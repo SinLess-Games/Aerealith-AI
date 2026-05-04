@@ -22,9 +22,9 @@
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18",
-    "@grafana/faro-react": "^1.19.0",
-    "@grafana/faro-web-sdk": "^1.19.0",
-    "@grafana/faro-web-tracing": "^1.19.0",
+    "@grafana/faro-react": "^1.19.0 || ^2.0.0",
+    "@grafana/faro-web-sdk": "^1.19.0 || ^2.0.0",
+    "@grafana/faro-web-tracing": "^1.19.0 || ^2.0.0",
     "@mui/material": "^7.3.5",
     "@mui/icons-material": "^7.3.5",
     "@emotion/react": "11.x",
