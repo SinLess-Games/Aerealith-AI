@@ -1,54 +1,161 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Alert, Box, Button, TextField, Typography } from '@mui/material';
+import * as React from 'react';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
-import Image from 'next/image';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import Image, { type StaticImageData } from 'next/image';
 
-//
-// ──────────────────────────────────────────────
-//   HERO WAITLIST COMPONENT
-// ──────────────────────────────────────────────
-//
-export function HeroWaitlist() {
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-  const [errorMsg, setErrorMsg] = useState('');
+export type WaitlistStatus = 'idle' | 'sending' | 'success' | 'error';
 
-  const isValidEmail = /^\S+@\S+\.\S+$/.test(email);
+export type HeroWaitlistProps = {
+  /**
+   * API endpoint used to submit the waitlist form.
+   */
+  endpoint?: string;
 
-  // Automatically clear feedback after 5 seconds
-  useEffect(() => {
-    if (status === 'idle') return undefined;
-    const timer = setTimeout(() => setStatus('idle'), 5000);
-    return () => clearTimeout(timer);
-  }, [status]);
+  /**
+   * Heading shown above the waitlist form.
+   */
+  title?: string;
 
-  const handleSubmit = async () => {
-    if (!isValidEmail || status === 'sending') return;
+  /**
+   * Email input label.
+   */
+  emailLabel?: string;
+
+  /**
+   * Submit button text.
+   */
+  submitLabel?: string;
+
+  /**
+   * Submit button text while sending.
+   */
+  sendingLabel?: string;
+
+  /**
+   * Success message shown after a valid submission.
+   */
+  successMessage?: string;
+
+  /**
+   * How long feedback alerts remain visible.
+   */
+  feedbackDurationMs?: number;
+};
+
+export type HeroSectionProps = {
+  title: string;
+  subtitle: string;
+  imageUrl: string | StaticImageData;
+  imageAlt?: string;
+  waitlist?: HeroWaitlistProps;
+};
+
+const DEFAULT_WAITLIST_ENDPOINT = '/api/V1/waitlist';
+const DEFAULT_FEEDBACK_DURATION_MS = 5_000;
+
+function isValidEmailAddress(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+async function readJsonResponse(response: Response): Promise<Record<string, unknown>> {
+  try {
+    const body = (await response.json()) as unknown;
+
+    return typeof body === 'object' && body !== null
+      ? (body as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function getResponseMessage(
+  body: Record<string, unknown>,
+  fallback: string,
+): string {
+  return typeof body.message === 'string' && body.message.trim().length > 0
+    ? body.message
+    : fallback;
+}
+
+export function HeroWaitlist({
+  endpoint = DEFAULT_WAITLIST_ENDPOINT,
+  title = 'Join our waitlist!',
+  emailLabel = 'Email',
+  submitLabel = 'Submit',
+  sendingLabel = 'Sending…',
+  successMessage = 'Thanks! You’re on the waitlist. We’ll notify you when we launch.',
+  feedbackDurationMs = DEFAULT_FEEDBACK_DURATION_MS,
+}: HeroWaitlistProps) {
+  const [email, setEmail] = React.useState('');
+  const [status, setStatus] = React.useState<WaitlistStatus>('idle');
+  const [errorMessage, setErrorMessage] = React.useState('');
+
+  const trimmedEmail = email.trim();
+  const isValidEmail = React.useMemo(
+    () => isValidEmailAddress(trimmedEmail),
+    [trimmedEmail],
+  );
+
+  React.useEffect(() => {
+    if (status === 'idle') {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setStatus('idle');
+      setErrorMessage('');
+    }, feedbackDurationMs);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [feedbackDurationMs, status]);
+
+  const handleSubmit = React.useCallback(async (): Promise<void> => {
+    if (!isValidEmail || status === 'sending') {
+      return;
+    }
 
     setStatus('sending');
-    setErrorMsg('');
+    setErrorMessage('');
 
     try {
-      const res = await fetch('/api/V1/waitlist', {
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: trimmedEmail,
+        }),
       });
 
-      const body = await res.json().catch(() => ({}));
+      const body = await readJsonResponse(response);
 
-      if (!res.ok) throw new Error(body?.message || `HTTP ${res.status}`);
-      if (body?.status !== 'success') throw new Error(body?.message || 'Server error');
+      if (!response.ok) {
+        throw new Error(getResponseMessage(body, `HTTP ${response.status}`));
+      }
+
+      if (body.status && body.status !== 'success') {
+        throw new Error(getResponseMessage(body, 'Server error'));
+      }
 
       setEmail('');
       setStatus('success');
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Unknown error occurred');
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Unknown error occurred',
+      );
       setStatus('error');
     }
-  };
+  }, [endpoint, isValidEmail, status, trimmedEmail]);
 
   return (
     <Box
@@ -60,56 +167,64 @@ export function HeroWaitlist() {
         alignItems: 'center',
         mt: 4,
         gap: 2,
+        width: '100%',
       }}
     >
-      {/* Heading */}
       <Typography
         variant="h2"
         sx={{
-          color: 'rgba(255,255,255,0.9)',
+          color: 'rgba(255, 255, 255, 0.9)',
           textAlign: 'center',
           fontSize: { xs: '1.5rem', sm: '2rem' },
-          fontWeight: 'bold',
+          fontWeight: 700,
         }}
       >
-        Join our waitlist!
+        {title}
       </Typography>
 
-      {/* Feedback Alerts */}
-      {status === 'success' && (
-        <Alert
-          severity="success"
-          data-testid="waitlist-success"
-          sx={{ mt: 2, width: { xs: '100%', sm: 'auto' } }}
-        >
-          Thanks! You&apos;re on the waitlist. We’ll notify you when we launch.
-        </Alert>
-      )}
-      {status === 'error' && (
-        <Alert
-          severity="error"
-          data-testid="waitlist-error"
-          sx={{ mt: 2, width: { xs: '100%', sm: 'auto' } }}
-        >
-          Error: {errorMsg}
-        </Alert>
-      )}
+      <Box
+        aria-live="polite"
+        sx={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
+        {status === 'success' ? (
+          <Alert
+            severity="success"
+            data-testid="waitlist-success"
+            sx={{ mt: 2, width: { xs: '100%', sm: 'auto' } }}
+          >
+            {successMessage}
+          </Alert>
+        ) : null}
 
-      {/* Form */}
+        {status === 'error' ? (
+          <Alert
+            severity="error"
+            data-testid="waitlist-error"
+            sx={{ mt: 2, width: { xs: '100%', sm: 'auto' } }}
+          >
+            Error: {errorMessage}
+          </Alert>
+        ) : null}
+      </Box>
+
       <Box
         component="form"
         data-testid="waitlist-form"
         noValidate
         autoComplete="off"
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit();
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSubmit();
         }}
         sx={{
           display: 'flex',
           flexDirection: { xs: 'column', sm: 'row' },
           gap: 2,
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
           width: '100%',
           maxWidth: 600,
@@ -117,26 +232,71 @@ export function HeroWaitlist() {
       >
         <TextField
           fullWidth
-          label="Email"
+          label={emailLabel}
           type="email"
           variant="filled"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={email !== '' && !isValidEmail}
-          helperText={email !== '' && !isValidEmail ? 'Please enter a valid email' : ' '}
-          inputProps={{ 'data-testid': 'waitlist-email-input' }}
-          sx={{
-            bgcolor: 'rgba(255,255,255,0.08)',
-            borderRadius: 1,
-            input: { color: '#fff' },
-            '& .MuiFilledInput-underline:before': {
-              borderBottomColor: 'rgba(255,255,255,0.3)',
+          onChange={(event) => {
+            setEmail(event.target.value);
+          }}
+          error={email.length > 0 && !isValidEmail}
+          helperText={
+            email.length > 0 && !isValidEmail
+              ? 'Please enter a valid email.'
+              : ' '
+          }
+          disabled={status === 'sending'}
+          slotProps={{
+            htmlInput: {
+              'data-testid': 'waitlist-email-input',
+              autoCapitalize: 'none',
+              autoCorrect: 'off',
+              inputMode: 'email',
             },
+          }}
+          sx={{
+            bgcolor: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: 1,
+
+            '& .MuiFilledInput-root': {
+              color: '#fff',
+              bgcolor: 'rgba(255, 255, 255, 0.08)',
+
+              '&:hover': {
+                bgcolor: 'rgba(255, 255, 255, 0.12)',
+              },
+
+              '&.Mui-focused': {
+                bgcolor: 'rgba(255, 255, 255, 0.12)',
+              },
+            },
+
+            '& .MuiFilledInput-underline:before': {
+              borderBottomColor: 'rgba(255, 255, 255, 0.3)',
+            },
+
             '& .MuiFilledInput-underline:hover:before': {
               borderBottomColor: '#fff',
             },
-            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
-            '& .MuiInputLabel-root.Mui-focused': { color: '#fff' },
+
+            '& .MuiFilledInput-underline:after': {
+              borderBottomColor: '#f6066f',
+            },
+
+            '& .MuiInputLabel-root': {
+              color: 'rgba(255, 255, 255, 0.7)',
+            },
+
+            '& .MuiInputLabel-root.Mui-focused': {
+              color: '#fff',
+            },
+
+            '& .MuiFormHelperText-root': {
+              color:
+                email.length > 0 && !isValidEmail
+                  ? 'error.light'
+                  : 'rgba(255, 255, 255, 0.55)',
+            },
           }}
         />
 
@@ -148,37 +308,35 @@ export function HeroWaitlist() {
           sx={{
             backgroundColor: '#022371',
             color: '#fff',
-            '&:hover': { backgroundColor: '#f6066f' },
             px: 4,
             py: 1.5,
             minWidth: '180px',
+            minHeight: 56,
+
+            '&:hover': {
+              backgroundColor: '#f6066f',
+            },
+
+            '&.Mui-disabled': {
+              color: 'rgba(255, 255, 255, 0.55)',
+              backgroundColor: 'rgba(2, 35, 113, 0.45)',
+            },
           }}
         >
-          {status === 'sending' ? 'Sending…' : 'Submit'}
+          {status === 'sending' ? sendingLabel : submitLabel}
         </Button>
       </Box>
     </Box>
   );
 }
 
-//
-// ──────────────────────────────────────────────
-//   HERO SECTION COMPONENT
-// ──────────────────────────────────────────────
-//
-type HeroSectionProps = {
-  title: string;
-  subtitle: string;
-  imageUrl: string;
-  imageAlt?: string;
-};
-
-export const HeroSection: React.FC<HeroSectionProps> = ({
+export function HeroSection({
   title,
   subtitle,
   imageUrl,
   imageAlt = 'Hero Image',
-}) => {
+  waitlist,
+}: HeroSectionProps) {
   return (
     <Box
       component="section"
@@ -189,10 +347,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         borderRadius: '0.75rem',
         backgroundColor: 'rgba(30, 30, 30, 0.75)',
         backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
       <Grid container spacing={4} alignItems="center">
-        {/* Image */}
         <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: 'center' }}>
           <Image
             src={imageUrl}
@@ -200,16 +358,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             width={400}
             height={400}
             priority
-            style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem' }}
+            style={{
+              maxWidth: '100%',
+              height: 'auto',
+              borderRadius: '0.5rem',
+            }}
           />
         </Grid>
 
-        {/* Text */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Typography
             component="h1"
             sx={{
-              fontWeight: 'bold',
+              fontWeight: 700,
               color: '#F6066F',
               fontSize: {
                 xs: '1.75rem',
@@ -224,6 +385,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           >
             {title}
           </Typography>
+
           <Typography
             component="p"
             sx={{
@@ -236,11 +398,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </Typography>
         </Grid>
 
-        {/* Waitlist */}
         <Grid size={12} sx={{ textAlign: 'center', mt: 4 }}>
-          <HeroWaitlist />
+          <HeroWaitlist {...waitlist} />
         </Grid>
       </Grid>
     </Box>
   );
-};
+}
+
+export default HeroSection;

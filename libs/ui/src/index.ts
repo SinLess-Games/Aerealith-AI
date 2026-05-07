@@ -1,17 +1,22 @@
-// libs/ui/src/index.tsx
-// Use this file to export React client components (those with 'use client') or other non-server utilities
+// libs/ui/src/index.ts
+// Public export surface for @helix-ai/ui.
 
+// -----------------------------------------------------------------------------
 // Theme utilities
-export * from './theme';
+// -----------------------------------------------------------------------------
+export * from './theme/index.js';
 
+// -----------------------------------------------------------------------------
 // Providers
-export * from './providers';
+// -----------------------------------------------------------------------------
+export * from './providers/index.js';
 
+// -----------------------------------------------------------------------------
 // Components
-export * from './components';
+// -----------------------------------------------------------------------------
+export * from './components/index.js';
 
-// Profile components
-export * from './components/Profile';
-
-// utils
-export * from './utils';
+// -----------------------------------------------------------------------------
+// Utilities
+// -----------------------------------------------------------------------------
+export * from './utils/index.js';

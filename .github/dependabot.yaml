@@ -1,24 +1,108 @@
-# .github/dependabot.yml
+# .github/dependabot.yaml
+# =============================================================================
+# Helix AI Dependabot Configuration
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Keep pnpm/npm workspace dependencies and GitHub Actions up to date.
+#
+# Notes:
+#   - GitHub officially documents the file as `.github/dependabot.yml`, but
+#     `.github/dependabot.yaml` is also accepted by GitHub.
+#   - Dependabot ignores labels that do not already exist in the repository, so
+#     keep `.github/labels.yaml` synced first.
+#   - Reviewers should be handled through CODEOWNERS. Dependabot's old reviewers
+#     option is retired on newer GitHub Enterprise Server versions.
+# =============================================================================
+
 version: 2
 
 updates:
-  # Monitor npm (or pnpm) dependencies in the root directory
+  # ---------------------------------------------------------------------------
+  # 📦 Root pnpm/npm workspace dependencies
+  # ---------------------------------------------------------------------------
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "daily"
-    # Optionally: add labels or reviewers for PRs
-    labels:
-      - dependencies
-      - auto-merge
+      time: "06:00"
+      timezone: "America/Boise"
+
     open-pull-requests-limit: 10
 
-  # Monitor GitHub Actions versions in workflows
+    assignees:
+      - "Sinless777"
+
+    labels:
+      - "dependencies"
+      - "kind:chore"
+      - "area:libs"
+      - "status:ready"
+
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+
+    pull-request-branch-name:
+      separator: "-"
+
+    rebase-strategy: "auto"
+
+    groups:
+      production-dependencies:
+        patterns:
+          - "*"
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+
+      development-dependencies:
+        patterns:
+          - "*"
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+
+      major-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+
+  # ---------------------------------------------------------------------------
+  # ⚙️ GitHub Actions dependencies
+  # ---------------------------------------------------------------------------
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
-    labels:
-      - dependencies
-      - actions-update
+      time: "06:30"
+      timezone: "America/Boise"
+
     open-pull-requests-limit: 5
+
+    assignees:
+      - "Sinless777"
+
+    labels:
+      - "dependencies"
+      - "automation"
+      - "area:github-actions"
+      - "area:ci"
+      - "status:ready"
+
+    commit-message:
+      prefix: "chore(actions)"
+      include: "scope"
+
+    pull-request-branch-name:
+      separator: "-"
+
+    rebase-strategy: "auto"
+
+    groups:
+      github-actions:
+        patterns:
+          - "*"

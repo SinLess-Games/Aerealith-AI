@@ -1,92 +1,368 @@
 'use client';
 
-import { getWebInstrumentations, initializeFaro, faro as faroGlobal } from '@grafana/faro-web-sdk';
+import {
+  getWebInstrumentations,
+  initializeFaro,
+} from '@grafana/faro-web-sdk';
 import { TracingInstrumentation } from '@grafana/faro-web-tracing';
-import { grafanaCloudConfig } from '@helix-ai/config/config/grafana-cloud.config';
 
-let faroSingleton: ReturnType<typeof initializeFaro> | null = null;
+// This package is the source of truth for Helix config.
+//
+// TS6305 can appear in VS Code before @helix-ai/config has generated
+// dist/libs/config/index.d.ts. The import is still correct; the generated
+// declaration file is produced by building @helix-ai/config.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore TS6305: referenced project declarations may not exist before config build.
+import { appConfig } from '@helix-ai/config';
 
-type FaroClientConfig = {
+type FaroInstance = ReturnType<typeof initializeFaro>;
+
+export type FaroClientConfig = {
+  enabled: boolean;
   url: string;
   appName: string;
   appVersion: string;
   environment: string;
 };
 
-function buildConfig(overrides: Partial<FaroClientConfig> = {}): FaroClientConfig | null {
-  const faro = grafanaCloudConfig?.addons?.faro;
-  if (!faro) return null;
+type FaroSourceConfig = Partial<{
+  enabled: boolean;
+  url: string;
+  publicUrl: string;
+  collectorUrl: string;
+  appName: string;
+  applicationName: string;
+  appNamespace: string;
+  appVersion: string;
+  version: string;
+  release: string;
+  environment: string;
+  env: string;
+  samplingRate: number;
+  captureErrors: boolean;
+  captureConsole: boolean;
+  capturePerformance: boolean;
+}>;
 
-  const url =
-    overrides.url ??
-    faro.url ??
-    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_FARO_URL : '') ??
-    '';
+type ConfigRecord = Record<string, unknown>;
 
-  if (!url) return null;
+type HelixWindow = Window & {
+  __HELIX_FARO__?: FaroInstance | null;
+};
 
+let faroSingleton: FaroInstance | null = null;
+
+function getEnv(name: string): string | undefined {
+  if (typeof process === 'undefined') {
+    return undefined;
+  }
+
+  const value = process.env[name];
+
+  return typeof value === 'string' && value.trim().length > 0
+    ? value
+    : undefined;
+}
+
+function isDevelopment(): boolean {
+  return getEnv('NODE_ENV') === 'development';
+}
+
+function isRecord(value: unknown): value is ConfigRecord {
+  return typeof value === 'object' && value !== null;
+}
+
+function readConfigValue(path: string[]): unknown {
+  let current: unknown = appConfig;
+
+  for (const key of path) {
+    if (!isRecord(current)) {
+      return undefined;
+    }
+
+    current = current[key];
+  }
+
+  return current;
+}
+
+function readString(path: string[]): string | undefined {
+  const value = readConfigValue(path);
+
+  return typeof value === 'string' && value.trim().length > 0
+    ? value
+    : undefined;
+}
+
+function readBoolean(path: string[]): boolean | undefined {
+  const value = readConfigValue(path);
+
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+function readNumber(path: string[]): number | undefined {
+  const value = readConfigValue(path);
+
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
+function resolveFaroSourceConfig(): FaroSourceConfig {
   return {
-    url,
+    enabled:
+      readBoolean(['observability', 'faro', 'enabled']) ??
+      readBoolean(['grafanaCloud', 'addons', 'faro', 'enabled']) ??
+      readBoolean(['grafanaCloud', 'faro', 'enabled']) ??
+      readBoolean(['addons', 'faro', 'enabled']),
+
+    url:
+      readString(['observability', 'faro', 'url']) ??
+      readString(['observability', 'faro', 'publicUrl']) ??
+      readString(['observability', 'faro', 'collectorUrl']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'url']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'publicUrl']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'collectorUrl']) ??
+      readString(['grafanaCloud', 'faro', 'url']) ??
+      readString(['grafanaCloud', 'faro', 'publicUrl']) ??
+      readString(['grafanaCloud', 'faro', 'collectorUrl']) ??
+      readString(['addons', 'faro', 'url']) ??
+      readString(['addons', 'faro', 'publicUrl']) ??
+      readString(['addons', 'faro', 'collectorUrl']),
+
+    publicUrl:
+      readString(['observability', 'faro', 'publicUrl']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'publicUrl']) ??
+      readString(['grafanaCloud', 'faro', 'publicUrl']) ??
+      readString(['addons', 'faro', 'publicUrl']),
+
+    collectorUrl:
+      readString(['observability', 'faro', 'collectorUrl']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'collectorUrl']) ??
+      readString(['grafanaCloud', 'faro', 'collectorUrl']) ??
+      readString(['addons', 'faro', 'collectorUrl']),
+
     appName:
-      overrides.appName ??
-      faro.appName ??
-      (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_FARO_APP_NAME : '') ??
-      'helix-app',
+      readString(['observability', 'faro', 'appName']) ??
+      readString(['observability', 'faro', 'applicationName']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'appName']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'applicationName']) ??
+      readString(['grafanaCloud', 'faro', 'appName']) ??
+      readString(['grafanaCloud', 'faro', 'applicationName']) ??
+      readString(['addons', 'faro', 'appName']) ??
+      readString(['addons', 'faro', 'applicationName']),
+
+    applicationName:
+      readString(['observability', 'faro', 'applicationName']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'applicationName']) ??
+      readString(['grafanaCloud', 'faro', 'applicationName']) ??
+      readString(['addons', 'faro', 'applicationName']),
+
+    appNamespace:
+      readString(['observability', 'faro', 'appNamespace']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'appNamespace']) ??
+      readString(['grafanaCloud', 'faro', 'appNamespace']) ??
+      readString(['addons', 'faro', 'appNamespace']),
+
     appVersion:
-      overrides.appVersion ??
-      faro.appVersion ??
-      (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_FARO_APP_VERSION : '') ??
-      (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_APP_VERSION : '') ??
-      'dev',
+      readString(['observability', 'faro', 'appVersion']) ??
+      readString(['observability', 'faro', 'version']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'appVersion']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'version']) ??
+      readString(['grafanaCloud', 'faro', 'appVersion']) ??
+      readString(['grafanaCloud', 'faro', 'version']) ??
+      readString(['addons', 'faro', 'appVersion']) ??
+      readString(['addons', 'faro', 'version']),
+
+    version:
+      readString(['observability', 'faro', 'version']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'version']) ??
+      readString(['grafanaCloud', 'faro', 'version']) ??
+      readString(['addons', 'faro', 'version']),
+
+    release:
+      readString(['observability', 'faro', 'release']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'release']) ??
+      readString(['grafanaCloud', 'faro', 'release']) ??
+      readString(['addons', 'faro', 'release']),
+
     environment:
-      overrides.environment ??
-      faro.environment ??
-      (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_FARO_APP_ENV : '') ??
-      (typeof process !== 'undefined' ? process.env.NODE_ENV : '') ??
-      'development'
+      readString(['observability', 'faro', 'environment']) ??
+      readString(['observability', 'faro', 'env']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'environment']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'env']) ??
+      readString(['grafanaCloud', 'faro', 'environment']) ??
+      readString(['grafanaCloud', 'faro', 'env']) ??
+      readString(['addons', 'faro', 'environment']) ??
+      readString(['addons', 'faro', 'env']),
+
+    env:
+      readString(['observability', 'faro', 'env']) ??
+      readString(['grafanaCloud', 'addons', 'faro', 'env']) ??
+      readString(['grafanaCloud', 'faro', 'env']) ??
+      readString(['addons', 'faro', 'env']),
+
+    samplingRate:
+      readNumber(['observability', 'faro', 'samplingRate']) ??
+      readNumber(['grafanaCloud', 'addons', 'faro', 'samplingRate']) ??
+      readNumber(['grafanaCloud', 'faro', 'samplingRate']) ??
+      readNumber(['addons', 'faro', 'samplingRate']),
+
+    captureErrors:
+      readBoolean(['observability', 'faro', 'captureErrors']) ??
+      readBoolean(['grafanaCloud', 'addons', 'faro', 'captureErrors']) ??
+      readBoolean(['grafanaCloud', 'faro', 'captureErrors']) ??
+      readBoolean(['addons', 'faro', 'captureErrors']),
+
+    captureConsole:
+      readBoolean(['observability', 'faro', 'captureConsole']) ??
+      readBoolean(['grafanaCloud', 'addons', 'faro', 'captureConsole']) ??
+      readBoolean(['grafanaCloud', 'faro', 'captureConsole']) ??
+      readBoolean(['addons', 'faro', 'captureConsole']),
+
+    capturePerformance:
+      readBoolean(['observability', 'faro', 'capturePerformance']) ??
+      readBoolean(['grafanaCloud', 'addons', 'faro', 'capturePerformance']) ??
+      readBoolean(['grafanaCloud', 'faro', 'capturePerformance']) ??
+      readBoolean(['addons', 'faro', 'capturePerformance']),
   };
 }
 
-export function initFaro(overrides: Partial<FaroClientConfig> = {}) {
-  if (typeof window === 'undefined') return null;
+function buildConfig(
+  overrides: Partial<FaroClientConfig> = {},
+): FaroClientConfig | null {
+  const faroConfig = resolveFaroSourceConfig();
 
-  // If Faro already exists (e.g., HMR, multiple inits), reuse it.
-  if (faroSingleton || (faroGlobal as any)?._enabled) {
-    return faroSingleton ?? (faroGlobal as any) ?? null;
+  const enabled = overrides.enabled ?? faroConfig.enabled ?? true;
+
+  if (!enabled) {
+    return null;
+  }
+
+  const url =
+    overrides.url ??
+    faroConfig.url ??
+    faroConfig.publicUrl ??
+    faroConfig.collectorUrl ??
+    getEnv('NEXT_PUBLIC_FARO_URL') ??
+    getEnv('NEXT_PUBLIC_GRAFANA_FARO_URL');
+
+  if (!url) {
+    return null;
+  }
+
+  return {
+    enabled,
+    url,
+    appName:
+      overrides.appName ??
+      faroConfig.appName ??
+      faroConfig.applicationName ??
+      getEnv('NEXT_PUBLIC_FARO_APP_NAME') ??
+      getEnv('NEXT_PUBLIC_APP_NAME') ??
+      'helix-app',
+    appVersion:
+      overrides.appVersion ??
+      faroConfig.appVersion ??
+      faroConfig.version ??
+      faroConfig.release ??
+      getEnv('NEXT_PUBLIC_FARO_APP_VERSION') ??
+      getEnv('NEXT_PUBLIC_APP_VERSION') ??
+      getEnv('NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA') ??
+      'dev',
+    environment:
+      overrides.environment ??
+      faroConfig.environment ??
+      faroConfig.env ??
+      getEnv('NEXT_PUBLIC_FARO_APP_ENV') ??
+      getEnv('NEXT_PUBLIC_APP_ENV') ??
+      getEnv('NODE_ENV') ??
+      'development',
+  };
+}
+
+function getStoredFaro(): FaroInstance | null {
+  if (faroSingleton) {
+    return faroSingleton;
+  }
+
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return (window as HelixWindow).__HELIX_FARO__ ?? null;
+}
+
+function setStoredFaro(faro: FaroInstance | null): void {
+  faroSingleton = faro;
+
+  if (typeof window !== 'undefined') {
+    (window as HelixWindow).__HELIX_FARO__ = faro;
+  }
+}
+
+export function initFaro(
+  overrides: Partial<FaroClientConfig> = {},
+): FaroInstance | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const existingFaro = getStoredFaro();
+
+  if (existingFaro) {
+    return existingFaro;
   }
 
   const config = buildConfig(overrides);
+
   if (!config) {
-    if (process.env.NODE_ENV === 'development') {
-      console.info('[Faro] configuration missing; skipping.');
+    if (isDevelopment()) {
+      console.info('[Faro] configuration missing or disabled; skipping.');
     }
+
     return null;
   }
 
   try {
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevelopment()) {
       console.info('[Faro] initializing', {
-        app: { name: config.appName, version: config.appVersion, environment: config.environment }
+        app: {
+          name: config.appName,
+          version: config.appVersion,
+          environment: config.environment,
+        },
       });
     }
 
-    faroSingleton = initializeFaro({
+    const faro = initializeFaro({
       url: config.url,
       app: {
         name: config.appName,
         version: config.appVersion,
-        environment: config.environment
+        environment: config.environment,
       },
-      instrumentations: [...getWebInstrumentations(), new TracingInstrumentation()]
+      instrumentations: [
+        ...getWebInstrumentations(),
+        new TracingInstrumentation(),
+      ],
     });
-  } catch (err) {
-    console.error('[Faro] failed to initialize:', err instanceof Error ? err.message : err);
-    faroSingleton = null;
-  }
 
-  return faroSingleton;
+    setStoredFaro(faro);
+
+    return faro;
+  } catch (error) {
+    console.error(
+      '[Faro] failed to initialize:',
+      error instanceof Error ? error.message : error,
+    );
+
+    setStoredFaro(null);
+
+    return null;
+  }
 }
 
-export function getFaroInstance() {
-  return faroSingleton ?? (faroGlobal as any) ?? null;
+export function getFaroInstance(): FaroInstance | null {
+  return getStoredFaro();
 }

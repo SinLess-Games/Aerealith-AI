@@ -1,93 +1,479 @@
 # .github/labeler.yaml
 ---
-# Label when changes relate to frontend app
+# =============================================================================
+# Helix AI Labeler Configuration
+# -----------------------------------------------------------------------------
+# Used by:
+#   - .github/workflows/labeler.yaml
+#
+# Purpose:
+#   Apply path-based labels to pull requests using actions/labeler.
+#
+# Notes:
+#   - This file is primarily changed-file based.
+#   - Intelligent issue/PR labeling, milestone assignment, and issue/PR linking
+#     are handled by .github/workflows/repo-manager.md.
+#   - Keep labels aligned with .github/labels.yaml and .github/assignees.yaml.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Safety limits
+# -----------------------------------------------------------------------------
+# Prevent huge PRs from receiving an excessive number of labels automatically.
+changed-files-labels-limit: 12
+max-files-changed: 300
+
+# -----------------------------------------------------------------------------
+# Apps
+# -----------------------------------------------------------------------------
+
 area:frontend:
   - any:
-      changed-files:
-        any-glob-to-any-file:
-          - "apps/frontend/**"
-          - "libs/ui/**"
-          - "apps/e2e/frontend-e2e/**"
+      - changed-files:
+          - any-glob-to-any-file:
+              - "apps/frontend/**"
+              - "apps/e2e/frontend-e2e/**"
 
-# Label when changes relate to backend / services
-area:backend:
+area:e2e:
   - any:
-      changed-files:
-        any-glob-to-any-file:
-          - "apps/services/**"
-          - "libs/shared/db/**"
-          - "libs/shared/logger/**"
+      - changed-files:
+          - any-glob-to-any-file:
+              - "apps/e2e/**"
+              - "apps/e2e/frontend-e2e/**"
+              - "**/*.cy.ts"
+              - "**/*.cy.tsx"
+              - "**/*.e2e.ts"
+              - "**/*.e2e.tsx"
+              - "cypress.config.*"
+              - "playwright.config.*"
 
-# Infrastructure / DevOps / CI-CD changes
-area:infra:
+area:integrations:
   - any:
-      changed-files:
-        any-glob-to-any-file:
-          - "IaC/**"
-          - ".github/workflows/**"
-          - ".github/renovate.json5"
-          - ".taskfiles/**"
+      - changed-files:
+          - any-glob-to-any-file:
+              - "apps/integrations/**"
 
-# Terraform IaC updates
-terraform-dependencies:
+area:services:
   - any:
-      changed-files:
-        any-glob-to-any-file:
-          - "IaC/terraform/**"
-          - "**/*.tf"
-          - "**/*.hcl"
+      - changed-files:
+          - any-glob-to-any-file:
+              - "apps/services/**"
 
-# Ansible IaC updates
-ansible-dependencies:
+# -----------------------------------------------------------------------------
+# Libraries
+# -----------------------------------------------------------------------------
+
+area:ui:
   - any:
-      changed-files:
-        any-glob-to-any-file:
-          - "IaC/ansible/**"
-          - "IaC/ansible/**/*"
+      - changed-files:
+          - any-glob-to-any-file:
+              - "libs/ui/**"
 
-# Kubernetes infra / Helm / Kustomize updates
-k8s-dependencies:
+area:config:
   - any:
-      changed-files:
-        any-glob-to-any-file:
-          - "IaC/kubernetes/**"
-          - "IaC/kubernetes/apps/**"
-          - "IaC/kubernetes/clusters/**"
+      - changed-files:
+          - any-glob-to-any-file:
+              - "libs/config/**"
 
-# Dependency / automation updates (general)
+area:db:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "libs/db/**"
+
+area:flags:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "libs/flags/**"
+
+area:libs:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "libs/**"
+
+# -----------------------------------------------------------------------------
+# GitHub / automation / CI
+# -----------------------------------------------------------------------------
+
+area:github-actions:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/**"
+              - ".github/actions/**"
+              - ".github/agents/**"
+              - ".github/scripts/**"
+              - ".github/workflows/**"
+              - ".github/mcp.json"
+              - ".github/assignees.yaml"
+              - ".github/labeler.yaml"
+              - ".github/labels.yaml"
+              - ".github/milestones.yaml"
+              - ".github/dependabot.yaml"
+              - ".github/dependabot.yml"
+              - ".github/renovate.json5"
+              - "renovate.json"
+              - "renovate.json5"
+
+area:ci:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/workflows/**"
+              - ".github/actions/**"
+              - ".github/scripts/**"
+              - "nx.json"
+              - "package.json"
+              - "pnpm-lock.yaml"
+              - "pnpm-workspace.yaml"
+              - "tsconfig.base.json"
+              - "tsconfig.json"
+              - "**/project.json"
+              - "**/tsconfig*.json"
+              - "**/eslint.config.*"
+              - "**/jest.config.*"
+              - "**/vitest.config.*"
+
+automation:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/**"
+              - "scripts/**"
+              - "tools/**"
+              - ".taskfiles/**"
+              - "taskfile.yaml"
+              - "Taskfile.yaml"
+
+agentic-workflow:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/workflows/*.md"
+              - ".github/workflows/*.lock.yml"
+              - ".github/agents/**"
+              - ".github/mcp.json"
+
+repo-management:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/workflows/repo-manager.md"
+              - ".github/workflows/repo-manager.lock.yml"
+              - ".github/assignees.yaml"
+              - ".github/labeler.yaml"
+              - ".github/labels.yaml"
+              - ".github/milestones.yaml"
+              - ".github/projects/**"
+              - ".github/scripts/projects/**"
+
+# -----------------------------------------------------------------------------
+# Cloudflare / deployment
+# -----------------------------------------------------------------------------
+
+area:cloudflare:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "apps/frontend/wrangler.jsonc"
+              - "apps/frontend/wrangler.toml"
+              - "apps/frontend/open-next.config.ts"
+              - "apps/frontend/cloudflare-env.d.ts"
+              - "apps/frontend/public/_headers"
+              - "wrangler.toml"
+              - "wrangler.jsonc"
+              - "**/wrangler.toml"
+              - "**/wrangler.jsonc"
+              - "**/open-next.config.ts"
+              - "**/cloudflare-env.d.ts"
+
+cloudflare:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "apps/frontend/wrangler.jsonc"
+              - "apps/frontend/wrangler.toml"
+              - "apps/frontend/open-next.config.ts"
+              - "apps/frontend/cloudflare-env.d.ts"
+              - "apps/frontend/public/_headers"
+              - "wrangler.toml"
+              - "wrangler.jsonc"
+              - "**/wrangler.toml"
+              - "**/wrangler.jsonc"
+              - "**/open-next.config.ts"
+
+deployment:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/workflows/*deploy*"
+              - ".github/workflows/*publish*"
+              - ".github/workflows/container-build-publish.yaml"
+              - "apps/frontend/wrangler.jsonc"
+              - "apps/frontend/open-next.config.ts"
+              - "Dockerfile"
+              - "**/Dockerfile"
+              - "**/Dockerfile.*"
+              - "docker/**"
+
+# -----------------------------------------------------------------------------
+# Infrastructure
+# -----------------------------------------------------------------------------
+
+area:kubernetes:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "Kubernetes/**"
+              - "kubernetes/**"
+              - "**/*.k8s.yaml"
+              - "**/*.k8s.yml"
+              - "**/kustomization.yaml"
+              - "**/kustomization.yml"
+              - "**/Chart.yaml"
+              - "**/values.yaml"
+              - "**/values.yml"
+
+area:ansible:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "Ansible/**"
+              - "ansible/**"
+              - "**/playbooks/**"
+              - "**/roles/**"
+              - "**/inventory/**"
+              - "**/*.ansible.yaml"
+              - "**/*.ansible.yml"
+
+area:terraform:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "Terraform/**"
+              - "terraform/**"
+              - "**/*.tf"
+              - "**/*.tfvars"
+              - "**/*.hcl"
+
+# -----------------------------------------------------------------------------
+# Security / observability
+# -----------------------------------------------------------------------------
+
+area:security:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/codeql.yaml"
+              - ".github/workflows/codeQL.yaml"
+              - ".github/workflows/*security*"
+              - ".github/workflows/*scan*"
+              - "security/**"
+              - "Security/**"
+              - "**/*security*"
+              - "**/*secret*"
+              - "**/*auth*"
+              - "**/*policy*"
+              - "**/*rbac*"
+              - "**/*abac*"
+              - "**/*vault*"
+              - "**/*kms*"
+
+area:observability:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "**/*grafana*"
+              - "**/*faro*"
+              - "**/*otel*"
+              - "**/*opentelemetry*"
+              - "**/*prometheus*"
+              - "**/*alertmanager*"
+              - "**/*loki*"
+              - "**/*tempo*"
+              - "**/*pyroscope*"
+              - "**/*dashboard*"
+              - "**/*metrics*"
+              - "**/*traces*"
+              - "**/*logs*"
+
+# -----------------------------------------------------------------------------
+# Documentation
+# -----------------------------------------------------------------------------
+
+area:docs:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "**/*.md"
+              - "**/*.mdx"
+              - "Docs/**"
+              - "docs/**"
+              - "README.md"
+              - "Readme.md"
+              - "CONTRIBUTING.md"
+              - "CODE_OF_CONDUCT.md"
+              - "mkdocs.yaml"
+              - "mkdocs.yml"
+
+kind:documentation:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "**/*.md"
+              - "**/*.mdx"
+              - "Docs/**"
+              - "docs/**"
+              - "README.md"
+              - "Readme.md"
+              - "CONTRIBUTING.md"
+              - "CODE_OF_CONDUCT.md"
+              - "mkdocs.yaml"
+              - "mkdocs.yml"
+
+# -----------------------------------------------------------------------------
+# Tests
+# -----------------------------------------------------------------------------
+
+kind:test:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "**/*.spec.ts"
+              - "**/*.spec.tsx"
+              - "**/*.test.ts"
+              - "**/*.test.tsx"
+              - "**/*.cy.ts"
+              - "**/*.cy.tsx"
+              - "**/*.e2e.ts"
+              - "**/*.e2e.tsx"
+              - "**/__tests__/**"
+              - "**/__mocks__/**"
+              - "apps/e2e/**"
+              - "jest.config.*"
+              - "vitest.config.*"
+              - "playwright.config.*"
+              - "cypress.config.*"
+
+# -----------------------------------------------------------------------------
+# Release / packaging / dependency management
+# -----------------------------------------------------------------------------
+
+kind:release:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/workflows/publish-libs.yaml"
+              - ".github/workflows/container-build-publish.yaml"
+              - ".github/workflows/package-manager.md"
+              - ".github/workflows/package-manager.lock.yml"
+              - "CHANGELOG.md"
+              - ".changeset/**"
+              - "package.json"
+              - "pnpm-lock.yaml"
+              - "**/package.json"
+
+release:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/workflows/publish-libs.yaml"
+              - ".github/workflows/container-build-publish.yaml"
+              - ".github/workflows/package-manager.md"
+              - ".github/workflows/package-manager.lock.yml"
+              - "CHANGELOG.md"
+              - ".changeset/**"
+
 dependencies:
   - any:
-      changed-files:
-        any-glob-to-any-file:
-          - "pnpm-lock.yaml"
-          - "package.json"
-          - "package-lock.json"
-          - "libs/shared/utils/**"
-          - ".github/renovate.json5"
+      - changed-files:
+          - any-glob-to-any-file:
+              - "package.json"
+              - "pnpm-lock.yaml"
+              - "pnpm-workspace.yaml"
+              - "**/package.json"
+              - ".github/dependabot.yaml"
+              - ".github/dependabot.yml"
+              - ".github/renovate.json5"
+              - "renovate.json"
+              - "renovate.json5"
 
-# Documentation changes
-type:docs:
-  - any:
-      changed-files:
-        any-glob-to-any-file:
-          - "**/*.md"
-          - "Docs/**"
-          - "CONTRIBUTING.md"
-          - "CODE_OF_CONDUCT.md"
+# -----------------------------------------------------------------------------
+# General kind labels
+# -----------------------------------------------------------------------------
 
-# Test-only changes
-type:test:
+kind:chore:
   - any:
-      changed-files:
-        any-glob-to-any-file:
-          - "jest.config.ts"
-          - "**/*.spec.ts"
-          - "apps/e2e/**"
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/**"
+              - "scripts/**"
+              - "tools/**"
+              - ".taskfiles/**"
+              - "taskfile.yaml"
+              - "Taskfile.yaml"
+              - "package.json"
+              - "pnpm-lock.yaml"
+              - "pnpm-workspace.yaml"
 
-# Security / vulnerability related changes
-type:security:
+kind:security:
   - any:
-      changed-files:
-        any-glob-to-any-file:
-          - "security/**"
-          - "dependency-dashboard/**"
+      - changed-files:
+          - any-glob-to-any-file:
+              - ".github/codeql.yaml"
+              - ".github/workflows/codeQL.yaml"
+              - ".github/workflows/*security*"
+              - ".github/workflows/*scan*"
+              - "security/**"
+              - "Security/**"
+              - "**/*security*"
+              - "**/*secret*"
+              - "**/*auth*"
+              - "**/*policy*"
+              - "**/*rbac*"
+              - "**/*abac*"
+              - "**/*vault*"
+              - "**/*kms*"
+
+kind:feature:
+  - any:
+      - head-branch:
+          - "^feature/"
+          - "^feat/"
+          - "feature"
+          - "feat"
+
+kind:bug:
+  - any:
+      - head-branch:
+          - "^bugfix/"
+          - "^fix/"
+          - "^hotfix/"
+          - "bug"
+          - "fix"
+          - "hotfix"
+
+kind:refactor:
+  - any:
+      - head-branch:
+          - "^refactor/"
+          - "refactor"
+
+# -----------------------------------------------------------------------------
+# Branch-based workflow labels
+# -----------------------------------------------------------------------------
+
+status:ready:
+  - any:
+      - base-branch:
+          - "^main$"
+
+status:in-progress:
+  - any:
+      - head-branch:
+          - "^wip/"
+          - "^draft/"
+          - "wip"
+          - "draft"

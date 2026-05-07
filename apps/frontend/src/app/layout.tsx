@@ -1,12 +1,11 @@
 // apps/frontend/src/app/layout.tsx
+
 import * as React from 'react';
-import { Analytics } from '@vercel/analytics/next';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata, Viewport } from 'next';
-import { HelixProviders, Background } from '@helix-ai/ui';
+import { Background, HelixProviders } from '@helix-ai/ui';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://helixai.com'),
+  metadataBase: new URL('https://helixaibot.com'),
   title: { default: 'Helix AI', template: '%s | Helix AI' },
   description:
     'Helix AI is your adaptive digital companion — connect, automate, and analyze across your ecosystem.',
@@ -15,21 +14,21 @@ export const metadata: Metadata = {
     'AI assistant',
     'automation',
     'productivity',
-    'Convex',
-    'Clerk',
     'Next.js',
+    'Cloudflare',
+    'SinLess Games',
   ],
   applicationName: 'Helix AI',
   authors: [{ name: 'SinLess Games LLC', url: 'https://sinlessgamesllc.com' }],
   creator: 'SinLess Games LLC',
   publisher: 'SinLess Games LLC',
   robots: { index: true, follow: true },
-  alternates: { canonical: 'https://helixai.com' },
+  alternates: { canonical: 'https://helixaibot.com' },
   openGraph: {
     title: 'Helix AI',
     description:
       'Your adaptive digital companion — connect, automate, and analyze across your ecosystem.',
-    url: 'https://helixai.com',
+    url: 'https://helixaibot.com',
     siteName: 'Helix AI',
     images: [
       {
@@ -73,29 +72,25 @@ export const viewport: Viewport = {
   ],
 };
 
-type RootLayoutProps = { children: React.ReactNode };
+type RootLayoutProps = {
+  children: React.ReactNode;
+};
 
 export default function RootLayout({ children }: RootLayoutProps) {
-  const mode: 'dark' | 'light' = 'dark';
-
   return (
-    <html
-      lang="en"
-      className={mode === 'dark' ? 'dark' : ''}
-      style={{ colorScheme: mode }}
-      suppressHydrationWarning
-    >
-      <head />
-      <body className="antialiased bg-black text-white">
-        <Analytics />
-        <SpeedInsights />
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">
         <Background
-          imageUrl="https://cdn.sinlessgamesllc.com/Helix-AI/images/Background.webp"
-          altText="Background Image"
+          imageUrl="/images/background-dark.png"
+          lightImageUrl="/images/background-light.png"
+          darkImageUrl="/images/background-dark.png"
+          altText=""
+          overlayOpacity={0.18}
+          lightOverlayOpacity={0.08}
+          darkOverlayOpacity={0.28}
+          priority
         >
-          <HelixProviders defaultMode={mode}>
-            {children}
-          </HelixProviders>
+          <HelixProviders defaultMode="system">{children}</HelixProviders>
         </Background>
       </body>
     </html>

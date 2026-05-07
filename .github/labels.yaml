@@ -1,155 +1,273 @@
+# .github/labels.yaml
 # ==========================================================
 # GitHub Labels Configuration
-# Managed by .github/workflows/sync-labels.yml
+# Managed by .github/workflows/sync-labels.yaml
 # ==========================================================
 # Each label entry:
 # - name: Visible label name
-# - color: Hex color code (no #)
+# - color: Hex color code without "#"
 # - description: Short explanation
 # ==========================================================
 
 # -----------------------------
-# 🧩 Type Labels
+# 🧩 Kind Labels
 # -----------------------------
-- name: type:bug
-  color: d73a4a
-  description: Something isn't working as intended
+- name: kind:bug
+  color: D73A4A
+  description: Something is broken or not working as intended
 
-- name: type:feature
-  color: a2eeef
-  description: New feature or enhancement
+- name: kind:feature
+  color: 0E8A16
+  description: New feature, capability, or enhancement
 
-- name: type:chore
-  color: cccccc
-  description: Maintenance, cleanup, or refactor task
+- name: kind:chore
+  color: C5DEF5
+  description: Maintenance, cleanup, tooling, or routine work
 
-- name: type:docs
-  color: 0075ca
-  description: Documentation or README-related change
+- name: kind:refactor
+  color: 5319E7
+  description: Code restructuring without intended behavior change
 
-- name: type:test
-  color: 0e8a16
-  description: Unit or integration tests
+- name: kind:security
+  color: B60205
+  description: Security vulnerability, hardening, policy, or patch
 
-- name: type:security
-  color: b60205
-  description: Security vulnerability or patch
+- name: kind:documentation
+  color: 0075CA
+  description: Documentation, README, ADR, or MkDocs change
+
+- name: kind:test
+  color: 1D76DB
+  description: Unit, integration, E2E, fixture, or test config work
+
+- name: kind:release
+  color: FF8C00
+  description: Release, changelog, versioning, publishing, or packaging work
 
 # -----------------------------
 # 🚦 Status Labels
 # -----------------------------
-- name: status:todo
-  color: d876e3
-  description: Planned but not yet started
-
-- name: status:in-progress
-  color: fbca04
-  description: Work currently in progress
-
-- name: status:review
-  color: fef2c0
-  description: Awaiting review or approval
-
-- name: status:blocked
-  color: 5319e7
-  description: Blocked by external dependency or prerequisite
+- name: status:backlog
+  color: D4C5F9
+  description: Planned or accepted for future work
 
 - name: status:ready
-  color: 0e8a16
-  description: Ready for development or merge
+  color: 0E8A16
+  description: Ready for development, review, or merge
+
+- name: status:in-progress
+  color: FBCA04
+  description: Work is actively in progress
+
+- name: status:needs-info
+  color: FEF2C0
+  description: More information is required before work can proceed
+
+- name: status:blocked
+  color: 5319E7
+  description: Blocked by dependency, decision, secret, or prerequisite
 
 # -----------------------------
 # ⚡ Priority Labels
 # -----------------------------
 - name: priority:critical
-  color: e11d21
-  description: Must fix or implement immediately
+  color: B60205
+  description: Production-impacting, security-critical, or must fix immediately
 
 - name: priority:high
-  color: b60205
-  description: Important issue that should be addressed soon
+  color: D93F0B
+  description: Important and should be addressed soon
 
 - name: priority:medium
-  color: fbca04
+  color: FBCA04
   description: Normal priority item
 
 - name: priority:low
-  color: cccccc
-  description: Low urgency or nice-to-have
+  color: C2E0C6
+  description: Low urgency, polish, cleanup, or nice-to-have
 
 # -----------------------------
 # 🏗️ Area / Scope Labels
 # -----------------------------
 - name: area:frontend
-  color: 1d76db
-  description: Frontend, UI, or web client components
+  color: 1D76DB
+  description: Frontend app, Next.js pages, layouts, routes, or client behavior
 
-- name: area:backend
-  color: 0052cc
-  description: Backend services or APIs
+- name: area:e2e
+  color: 0052CC
+  description: End-to-end testing, browser tests, Cypress, or Playwright
 
-- name: area:infra
-  color: 0e8a16
-  description: Infrastructure, DevOps, or CI/CD
+- name: area:integrations
+  color: 006B75
+  description: External integrations, connectors, webhooks, or third-party APIs
 
-- name: area:database
-  color: f9d0c4
-  description: Schema, ORM, or database logic
+- name: area:services
+  color: 0366D6
+  description: Backend services, APIs, workers, or service apps
+
+- name: area:ui
+  color: 7057FF
+  description: Shared UI library, React components, MUI theme, or styling
+
+- name: area:config
+  color: BFDADC
+  description: Shared configuration, env loading, runtime config, or app settings
+
+- name: area:db
+  color: 8B4513
+  description: Database schema, MikroORM entities, migrations, or persistence logic
+
+- name: area:flags
+  color: 6F42C1
+  description: Feature flags, entitlements, rollout logic, or flag abstraction
+
+- name: area:libs
+  color: 4C1D95
+  description: Shared libraries, workspace packages, or cross-project code
+
+- name: area:github-actions
+  color: 24292E
+  description: GitHub Actions workflows, scripts, labels, milestones, or repo automation
+
+- name: area:cloudflare
+  color: F38020
+  description: Cloudflare Workers, Wrangler, OpenNext, routes, DNS, or edge deployment
+
+- name: area:docs
+  color: 0075CA
+  description: Documentation, architecture docs, ADRs, README, or MkDocs
+
+- name: area:kubernetes
+  color: 326CE5
+  description: Kubernetes manifests, Helm, Kustomize, RKE2, or cluster platform work
+
+- name: area:ansible
+  color: EE0000
+  description: Ansible playbooks, roles, inventory, templates, or automation
+
+- name: area:terraform
+  color: 7B42BC
+  description: Terraform modules, providers, state, or infrastructure as code
 
 - name: area:security
-  color: ffccd7
-  description: Authentication, authorization, or encryption
+  color: B60205
+  description: Auth, secrets, permissions, policy, CodeQL, scanning, or security controls
 
-- name: area:ai
-  color: 5319e7
-  description: AI/ML, inference, or model-related components
+- name: area:observability
+  color: FF69B4
+  description: Grafana, Faro, OpenTelemetry, metrics, logs, traces, alerts, or dashboards
+
+- name: area:ci
+  color: 2CBE4E
+  description: CI/CD, Nx validation, lint, tests, builds, releases, or deployment automation
+
+# -----------------------------
+# ☁️ Deployment / Cloud / Release Labels
+# -----------------------------
+- name: cloudflare
+  color: F38020
+  description: Cloudflare-specific work or configuration
+
+- name: deployment
+  color: 0052CC
+  description: Deployment, hosting, rollout, preview, or production delivery work
+
+- name: release
+  color: FF8C00
+  description: Release management, versioning, changelog, npm publishing, or GHCR publishing
+
+# -----------------------------
+# 🤖 Automation / Agentic Workflow Labels
+# -----------------------------
+- name: automation
+  color: C5DEF5
+  description: Automation, bots, scripts, generated workflows, or scheduled jobs
+
+- name: agentic-workflow
+  color: 5319E7
+  description: GitHub Agentic Workflow, gh-aw, repository agent, or AI workflow automation
+
+- name: repo-management
+  color: 0B7285
+  description: Repository labels, milestones, issue triage, PR triage, or project management
+
+- name: package-management
+  color: 6F42C1
+  description: npm packages, workspace publishing, GHCR images, or package automation
+
+- name: report
+  color: FEF2C0
+  description: Generated report, audit summary, or actionable automation finding
+
+# -----------------------------
+# 📦 Dependency Labels
+# -----------------------------
+- name: dependencies
+  color: 0366D6
+  description: Dependency updates from Dependabot, Renovate, pnpm, npm, or package metadata
+
+- name: auto-merge
+  color: 0E8A16
+  description: Eligible for automated merge after required checks pass
+
+- name: actions-update
+  color: 24292E
+  description: GitHub Actions dependency or workflow action update
+
+- name: ansible-dependencies
+  color: EE0000
+  description: Dependency updates for Ansible roles, collections, or automation
+
+- name: terraform-dependencies
+  color: 7B42BC
+  description: Dependency updates for Terraform providers, modules, or IaC
+
+- name: k8s-dependencies
+  color: 326CE5
+  description: Dependency updates for Kubernetes, Helm, charts, or manifests
 
 # -----------------------------
 # 🧠 Meta / Community Labels
 # -----------------------------
 - name: good first issue
-  color: 7057ff
-  description: Great starting point for new contributors
+  color: 7057FF
+  description: Good starting point for new contributors
 
 - name: help wanted
   color: 008672
-  description: Open for external contributions
+  description: Extra help or external contribution is welcome
 
 - name: discussion
-  color: d4c5f9
-  description: Requires further design or discussion
-
-- name: wontfix
-  color: ffffff
-  description: Decision made to not address this issue
+  color: D4C5F9
+  description: Requires design discussion, architecture discussion, or decision-making
 
 - name: duplicate
-  color: cfd3d7
-  description: Similar or duplicate of another issue
+  color: CFD3D7
+  description: Duplicate of another issue or pull request
 
 - name: invalid
-  color: e4e669
-  description: Not reproducible or not applicable
+  color: E4E669
+  description: Not reproducible, not applicable, or not valid for this repository
+
+- name: wontfix
+  color: FFFFFF
+  description: Decision made to not address this issue or request
 
 # -----------------------------
-# 🧩 Dependency / Automation Labels
+# 🛡️ Safety / Review Control Labels
 # -----------------------------
-- name: dependencies
-  color: 0366d6
-  description: Automated dependency updates (managed by Renovate)
+- name: do-not-merge
+  color: B60205
+  description: Pull request must not be merged until this label is removed
 
-- name: auto-merge
-  color: 0e8a16
-  description: Eligible for auto-merge by the bot
+- name: security-reviewed
+  color: 0E8A16
+  description: Security-sensitive change has been reviewed
 
-- name: ansible-dependencies
-  color: 006b75
-  description: Dependency updates for Ansible IaC
+- name: approved
+  color: 2CBE4E
+  description: Approved by maintainer or automation policy
 
-- name: terraform-dependencies
-  color: 0052cc
-  description: Dependency updates for Terraform IaC
-
-- name: k8s-dependencies
-  color: 1d76db
-  description: Dependency updates for Kubernetes infrastructure
+- name: merged
+  color: C2E0C6
+  description: Work has been merged or completed

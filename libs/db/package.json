@@ -3,28 +3,33 @@
   "version": "0.0.1",
   "private": false,
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "files": [
+    "**/*"
+  ],
+  "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
     "prepublishOnly": "pnpm build"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "Helix": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
     }
   },
   "dependencies": {
+    "@helix-ai/config": "workspace:*",
     "@mikro-orm/core": "^6.5.9",
     "@mikro-orm/postgresql": "^6.5.9",
-    "uuid": "^13.0.0",
-    "@helix-ai/config": "workspace:*"
+    "pg": ">=8.16.3",
+    "uuid": "^13.0.0"
   }
 }

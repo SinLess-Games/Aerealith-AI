@@ -1,24 +1,39 @@
-"use client";
+'use client';
 
-import { ThemeProvider } from './theme.provider';
-import type { Mode } from '../theme/constants';
-import FaroProvider from './faro.provider';
+import type { ReactNode } from 'react';
 
+import FaroProvider, { type FaroProviderProps } from './faro.provider.js';
+import ThemeProvider, {
+  type ThemeProviderDefaultMode,
+} from './theme.provider.js';
 
 export type HelixProvidersProps = {
-  /** 'system' uses prefers-color-scheme; otherwise force light/dark */
-  defaultMode?: 'system' | Mode;
-  children: any;
+  /**
+   * "system" uses prefers-color-scheme.
+   * Otherwise force light or dark mode.
+   */
+  defaultMode?: ThemeProviderDefaultMode;
+
+  /**
+   * Optional Faro provider configuration.
+   */
+  faro?: Omit<FaroProviderProps, 'children'>;
+
+  children: ReactNode;
 };
 
-
-export function HelixProviders({ children, defaultMode }: HelixProvidersProps) {
-
+export function HelixProviders({
+  children,
+  defaultMode = 'system',
+  faro,
+}: HelixProvidersProps) {
   return (
     <ThemeProvider defaultMode={defaultMode}>
-      <FaroProvider>
+      <FaroProvider enabled={faro?.enabled} config={faro?.config}>
         {children}
       </FaroProvider>
     </ThemeProvider>
   );
 }
+
+export default HelixProviders;

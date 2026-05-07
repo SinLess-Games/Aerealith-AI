@@ -1,10 +1,10 @@
 'use client';
 
-import { Box, Grid } from '@mui/material';
+import { Box, Grid, Typography } from '@mui/material';
 import React from 'react';
 
-import { HelixCard } from '@helix-ai/ui';
-import { Header } from '@helix-ai/ui';
+import { Header, HelixCard } from '@helix-ai/ui';
+
 import { AboutContent } from '../../content/about';
 import { headerProps } from '../../content/header';
 
@@ -13,94 +13,174 @@ type AboutSection = {
   paragraphs: React.ReactNode | React.ReactNode[];
 };
 
-const ORDER_MAP: Record<string, string> = {
-  'Meet the Team': 'order-0 sm:order-1',
-  'Who We Are': 'order-0 sm:order-2',
-  'Our Mission': 'order-0 sm:order-3',
-  'Our Story': 'order-0 sm:order-4',
+const ABOUT_IMAGE_URL = '/images/about-us.png';
+
+const ORDER_MAP: Record<string, number> = {
+  'Meet the Team': 1,
+  'Who We Are': 2,
+  'Our Mission': 3,
+  'Our Story': 4,
 };
 
-// Helper to flatten ReactNode[] into plain text for HelixCard.description
 function nodesToPlainText(nodes: React.ReactNode[]): string {
   return nodes
-    .map((n) =>
-      typeof n === 'string'
-        ? n
-        : React.isValidElement(n) &&
-            typeof (n as React.ReactElement<{ children?: React.ReactNode }>).props.children ===
-              'string'
-          ? ((n as React.ReactElement<{ children?: React.ReactNode }>).props.children as string)
-          : ''
-    )
-    .filter((str) => str.length > 0)
+    .map((node) => {
+      if (typeof node === 'string') {
+        return node;
+      }
+
+      if (
+        React.isValidElement<{ children?: React.ReactNode }>(node) &&
+        typeof node.props.children === 'string'
+      ) {
+        return node.props.children;
+      }
+
+      return '';
+    })
+    .filter((value) => value.trim().length > 0)
     .join('\n\n')
     .trim();
+}
+
+function sectionToDescription(section: AboutSection): string {
+  const paragraphs = Array.isArray(section.paragraphs)
+    ? section.paragraphs
+    : [section.paragraphs];
+
+  if (paragraphs.length === 1 && typeof paragraphs[0] === 'string') {
+    return paragraphs[0];
+  }
+
+  return nodesToPlainText(paragraphs);
 }
 
 export default function AboutPage() {
   const sections = (AboutContent as AboutSection[]) ?? [];
 
   return (
-    <Box component="div" sx={{ position: 'relative', minHeight: '100vh', color: 'white' }}>
-      <Header {...headerProps} pages={[...(headerProps.pages ?? [])]} />
+    <Box
+      component="div"
+      sx={{
+        position: 'relative',
+        minHeight: '100vh',
+        color: 'white',
+        overflow: 'hidden',
+        backgroundColor: '#050716',
 
-      <Box
-        component="main"
-        sx={{ mx: 'auto', maxWidth: 1200, px: { xs: 2, sm: 3, lg: 4 }, pb: { xs: 10, md: 14 } }}
-      >
+        '&::before': {
+          content: '""',
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
+          backgroundImage: `linear-gradient(
+              rgba(5, 7, 22, 0.42),
+              rgba(5, 7, 22, 0.72)
+            ),
+            url("${ABOUT_IMAGE_URL}")`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: { xs: 'scroll', md: 'fixed' },
+        },
+
+        '&::after': {
+          content: '""',
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+          background:
+            'radial-gradient(circle at 50% 20%, rgba(140, 82, 255, 0.22), transparent 34%), linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.55))',
+        },
+      }}
+    >
+      <Box sx={{ position: 'relative', zIndex: 2 }}>
+        <Header {...headerProps} pages={[...(headerProps.pages ?? [])]} />
+
         <Box
-          component="h1"
+          component="main"
           sx={{
-            fontSize: { xs: '2rem', md: '2.5rem' },
-            fontWeight: 'bold',
-            textAlign: 'center',
-            mb: { xs: 4, md: 6 },
+            mx: 'auto',
+            maxWidth: 1200,
+            px: { xs: 2, sm: 3, lg: 4 },
+            pt: { xs: 4, md: 6 },
+            pb: { xs: 10, md: 14 },
           }}
         >
-          About Helix AI
-        </Box>
+          <Box
+            component="section"
+            sx={{
+              textAlign: 'center',
+              mb: { xs: 4, md: 7 },
+              px: { xs: 1, md: 4 },
+            }}
+          >
+            <Typography
+              component="h1"
+              sx={{
+                fontSize: { xs: '2.5rem', sm: '3.25rem', md: '4.5rem' },
+                lineHeight: 1,
+                fontWeight: 800,
+                letterSpacing: '0.04em',
+                color: '#ffffff',
+                textShadow: '0 0 28px rgba(140, 82, 255, 0.45)',
+                mb: 2,
+              }}
+            >
+              About Helix AI
+            </Typography>
 
-        <Grid container spacing={4}>
-          {sections.map((sec) => {
-            const paras = Array.isArray(sec.paragraphs) ? sec.paragraphs : [sec.paragraphs];
-            const description =
-              paras.length === 1 && typeof paras[0] === 'string'
-                ? (paras[0] as string)
-                : nodesToPlainText(paras);
+            <Typography
+              component="p"
+              sx={{
+                mx: 'auto',
+                maxWidth: 760,
+                color: 'rgba(255, 255, 255, 0.82)',
+                fontSize: { xs: '1rem', md: '1.2rem' },
+                lineHeight: 1.7,
+              }}
+            >
+              Building intelligent systems that help people automate the
+              complex, understand their world, and elevate what they can create.
+            </Typography>
+          </Box>
 
-            return (
-              <Grid
-                size={{ xs: 12, sm: 6 }}
-                spacing={{ xs: 2, sm: 4, md: 6, lg: 8 }}
-                key={sec.title}
-                sx={{
-                  // apply ordering only on sm+ as defined
-                  order: {
-                    xs: 0,
-                    sm: parseInt(ORDER_MAP[sec.title]?.split('sm:order-')[1] ?? '0'),
-                  },
-                  padding: 1,
-                }}
-              >
-                <HelixCard
-                  title={sec.title}
-                  description={description}
-                  image="" // no image
-                  link="" // no link
+          <Grid container spacing={4}>
+            {sections.map((section) => {
+              const description = sectionToDescription(section);
+
+              return (
+                <Grid
+                  key={section.title}
+                  size={{ xs: 12, sm: 6 }}
                   sx={{
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderWidth: 1,
-                    borderStyle: 'solid',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
+                    order: {
+                      xs: 0,
+                      sm: ORDER_MAP[section.title] ?? 0,
+                    },
                   }}
-                />
-              </Grid>
-            );
-          })}
-        </Grid>
+                >
+                  <HelixCard
+                    title={section.title}
+                    description={description}
+                    sx={{
+                      height: '100%',
+                      minHeight: 340,
+                      backgroundColor: 'rgba(5, 7, 22, 0.58)',
+                      borderColor: 'rgba(255, 255, 255, 0.14)',
+                      borderWidth: 1,
+                      borderStyle: 'solid',
+                      boxShadow: '0 24px 70px rgba(0, 0, 0, 0.38)',
+                      backdropFilter: 'blur(18px) saturate(145%)',
+                      WebkitBackdropFilter: 'blur(18px) saturate(145%)',
+                    }}
+                  />
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Box>
       </Box>
     </Box>
   );

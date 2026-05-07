@@ -5,12 +5,16 @@
   "main": "./dist/index.esm.js",
   "module": "./dist/index.esm.js",
   "types": "./dist/index.esm.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
     "prepublishOnly": "pnpm build"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     "./package.json": "./package.json",
     ".": {
@@ -20,25 +24,30 @@
     }
   },
   "peerDependencies": {
-    "react": ">=18",
-    "react-dom": ">=18",
+    "@emotion/react": "11.x",
+    "@emotion/styled": "11.x",
     "@grafana/faro-react": "^1.19.0",
     "@grafana/faro-web-sdk": "^1.19.0",
     "@grafana/faro-web-tracing": "^1.19.0",
-    "@mui/material": "^7.3.5",
     "@mui/icons-material": "^7.3.5",
-    "@emotion/react": "11.x",
-    "@emotion/styled": "11.x"
+    "@mui/material": "^7.3.5",
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "peerDependenciesMeta": {
-    "@grafana/faro-react": { "optional": true }
+    "@grafana/faro-react": {
+      "optional": true
+    },
+    "@grafana/faro-web-sdk": {
+      "optional": true
+    },
+    "@grafana/faro-web-tracing": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@helix-ai/config": "workspace:*",
-    "@helix-ai/hypertune": "workspace:*",
-    "@vercel/edge-config": "^1.4.3",
-    "hypertune": "^2.10.0",
-    "material": "link:@mui/icons/material",
+    "@helix-ai/flags": "workspace:*",
     "server-only": "^0.0.1"
   },
   "devDependencies": {

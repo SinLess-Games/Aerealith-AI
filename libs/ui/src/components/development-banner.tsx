@@ -2,31 +2,75 @@
 
 import * as React from 'react';
 import AnnouncementIcon from '@mui/icons-material/Announcement';
-import { Alert, AlertTitle, type SxProps, type Theme } from '@mui/material';
-import { alpha } from '@mui/material/styles';
+import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
+import { alpha, type SxProps, type Theme } from '@mui/material/styles';
+
+export type DevelopmentBannerFixedPosition = 'top' | 'bottom' | false;
 
 export interface DevelopmentBannerProps {
-  /** Custom banner message */
+  /** Custom banner title. */
+  title?: string;
+
+  /** Custom banner message. */
   message?: string;
-  /** Optional styling overrides */
+
+  /** Optional styling overrides. */
   sx?: SxProps<Theme>;
-  /** Whether the banner is fixed at top or bottom, or not fixed */
-  fixed?: 'top' | 'bottom' | false;
+
+  /** Whether the banner is fixed at top or bottom, or not fixed. */
+  fixed?: DevelopmentBannerFixedPosition;
+
+  /** Optional test id. */
+  testId?: string;
 }
 
-export const DevelopmentBanner: React.FC<DevelopmentBannerProps> = ({
+function getFixedPositionSx(
+  fixed: DevelopmentBannerFixedPosition,
+): SxProps<Theme> {
+  if (fixed === 'top') {
+    return {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: (theme) => theme.zIndex.snackbar,
+    };
+  }
+
+  if (fixed === 'bottom') {
+    return {
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: (theme) => theme.zIndex.snackbar,
+    };
+  }
+
+  return {};
+}
+
+function mergeSx(...values: Array<SxProps<Theme> | undefined>): SxProps<Theme> {
+  const merged = values.flatMap((value) => {
+    if (!value) {
+      return [];
+    }
+
+    return Array.isArray(value) ? value : [value];
+  });
+
+  return merged as SxProps<Theme>;
+}
+
+export function DevelopmentBanner({
+  title = 'Under Development',
   message = 'This is a development environment. Features may be incomplete.',
   sx,
   fixed = false,
-}) => {
-  const positionStyles: SxProps<Theme> =
-    fixed === 'top'
-      ? { position: 'fixed', top: 0, left: 0, right: 0, zIndex: 2000 }
-      : fixed === 'bottom'
-      ? { position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 2000 }
-      : {};
-
-  const alertSx: SxProps<Theme> = (theme) => ({
+  testId = 'development-banner',
+}: DevelopmentBannerProps) {
+  const baseAlertSx: SxProps<Theme> = (theme) => ({
     borderRadius: 0,
     px: 2,
     py: 1,
@@ -45,23 +89,28 @@ export const DevelopmentBanner: React.FC<DevelopmentBannerProps> = ({
         : theme.palette.info.dark,
     backdropFilter: 'blur(6px)',
     WebkitBackdropFilter: 'blur(6px)',
-    ...positionStyles,
-    ...((sx as object) ?? {}),
   });
 
   return (
     <Alert
+      data-testid={testId}
       icon={<AnnouncementIcon fontSize="small" />}
       severity="info"
       variant="outlined"
-      sx={alertSx}
+      sx={mergeSx(baseAlertSx, getFixedPositionSx(fixed), sx)}
     >
-      <AlertTitle sx={{ fontWeight: 600, mb: 0, lineHeight: 1.3 }}>
-        Under Development
+      <AlertTitle
+        sx={{
+          fontWeight: 600,
+          mb: 0,
+          lineHeight: 1.3,
+        }}
+      >
+        {title}
       </AlertTitle>
       <span>{message}</span>
     </Alert>
   );
-};
+}
 
 export default DevelopmentBanner;

@@ -1,0 +1,11 @@
+/_next/static/*
+  Cache-Control: public,max-age=31536000,immutable
+
+/images/*
+  Cache-Control: public,max-age=86400
+
+/icons/*
+  Cache-Control: public,max-age=86400
+
+/favicon.ico
+  Cache-Control: public,max-age=86400

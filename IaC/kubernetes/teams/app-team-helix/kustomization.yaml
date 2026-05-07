@@ -1,9 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-namespace: default
-commonLabels:
-  app.kubernetes.io/part-of: helix-platform
-  helix.ai/team: app-team-helix
-  app.kubernetes.io/managed-by: kustomize
-resources:
-  - ./rbac.yaml

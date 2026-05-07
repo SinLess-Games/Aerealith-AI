@@ -108,6 +108,100 @@
       "syncGenerators": ["@nx/js:typescript-sync"],
       "configurations": {},
       "parallelism": true
+    },
+    "cf:typegen": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["cloudflare"],
+      "outputs": ["{projectRoot}/cloudflare-env.d.ts"],
+      "options": {
+        "cwd": "apps/frontend",
+        "command": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+      },
+      "configurations": {},
+      "parallelism": true
+    },
+    "cf:build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["^build"],
+      "cache": true,
+      "inputs": [
+        "production",
+        "^production",
+        "cloudflare",
+        {
+          "externalDependencies": ["next", "@opennextjs/cloudflare", "wrangler"]
+        }
+      ],
+      "outputs": ["{projectRoot}/.open-next"],
+      "options": {
+        "cwd": "apps/frontend",
+        "tty": false,
+        "command": "opennextjs-cloudflare build"
+      },
+      "syncGenerators": ["@nx/js:typescript-sync"],
+      "configurations": {},
+      "parallelism": true
+    },
+    "cf:preview": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "dependsOn": ["cf:build"],
+      "cache": false,
+      "inputs": [
+        "production",
+        "^production",
+        "cloudflare",
+        {
+          "externalDependencies": ["@opennextjs/cloudflare", "wrangler"]
+        }
+      ],
+      "options": {
+        "cwd": "apps/frontend",
+        "command": "opennextjs-cloudflare preview"
+      },
+      "configurations": {},
+      "parallelism": true
+    },
+    "cf:deploy": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["cf:build"],
+      "cache": false,
+      "inputs": [
+        "production",
+        "^production",
+        "cloudflare",
+        {
+          "externalDependencies": ["@opennextjs/cloudflare", "wrangler"]
+        }
+      ],
+      "options": {
+        "cwd": "apps/frontend",
+        "tty": false,
+        "command": "opennextjs-cloudflare deploy"
+      },
+      "configurations": {},
+      "parallelism": true
+    },
+    "cf:upload": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["cf:build"],
+      "cache": false,
+      "inputs": [
+        "production",
+        "^production",
+        "cloudflare",
+        {
+          "externalDependencies": ["@opennextjs/cloudflare", "wrangler"]
+        }
+      ],
+      "options": {
+        "cwd": "apps/frontend",
+        "tty": false,
+        "command": "opennextjs-cloudflare upload"
+      },
+      "configurations": {},
+      "parallelism": true
     }
   },
   "tags": ["npm:private"],

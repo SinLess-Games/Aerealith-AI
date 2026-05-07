@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: platform-team
-  labels:
-    app.kubernetes.io/name: platform-team
-    app.kubernetes.io/part-of: helix-platform
-    app.kubernetes.io/managed-by: fluxcd
-    helix.ai/team: platform-team

@@ -1,10 +1,10 @@
 {
   "files": [],
   "include": [],
+  "compilerOptions": {
+    "composite": true,
+  },
   "references": [
-    {
-      "path": "../hypertune"
-    },
     {
       "path": "../config"
     },

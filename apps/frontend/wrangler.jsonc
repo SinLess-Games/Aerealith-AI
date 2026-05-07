@@ -1,0 +1,24 @@
+// apps/frontend/wrangler.jsonc
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "helix-ai-frontend",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-05-07",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "helix-ai-frontend"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

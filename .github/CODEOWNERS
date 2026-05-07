@@ -1,18 +1,127 @@
-# Default owners for the Nx monorepo
+# .github/CODEOWNERS
+# =============================================================================
+# Helix AI CODEOWNERS
+# -----------------------------------------------------------------------------
+# Default review ownership for the Helix AI Nx monorepo.
+#
+# Notes:
+# - Each rule is path pattern followed by one or more owners.
+# - Later matching rules override earlier matching rules.
+# - Keep this aligned with .github/assignees.yaml.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Default owner
+# -----------------------------------------------------------------------------
 
 * @sinless777
 
+# -----------------------------------------------------------------------------
 # App surfaces
+# -----------------------------------------------------------------------------
 
+/apps/ @sinless777
 /apps/frontend/ @sinless777
+/apps/e2e/ @sinless777
+/apps/e2e/frontend-e2e/ @sinless777
+/apps/integrations/ @sinless777
 /apps/services/ @sinless777
 
+# -----------------------------------------------------------------------------
 # Shared libraries
+# -----------------------------------------------------------------------------
 
 /libs/ @sinless777
+/libs/ui/ @sinless777
+/libs/config/ @sinless777
+/libs/db/ @sinless777
+/libs/flags/ @sinless777
 
-# Infrastructure and repo config
+# -----------------------------------------------------------------------------
+# Frontend / Cloudflare deployment
+# -----------------------------------------------------------------------------
+
+/apps/frontend/next.config.js @sinless777
+/apps/frontend/project.json @sinless777
+/apps/frontend/wrangler.jsonc @sinless777
+/apps/frontend/open-next.config.ts @sinless777
+/apps/frontend/cloudflare-env.d.ts @sinless777
+/apps/frontend/public/_headers @sinless777
+
+# -----------------------------------------------------------------------------
+# Repository configuration
+# -----------------------------------------------------------------------------
+
+/.github/ @sinless777
+/.github/workflows/ @sinless777
+/.github/actions/ @sinless777
+/.github/agents/ @sinless777
+/.github/scripts/ @sinless777
+/.github/CODEOWNERS @sinless777
+/.github/assignees.yaml @sinless777
+/.github/codeql.yaml @sinless777
+/.github/dependabot.yaml @sinless777
+/.github/labeler.yaml @sinless777
+/.github/labels.yaml @sinless777
+/.github/milestones.yaml @sinless777
+/.github/renovate.json5 @sinless777
+/.github/mcp.json @sinless777
+
+# -----------------------------------------------------------------------------
+# Package / build / workspace configuration
+# -----------------------------------------------------------------------------
+
+/package.json @sinless777
+/pnpm-lock.yaml @sinless777
+/pnpm-workspace.yaml @sinless777
+/nx.json @sinless777
+/tsconfig.json @sinless777
+/tsconfig.base.json @sinless777
+
+# -----------------------------------------------------------------------------
+# Tooling and scripts
+# -----------------------------------------------------------------------------
+
+/Taskfile.yaml @sinless777
+/taskfile.yaml @sinless777
+/.taskfiles/ @sinless777
+/scripts/ @sinless777
+/tools/ @sinless777
+
+# -----------------------------------------------------------------------------
+# Documentation
+# -----------------------------------------------------------------------------
+
+/README.md @sinless777
+/Readme.md @sinless777
+/Docs/ @sinless777
+/docs/ @sinless777
+/mkdocs.yaml @sinless777
+/mkdocs.yml @sinless777
+
+# -----------------------------------------------------------------------------
+# Infrastructure
+# -----------------------------------------------------------------------------
 
 /IaC/ @sinless777
-/.github/ @sinless777
-Taskfile.yaml .taskfiles/ @sinless777
+/Infrastructure/ @sinless777
+/Kubernetes/ @sinless777
+/kubernetes/ @sinless777
+/Ansible/ @sinless777
+/ansible/ @sinless777
+/Terraform/ @sinless777
+/terraform/ @sinless777
+/Packer/ @sinless777
+/packer/ @sinless777
+/PXE/ @sinless777
+/pxe/ @sinless777
+
+# -----------------------------------------------------------------------------
+# Security-sensitive files
+# -----------------------------------------------------------------------------
+
+/.env.example @sinless777
+/.npmrc @sinless777
+/.nvmrc @sinless777
+/.node-version @sinless777
+/docker/ @sinless777

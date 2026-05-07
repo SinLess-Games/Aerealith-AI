@@ -9,6 +9,7 @@
   "files": [
     "dist"
   ],
+  "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
     "prepublishOnly": "pnpm build"
@@ -22,7 +23,6 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "Helix": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"

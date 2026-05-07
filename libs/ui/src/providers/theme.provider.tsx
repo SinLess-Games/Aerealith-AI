@@ -1,68 +1,138 @@
-// libs/ui/src/providers/theme.provider.tsx
 'use client';
 
 import * as React from 'react';
-import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material';
-import { getMuiTheme } from '../theme/mui';
-import { applyCssVars } from '../theme/cssVars';
-import type { Mode } from '../theme/constants';
+import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 
-type Props = {
-  defaultMode?: 'system' | Mode;
+import { applyCssVars } from '../theme/cssVars.js';
+import type { Mode } from '../theme/constants.js';
+import { getMuiTheme } from '../theme/mui.js';
+
+export type ThemeProviderDefaultMode = 'system' | Mode;
+
+export type ThemeProviderProps = {
+  defaultMode?: ThemeProviderDefaultMode;
   children: React.ReactNode;
 };
 
-type Ctx = {
+export type ColorModeContextValue = {
   mode: Mode;
-  setMode: (m: Mode) => void;
+  defaultMode: ThemeProviderDefaultMode;
+  setMode: (mode: Mode) => void;
   toggle: () => void;
 };
 
-export const ColorModeContext = React.createContext<Ctx | null>(null);
+export const ColorModeContext =
+  React.createContext<ColorModeContextValue | null>(null);
 
-const getSystem = (): Mode =>
-  typeof window !== 'undefined' &&
-  window.matchMedia &&
-  window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light';
+function isMode(value: unknown): value is Mode {
+  return value === 'light' || value === 'dark';
+}
 
-export function ThemeProvider({ defaultMode = 'system', children }: Props) {
-  const initial: Mode =
-    defaultMode === 'system'
-      ? (typeof document !== 'undefined' &&
-          (document.documentElement.dataset.theme as Mode)) ||
-        getSystem()
-      : defaultMode;
+function getSystemMode(): Mode {
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  ) {
+    return 'dark';
+  }
 
-  const [mode, setMode] = React.useState<Mode>(initial);
+  return 'light';
+}
 
-  // Tailwind (class strategy) + data-theme for SSR hydration friendliness
+function getDocumentMode(): Mode | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const theme = document.documentElement.dataset.theme;
+
+  return isMode(theme) ? theme : null;
+}
+
+function getInitialMode(defaultMode: ThemeProviderDefaultMode): Mode {
+  if (defaultMode !== 'system') {
+    return defaultMode;
+  }
+
+  return getDocumentMode() ?? getSystemMode();
+}
+
+function applyThemeMode(mode: Mode): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const root = document.documentElement;
+
+  root.classList.toggle('dark', mode === 'dark');
+  root.dataset.theme = mode;
+
+  applyCssVars(mode);
+}
+
+export function ThemeProvider({
+  defaultMode = 'system',
+  children,
+}: ThemeProviderProps) {
+  const [mode, setModeState] = React.useState<Mode>(() =>
+    getInitialMode(defaultMode),
+  );
+
+  const setMode = React.useCallback((nextMode: Mode): void => {
+    setModeState(nextMode);
+  }, []);
+
+  const toggle = React.useCallback((): void => {
+    setModeState((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'));
+  }, []);
+
   React.useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle('dark', mode === 'dark');
-    root.dataset.theme = mode;
-    applyCssVars(mode);
+    applyThemeMode(mode);
   }, [mode]);
 
-  // sync system changes if defaultMode === 'system'
   React.useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => setMode(mq.matches ? 'dark' : 'light');
-    mq.addEventListener?.('change', handler);
-    return () => mq.removeEventListener?.('change', handler);
+    if (defaultMode !== 'system') {
+      return undefined;
+    }
+
+    if (
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handleSystemModeChange = (): void => {
+      setModeState(mediaQuery.matches ? 'dark' : 'light');
+    };
+
+    handleSystemModeChange();
+
+    mediaQuery.addEventListener?.('change', handleSystemModeChange);
+
+    return () => {
+      mediaQuery.removeEventListener?.('change', handleSystemModeChange);
+    };
   }, [defaultMode]);
 
-  const ctx: Ctx = {
-    mode,
-    setMode,
-    toggle: () => setMode((m) => (m === 'dark' ? 'light' : 'dark')),
-  };
+  const contextValue = React.useMemo<ColorModeContextValue>(
+    () => ({
+      mode,
+      defaultMode,
+      setMode,
+      toggle,
+    }),
+    [defaultMode, mode, setMode, toggle],
+  );
 
   const muiTheme = React.useMemo(() => getMuiTheme(mode), [mode]);
 
   return (
-    <ColorModeContext.Provider value={ctx}>
+    <ColorModeContext.Provider value={contextValue}>
       <MuiThemeProvider theme={muiTheme}>
         <CssBaseline />
         {children}
@@ -71,8 +141,14 @@ export function ThemeProvider({ defaultMode = 'system', children }: Props) {
   );
 }
 
-export function useHelixColorMode() {
-  const ctx = React.useContext(ColorModeContext);
-  if (!ctx) throw new Error('useHelixColorMode must be used within HelixThemeProvider');
-  return ctx;
+export function useHelixColorMode(): ColorModeContextValue {
+  const context = React.useContext(ColorModeContext);
+
+  if (!context) {
+    throw new Error('useHelixColorMode must be used within ThemeProvider.');
+  }
+
+  return context;
 }
+
+export default ThemeProvider;

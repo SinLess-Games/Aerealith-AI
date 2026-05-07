@@ -5,6 +5,13 @@ packages:
 
 onlyBuiltDependencies:
   - '@nestjs/core'
+  - '@parcel/watcher'
   - '@swc/core'
+  - core-js
   - cypress
+  - esbuild
   - nx
+  - protobufjs
+  - sharp
+  - unrs-resolver
+  - workerd

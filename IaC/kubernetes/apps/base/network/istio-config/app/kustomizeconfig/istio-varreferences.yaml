@@ -1,9 +1,0 @@
-varReference:
-  - kind: Gateway
-    path: spec/servers/hosts
-  - kind: Certificate
-    path: spec/dnsNames
-  - kind: AuthorizationPolicy
-    path: spec/rules/from/source/ipBlocks
-  - kind: AuthorizationPolicy
-    path: spec/rules/from/source/notIpBlocks

@@ -1,8 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
-  "buildCommand": "pnpm -w -r vercel-build",
-  "crons": [],
-  "devCommand": "pnpm --filter frontend dev",
-  "framework": "nextjs"
-}

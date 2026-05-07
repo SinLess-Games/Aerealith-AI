@@ -1,13 +1,22 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  description: "Helix AI Renovate configuration for pnpm, GitHub Actions, Docker, Kubernetes, Helm, Kustomize, Terraform, and Ansible.",
+
   baseBranchPatterns: ["main"],
+
   extends: [
     "config:recommended",
     ":semanticCommits",
+    ":semanticCommitType(chore)",
+    ":semanticCommitScope(deps)",
     ":maintainLockFilesMonthly",
     ":prHourlyLimit2",
     ":label(dependencies)",
   ],
+
+  enabled: true,
+
   enabledManagers: [
     "npm",
     "dockerfile",
@@ -19,59 +28,482 @@
     "ansible-galaxy",
     "kubernetes",
   ],
+
+  timezone: "America/Boise",
+
+  schedule: [
+    "after 5pm every weekday",
+    "every weekend",
+  ],
+
   prHourlyLimit: 2,
-  labels: ["dependencies", "auto-merge"],
-  schedule: ["after 5pm every weekday", "every weekend"],
+  prConcurrentLimit: 10,
+  branchConcurrentLimit: 10,
+
+  dependencyDashboard: true,
+  dependencyDashboardTitle: "Dependency Dashboard",
+  dependencyDashboardLabels: [
+    "dependencies",
+    "repo-management",
+  ],
+
+  labels: [
+    "dependencies",
+  ],
+
+  addLabels: [
+    "status:ready",
+  ],
+
+  rebaseWhen: "behind-base-branch",
+  automergeStrategy: "merge-commit",
+
+  rangeStrategy: "bump",
+
+  commitMessagePrefix: "chore(deps):",
+  commitMessageAction: "update",
+  commitMessageTopic: "{{depName}}",
+  commitMessageExtra: "to {{newVersion}}",
+
+  lockFileMaintenance: {
+    enabled: true,
+    schedule: [
+      "before 5am on monday",
+    ],
+    labels: [
+      "dependencies",
+      "kind:chore",
+      "status:ready",
+    ],
+  },
+
+  ignorePaths: [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/.open-next/**",
+    "**/.wrangler/**",
+    "**/dist/**",
+    "**/out/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/.cache/**",
+    "**/.nx/**",
+    "**/tmp/**",
+    "apps/e2e/**",
+    "tools/scripts/**",
+  ],
+
+  npm: {
+    managerFilePatterns: [
+      "/(^|/)package\\.json$/",
+      "/(^|/)pnpm-workspace\\.yaml$/",
+      "/(^|/)\\.npmrc$/",
+    ],
+  },
+
+  dockerfile: {
+    managerFilePatterns: [
+      "/(^|/)Dockerfile$/",
+      "/(^|/)Dockerfile\\.[^/]+$/",
+      "/(^|/)docker/.+Dockerfile$/",
+    ],
+  },
+
+  "github-actions": {
+    managerFilePatterns: [
+      "/(^|/)\\.github/workflows/.+\\.ya?ml$/",
+      "/(^|/)\\.github/actions/.+/action\\.ya?ml$/",
+    ],
+  },
+
+  terraform: {
+    managerFilePatterns: [
+      "/(^|/)(Terraform|terraform)/.+\\.tf$/",
+      "/(^|/).+\\.tf$/",
+    ],
+  },
+
+  "helm-values": {
+    managerFilePatterns: [
+      "/(^|/)(Kubernetes|kubernetes)/.+values\\.ya?ml$/",
+      "/(^|/)values\\.ya?ml$/",
+    ],
+  },
+
+  kustomize: {
+    managerFilePatterns: [
+      "/(^|/)(Kubernetes|kubernetes)/.+kustomization\\.ya?ml$/",
+      "/(^|/)kustomization\\.ya?ml$/",
+    ],
+  },
+
+  helmfile: {
+    managerFilePatterns: [
+      "/(^|/)(Kubernetes|kubernetes)/.+helmfile\\.ya?ml$/",
+      "/(^|/)helmfile\\.ya?ml$/",
+    ],
+  },
+
+  kubernetes: {
+    managerFilePatterns: [
+      "/(^|/)(Kubernetes|kubernetes)/.+\\.ya?ml$/",
+    ],
+  },
+
+  "ansible-galaxy": {
+    managerFilePatterns: [
+      "/(^|/)(Ansible|ansible)/requirements\\.ya?ml$/",
+      "/(^|/)(Ansible|ansible)/.+/requirements\\.ya?ml$/",
+      "/(^|/)requirements\\.ya?ml$/",
+    ],
+  },
+
   packageRules: [
     {
+      description: "Group safe npm and pnpm patch updates and allow automerge after checks pass.",
       matchManagers: ["npm"],
       matchUpdateTypes: ["patch"],
+      matchDepTypes: [
+        "dependencies",
+        "devDependencies",
+        "optionalDependencies",
+        "peerDependencies",
+      ],
+      groupName: "npm patch dependencies",
+      labels: [
+        "dependencies",
+        "kind:chore",
+        "priority:low",
+        "status:ready",
+      ],
       automerge: true,
-      matchPackageNames: ["/.*/"],
-      matchFileNames: ["**/pnpm-lock.yaml"],
-      description: "Auto-merge npm patch updates – low risk",
+      platformAutomerge: true,
+      minimumReleaseAge: "3 days",
     },
+
     {
+      description: "Group npm and pnpm minor updates for manual review.",
       matchManagers: ["npm"],
       matchUpdateTypes: ["minor"],
+      groupName: "npm minor dependencies",
+      labels: [
+        "dependencies",
+        "kind:chore",
+        "priority:medium",
+        "status:ready",
+      ],
       automerge: false,
-      description: "Block auto-merge for npm minor updates – needs review",
+      minimumReleaseAge: "5 days",
     },
+
     {
-      matchFileNames: ["^libs/.*\\.json$"],
+      description: "Require manual review for npm and pnpm major updates.",
+      matchManagers: ["npm"],
+      matchUpdateTypes: ["major"],
+      groupName: "npm major dependencies",
+      labels: [
+        "dependencies",
+        "kind:chore",
+        "priority:high",
+        "status:ready",
+      ],
+      dependencyDashboardApproval: true,
+      automerge: false,
+      minimumReleaseAge: "7 days",
+    },
+
+    {
+      description: "Do not update local Helix workspace package references.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "/^@helix-ai\\//",
+      ],
       enabled: false,
-      matchPackageNames: ["/^@helix-ai/"],
-      description: "Disable updates on libs JSON files for @helix-ai namespace",
     },
+
     {
-      matchManagers: ["ansible-galaxy"],
-      matchFileNames: ["IaC/ansible/**"],
+      description: "Group Next.js, React, and frontend framework updates for manual review.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "next",
+        "react",
+        "react-dom",
+        "@next/**",
+        "@mui/**",
+        "@emotion/**",
+      ],
+      groupName: "frontend framework dependencies",
+      labels: [
+        "dependencies",
+        "area:frontend",
+        "area:ui",
+        "priority:high",
+        "status:ready",
+      ],
       automerge: false,
-      addLabels: ["ansible-dependencies"],
-      description: "Handle Ansible dependencies in IaC/ansible folder – manual review required",
+      dependencyDashboardApproval: true,
     },
+
     {
-      matchManagers: ["terraform"],
-      matchFileNames: ["IaC/terraform/**"],
+      description: "Group Nx workspace tooling updates for manual review.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "nx",
+        "@nx/**",
+      ],
+      groupName: "nx workspace dependencies",
+      labels: [
+        "dependencies",
+        "area:ci",
+        "kind:chore",
+        "priority:high",
+        "status:ready",
+      ],
       automerge: false,
-      addLabels: ["terraform-dependencies"],
-      groupName: "all terraform dependencies",
-      description: "Group & label Terraform updates – manual merge, less noise",
+      dependencyDashboardApproval: true,
     },
+
     {
-      matchFileNames: ["IaC/kubernetes/**"],
-      matchManagers: ["helm-values", "kustomize", "helmfile"],
+      description: "Group TypeScript, ESLint, Prettier, Jest, Vitest, and test tooling updates.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "typescript",
+        "eslint",
+        "@eslint/**",
+        "typescript-eslint",
+        "prettier",
+        "jest",
+        "@jest/**",
+        "ts-jest",
+        "vitest",
+        "@vitest/**",
+        "playwright",
+        "@playwright/**",
+        "cypress",
+      ],
+      groupName: "lint test and typescript tooling",
+      labels: [
+        "dependencies",
+        "area:ci",
+        "kind:test",
+        "priority:medium",
+        "status:ready",
+      ],
       automerge: false,
-      addLabels: ["k8s-dependencies"],
+    },
+
+    {
+      description: "Group Cloudflare and OpenNext updates for manual review.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "wrangler",
+        "@cloudflare/**",
+        "@opennextjs/cloudflare",
+      ],
+      groupName: "cloudflare deployment dependencies",
+      labels: [
+        "dependencies",
+        "area:cloudflare",
+        "cloudflare",
+        "deployment",
+        "priority:high",
+        "status:ready",
+      ],
+      automerge: false,
+      dependencyDashboardApproval: true,
+    },
+
+    {
+      description: "Group MikroORM and database driver updates for manual review.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "@mikro-orm/**",
+        "pg",
+        "uuid",
+      ],
+      groupName: "database dependencies",
+      labels: [
+        "dependencies",
+        "area:db",
+        "priority:high",
+        "status:ready",
+      ],
+      automerge: false,
+      dependencyDashboardApproval: true,
+    },
+
+    {
+      description: "Group Grafana, Faro, and observability dependencies.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "@grafana/**",
+        "@opentelemetry/**",
+        "prom-client",
+      ],
+      groupName: "observability dependencies",
+      labels: [
+        "dependencies",
+        "area:observability",
+        "priority:medium",
+        "status:ready",
+      ],
+      automerge: false,
+    },
+
+    {
+      description: "Group GitHub Actions updates for manual review.",
+      matchManagers: ["github-actions"],
+      groupName: "github actions dependencies",
+      labels: [
+        "dependencies",
+        "actions-update",
+        "area:github-actions",
+        "area:ci",
+        "automation",
+        "status:ready",
+      ],
+      automerge: false,
+    },
+
+    {
+      description: "Allow patch-level GitHub Actions updates to automerge after checks pass.",
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["patch"],
+      labels: [
+        "dependencies",
+        "actions-update",
+        "area:github-actions",
+        "area:ci",
+        "automation",
+        "priority:low",
+        "status:ready",
+      ],
+      automerge: true,
+      platformAutomerge: true,
+      minimumReleaseAge: "3 days",
+    },
+
+    {
+      description: "Group Dockerfile image updates.",
+      matchManagers: ["dockerfile"],
+      groupName: "docker image dependencies",
+      labels: [
+        "dependencies",
+        "deployment",
+        "area:ci",
+        "priority:medium",
+        "status:ready",
+      ],
+      automerge: false,
+    },
+
+    {
+      description: "Group Kubernetes manifest image updates.",
+      matchManagers: ["kubernetes"],
+      matchFileNames: [
+        "Kubernetes/**",
+        "kubernetes/**",
+      ],
+      groupName: "kubernetes manifest dependencies",
+      labels: [
+        "dependencies",
+        "k8s-dependencies",
+        "area:kubernetes",
+        "priority:medium",
+        "status:ready",
+      ],
+      automerge: false,
+    },
+
+    {
+      description: "Group Helm values, Helmfile, and Kustomize updates.",
+      matchManagers: [
+        "helm-values",
+        "helmfile",
+        "kustomize",
+      ],
+      matchFileNames: [
+        "Kubernetes/**",
+        "kubernetes/**",
+      ],
       groupName: "kubernetes infra updates",
-      description: "Updates for Kubernetes infra (charts, kustomize) – manual review",
+      labels: [
+        "dependencies",
+        "k8s-dependencies",
+        "area:kubernetes",
+        "priority:medium",
+        "status:ready",
+      ],
+      automerge: false,
+    },
+
+    {
+      description: "Group Terraform provider and module updates for manual review.",
+      matchManagers: ["terraform"],
+      matchFileNames: [
+        "Terraform/**",
+        "terraform/**",
+        "**/*.tf",
+        "**/*.tfvars",
+        "**/*.hcl",
+      ],
+      groupName: "terraform dependencies",
+      labels: [
+        "dependencies",
+        "terraform-dependencies",
+        "area:terraform",
+        "priority:medium",
+        "status:ready",
+      ],
+      automerge: false,
+      dependencyDashboardApproval: true,
+    },
+
+    {
+      description: "Group Ansible Galaxy dependency updates for manual review.",
+      matchManagers: ["ansible-galaxy"],
+      matchFileNames: [
+        "Ansible/**",
+        "ansible/**",
+        "**/requirements.yaml",
+        "**/requirements.yml",
+      ],
+      groupName: "ansible dependencies",
+      labels: [
+        "dependencies",
+        "ansible-dependencies",
+        "area:ansible",
+        "priority:medium",
+        "status:ready",
+      ],
+      automerge: false,
+      dependencyDashboardApproval: true,
+    },
+
+    {
+      description: "Mark security-related vulnerability fixes as high priority.",
+      matchVulnerabilityAlerts: true,
+      labels: [
+        "dependencies",
+        "kind:security",
+        "area:security",
+        "priority:high",
+        "status:ready",
+      ],
+      automerge: false,
+      dependencyDashboardApproval: false,
+    },
+
+    {
+      description: "Disable updates in generated or build-output package files.",
+      matchFileNames: [
+        "**/dist/**",
+        "**/build/**",
+        "**/.next/**",
+        "**/.open-next/**",
+        "**/.wrangler/**",
+      ],
+      enabled: false,
     },
   ],
-  ignorePaths: ["apps/e2e/**", "tools/scripts/**"],
-  automergeStrategy: "merge-commit",
-  rebaseWhen: "behind-base-branch",
-  dependencyDashboard: true,
-  kubernetes: {
-    managerFilePatterns: ["/IaC/kubernetes/.+\\.ya?ml$"],
-  },
 }

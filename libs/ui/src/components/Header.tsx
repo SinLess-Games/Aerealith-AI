@@ -2,22 +2,20 @@
 
 import CloseIcon from '@mui/icons-material/Close';
 import MenuIcon from '@mui/icons-material/Menu';
-import {
-  Box,
-  Button,
-  Drawer,
-  IconButton,
-  Link as MuiLink,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Stack,
-  Typography,
-  useMediaQuery,
-} from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import Image from 'next/image';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import MuiLink from '@mui/material/Link';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { alpha, useTheme, type SxProps, type Theme } from '@mui/material/styles';
+import Image, { type StaticImageData } from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
 
@@ -29,53 +27,138 @@ export interface Page {
 }
 
 export interface HeaderProps {
-  logo: string;
+  logo: string | StaticImageData;
   version: string;
   pages: Page[];
   style?: React.CSSProperties;
+  sx?: SxProps<Theme>;
+  logoAlt?: string;
+  githubReleasesUrl?: string;
+  latestReleaseApiUrl?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ logo, version, pages, style }) => {
+function normalizeVersion(version: string): string {
+  return version.trim().replace(/^v/i, '');
+}
+
+function isActivePath(pathname: string | null, url: string): boolean {
+  if (!pathname) {
+    return false;
+  }
+
+  if (url === '/') {
+    return pathname === '/';
+  }
+
+  return pathname === url || pathname.startsWith(`${url}/`);
+}
+
+export function Header({
+  logo,
+  version,
+  pages,
+  style,
+  sx,
+  logoAlt = 'Helix logo',
+  githubReleasesUrl = 'https://github.com/Sinless777/Helix/releases',
+  latestReleaseApiUrl = 'https://api.github.com/repos/Sinless777/Helix/releases/latest',
+}: HeaderProps) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [latestVersion, setLatestVersion] = React.useState<string | null>(null);
+  const [scrolled, setScrolled] = React.useState(false);
 
   const pathname = usePathname();
   const router = useRouter();
   const theme = useTheme();
-  const mdUp = useMediaQuery(theme.breakpoints.up('md'));
+  const mdUp = useMediaQuery(theme.breakpoints.up('md'), { noSsr: true });
 
   React.useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    async function loadLatestVersion(): Promise<void> {
       try {
-        const res = await fetch('https://api.github.com/repos/Sinless777/Helix/releases/latest');
-        if (!res.ok) throw new Error('bad status');
-        const data = await res.json();
-        const tag: string = data?.tag_name ?? '';
-        if (!cancelled) setLatestVersion(tag.replace(/^v/i, '') || null);
+        const response = await fetch(latestReleaseApiUrl, {
+          headers: {
+            Accept: 'application/vnd.github+json',
+          },
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error(`GitHub releases request failed: ${response.status}`);
+        }
+
+        const data = (await response.json()) as { tag_name?: string };
+        const tagName = typeof data.tag_name === 'string' ? data.tag_name : '';
+        const normalizedVersion = normalizeVersion(tagName);
+
+        if (!cancelled) {
+          setLatestVersion(normalizedVersion || null);
+        }
       } catch {
-        if (!cancelled) setLatestVersion(null);
+        if (!cancelled) {
+          setLatestVersion(null);
+        }
       }
-    })();
+    }
+
+    void loadLatestVersion();
+
     return () => {
       cancelled = true;
     };
+  }, [latestReleaseApiUrl]);
+
+  React.useEffect(() => {
+    const handleScroll = (): void => {
+      setScrolled(window.scrollY > 8);
+    };
+
+    handleScroll();
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
-  const displayVersion = latestVersion ?? version;
-  const releaseUrl = `https://github.com/Sinless777/Helix/releases/tag/v${displayVersion}`;
+  React.useEffect(() => {
+    if (mdUp) {
+      setMenuOpen(false);
+    }
+  }, [mdUp]);
 
-  const go = (href: string) => {
-    router.push(href as any);
-  };
-  const goAndClose = (href: string) => {
-    setMenuOpen(false);
-    router.push(href as any);
-  };
+  const displayVersion = latestVersion ?? normalizeVersion(version);
+  const releaseUrl = `${githubReleasesUrl}/tag/v${displayVersion}`;
+
+  const navigate = React.useCallback(
+    (href: string): void => {
+      router.push(href);
+    },
+    [router],
+  );
+
+  const navigateAndClose = React.useCallback(
+    (href: string): void => {
+      setMenuOpen(false);
+      router.push(href);
+    },
+    [router],
+  );
+
+  const headerClassName = scrolled
+    ? `${styles.header} ${styles.scrolled}`
+    : styles.header;
 
   return (
     <>
-      <Box component="header" className={styles.header} style={style}>
+      <Box
+        component="header"
+        className={headerClassName}
+        style={style}
+        sx={sx}
+      >
         <Box
           sx={{
             width: '100%',
@@ -88,42 +171,65 @@ const Header: React.FC<HeaderProps> = ({ logo, version, pages, style }) => {
             gap: 2,
           }}
         >
-          {/* Left: Logo + Version */}
-          <Stack direction="row" spacing={2}>
+          <Stack
+            direction="row"
+            spacing={2}
+            className={styles.leftSection}
+            sx={{
+              minWidth: 0,
+            }}
+          >
             <Box
-              role="link"
-              aria-label="Helix Home"
-              onClick={() => go('/')}
-              sx={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+              component="button"
+              type="button"
+              aria-label="Go to Helix home"
+              onClick={() => navigate('/')}
+              sx={{
+                p: 0,
+                m: 0,
+                border: 0,
+                background: 'transparent',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                flexShrink: 0,
+              }}
             >
-              <Image src={logo} alt="Helix logo" width={120} height={40} priority />
+              <Image
+                src={logo}
+                alt={logoAlt}
+                width={120}
+                height={40}
+                priority
+                style={{
+                  width: 'auto',
+                  height: '40px',
+                  objectFit: 'contain',
+                }}
+              />
             </Box>
 
             <MuiLink
+              className={styles.versionLink}
               href={releaseUrl}
               target="_blank"
               rel="noopener noreferrer"
               underline="none"
               sx={{
-                color: 'rgba(255,255,255,0.85)',
-                fontSize: '0.85rem',
-                '&:hover': {
-                  color: '#fff',
-                  fontWeight: 700,
-                  textShadow: '0 0 6px rgba(2,35,113,0.6)',
-                },
                 alignSelf: 'center',
+                whiteSpace: 'nowrap',
               }}
             >
               V{displayVersion}
             </MuiLink>
           </Stack>
 
-          {/* Middle: Navigation on large screens */}
-          {mdUp && (
+          {mdUp ? (
             <Stack
               component="nav"
               direction="row"
+              className={styles.middleSection}
+              aria-label="Primary navigation"
               sx={{
                 flexGrow: 1,
                 justifyContent: 'center',
@@ -135,48 +241,68 @@ const Header: React.FC<HeaderProps> = ({ logo, version, pages, style }) => {
                 px: 1,
               }}
             >
-              {pages.map((p) => {
-                const active = pathname === p.url;
+              {pages.map((page) => {
+                const active = isActivePath(pathname, page.url);
+
                 return (
                   <Button
-                    key={p.name}
-                    onClick={() => go(p.url)}
+                    key={`${page.name}:${page.url}`}
+                    onClick={() => navigate(page.url)}
+                    aria-current={active ? 'page' : undefined}
                     sx={{
                       color: 'inherit',
                       fontWeight: active ? 700 : 500,
-                      textDecorationThickness: active ? '2px' : undefined,
+                      borderBottom: active
+                        ? '2px solid #f6066f'
+                        : '2px solid transparent',
+                      borderRadius: 0,
                       whiteSpace: 'nowrap',
                       textTransform: 'none',
                       px: 1,
                       minWidth: 0,
+                      '&:hover': {
+                        color: '#f6066f',
+                        backgroundColor: 'transparent',
+                      },
                     }}
                   >
-                    {p.name}
+                    {page.name}
                   </Button>
                 );
               })}
             </Stack>
-          )}
+          ) : null}
 
-          {/* Right: menu toggle for small screens */}
-          {!mdUp && (
-            <IconButton
-              onClick={() => setMenuOpen(true)}
-              sx={{ color: '#fff' }}
-              aria-label="Open menu"
-            >
-              <MenuIcon fontSize="large" />
-            </IconButton>
-          )}
+          <Box className={styles.navSection}>
+            {!mdUp ? (
+              <IconButton
+                onClick={() => setMenuOpen(true)}
+                sx={{ color: '#fff' }}
+                aria-label="Open menu"
+                aria-expanded={menuOpen}
+                aria-controls="helix-mobile-navigation"
+              >
+                <MenuIcon fontSize="large" />
+              </IconButton>
+            ) : null}
+          </Box>
         </Box>
       </Box>
 
-      {/* Drawer for mobile navigation */}
       <Drawer
         anchor="right"
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
-        PaperProps={{ sx: { width: 300, bgcolor: '#1f1f2a', color: '#fff' } }}
+        PaperProps={{
+          id: 'helix-mobile-navigation',
+          sx: {
+            width: 300,
+            color: '#fff',
+            bgcolor: '#1f1f2a',
+            backgroundImage: 'none',
+            borderLeft: `1px solid ${alpha(theme.palette.common.white, 0.12)}`,
+          },
+        }}
       >
         <Stack
           direction="row"
@@ -184,7 +310,10 @@ const Header: React.FC<HeaderProps> = ({ logo, version, pages, style }) => {
           justifyContent="space-between"
           sx={{ px: 2, py: 2 }}
         >
-          <Typography variant="subtitle1">Menu</Typography>
+          <Typography variant="subtitle1" component="h2">
+            Menu
+          </Typography>
+
           <IconButton
             onClick={() => setMenuOpen(false)}
             sx={{ color: '#fff' }}
@@ -194,20 +323,27 @@ const Header: React.FC<HeaderProps> = ({ logo, version, pages, style }) => {
           </IconButton>
         </Stack>
 
-        <List component="nav">
-          {pages.map((p) => {
-            const active = pathname === p.url;
+        <List component="nav" aria-label="Mobile navigation">
+          {pages.map((page) => {
+            const active = isActivePath(pathname, page.url);
+
             return (
-              <ListItem key={p.name} disablePadding>
+              <ListItem key={`${page.name}:${page.url}`} disablePadding>
                 <ListItemButton
-                  onClick={() => goAndClose(p.url)}
+                  onClick={() => navigateAndClose(page.url)}
                   selected={active}
+                  aria-current={active ? 'page' : undefined}
                   sx={{
                     color: 'inherit',
-                    '&.Mui-selected': { bgcolor: 'rgba(255,255,255,.08)' },
+                    '&.Mui-selected': {
+                      bgcolor: alpha(theme.palette.common.white, 0.08),
+                    },
+                    '&.Mui-selected:hover': {
+                      bgcolor: alpha(theme.palette.common.white, 0.12),
+                    },
                   }}
                 >
-                  <ListItemText primary={p.name} />
+                  <ListItemText primary={page.name} />
                 </ListItemButton>
               </ListItem>
             );
@@ -215,10 +351,9 @@ const Header: React.FC<HeaderProps> = ({ logo, version, pages, style }) => {
         </List>
       </Drawer>
 
-      {/* Spacer so content isn’t hidden behind the fixed header */}
-      <Box sx={{ height: { xs: 64, md: 68 } }} />
+      <Box aria-hidden sx={{ height: { xs: 64, md: 72 } }} />
     </>
   );
-};
+}
 
 export default Header;

@@ -2,23 +2,15 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "strict": false,
+    "composite": true,
     "jsx": "preserve",
     "skipLibCheck": true,
     "noEmit": true,
     "emitDeclarationOnly": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "types": [
-      "node",
-      "jest",
-      "next",
-      "next/types/global"
-    ],
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "types": ["node", "jest"],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
@@ -30,16 +22,14 @@
     ]
   },
   "include": [
-    "../../apps/frontend/.next/types/**/*.ts",
-    "../../dist/apps/frontend/.next/types/**/*.ts",
-    "../../libs/ui/src",
-    ".next/types/**/*.ts",
     "next-env.d.ts",
+    ".next/types/**/*.ts",
     "src/**/*.js",
     "src/**/*.jsx",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "../../dist/apps/frontend/types/**/*.ts"
+    "../../libs/ui/src/**/*.ts",
+    "../../libs/ui/src/**/*.tsx"
   ],
   "exclude": [
     "out-tsc",

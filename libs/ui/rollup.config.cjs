@@ -1,6 +1,8 @@
 const { withNx } = require('@nx/rollup/with-nx');
 const url = require('@rollup/plugin-url');
-const svg = require('@svgr/rollup');
+const svgr = require('@svgr/rollup');
+
+const svg = svgr.default ?? svgr;
 
 module.exports = withNx(
   {
@@ -9,36 +11,51 @@ module.exports = withNx(
     tsConfig: './tsconfig.lib.json',
     compiler: 'babel',
     external: [
-      // react
+      // React
       'react',
       'react-dom',
       'react/jsx-runtime',
 
-      // helix workspaces
-      '@helix-ai/hypertune',
+      // Helix workspaces
       '@helix-ai/config',
+      '@helix-ai/flags',
 
-      // mui & emotion
+      // MUI & Emotion
       '@mui/material',
       '@mui/icons-material',
       '@emotion/react',
       '@emotion/styled',
 
-      // faro sdk (keep out of bundle!)
+      // Grafana Faro SDK
+      // Keep these out of the UI bundle.
       '@grafana/faro-react',
       '@grafana/faro-web-sdk',
       '@grafana/faro-web-tracing'
     ],
     format: ['esm'],
-    assets: [{ input: '.', output: '.', glob: 'README.md' }],
+    assets: [
+      {
+        input: '.',
+        output: '.',
+        glob: 'README.md'
+      }
+    ],
     rollupOptions: {
-      treeshake: { moduleSideEffects: false }
+      treeshake: {
+        moduleSideEffects: false
+      }
     }
   },
   {
     plugins: [
-      svg({ svgo: false, titleProp: true, ref: true }),
-      url({ limit: 10_000 })
+      svg({
+        svgo: false,
+        titleProp: true,
+        ref: true
+      }),
+      url({
+        limit: 10_000
+      })
     ]
   }
 );

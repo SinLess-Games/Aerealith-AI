@@ -4,10 +4,9 @@
 # Managed by sync-milestones workflow
 # ==========================================================
 # Each milestone entry:
-# - title: Required (unique milestone name)
+# - title: Required unique milestone name
 # - description: Markdown-supported summary
 # - state: open | closed
-# - due_on: Optional ISO 8601 date
 # ==========================================================
 
 # ----------------------------------------------------------
@@ -16,45 +15,41 @@
 - title: 🧬 v0.1.0 — MVP
   description: |
     The **Minimum Viable Product** milestone for Helix AI.
-    - Core architecture (Next.js + Convex + Cloudflare Workers)
-    - Authentication (Clerk integration)
+    - Core architecture using Next.js, Cloudflare Workers, and Nx
+    - Authentication foundation
     - Discord bot base with command framework
     - Continuous Integration and automated testing setup
     - Initial API routes for AI inference
   state: open
-  due_on: 2025-12-15
 
 - title: ⚙️ v0.2.0 — Beta
   description: |
     Beta release introducing Helix's assistant and modular Discord bot integrations.
     - DynoBot / ProBot feature parity
     - Ticket system and moderation tools
-    - Observability stack (Grafana, Loki, Prometheus)
+    - Observability stack with Grafana, Loki, Prometheus, and OpenTelemetry
     - Persistent memory system and RBAC layer
     - Early access onboarding
   state: open
-  due_on: 2026-02-15
 
 - title: 🧩 v0.3.0 — Core Expansion
   description: |
     Feature expansion and deeper integration milestone.
-    - Advanced plugin runtime (Deno/V8)
-    - Hybrid inference routing (local + cloud)
+    - Advanced plugin runtime
+    - Hybrid inference routing
     - RBAC/ABAC hybrid with tenant awareness
-    - GitHub/Discord OAuth linking
+    - GitHub and Discord OAuth linking
     - Enhanced monitoring and audit logging
   state: open
-  due_on: 2026-04-15
 
 - title: 💸 v0.4.0 — Marketplace & Billing
   description: |
     Launch of Helix Marketplace and subscription system.
     - Stripe and PayPal integration for tiers and entitlements
     - Plugin publishing flow and sandboxing
-    - Per-tenant billing & usage metrics
+    - Per-tenant billing and usage metrics
     - CI/CD enhancements and versioning system
   state: open
-  due_on: 2026-06-15
 
 - title: 📊 v0.5.0 — Analytics & Memory
   description: |
@@ -64,7 +59,6 @@
     - Event-based triggers for automations
     - Improved vector search and embedding control
   state: open
-  due_on: 2026-08-15
 
 - title: 🧠 v0.6.0 — Hybrid Intelligence
   description: |
@@ -74,17 +68,15 @@
     - Air-gapped deployment support
     - Advanced audit logging with signed append-only logs
   state: open
-  due_on: 2026-10-15
 
 - title: 🧪 v0.9.0 — Release Candidate
   description: |
     Final release stabilization and performance optimization.
-    - Load/stress testing
+    - Load and stress testing
     - CI pipeline hardening
     - UI/UX polish and accessibility improvements
     - Documentation and deployment templates
   state: open
-  due_on: 2027-04-15
 
 - title: 🌐 v1.0.0 — General Availability
   description: |
@@ -94,58 +86,55 @@
     - SLA metrics and uptime guarantees
     - Security review and final compliance pass
   state: open
-  due_on: 2027-06-15
 
 # ----------------------------------------------------------
 # 🛡️ Security & Compliance
 # ----------------------------------------------------------
-- title: '🧰 Security: Hardening & Audits (Q4 2025)'
+- title: 🧰 Security — Hardening & Audits
   description: |
     Continuous security baseline and compliance initiative.
-    - CIS & NIST benchmarks
+    - CIS and NIST benchmark alignment
     - Secrets scanning and key rotation
-    - SAST (CodeQL), DAST, and dependency vulnerability monitoring
+    - SAST, CodeQL, DAST, and dependency vulnerability monitoring
     - Security regression test suite
   state: open
-  due_on: 2025-12-31
 
-- title: '🔒 Security: Patches & CVE Triage (Rolling)'
+- title: 🔒 Security — Patches & CVE Triage
   description: |
     Ongoing vulnerability management and CVE remediation cycle.
     - CVE scanning and triage
     - Patch management automation
-    - Renovate integration for security fixes
-    - Monthly reporting and audit documentation
+    - Renovate and Dependabot integration for security fixes
+    - Recurring reporting and audit documentation
   state: open
 
 # ----------------------------------------------------------
 # ♻️ Dependency / Renovate Cycles
 # ----------------------------------------------------------
-- title: '🧩 Renovate: Weekly Dependency Updates'
+- title: 🧩 Renovate — Weekly Dependency Updates
   description: |
     Automated dependency management milestone.
-    - Automatically merge safe patch/minor updates
-    - Group updates by ecosystem (npm, GitHub Actions, Docker)
+    - Automatically merge safe patch/minor updates when policy allows
+    - Group updates by ecosystem
     - Maintain stable CI pipelines and test coverage
   state: open
 
-- title: '📦 Renovate: Monthly Rollup'
+- title: 📦 Renovate — Monthly Rollup
   description: |
     Consolidated review and merge of outstanding dependency PRs.
-    - Combine all deferred updates into a single PR
+    - Combine deferred updates into controlled review batches
     - Manual validation of lockfile and changelogs
     - Re-run integration tests before merge
   state: open
 
-- title: '🚀 Renovate: Major Upgrade Program'
+- title: 🚀 Renovate — Major Upgrade Program
   description: |
     Managed major version upgrades.
-    - Framework migrations (Next.js, NestJS, etc.)
+    - Framework migrations
     - Breaking change documentation
     - Canary releases and rollback verification
-    - Scheduled quarterly review cycle
+    - Scheduled review cycle
   state: open
-  due_on: 2026-03-31
 
 # ----------------------------------------------------------
 # 🗂️ Planning / Backlog
@@ -155,4 +144,93 @@
     Repository for future ideas, deferred features, and exploratory work.
     - Capture long-term ideas and deferred roadmap items
     - Convert into scoped milestones once prioritized
+  state: open
+
+# ----------------------------------------------------------
+# ☁️ Cloudflare / Frontend
+# ----------------------------------------------------------
+- title: ☁️ Cloudflare Setup
+  description: |
+    Cloudflare setup and deployment milestone for Helix AI.
+    - OpenNext configuration
+    - Wrangler configuration
+    - Cloudflare Workers deployment
+    - Route and domain setup for helixaibot.com
+    - Preview, rollback, and production deployment validation
+  state: open
+
+- title: 🎨 Frontend
+  description: |
+    Frontend application and UI milestone.
+    - Next.js app router pages
+    - Shared UI integration
+    - Theme and background support
+    - Layout, hero, about, contact, and marketing pages
+    - Responsive and accessibility improvements
+  state: open
+
+# ----------------------------------------------------------
+# 🤖 Automation / CI / Release
+# ----------------------------------------------------------
+- title: 🤖 Agentic Workflows
+  description: |
+    GitHub Agentic Workflow milestone.
+    - Repo manager workflow
+    - Package manager workflow
+    - Issue and PR triage automation
+    - Label, milestone, and relationship management
+    - Agent-safe outputs and workflow compilation
+  state: open
+
+- title: ⚙️ CI/CD
+  description: |
+    Continuous integration and deployment automation.
+    - Lint all projects
+    - Test all projects
+    - Build all projects
+    - Cloudflare frontend validation
+    - GitHub Actions hardening
+  state: open
+
+- title: 🚀 Release
+  description: |
+    Release, publishing, and packaging automation.
+    - npm library publishing
+    - GHCR container publishing
+    - Versioning and changelog generation
+    - GitHub Release creation
+    - Release rollback process
+  state: open
+
+# ----------------------------------------------------------
+# 🧱 Infrastructure / Observability / Documentation
+# ----------------------------------------------------------
+- title: 🏗️ Infrastructure
+  description: |
+    Infrastructure and platform milestone.
+    - Kubernetes platform work
+    - Ansible automation
+    - Terraform infrastructure
+    - Proxmox and homelab infrastructure
+    - GitOps platform services
+  state: open
+
+- title: 📈 Observability
+  description: |
+    Observability and telemetry milestone.
+    - Grafana dashboards
+    - OpenTelemetry instrumentation
+    - Logs, metrics, traces, and profiles
+    - Alerting and operational visibility
+    - Faro frontend telemetry
+  state: open
+
+- title: 📚 Documentation
+  description: |
+    Documentation and architecture milestone.
+    - README updates
+    - MkDocs documentation
+    - Architecture Decision Records
+    - Developer setup guides
+    - Deployment and operations documentation
   state: open

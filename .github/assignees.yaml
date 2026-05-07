@@ -1,10 +1,22 @@
 # .github/assignees.yaml
 # ==========================================================
-# 👥 Default Assignee Configuration
-# Managed manually or via automation in workflows
+# 👥 Helix AI Default Assignee Configuration
 # ==========================================================
-# Each section maps label or event contexts to default assignees.
-# You can extend this with workflow logic (e.g., auto-assign based on label)
+# Purpose:
+#   Central source of truth for deterministic assignment,
+#   reviewer recommendations, milestone hints, and ownership
+#   routing for issues and pull requests.
+#
+# Used by:
+#   - .github/workflows/assign.yaml
+#   - .github/scripts/assign.js
+#   - .github/workflows/repo-manager.md
+#
+# Notes:
+#   - Repo-manager may recommend owners from this file.
+#   - The deterministic assignment script should apply assignments.
+#   - Bots are listed only where useful for automation context.
+#   - If GitHub rejects a bot assignment, the script should skip it safely.
 # ==========================================================
 
 # ----------------------------------------------------------
@@ -12,77 +24,747 @@
 # ----------------------------------------------------------
 maintainers:
   - Sinless777
+
+automation_accounts:
   - github-actions[bot]
   - dependabot[bot]
   - renovate[bot]
   - github-copilot[bot]
 
 # ----------------------------------------------------------
-# 🧩 Default Auto-Assignment Rules
+# ⚙️ Global Defaults
 # ----------------------------------------------------------
-# Assigns maintainers automatically based on label or type.
-# Integrate this with a workflow like `.github/workflows/auto-assign.yaml`.
-
-rules:
-  type:bug:
-    assignees:
-      - Sinless777
-      - github-copilot[bot]
-    reviewers:
-      - Sinless777
-
-  type:feature:
-    assignees:
-      - Sinless777
-      - github-copilot[bot]
-    reviewers:
-      - Sinless777
-
-  type:chore:
-    assignees:
-      - github-actions[bot]
-    reviewers:
-      - Sinless777
-
-  type:security:
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-
-  type:docs:
-    assignees:
-      - github-copilot[bot]
-    reviewers:
-      - Sinless777
-
-  renovate:
-    assignees:
-      - renovate[bot]
-      - Sinless777
-    reviewers:
-      - Sinless777
-
-  dependabot:
-    assignees:
-      - dependabot[bot]
-      - Sinless777
-    reviewers:
-      - Sinless777
-
-  ci:
-    assignees:
-      - github-actions[bot]
-    reviewers:
-      - Sinless777
-
-# ----------------------------------------------------------
-# ⚙️ Fallback
-# ----------------------------------------------------------
-# Default fallback if no specific match found.
 default:
   assignees:
     - Sinless777
-    - github-copilot[bot]
   reviewers:
     - Sinless777
+  labels:
+    - status:backlog
+  milestone: Backlog
+
+# ----------------------------------------------------------
+# 🧠 Rule Matching Strategy
+# ----------------------------------------------------------
+# Rules are keyed by labels or automation contexts.
+#
+# Recommended script behavior:
+#   1. Match exact labels first.
+#   2. Apply all matching area labels.
+#   3. Apply one matching kind label.
+#   4. Apply one matching priority label.
+#   5. Apply one matching status label.
+#   6. Prefer the most specific milestone.
+#   7. Fall back to `default`.
+#
+# Labels should match the label families used by repo-manager:
+#   - area:*
+#   - kind:*
+#   - priority:*
+#   - status:*
+# ----------------------------------------------------------
+
+rules:
+  # --------------------------------------------------------
+  # 🧩 Kind-based ownership
+  # --------------------------------------------------------
+
+  "kind:bug":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - kind:bug
+      - status:ready
+    milestone: Backlog
+
+  "kind:feature":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - kind:feature
+      - status:backlog
+    milestone: MVP
+
+  "kind:chore":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - kind:chore
+      - status:ready
+    milestone: Backlog
+
+  "kind:refactor":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - kind:refactor
+      - status:ready
+    milestone: Backlog
+
+  "kind:security":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - kind:security
+      - area:security
+      - priority:high
+      - status:ready
+    milestone: Security
+
+  "kind:documentation":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - kind:documentation
+      - area:docs
+      - status:ready
+    milestone: Documentation
+
+  "kind:test":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - kind:test
+      - status:ready
+    milestone: CI/CD
+
+  "kind:release":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - kind:release
+      - release
+      - status:ready
+    milestone: Release
+
+  # --------------------------------------------------------
+  # 🗂️ Area-based ownership
+  # --------------------------------------------------------
+
+  "area:frontend":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:frontend
+    milestone: Frontend
+    paths:
+      - apps/frontend/**
+      - apps/e2e/frontend-e2e/**
+
+  "area:e2e":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:e2e
+      - kind:test
+    milestone: CI/CD
+    paths:
+      - apps/e2e/**
+      - apps/e2e/frontend-e2e/**
+
+  "area:integrations":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:integrations
+    milestone: MVP
+    paths:
+      - apps/integrations/**
+
+  "area:services":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:services
+    milestone: MVP
+    paths:
+      - apps/services/**
+
+  "area:ui":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:ui
+      - area:frontend
+    milestone: Frontend
+    paths:
+      - libs/ui/**
+
+  "area:config":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:config
+    milestone: MVP
+    paths:
+      - libs/config/**
+
+  "area:db":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:db
+    milestone: MVP
+    paths:
+      - libs/db/**
+
+  "area:flags":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:flags
+    milestone: MVP
+    paths:
+      - libs/flags/**
+
+  "area:libs":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:libs
+    milestone: MVP
+    paths:
+      - libs/**
+
+  "area:github-actions":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:github-actions
+      - automation
+    milestone: CI/CD
+    paths:
+      - .github/**
+
+  "area:cloudflare":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:cloudflare
+      - cloudflare
+      - deployment
+    milestone: Cloudflare Setup
+    paths:
+      - apps/frontend/wrangler.jsonc
+      - apps/frontend/open-next.config.ts
+      - apps/frontend/cloudflare-env.d.ts
+      - apps/frontend/public/_headers
+      - wrangler.toml
+      - "**/wrangler.toml"
+
+  "area:docs":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:docs
+      - kind:documentation
+    milestone: Documentation
+    paths:
+      - docs/**
+      - Docs/**
+      - README.md
+      - Readme.md
+      - "**/*.md"
+
+  "area:kubernetes":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:kubernetes
+    milestone: Infrastructure
+    paths:
+      - kubernetes/**
+      - Kubernetes/**
+
+  "area:ansible":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:ansible
+    milestone: Infrastructure
+    paths:
+      - ansible/**
+      - Ansible/**
+
+  "area:terraform":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:terraform
+    milestone: Infrastructure
+    paths:
+      - terraform/**
+      - Terraform/**
+
+  "area:security":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:security
+      - kind:security
+    milestone: Security
+    paths:
+      - .github/workflows/codeQL.yaml
+      - .github/codeql.yaml
+      - "**/*security*"
+      - "**/*auth*"
+      - "**/*policy*"
+      - "**/*secret*"
+
+  "area:observability":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:observability
+    milestone: Observability
+    paths:
+      - "**/*grafana*"
+      - "**/*faro*"
+      - "**/*otel*"
+      - "**/*opentelemetry*"
+      - "**/*prometheus*"
+      - "**/*loki*"
+      - "**/*tempo*"
+      - "**/*dashboard*"
+
+  "area:ci":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - area:ci
+      - automation
+    milestone: CI/CD
+    paths:
+      - .github/workflows/**
+      - nx.json
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - tsconfig.base.json
+
+  # --------------------------------------------------------
+  # 🚦 Priority-based ownership
+  # --------------------------------------------------------
+
+  "priority:critical":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - priority:critical
+      - status:blocked
+    milestone: MVP
+
+  "priority:high":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - priority:high
+      - status:ready
+    milestone: MVP
+
+  "priority:medium":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - priority:medium
+    milestone: Backlog
+
+  "priority:low":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - priority:low
+      - status:backlog
+    milestone: Backlog
+
+  # --------------------------------------------------------
+  # 📌 Status-based ownership
+  # --------------------------------------------------------
+
+  "status:blocked":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - status:blocked
+    milestone: Backlog
+
+  "status:needs-info":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - status:needs-info
+    milestone: Backlog
+
+  "status:ready":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - status:ready
+    milestone: Backlog
+
+  "status:backlog":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - status:backlog
+    milestone: Backlog
+
+  "status:in-progress":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - status:in-progress
+    milestone: MVP
+
+  # --------------------------------------------------------
+  # 🤖 Agentic workflow ownership
+  # --------------------------------------------------------
+
+  "agentic-workflow":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - agentic-workflow
+      - automation
+      - area:github-actions
+    milestone: Agentic Workflows
+    paths:
+      - .github/workflows/*.md
+      - .github/workflows/*.lock.yml
+      - .github/agents/**
+      - .github/mcp.json
+
+  "repo-management":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - repo-management
+      - automation
+      - area:github-actions
+    milestone: Agentic Workflows
+    paths:
+      - .github/workflows/repo-manager.md
+      - .github/workflows/repo-manager.lock.yml
+      - .github/assignees.yaml
+      - .github/labels.yaml
+      - .github/labeler.yaml
+      - .github/milestones.yaml
+
+  # --------------------------------------------------------
+  # 📦 Release / dependency ownership
+  # --------------------------------------------------------
+
+  "release":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - release
+      - kind:release
+    milestone: Release
+    paths:
+      - .github/workflows/publish-libs.yaml
+      - .github/workflows/container-build-publish.yaml
+      - .github/workflows/package-manager.md
+      - .github/workflows/package-manager.lock.yml
+
+  "dependencies":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - dependencies
+      - kind:chore
+    milestone: Backlog
+    paths:
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+
+  "deployment":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - deployment
+    milestone: Cloudflare Setup
+
+  "cloudflare":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - cloudflare
+      - area:cloudflare
+      - deployment
+    milestone: Cloudflare Setup
+
+  # --------------------------------------------------------
+  # 🤖 Bot / automation contexts
+  # --------------------------------------------------------
+
+  renovate:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - dependencies
+      - kind:chore
+      - automation
+    milestone: Backlog
+
+  dependabot:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - dependencies
+      - kind:security
+      - automation
+    milestone: Security
+
+  github-actions:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - automation
+      - area:github-actions
+    milestone: CI/CD
+
+  github-copilot:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    labels:
+      - agentic-workflow
+      - automation
+    milestone: Agentic Workflows
+
+# ----------------------------------------------------------
+# 🧭 Milestone Routing Hints
+# ----------------------------------------------------------
+# Repo-manager and assignment scripts can use this map when
+# a label or changed path does not already provide a milestone.
+# ----------------------------------------------------------
+
+milestones:
+  Backlog:
+    description: Future work, unclear priority, or deferred work.
+    labels:
+      - status:backlog
+      - priority:low
+
+  MVP:
+    description: Critical MVP-facing feature work or launch blockers.
+    labels:
+      - priority:critical
+      - priority:high
+      - kind:feature
+
+  Frontend:
+    description: Frontend application, UI, pages, layout, app router, and shared UI components.
+    labels:
+      - area:frontend
+      - area:ui
+
+  Cloudflare Setup:
+    description: Cloudflare Workers, OpenNext, Wrangler, deployment, DNS, and domain routing.
+    labels:
+      - area:cloudflare
+      - cloudflare
+      - deployment
+
+  Infrastructure:
+    description: Kubernetes, Ansible, Terraform, Proxmox, homelab, and platform infrastructure.
+    labels:
+      - area:kubernetes
+      - area:ansible
+      - area:terraform
+
+  Security:
+    description: Security scanning, CodeQL, secrets, auth, policy, permissions, and supply-chain work.
+    labels:
+      - area:security
+      - kind:security
+
+  Observability:
+    description: Grafana, Faro, OpenTelemetry, logs, metrics, traces, alerts, and dashboards.
+    labels:
+      - area:observability
+
+  Agentic Workflows:
+    description: gh-aw, repo-manager, package-manager, workflow agents, and GitHub automation agents.
+    labels:
+      - agentic-workflow
+      - repo-management
+
+  Documentation:
+    description: Docs, ADRs, README, MkDocs, and architecture documentation.
+    labels:
+      - area:docs
+      - kind:documentation
+
+  Release:
+    description: npm publishing, GHCR publishing, versioning, changelog, and release automation.
+    labels:
+      - release
+      - kind:release
+
+  CI/CD:
+    description: GitHub Actions, lint, tests, builds, Nx, package-manager automation, and validation pipelines.
+    labels:
+      - area:ci
+      - area:github-actions
+      - automation
+
+# ----------------------------------------------------------
+# 🔗 Relationship Routing Hints
+# ----------------------------------------------------------
+# Repo-manager should use these as signals when associating
+# issues and pull requests.
+# ----------------------------------------------------------
+
+relationships:
+  strong_keywords:
+    - fixes
+    - fixed
+    - closes
+    - closed
+    - resolves
+    - resolved
+    - related to
+    - refs
+    - references
+
+  weak_keywords:
+    - update
+    - fix
+    - frontend
+    - workflow
+    - docs
+    - config
+    - build
+
+  require_strong_evidence: true
+
+  relationship_footer:
+    start: "<!-- repo-manager:relationships:start -->"
+    end: "<!-- repo-manager:relationships:end -->"
+
+  same_repo_link_format:
+    issue: "#{{number}}"
+    pull_request: "#{{number}}"
+
+# ----------------------------------------------------------
+# 🛡️ Safety
+# ----------------------------------------------------------
+safety:
+  do_not_assign_without_matching_rule: true
+  do_not_assign_bots_when_github_rejects: true
+  do_not_create_milestones: true
+  do_not_delete_labels: true
+  do_not_delete_milestones: true
+  do_not_close_issues: true
+  do_not_merge_pull_requests: true
+
+  protected_labels:
+    - security-reviewed
+    - approved
+    - merged
+    - do-not-merge
+
+  replace_status_labels:
+    - status:needs-info
+    - status:ready
+    - status:backlog
+    - status:blocked
+    - status:in-progress
+
+  replace_priority_labels:
+    - priority:low
+    - priority:medium
+    - priority:high
+    - priority:critical

@@ -2,18 +2,43 @@
 
 import { type ReactNode, useEffect } from 'react';
 
-import { initFaro } from '../utils/faro';
+import { initFaro, type FaroClientConfig } from '../utils/faro.js';
 
-type FaroProviderProps = {
+export type FaroProviderProps = {
   children: ReactNode;
+
+  /**
+   * Allows Faro to be explicitly disabled from the app layer.
+   *
+   * Defaults to true and still respects @helix-ai/config.
+   */
+  enabled?: boolean;
+
+  /**
+   * Optional runtime overrides for Faro config.
+   *
+   * Values here override @helix-ai/config and NEXT_PUBLIC_* env values.
+   */
+  config?: Partial<FaroClientConfig>;
 };
 
-export function FaroProvider({ children }: FaroProviderProps) {
+export function FaroProvider({
+  children,
+  enabled = true,
+  config = {},
+}: FaroProviderProps) {
   useEffect(() => {
-    initFaro();
-  }, []);
+    if (!enabled) {
+      return;
+    }
 
-  return children;
+    initFaro({
+      ...config,
+      enabled: config.enabled ?? enabled,
+    });
+  }, [enabled, config]);
+
+  return <>{children}</>;
 }
 
 export default FaroProvider;

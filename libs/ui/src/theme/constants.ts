@@ -20,33 +20,58 @@ export type ThemePalette = {
   accentForeground: ColorFormats;
 };
 
+export type ThemeMode = 'light' | 'dark';
+export type Mode = ThemeMode;
+
+const HEX_COLOR_PATTERN = /^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/;
+
+const clampAlpha = (alpha: number): number => Math.min(1, Math.max(0, alpha));
+
 const normalizeHex = (hex: string): string => {
-  const stripped = hex.replace('#', '').trim();
-  if (stripped.length === 3) {
-    return stripped.split('').map((c) => c + c).join('').toUpperCase();
+  const stripped = hex.trim().replace(/^#/, '');
+
+  if (!HEX_COLOR_PATTERN.test(stripped)) {
+    throw new Error(`Invalid hex color: "${hex}"`);
   }
-  if (stripped.length !== 6) throw new Error(`Invalid hex color: "${hex}"`);
+
+  if (stripped.length === 3) {
+    return stripped
+      .split('')
+      .map((character) => `${character}${character}`)
+      .join('')
+      .toUpperCase();
+  }
+
   return stripped.toUpperCase();
 };
 
 const hexToRgb = (hex: string): [number, number, number] => {
-  const n = Number.parseInt(normalizeHex(hex), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const normalizedHex = normalizeHex(hex);
+  const numericValue = Number.parseInt(normalizedHex, 16);
+
+  return [
+    (numericValue >> 16) & 255,
+    (numericValue >> 8) & 255,
+    numericValue & 255,
+  ];
 };
 
 const alphaToHex = (alpha: number): string =>
-  Math.round(Math.min(1, Math.max(0, alpha)) * 255)
+  Math.round(clampAlpha(alpha) * 255)
     .toString(16)
     .padStart(2, '0')
     .toUpperCase();
 
 const createColor = (hex: string, alpha = 1): ColorFormats => {
-  const [r, g, b] = hexToRgb(hex);
-  const base = `#${normalizeHex(hex)}`;
+  const normalizedAlpha = clampAlpha(alpha);
+  const normalizedHex = normalizeHex(hex);
+  const [red, green, blue] = hexToRgb(normalizedHex);
+  const baseHex = `#${normalizedHex}`;
+
   return {
-    hex: alpha >= 1 ? base : `${base}${alphaToHex(alpha)}`,
-    rgb: `rgb(${r}, ${g}, ${b})`,
-    rgba: `rgba(${r}, ${g}, ${b}, ${Number(alpha.toFixed(3))})`,
+    hex: normalizedAlpha >= 1 ? baseHex : `${baseHex}${alphaToHex(normalizedAlpha)}`,
+    rgb: `rgb(${red}, ${green}, ${blue})`,
+    rgba: `rgba(${red}, ${green}, ${blue}, ${Number(normalizedAlpha.toFixed(3))})`,
   };
 };
 
@@ -78,9 +103,10 @@ export const darkTheme: ThemePalette = {
   accentForeground: createColor('#052421'),
 };
 
-export const themes = { light: lightTheme, dark: darkTheme } as const;
-export type ThemeMode = keyof typeof themes;
-export type Mode = ThemeMode;
+export const themes = {
+  light: lightTheme,
+  dark: darkTheme,
+} as const satisfies Record<ThemeMode, ThemePalette>;
 
 export const HELIX_COLORS = {
   light: {

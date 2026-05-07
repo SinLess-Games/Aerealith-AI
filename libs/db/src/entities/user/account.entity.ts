@@ -2,61 +2,96 @@
 
 import {
   Entity,
-  Property,
   Index,
-  ManyToOne,
   LoadStrategy,
+  ManyToOne,
+  Property,
+  Unique,
   type Rel,
 } from '@mikro-orm/core';
-import { BaseEntity } from '../../entity.base';
-import { User } from './user.entity';
+
+import { BaseEntity } from '../../entity.base.js';
+import { User } from './user.entity.js';
+
+export type UserAccountStatus = 'active' | 'revoked' | 'suspended' | 'expired';
 
 /**
  * UserAccount
  *
- * Represents an external authentication or integration account
- * linked to a {@link User}.
+ * Represents an external authentication or integration account linked to a User.
  *
- * Examples: Google, GitHub, Discord OAuth accounts.
+ * Examples:
+ * - Google OAuth account
+ * - GitHub OAuth account
+ * - Discord OAuth account
  *
  * Table: user_account
  */
 @Entity({ tableName: 'user_account' })
-@Index({ name: 'idx_account_user', properties: ['user'] })
-@Index({ name: 'idx_account_provider', properties: ['provider', 'accountId'] })
+@Index({ name: 'idx_user_account_user', properties: ['user'] })
+@Index({ name: 'idx_user_account_provider', properties: ['provider'] })
+@Index({
+  name: 'idx_user_account_provider_account_id',
+  properties: ['provider', 'accountId'],
+})
+@Unique({
+  name: 'uq_user_account_provider_account_id',
+  properties: ['provider', 'accountId'],
+})
 export class UserAccount extends BaseEntity {
   /**
-   * Foreign key reference to the owning {@link User}.
-   * Each account must belong to exactly one user.
+   * Owning user.
+   *
+   * Each linked external account belongs to exactly one Helix user.
    */
   @ManyToOne(() => User, {
     fieldName: 'user_id',
     nullable: false,
     strategy: LoadStrategy.JOINED,
+    deleteRule: 'cascade',
+    updateRule: 'cascade',
   })
   user!: Rel<User>;
 
-  /** External provider name (e.g., "google", "github", "discord"). */
+  /** External provider name, for example: google, github, discord. */
   @Property({ type: 'text' })
   provider!: string;
 
-  /** Identifier of the account within the provider’s system. */
-  @Property({ type: 'text' })
+  /** Provider-side account identifier. */
+  @Property({ type: 'text', fieldName: 'account_id' })
   accountId!: string;
 
-  /** Display name of the linked account (e.g., "John Doe (Google)"). */
-  @Property({ type: 'text' })
+  /** Human-readable display name for the linked account. */
+  @Property({ type: 'text', fieldName: 'display_name' })
   displayName!: string;
 
-  /** Optional management or settings URL for the provider account. */
-  @Property({ type: 'text', nullable: true })
+  /** Optional provider account management/settings URL. */
+  @Property({ type: 'text', fieldName: 'management_url', nullable: true })
   managementUrl?: string;
 
-  /** Connection status ("active", "revoked", "suspended", etc.). */
-  @Property({ type: 'text', nullable: true })
-  status?: string;
+  /** Current connection status. */
+  @Property({ type: 'text', default: 'active' })
+  status: UserAccountStatus = 'active';
 
-  /** Unix timestamp (ms) when the account was connected. */
-  @Property({ type: 'bigint', default: Date.now() })
-  connectedAt: number = Date.now();
+  /** Timestamp for when the account was connected. */
+  @Property({
+    type: 'datetime',
+    columnType: 'timestamptz',
+    fieldName: 'connected_at',
+    defaultRaw: 'CURRENT_TIMESTAMP',
+  })
+  connectedAt: Date = new Date();
+
+  /**
+   * Stable deterministic ID seed.
+   *
+   * This makes the entity ID stable for the same provider/account pair.
+   */
+  protected override getDeterministicIdSeed(): string | undefined {
+    if (!this.provider || !this.accountId) {
+      return undefined;
+    }
+
+    return `${this.provider}:${this.accountId}`;
+  }
 }

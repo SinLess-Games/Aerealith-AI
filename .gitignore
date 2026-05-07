@@ -21,7 +21,6 @@ test-output/
 *.tgz
 *.swp
 
-
 # Local runtime data
 null
 
@@ -36,9 +35,10 @@ node_modules/
 .yarnrc.yml
 yarn-error.log
 
-# Lockfiles (keep one per policy)
-# package-lock.json
-# yarn.lock
+# Lockfiles
+# Keep pnpm-lock.yaml committed.
+package-lock.json
+yarn.lock
 
 # ─────────────────────────────────────────────
 # Environment & secrets
@@ -53,22 +53,34 @@ yarn-error.log
 # ─────────────────────────────────────────────
 # IDEs & editors
 # ─────────────────────────────────────────────
-
 .idea/
 *.code-workspace
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+.vscode-test/
 
+# Keep VS Code workspace settings if committed intentionally.
+# Uncomment this if you want all local VS Code settings ignored.
+# .vscode/
+
+# ─────────────────────────────────────────────
 # OS junk
+# ─────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 ehthumbs.db
 desktop.ini
 *.tmp
+*~
+.trash/
+.nfs*
 
 # ─────────────────────────────────────────────
 # Logs & diagnostics
 # ─────────────────────────────────────────────
 logs/
-*.log
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
@@ -88,45 +100,48 @@ docker-compose.override.yml
 # Local development tooling
 # ─────────────────────────────────────────────
 .envrc
-.direnv
+.direnv/
 .local/
 .secret/
 .mitmproxy/
 
 # ─────────────────────────────────────────────
-# JetBrains / VS / Misc
+# Nx specific
 # ─────────────────────────────────────────────
-*.iml
-*.ipr
-*.iws
-.idea_modules/
-*.vs/
-.vscode-test/
+.nx/
 
-# ─────────────────────────────────────────────
-# Mac/Linux temp
-# ─────────────────────────────────────────────
-*~
-.trash/
-.nfs*
-
-# ─────────────────────────────────────────────
-# NX specific
-# ─────────────────────────────────────────────
 # Ignore generated files from Nx plugins
 libs/**/src/generated/
 apps/**/src/generated/
 
-.nx/
-.vercel
+# ─────────────────────────────────────────────
+# Vercel
+# ─────────────────────────────────────────────
+.vercel/
 
 # ─────────────────────────────────────────────
-# Docker
+# OpenNext / Cloudflare Workers
+# ─────────────────────────────────────────────
+
+# OpenNext output
+.open-next/
+apps/**/.open-next/
+
+# Cloudflare local state
+.wrangler/
+apps/**/.wrangler/
+
+# Cloudflare local env files
+.dev.vars
+.dev.vars.*
+apps/**/.dev.vars
+apps/**/.dev.vars.*
+
+# Wrangler generated type output may be committed if wanted.
+# Uncomment if you want it ignored instead.
+# apps/**/cloudflare-env.d.ts
+
+# ─────────────────────────────────────────────
+# Project-specific generated files
 # ─────────────────────────────────────────────
 docker/hashicorp/certs/
-
-
-# ─────────────────────────────────────────────
-# Individual Files
-# ─────────────────────────────────────────────
-IaC/kubernetes/bootstrap/sops-age.yaml

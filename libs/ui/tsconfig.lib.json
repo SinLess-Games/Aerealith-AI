@@ -20,9 +20,6 @@
   },
   "references": [
     {
-      "path": "../hypertune/tsconfig.lib.json"
-    },
-    {
       "path": "../config/tsconfig.lib.json"
     }
   ],

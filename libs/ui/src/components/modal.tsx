@@ -1,46 +1,60 @@
 'use client';
 
 import CloseIcon from '@mui/icons-material/Close';
-import {
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Stack,
-  Typography,
-  type DialogProps,
-} from '@mui/material';
-import { type ReactNode } from 'react';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import type { DialogProps } from '@mui/material/Dialog';
+import type { SxProps, Theme } from '@mui/material/styles';
+import { type ReactNode, useId } from 'react';
 
 export type PrimitiveModalProps = {
-  /** Whether the modal is open */
+  /** Whether the modal is open. */
   open: boolean;
 
-  /** Called when modal closes (either backdrop click or close button) */
+  /** Called when modal closes from backdrop, escape, or close button. */
   onClose: () => void;
 
-  /** Optional onClose passthrough for <Dialog> */
+  /** Optional Dialog onClose passthrough. */
   onDialogClose?: DialogProps['onClose'];
 
-  /** Optional modal title (string or node) */
+  /** Optional modal title. */
   title?: ReactNode;
 
-  /** Optional short description below title */
+  /** Optional short description below title. */
   description?: ReactNode;
 
-  /** Optional footer actions (buttons, etc.) */
+  /** Optional footer actions. */
   actions?: ReactNode;
 
-  /** Main content of the modal */
+  /** Main modal content. */
   children: ReactNode;
 
-  /** Show or hide the “X” close button (defaults to true) */
+  /** Show or hide the close button. */
   showCloseButton?: boolean;
 
-  /** Adds dividers between title/content/actions (defaults to false) */
+  /** Adds dividers between title/content/actions. */
   dividers?: boolean;
+
+  /** Optional style overrides for the Dialog paper. */
+  paperSx?: SxProps<Theme>;
 } & Omit<DialogProps, 'open' | 'onClose' | 'children'>;
+
+function mergeSx(...values: Array<SxProps<Theme> | undefined>): SxProps<Theme> {
+  const merged = values.flatMap((value) => {
+    if (!value) {
+      return [];
+    }
+
+    return Array.isArray(value) ? value : [value];
+  });
+
+  return merged as SxProps<Theme>;
+}
 
 export function PrimitiveModal({
   open,
@@ -55,73 +69,27 @@ export function PrimitiveModal({
   maxWidth = 'sm',
   fullWidth = true,
   scroll = 'paper',
+  paperSx,
+  PaperProps,
+  'aria-labelledby': ariaLabelledBy,
+  'aria-describedby': ariaDescribedBy,
   ...dialogProps
 }: PrimitiveModalProps) {
+  const generatedTitleId = useId();
+  const generatedDescriptionId = useId();
+
+  const hasHeader = Boolean(title || description || showCloseButton);
+  const titleId = ariaLabelledBy ?? (title ? generatedTitleId : undefined);
+  const descriptionId =
+    ariaDescribedBy ?? (description ? generatedDescriptionId : undefined);
+
   const handleDialogClose: DialogProps['onClose'] = (event, reason) => {
-    if (onDialogClose) onDialogClose(event, reason);
+    onDialogClose?.(event, reason);
     onClose();
   };
 
-  const renderHeader = () => {
-    if (!title && !description && !showCloseButton) return null;
-
-    return (
-      <DialogTitle sx={{ pb: description ? 0.5 : 1 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
-          <Stack spacing={0.5} flexGrow={1} overflow="hidden">
-            {typeof title === 'string' ? (
-              <Typography
-                variant="h6"
-                noWrap
-                sx={{
-                  fontWeight: 600,
-                  textOverflow: 'ellipsis',
-                  overflow: 'hidden',
-                  color: 'text.primary',
-                }}
-              >
-                {title}
-              </Typography>
-            ) : (
-              title
-            )}
-            {description &&
-              (typeof description === 'string' ? (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{
-                    lineHeight: 1.4,
-                    display: 'block',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {description}
-                </Typography>
-              ) : (
-                description
-              ))}
-          </Stack>
-
-          {showCloseButton && (
-            <IconButton
-              aria-label="close"
-              onClick={onClose}
-              edge="end"
-              sx={{
-                ml: 1,
-                mt: 0.25,
-                color: 'text.secondary',
-                '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-              }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          )}
-        </Stack>
-      </DialogTitle>
-    );
+  const handleCloseButtonClick = (): void => {
+    onClose();
   };
 
   return (
@@ -131,18 +99,94 @@ export function PrimitiveModal({
       maxWidth={maxWidth}
       fullWidth={fullWidth}
       scroll={scroll}
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
       PaperProps={{
-        sx: {
-          borderRadius: 3,
-          backgroundImage: 'none',
-          bgcolor: 'background.paper',
-          boxShadow: 24,
-          overflow: 'hidden',
-        },
+        ...PaperProps,
+        sx: mergeSx(
+          {
+            borderRadius: 3,
+            backgroundImage: 'none',
+            bgcolor: 'background.paper',
+            boxShadow: 24,
+            overflow: 'hidden',
+          },
+          PaperProps?.sx,
+          paperSx,
+        ),
       }}
       {...dialogProps}
     >
-      {renderHeader()}
+      {hasHeader ? (
+        <DialogTitle id={titleId} sx={{ pb: description ? 0.5 : 1 }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="flex-start"
+            gap={1}
+          >
+            <Stack spacing={0.5} flexGrow={1} overflow="hidden">
+              {typeof title === 'string' ? (
+                <Typography
+                  variant="h6"
+                  component="span"
+                  noWrap
+                  sx={{
+                    display: 'block',
+                    fontWeight: 600,
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    color: 'text.primary',
+                  }}
+                >
+                  {title}
+                </Typography>
+              ) : (
+                title
+              )}
+
+              {description ? (
+                typeof description === 'string' ? (
+                  <Typography
+                    id={descriptionId}
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      lineHeight: 1.4,
+                      display: 'block',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {description}
+                  </Typography>
+                ) : (
+                  <span id={descriptionId}>{description}</span>
+                )
+              ) : null}
+            </Stack>
+
+            {showCloseButton ? (
+              <IconButton
+                aria-label="Close modal"
+                onClick={handleCloseButtonClick}
+                edge="end"
+                sx={{
+                  ml: 1,
+                  mt: 0.25,
+                  color: 'text.secondary',
+                  '&:hover': {
+                    color: 'text.primary',
+                    bgcolor: 'action.hover',
+                  },
+                }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            ) : null}
+          </Stack>
+        </DialogTitle>
+      ) : null}
 
       <DialogContent
         dividers={dividers}
@@ -155,7 +199,7 @@ export function PrimitiveModal({
         {children}
       </DialogContent>
 
-      {actions && (
+      {actions ? (
         <DialogActions
           sx={{
             px: 3,
@@ -165,7 +209,7 @@ export function PrimitiveModal({
         >
           {actions}
         </DialogActions>
-      )}
+      ) : null}
     </Dialog>
   );
 }

@@ -2,18 +2,23 @@
 
 import {
   Entity,
+  Index,
+  LoadStrategy,
   OneToOne,
   Property,
-  Index,
   Unique,
   type Rel,
 } from '@mikro-orm/core';
-import { BaseEntity } from '../../entity.base';
-import { User } from './user.entity';
+
+import { BaseEntity } from '../../entity.base.js';
+import { User } from './user.entity.js';
+
+export type UserProfileLinks = Record<string, string | undefined>;
 
 /**
  * UserProfile
- * Owns a 1:1 relationship to User and stores public profile data.
+ *
+ * Stores public-facing profile data for a Helix user.
  *
  * Table: user_profile
  */
@@ -23,29 +28,66 @@ import { User } from './user.entity';
 @Index({ name: 'idx_user_profile_handle', properties: ['handle'] })
 export class UserProfile extends BaseEntity {
   /**
-   * Owning side of the 1:1 relation.
-   * FK lives in this table and is UNIQUE via the decorator above.
+   * Owning side of the one-to-one user/profile relationship.
+   *
+   * The foreign key lives on this table as user_id.
    */
-  @OneToOne(() => User, (u) => u.profile, {
+  @OneToOne(() => User, (user) => user.profile, {
     owner: true,
+    fieldName: 'user_id',
     nullable: false,
     unique: true,
+    strategy: LoadStrategy.JOINED,
+    deleteRule: 'cascade',
+    updateRule: 'cascade',
   })
   user!: Rel<User>;
 
-  /** Public handle/alias (unique). */
+  /** Public handle/alias. Must be unique across all user profiles. */
   @Property({ type: 'text' })
   handle!: string;
 
-  /** Optional avatar URL. */
-  @Property({ type: 'text', nullable: true })
+  /** Optional avatar image URL. */
+  @Property({ type: 'text', fieldName: 'avatar_url', nullable: true })
   avatarUrl?: string;
 
-  /** Optional short bio/description. */
+  /** Optional short public bio/description. */
   @Property({ type: 'text', nullable: true })
   bio?: string;
 
-  /** External links (e.g., { github, discord, website }). */
-  @Property({ type: 'jsonb', nullable: true })
-  links?: Record<string, unknown>;
+  /**
+   * Optional external profile links.
+   *
+   * Example:
+   * {
+   *   "github": "https://github.com/sinless777",
+   *   "website": "https://helixaibot.com"
+   * }
+   */
+  @Property({
+    type: 'json',
+    columnType: 'jsonb',
+    nullable: true,
+  })
+  links?: UserProfileLinks;
+
+  /**
+   * Stable deterministic ID seed.
+   *
+   * Prefer the owning user ID when available so profile IDs remain stable even
+   * when handles change.
+   */
+  protected override getDeterministicIdSeed(): string | undefined {
+    const userId = this.user?.id;
+
+    if (userId) {
+      return `user-profile:${userId}`;
+    }
+
+    if (this.handle) {
+      return `user-profile:${this.handle}`;
+    }
+
+    return undefined;
+  }
 }
