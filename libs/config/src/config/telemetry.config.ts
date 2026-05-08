@@ -43,7 +43,7 @@ export function createTelemetryConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as TelemetryConfig;
 }
 
 export function buildTelemetryConfigOverrides(

@@ -34,6 +34,7 @@ export const appRuntimeSchema = z.union([
   z.literal('nextjs'),
   z.literal('cloudflare-worker'),
   z.literal('node'),
+  z.literal('nodejs'),
   z.literal('container'),
   z.literal('kubernetes'),
   z.literal('local'),
@@ -106,7 +107,67 @@ export const publicTokensSchema = z
   })
   .strict();
 
-export const appSchema = z
+type CloudflareSchemaOutput = z.output<typeof cloudflareSchema>;
+
+type DatabaseSchemaOutput = z.output<typeof databaseSchema>;
+
+type AppCloudflareWorkerInput = Partial<AppConfig['cloudflare']['worker']> & {
+  name?: string;
+  runtime?: string;
+};
+
+type AppDatabaseInstanceInput = Partial<
+  AppConfig['database']['instances'][string]
+> & {
+  provider?: string;
+};
+
+function normalizeAppCloudflareConfig(
+  value: CloudflareSchemaOutput,
+): AppConfig['cloudflare'] {
+  const worker = (value.worker ?? {}) as AppCloudflareWorkerInput;
+
+  return {
+    ...value,
+    worker: {
+      ...worker,
+      name: worker.name ?? 'helix-frontend-dev',
+      runtime: worker.runtime ?? (value.enabled ? 'cloudflare-worker' : 'nodejs'),
+    },
+  } as AppConfig['cloudflare'];
+}
+
+function normalizeAppDatabaseConfig(
+  value: DatabaseSchemaOutput,
+): AppConfig['database'] {
+  const provider = value.provider ?? 'postgres';
+
+  const instances = Object.fromEntries(
+    Object.entries(value.instances ?? {}).map(([key, instance]) => {
+      const normalizedInstance = instance as AppDatabaseInstanceInput;
+
+      return [
+        key,
+        {
+          ...normalizedInstance,
+          provider: normalizedInstance.provider ?? provider,
+        },
+      ];
+    }),
+  );
+
+  return {
+    ...value,
+    provider,
+    instances,
+  } as AppConfig['database'];
+}
+
+const appCloudflareSchema = cloudflareSchema.transform(normalizeAppCloudflareConfig);
+
+const appDatabaseSchema = databaseSchema.transform(normalizeAppDatabaseConfig);
+
+const appSchemaInternal = z
   .object({
     environment: appEnvironmentSchema.default('development'),
 
@@ -117,14 +178,19 @@ export const appSchema = z
       displayName: 'Helix AI',
     }),
 
-    cloudflare: cloudflareSchema.default({
+    cloudflare: appCloudflareSchema.default({
       enabled: false,
       defaultEnvironment: 'development',
       account: {},
+      worker: {
+        name: 'helix-frontend-dev',
+        runtime: 'nodejs',
+      },
     }),
 
-    database: databaseSchema.default({
+    database: appDatabaseSchema.default({
       enabled: false,
+      provider: 'postgres',
       defaultInstance: 'primary',
       instances: {},
     }),
@@ -293,6 +359,18 @@ export const appSchema = z
     }
 
     if (
+      value.cloudflare.enabled &&
+      value.cloudflare.worker?.runtime !== 'cloudflare-worker'
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['cloudflare', 'worker', 'runtime'],
+        message:
+          'cloudflare.worker.runtime should be cloudflare-worker when cloudflare.enabled is true.',
+      });
+    }
+
+    if (
       value.environment === 'production' &&
       value.security.environment !== 'production'
     ) {
@@ -327,11 +405,13 @@ export const appSchema = z
         message: 'app.url must use HTTPS in production.',
       });
     }
-  }) satisfies z.ZodType<AppConfig>;
+  });
 
-export type AppConfigInput = z.input<typeof appSchema>;
+export const appSchema = appSchemaInternal as unknown as z.ZodType<AppConfig>;
 
-export type AppConfigOutput = z.output<typeof appSchema>;
+export type AppConfigInput = z.input<typeof appSchemaInternal>;
+
+export type AppConfigOutput = z.output<typeof appSchemaInternal>;
 
 export function parseAppConfig(input: AppConfigInput): AppConfig {
   return appSchema.parse(input);

@@ -2,53 +2,30 @@ import { z } from 'zod';
 
 import type { StorageConfig } from '../types/storage';
 
-const optionalNonEmptyStringSchema = z.string().trim().min(1).optional();
+const nonEmptyStringSchema = z.string().trim().min(1);
+
+const optionalNonEmptyStringSchema = nonEmptyStringSchema.optional();
 
 const optionalUrlSchema = z.string().trim().url().optional();
 
-const stringArraySchema = z.array(z.string().trim().min(1)).default([]);
+const stringArraySchema = z.array(nonEmptyStringSchema).default([]);
 
 const metadataSchema = z.record(
   z.string(),
   z.union([z.string(), z.number(), z.boolean(), z.null()]),
 );
 
-export const storageProviderSchema = z.union([
-  z.literal('cloudflare-r2'),
-  z.literal('s3'),
-  z.literal('minio'),
-  z.literal('local'),
-  z.literal('memory'),
-  z.string().trim().min(1),
-]);
+export const storageProviderSchema = nonEmptyStringSchema;
 
-export const storageAccessModeSchema = z.union([
-  z.literal('private'),
-  z.literal('public-read'),
-  z.literal('signed-url'),
-  z.literal('worker-mediated'),
-  z.string().trim().min(1),
-]);
+export const storageAccessModeSchema = nonEmptyStringSchema;
 
-export const storageObjectCategorySchema = z.union([
-  z.literal('uploads'),
-  z.literal('avatars'),
-  z.literal('attachments'),
-  z.literal('exports'),
-  z.literal('artifacts'),
-  z.literal('logs'),
-  z.literal('backups'),
-  z.literal('datasets'),
-  z.literal('models'),
-  z.literal('memory'),
-  z.string().trim().min(1),
-]);
+export const storageObjectCategorySchema = nonEmptyStringSchema;
 
 export const storageBucketSchema = z
   .object({
-    name: z.string().trim().min(1),
+    name: nonEmptyStringSchema,
 
-    bucket: z.string().trim().min(1),
+    bucket: nonEmptyStringSchema,
 
     binding: optionalNonEmptyStringSchema,
 
@@ -78,7 +55,29 @@ export const storageBucketSchema = z
 
     allowedContentTypes: stringArraySchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    if (
+      value.accessMode === 'public-read' &&
+      !value.publicUrl &&
+      !value.cdnUrl
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['publicUrl'],
+        message:
+          'publicUrl or cdnUrl should be provided when accessMode is public-read.',
+      });
+    }
+
+    if (value.prefix && value.prefix.startsWith('/')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['prefix'],
+        message: 'prefix should not start with "/".',
+      });
+    }
+  });
 
 export const s3CompatibleStorageSchema = z
   .object({
@@ -130,11 +129,20 @@ export const storageSchema = z
       return;
     }
 
+    if (value.provider === 'disabled') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['provider'],
+        message: 'An enabled storage config cannot use provider "disabled".',
+      });
+    }
+
     if (Object.keys(value.buckets).length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['buckets'],
-        message: 'At least one storage bucket is required when storage is enabled.',
+        message:
+          'At least one storage bucket is required when storage is enabled.',
       });
     }
 
@@ -144,6 +152,17 @@ export const storageSchema = z
         path: ['defaultBucket'],
         message: 'defaultBucket must reference a key in buckets.',
       });
+    }
+
+    for (const [bucketKey, bucket] of Object.entries(value.buckets)) {
+      if (bucket.name !== bucketKey) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['buckets', bucketKey, 'name'],
+          message:
+            'Storage bucket name should match its registry key for predictable lookups.',
+        });
+      }
     }
 
     if (value.provider === 'cloudflare-r2') {
@@ -160,6 +179,42 @@ export const storageSchema = z
     }
 
     if (
+      value.provider === 's3' ||
+      value.provider === 'minio' ||
+      value.provider === 'cloudflare-r2'
+    ) {
+      const needsS3Credentials =
+        value.provider === 's3' || value.provider === 'minio';
+
+      if (needsS3Credentials && !value.s3?.accessKeyIdRef) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['s3', 'accessKeyIdRef'],
+          message:
+            's3.accessKeyIdRef is required when using an S3-compatible storage provider.',
+        });
+      }
+
+      if (needsS3Credentials && !value.s3?.secretAccessKeyRef) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['s3', 'secretAccessKeyRef'],
+          message:
+            's3.secretAccessKeyRef is required when using an S3-compatible storage provider.',
+        });
+      }
+    }
+
+    if (value.provider === 'local' && !value.local?.rootDirectory) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['local', 'rootDirectory'],
+        message:
+          'local.rootDirectory is required when storage provider is local.',
+      });
+    }
+
+    if (
       value.signedUploadsEnabled &&
       (!value.signedUrlTtlSeconds || value.signedUrlTtlSeconds <= 0)
     ) {
@@ -170,14 +225,14 @@ export const storageSchema = z
           'signedUrlTtlSeconds is required when signedUploadsEnabled is true.',
       });
     }
-  }) satisfies z.ZodType<StorageConfig>;
+  });
 
 export type StorageConfigInput = z.input<typeof storageSchema>;
 
 export type StorageConfigOutput = z.output<typeof storageSchema>;
 
 export function parseStorageConfig(input: StorageConfigInput): StorageConfig {
-  return storageSchema.parse(input);
+  return storageSchema.parse(input) as StorageConfig;
 }
 
 export function safeParseStorageConfig(input: unknown) {

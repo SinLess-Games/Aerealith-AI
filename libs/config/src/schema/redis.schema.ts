@@ -15,37 +15,11 @@ const metadataSchema = z.record(
   z.union([z.string(), z.number(), z.boolean(), z.null()]),
 );
 
-export const redisProviderSchema = z.union([
-  z.literal('redis'),
-  z.literal('valkey'),
-  z.literal('upstash'),
-  z.literal('dragonfly'),
-  z.literal('elasticache'),
-  z.literal('memory'),
-  z.literal('disabled'),
-  nonEmptyStringSchema,
-]);
+export const redisProviderSchema = nonEmptyStringSchema;
 
-export const redisTransportSchema = z.union([
-  z.literal('tcp'),
-  z.literal('tls'),
-  z.literal('http'),
-  z.literal('rest'),
-  z.literal('cloudflare-binding'),
-  z.literal('memory'),
-  nonEmptyStringSchema,
-]);
+export const redisTransportSchema = nonEmptyStringSchema;
 
-export const redisRoleSchema = z.union([
-  z.literal('cache'),
-  z.literal('session'),
-  z.literal('rate-limit'),
-  z.literal('queue'),
-  z.literal('pubsub'),
-  z.literal('lock'),
-  z.literal('feature-flags'),
-  nonEmptyStringSchema,
-]);
+export const redisRoleSchema = nonEmptyStringSchema;
 
 export const redisTlsSchema = z
   .object({
@@ -105,7 +79,7 @@ export const redisConnectionSchema = z
 
     database: z.number().int().nonnegative().optional(),
 
-    transport: redisTransportSchema,
+    transport: redisTransportSchema.default('tcp'),
 
     tls: redisTlsSchema.optional(),
 
@@ -178,7 +152,7 @@ export const redisConnectionSchema = z
       });
     }
 
-    if (value.transport === 'tls' && value.tls?.enabled === false) {
+    if (value.transport === 'tls' && value.tls?.enabled !== true) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['tls', 'enabled'],
@@ -242,11 +216,11 @@ export const redisInstanceSchema = z
   .object({
     name: nonEmptyStringSchema,
 
-    enabled: z.boolean(),
+    enabled: z.boolean().default(true),
 
-    provider: redisProviderSchema,
+    provider: redisProviderSchema.default('redis'),
 
-    role: redisRoleSchema,
+    role: redisRoleSchema.default('cache'),
 
     connection: redisConnectionSchema,
 
@@ -321,15 +295,23 @@ export const redisSchema = z
       return;
     }
 
-    if (Object.keys(value.instances).length === 0) {
+    const instanceCount = Object.keys(value.instances).length;
+    const hasLegacyConnection = Boolean(value.url || (value.host && value.port));
+
+    if (instanceCount === 0 && !hasLegacyConnection) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['instances'],
-        message: 'At least one Redis instance is required when Redis is enabled.',
+        message:
+          'At least one Redis instance or a top-level Redis url/host+port is required when Redis is enabled.',
       });
     }
 
-    if (value.defaultInstance && !(value.defaultInstance in value.instances)) {
+    if (
+      value.defaultInstance &&
+      instanceCount > 0 &&
+      !(value.defaultInstance in value.instances)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['defaultInstance'],
@@ -347,14 +329,14 @@ export const redisSchema = z
         });
       }
     }
-  }) satisfies z.ZodType<RedisConfig>;
+  });
 
 export type RedisConfigInput = z.input<typeof redisSchema>;
 
 export type RedisConfigOutput = z.output<typeof redisSchema>;
 
 export function parseRedisConfig(input: RedisConfigInput): RedisConfig {
-  return redisSchema.parse(input);
+  return redisSchema.parse(input) as RedisConfig;
 }
 
 export function safeParseRedisConfig(input: unknown) {

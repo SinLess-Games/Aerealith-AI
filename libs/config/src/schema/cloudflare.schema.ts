@@ -13,9 +13,7 @@ const metadataSchema = z.record(
   z.union([z.string(), z.number(), z.boolean(), z.null()]),
 );
 
-const cloudflareVarValueSchema: z.ZodType<
-  string | number | boolean | null | Record<string, unknown>
-> = z.union([
+const cloudflareVarValueSchema = z.union([
   z.string(),
   z.number(),
   z.boolean(),
@@ -23,69 +21,19 @@ const cloudflareVarValueSchema: z.ZodType<
   z.record(z.string(), z.unknown()),
 ]);
 
-export const cloudflareEnvironmentSchema = z.union([
-  z.literal('development'),
-  z.literal('preview'),
-  z.literal('staging'),
-  z.literal('production'),
-  z.literal('test'),
-  nonEmptyStringSchema,
-]);
+export const cloudflareEnvironmentSchema = nonEmptyStringSchema;
 
-export const cloudflareWorkerRuntimeSchema = z.union([
-  z.literal('workers'),
-  z.literal('pages'),
-  z.literal('workers-static-assets'),
-  z.literal('opennext'),
-  nonEmptyStringSchema,
-]);
+export const cloudflareWorkerRuntimeSchema = nonEmptyStringSchema;
 
-export const cloudflareRouteModeSchema = z.union([
-  z.literal('route'),
-  z.literal('custom-domain'),
-  z.literal('workers-dev'),
-  z.literal('preview'),
-  nonEmptyStringSchema,
-]);
+export const cloudflareRouteModeSchema = nonEmptyStringSchema;
 
-export const cloudflareBindingKindSchema = z.union([
-  z.literal('vars'),
-  z.literal('secrets'),
-  z.literal('kv'),
-  z.literal('r2'),
-  z.literal('queue'),
-  z.literal('durable-object'),
-  z.literal('d1'),
-  z.literal('hyperdrive'),
-  z.literal('vectorize'),
-  z.literal('service'),
-  z.literal('workflow'),
-  z.literal('ai'),
-  z.literal('analytics-engine'),
-  z.literal('browser-rendering'),
-  z.literal('dispatch-namespace'),
-  nonEmptyStringSchema,
-]);
+export const cloudflareBindingKindSchema = nonEmptyStringSchema;
 
-export const cloudflareServiceBindingModeSchema = z.union([
-  z.literal('fetch'),
-  z.literal('rpc'),
-  nonEmptyStringSchema,
-]);
+export const cloudflareServiceBindingModeSchema = nonEmptyStringSchema;
 
-export const cloudflareQueueRoleSchema = z.union([
-  z.literal('producer'),
-  z.literal('consumer'),
-  z.literal('producer-consumer'),
-  nonEmptyStringSchema,
-]);
+export const cloudflareQueueRoleSchema = nonEmptyStringSchema;
 
-export const cloudflareDurableObjectStorageSchema = z.union([
-  z.literal('sqlite'),
-  z.literal('kv'),
-  z.literal('none'),
-  nonEmptyStringSchema,
-]);
+export const cloudflareDurableObjectStorageSchema = nonEmptyStringSchema;
 
 export const cloudflareRouteSchema = z
   .object({
@@ -95,9 +43,9 @@ export const cloudflareRouteSchema = z
 
     zoneId: optionalNonEmptyStringSchema,
 
-    mode: cloudflareRouteModeSchema,
+    mode: cloudflareRouteModeSchema.default('route'),
 
-    enabled: z.boolean(),
+    enabled: z.boolean().default(true),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -131,7 +79,7 @@ export const cloudflareCustomDomainSchema = z
 
     zoneId: optionalNonEmptyStringSchema,
 
-    enabled: z.boolean(),
+    enabled: z.boolean().default(true),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -161,11 +109,7 @@ export const cloudflareSecretsSchema = z
     optional: stringArraySchema.optional(),
 
     localFile: z
-      .union([
-        z.literal('.dev.vars'),
-        z.literal('.env'),
-        nonEmptyStringSchema,
-      ])
+      .union([z.literal('.dev.vars'), z.literal('.env'), nonEmptyStringSchema])
       .optional(),
   })
   .strict();
@@ -202,7 +146,7 @@ export const cloudflareQueueBindingSchema = z
 
     queueName: nonEmptyStringSchema,
 
-    role: cloudflareQueueRoleSchema,
+    role: cloudflareQueueRoleSchema.default('producer'),
 
     eventTypes: stringArraySchema.optional(),
 
@@ -278,7 +222,7 @@ export const cloudflareServiceBindingSchema = z
 
     entrypoint: optionalNonEmptyStringSchema,
 
-    mode: cloudflareServiceBindingModeSchema,
+    mode: cloudflareServiceBindingModeSchema.default('fetch'),
 
     purpose: optionalNonEmptyStringSchema,
   })
@@ -288,7 +232,7 @@ export const cloudflareServiceBindingSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['entrypoint'],
-        message: 'entrypoint is recommended when service binding mode is rpc.',
+        message: 'entrypoint is required when service binding mode is rpc.',
       });
     }
   });
@@ -309,7 +253,7 @@ export const cloudflareAiBindingSchema = z
   .object({
     binding: nonEmptyStringSchema,
 
-    enabled: z.boolean(),
+    enabled: z.boolean().default(true),
 
     defaultModel: optionalNonEmptyStringSchema,
   })
@@ -329,7 +273,7 @@ export const cloudflareBrowserRenderingBindingSchema = z
   .object({
     binding: nonEmptyStringSchema,
 
-    enabled: z.boolean(),
+    enabled: z.boolean().default(true),
   })
   .strict();
 
@@ -365,9 +309,7 @@ export const cloudflareBindingsSchema = z
       .record(z.string(), cloudflareD1DatabaseBindingSchema)
       .optional(),
 
-    hyperdrive: z
-      .record(z.string(), cloudflareHyperdriveBindingSchema)
-      .optional(),
+    hyperdrive: z.record(z.string(), cloudflareHyperdriveBindingSchema).optional(),
 
     vectorize: z.record(z.string(), cloudflareVectorizeBindingSchema).optional(),
 
@@ -390,9 +332,7 @@ export const cloudflareBindingsSchema = z
   .strict()
   .superRefine((value, ctx) => {
     const validateRegistryKeys = <T extends { binding: string }>(
-      registry:
-        | Record<string, T>
-        | undefined,
+      registry: Record<string, T> | undefined,
       path: string,
     ) => {
       if (!registry) {
@@ -446,7 +386,7 @@ export const cloudflareWorkerSchema = z
   .object({
     name: nonEmptyStringSchema,
 
-    runtime: cloudflareWorkerRuntimeSchema,
+    runtime: cloudflareWorkerRuntimeSchema.default('workers'),
 
     main: optionalNonEmptyStringSchema,
 
@@ -472,7 +412,12 @@ export const cloudflareWorkerSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.runtime === 'opennext' && !value.compatibilityFlags?.includes('nodejs_compat')) {
+    const compatibilityFlags = value.compatibilityFlags ?? [];
+
+    if (
+      value.runtime === 'opennext' &&
+      !compatibilityFlags.includes('nodejs_compat')
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['compatibilityFlags'],
@@ -591,16 +536,34 @@ export const cloudflareSchema = z
     }
 
     if (!value.account.zoneName && !value.account.zoneId) {
-      const hasRouteZone =
+      const hasWorkerRouteZone =
         value.worker?.routes?.some((route) => route.zoneName || route.zoneId) ??
         false;
 
-      const hasCustomDomainZone =
+      const hasWorkerCustomDomainZone =
         value.worker?.customDomains?.some(
           (domain) => domain.zoneName || domain.zoneId,
         ) ?? false;
 
-      if (!hasRouteZone && !hasCustomDomainZone) {
+      const hasEnvironmentRouteZone =
+        Object.values(value.environments ?? {}).some((environment) =>
+          environment.routes?.some((route) => route.zoneName || route.zoneId),
+        );
+
+      const hasEnvironmentCustomDomainZone = Object.values(
+        value.environments ?? {},
+      ).some((environment) =>
+        environment.customDomains?.some(
+          (domain) => domain.zoneName || domain.zoneId,
+        ),
+      );
+
+      if (
+        !hasWorkerRouteZone &&
+        !hasWorkerCustomDomainZone &&
+        !hasEnvironmentRouteZone &&
+        !hasEnvironmentCustomDomainZone
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['account', 'zoneName'],
@@ -611,7 +574,9 @@ export const cloudflareSchema = z
     }
 
     if (value.environments) {
-      for (const [environmentKey, environment] of Object.entries(value.environments)) {
+      for (const [environmentKey, environment] of Object.entries(
+        value.environments,
+      )) {
         if (environment.name !== environmentKey) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -647,7 +612,7 @@ export const cloudflareSchema = z
         });
       }
     }
-  }) satisfies z.ZodType<CloudflareConfig>;
+  });
 
 export type CloudflareConfigInput = z.input<typeof cloudflareSchema>;
 
@@ -656,7 +621,7 @@ export type CloudflareConfigOutput = z.output<typeof cloudflareSchema>;
 export function parseCloudflareConfig(
   input: CloudflareConfigInput,
 ): CloudflareConfig {
-  return cloudflareSchema.parse(input);
+  return cloudflareSchema.parse(input) as CloudflareConfig;
 }
 
 export function safeParseCloudflareConfig(input: unknown) {

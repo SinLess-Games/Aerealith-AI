@@ -60,7 +60,7 @@ export function createGithubConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as GithubConfig;
 }
 
 export function buildGithubConfigOverrides(

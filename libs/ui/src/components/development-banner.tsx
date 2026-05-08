@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import AnnouncementIcon from '@mui/icons-material/Announcement';
 import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';

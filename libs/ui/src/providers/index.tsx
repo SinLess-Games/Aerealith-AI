@@ -1,19 +1,19 @@
-export { HelixProviders } from './providers.js';
-export type { HelixProvidersProps } from './providers.js';
+export { HelixProviders } from './providers';
+export type { HelixProvidersProps } from './providers';
 
 export {
   ThemeProvider,
   ColorModeContext,
   useHelixColorMode,
-} from './theme.provider.js';
+} from './theme.provider';
 
 export type {
   ColorModeContextValue,
   ThemeProviderDefaultMode,
   ThemeProviderProps,
-} from './theme.provider.js';
+} from './theme.provider';
 
-export { FaroProvider } from './faro.provider.js';
-export type { FaroProviderProps } from './faro.provider.js';
+export { FaroProvider } from './faro.provider';
+export type { FaroProviderProps } from './faro.provider';
 
-export type { Mode, ThemeMode } from '../theme/constants.js';
+export type { Mode, ThemeMode } from '../theme/constants';

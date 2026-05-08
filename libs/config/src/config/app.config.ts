@@ -64,7 +64,7 @@ export function createAppConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as AppConfig;
 }
 
 export function buildAppConfigOverrides(
@@ -237,8 +237,18 @@ function applyPublicRuntimeOverrides(
     setDeepValue(overrides, 'publicRuntime.release', release);
   }
 
-  applyOptionalString(env, overrides, 'NEXT_PUBLIC_FARO_URL', 'publicRuntime.faroUrl');
-  applyOptionalString(env, overrides, 'PUBLIC_FARO_URL', 'publicRuntime.faroUrl');
+  applyOptionalString(
+    env,
+    overrides,
+    'NEXT_PUBLIC_FARO_URL',
+    'publicRuntime.faroUrl',
+  );
+  applyOptionalString(
+    env,
+    overrides,
+    'PUBLIC_FARO_URL',
+    'publicRuntime.faroUrl',
+  );
 
   applyOptionalString(
     env,
@@ -287,7 +297,11 @@ function applyModuleOverrides(
     overrides,
     'cloudflare',
     createCloudflareConfig(env, {
-      profile: isCloudflareProfile ? 'production' : isLocalProfile ? 'local' : 'default',
+      profile: isCloudflareProfile
+        ? 'production'
+        : isLocalProfile
+          ? 'local'
+          : 'default',
     }),
   );
 
@@ -307,7 +321,11 @@ function applyModuleOverrides(
     overrides,
     'storage',
     createStorageConfig(env, {
-      profile: isCloudflareProfile ? 'cloudflare-r2' : isLocalProfile ? 'local' : 'default',
+      profile: isCloudflareProfile
+        ? 'cloudflare-r2'
+        : isLocalProfile
+          ? 'local'
+          : 'default',
     }),
   );
 
@@ -347,7 +365,11 @@ function applyModuleOverrides(
     overrides,
     'security',
     createSecurityConfig(env, {
-      profile: isCloudflareProfile ? 'production' : isLocalProfile ? 'local' : 'default',
+      profile: isCloudflareProfile
+        ? 'production'
+        : isLocalProfile
+          ? 'local'
+          : 'default',
     }),
   );
 
@@ -363,11 +385,7 @@ function applyModuleOverrides(
     }),
   );
 
-  setDeepValue(
-    overrides,
-    'telemetry',
-    createTelemetryConfig(env),
-  );
+  setDeepValue(overrides, 'telemetry', createTelemetryConfig(env));
 
   setDeepValue(
     overrides,
@@ -385,7 +403,11 @@ function applyModuleOverrides(
     overrides,
     'redis',
     createRedisConfig(env, {
-      profile: isCloudflareProfile ? 'upstash' : isLocalProfile ? 'local' : 'auto',
+      profile: isCloudflareProfile
+        ? 'upstash'
+        : isLocalProfile
+          ? 'local'
+          : 'auto',
     }),
   );
 }
@@ -425,6 +447,7 @@ function applyDerivedAppOverrides(
     setDeepValue(overrides, 'runtime', 'cloudflare-worker');
     setDeepValue(overrides, 'cloudflare.enabled', true);
     setDeepValue(overrides, 'cloudflare.defaultEnvironment', environment);
+    setDeepValue(overrides, 'cloudflare.worker.runtime', 'cloudflare-worker');
   }
 
   if (environment === 'production') {
@@ -467,7 +490,11 @@ function applyDerivedAppOverrides(
   const profileEncryptionKey = getEnv(env, 'PROFILE_ENCRYPTION_KEY');
 
   if (profileEncryptionKey !== undefined) {
-    setDeepValue(overrides, 'telemetry.profileEncryptionKey', profileEncryptionKey);
+    setDeepValue(
+      overrides,
+      'telemetry.profileEncryptionKey',
+      profileEncryptionKey,
+    );
   }
 }
 

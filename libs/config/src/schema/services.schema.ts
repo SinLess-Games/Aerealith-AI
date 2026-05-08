@@ -15,55 +15,19 @@ const metadataSchema = z.record(
   z.union([z.string(), z.number(), z.boolean(), z.null()]),
 );
 
-export const serviceProtocolSchema = z.union([
-  z.literal('http'),
-  z.literal('https'),
-  z.literal('grpc'),
-  z.literal('websocket'),
-  z.literal('cloudflare-service-binding'),
-  z.literal('cloudflare-rpc'),
-  z.literal('queue'),
-  z.literal('event'),
-  z.literal('internal'),
-  nonEmptyStringSchema,
-]);
+export const serviceProtocolSchema = nonEmptyStringSchema;
 
-export const serviceRuntimeSchema = z.union([
-  z.literal('cloudflare-worker'),
-  z.literal('cloudflare-durable-object'),
-  z.literal('cloudflare-workflow'),
-  z.literal('node'),
-  z.literal('container'),
-  z.literal('kubernetes'),
-  z.literal('browser'),
-  z.literal('external-saas'),
-  z.literal('unknown'),
-  nonEmptyStringSchema,
-]);
+export const serviceRuntimeSchema = nonEmptyStringSchema;
 
-export const serviceExposureSchema = z.union([
-  z.literal('public'),
-  z.literal('private'),
-  z.literal('internal'),
-  z.literal('edge'),
-  z.literal('admin'),
-  z.literal('webhook'),
-  nonEmptyStringSchema,
-]);
+export const serviceExposureSchema = nonEmptyStringSchema;
 
-export const serviceHealthStatusSchema = z.union([
-  z.literal('healthy'),
-  z.literal('degraded'),
-  z.literal('unhealthy'),
-  z.literal('unknown'),
-  nonEmptyStringSchema,
-]);
+export const serviceHealthStatusSchema = nonEmptyStringSchema;
 
 export const serviceEndpointSchema = z
   .object({
     name: nonEmptyStringSchema,
 
-    protocol: serviceProtocolSchema,
+    protocol: serviceProtocolSchema.default('internal'),
 
     url: optionalUrlSchema,
 
@@ -73,7 +37,7 @@ export const serviceEndpointSchema = z
 
     timeoutMs: z.number().int().positive().optional(),
 
-    exposure: serviceExposureSchema,
+    exposure: serviceExposureSchema.default('internal'),
 
     headers: z.record(z.string(), z.string()).optional(),
 
@@ -130,9 +94,9 @@ export const serviceQueueSchema = z
 
     eventTypes: stringArraySchema.optional(),
 
-    consumes: z.boolean().optional(),
+    consumes: z.boolean().default(false),
 
-    publishes: z.boolean().optional(),
+    publishes: z.boolean().default(true),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -157,7 +121,7 @@ export const serviceDependencySchema = z
   .object({
     service: nonEmptyStringSchema,
 
-    required: z.boolean(),
+    required: z.boolean().default(true),
 
     protocol: serviceProtocolSchema.optional(),
 
@@ -171,7 +135,7 @@ export const serviceDependencySchema = z
 
 export const serviceRetrySchema = z
   .object({
-    enabled: z.boolean(),
+    enabled: z.boolean().default(false),
 
     attempts: z.number().int().nonnegative().optional(),
 
@@ -210,7 +174,7 @@ export const serviceRetrySchema = z
 
 export const serviceRateLimitSchema = z
   .object({
-    enabled: z.boolean(),
+    enabled: z.boolean().default(false),
 
     limit: z.number().int().positive().optional(),
 
@@ -247,9 +211,9 @@ export const serviceSchema = z
 
     displayName: optionalNonEmptyStringSchema,
 
-    enabled: z.boolean(),
+    enabled: z.boolean().default(true),
 
-    runtime: serviceRuntimeSchema,
+    runtime: serviceRuntimeSchema.default('node'),
 
     version: optionalNonEmptyStringSchema,
 
@@ -259,7 +223,7 @@ export const serviceSchema = z
 
     description: optionalNonEmptyStringSchema,
 
-    exposure: serviceExposureSchema,
+    exposure: serviceExposureSchema.default('internal'),
 
     endpoints: z.record(z.string(), serviceEndpointSchema).optional(),
 
@@ -283,20 +247,6 @@ export const serviceSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (
-      value.runtime === 'cloudflare-worker' &&
-      value.exposure === 'internal' &&
-      !value.cloudflareBinding &&
-      (!value.endpoints || Object.keys(value.endpoints).length === 0)
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['cloudflareBinding'],
-        message:
-          'Internal Cloudflare Worker services should define a cloudflareBinding or an internal endpoint.',
-      });
-    }
-
     if (
       value.cloudflareBinding?.rpcEnabled &&
       value.cloudflareBinding.entrypoint === ''
@@ -402,14 +352,14 @@ export const servicesSchema = z
         }
       }
     }
-  }) satisfies z.ZodType<ServicesConfig>;
+  });
 
 export type ServicesConfigInput = z.input<typeof servicesSchema>;
 
 export type ServicesConfigOutput = z.output<typeof servicesSchema>;
 
 export function parseServicesConfig(input: ServicesConfigInput): ServicesConfig {
-  return servicesSchema.parse(input);
+  return servicesSchema.parse(input) as ServicesConfig;
 }
 
 export function safeParseServicesConfig(input: unknown) {

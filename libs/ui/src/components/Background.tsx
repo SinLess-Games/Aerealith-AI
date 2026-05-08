@@ -73,18 +73,6 @@ function mergeSx(
   ] as SxProps<Theme>;
 }
 
-function getSystemMode(): BackgroundMode {
-  if (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-color-scheme: light)').matches
-  ) {
-    return 'light';
-  }
-
-  return 'dark';
-}
-
 function resolveImageUrl({
   mode,
   imageUrl,

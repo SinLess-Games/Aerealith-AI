@@ -15,64 +15,26 @@ const metadataSchema = z.record(
   z.union([z.string(), z.number(), z.boolean(), z.null()]),
 );
 
-export const discordAuthModeSchema = z.union([
-  z.literal('bot-token'),
-  z.literal('oauth2'),
-  z.literal('interactions-endpoint'),
-  z.literal('webhook'),
-  z.literal('none'),
-  nonEmptyStringSchema,
-]);
+export const discordAuthModeSchema = nonEmptyStringSchema;
 
-export const discordRuntimeModeSchema = z.union([
-  z.literal('gateway'),
-  z.literal('http-interactions'),
-  z.literal('hybrid'),
-  z.literal('worker'),
-  z.literal('node'),
-  nonEmptyStringSchema,
-]);
+export const discordRuntimeModeSchema = nonEmptyStringSchema;
 
-export const discordCommandScopeSchema = z.union([
-  z.literal('global'),
-  z.literal('guild'),
-  nonEmptyStringSchema,
-]);
+export const discordCommandScopeSchema = nonEmptyStringSchema;
 
-export const discordCommandTypeSchema = z.union([
-  z.literal('slash'),
-  z.literal('user'),
-  z.literal('message'),
-  z.literal('entry-point'),
-  nonEmptyStringSchema,
-]);
+export const discordCommandTypeSchema = nonEmptyStringSchema;
 
-export const discordEventDeliverySchema = z.union([
-  z.literal('gateway'),
-  z.literal('webhook'),
-  z.literal('queue'),
-  z.literal('disabled'),
-  nonEmptyStringSchema,
-]);
+export const discordEventDeliverySchema = nonEmptyStringSchema;
 
-export const discordChannelPurposeSchema = z.union([
-  z.literal('general'),
-  z.literal('logs'),
-  z.literal('moderation'),
-  z.literal('tickets'),
-  z.literal('alerts'),
-  z.literal('announcements'),
-  z.literal('support'),
-  z.literal('devops'),
-  z.literal('audit'),
-  nonEmptyStringSchema,
-]);
+export const discordChannelPurposeSchema = nonEmptyStringSchema;
 
 export const discordOAuth2Schema = z
   .object({
     clientId: optionalNonEmptyStringSchema,
+
     clientSecretRef: optionalNonEmptyStringSchema,
+
     redirectUri: optionalUrlSchema,
+
     scopes: stringArraySchema.optional(),
   })
   .strict();
@@ -80,13 +42,21 @@ export const discordOAuth2Schema = z
 export const discordBotSchema = z
   .object({
     enabled: z.boolean().default(false),
+
     applicationId: optionalNonEmptyStringSchema,
+
     botUserId: optionalNonEmptyStringSchema,
+
     publicKey: optionalNonEmptyStringSchema,
+
     tokenRef: optionalNonEmptyStringSchema,
+
     permissions: optionalNonEmptyStringSchema,
+
     scopes: stringArraySchema.optional(),
+
     publicInstall: z.boolean().optional(),
+
     requireCodeGrant: z.boolean().optional(),
   })
   .strict();
@@ -94,11 +64,17 @@ export const discordBotSchema = z
 export const discordGatewayIntentSchema = z
   .object({
     enabled: z.boolean().default(false),
+
     intents: stringArraySchema,
+
     messageContentIntentRequired: z.boolean().optional(),
+
     guildMembersIntentRequired: z.boolean().optional(),
+
     guildPresencesIntentRequired: z.boolean().optional(),
+
     shardCount: z.number().int().positive().optional(),
+
     shardIds: z.array(z.number().int().nonnegative()).optional(),
   })
   .strict();
@@ -106,10 +82,15 @@ export const discordGatewayIntentSchema = z
 export const discordInteractionsSchema = z
   .object({
     enabled: z.boolean().default(false),
+
     endpointUrl: optionalUrlSchema,
+
     endpointPath: optionalNonEmptyStringSchema,
+
     verifySignatures: z.boolean().default(true),
+
     initialResponseTimeoutMs: z.number().int().positive().optional(),
+
     deferredResponsesEnabled: z.boolean().optional(),
   })
   .strict()
@@ -139,15 +120,25 @@ export const discordInteractionsSchema = z
 export const discordCommandSchema = z
   .object({
     name: nonEmptyStringSchema,
+
     description: optionalNonEmptyStringSchema,
-    type: discordCommandTypeSchema,
-    scope: discordCommandScopeSchema,
+
+    type: discordCommandTypeSchema.default('slash'),
+
+    scope: discordCommandScopeSchema.default('global'),
+
     guildId: optionalNonEmptyStringSchema,
-    enabled: z.boolean(),
+
+    enabled: z.boolean().default(true),
+
     nsfw: z.boolean().optional(),
+
     defaultMemberPermissions: optionalNonEmptyStringSchema,
+
     dmPermission: z.boolean().optional(),
+
     requiredPermissions: stringArraySchema.optional(),
+
     requiredFeatureFlags: stringArraySchema.optional(),
   })
   .strict();
@@ -155,11 +146,17 @@ export const discordCommandSchema = z
 export const discordGuildSchema = z
   .object({
     name: nonEmptyStringSchema,
+
     id: nonEmptyStringSchema,
-    enabled: z.boolean(),
+
+    enabled: z.boolean().default(true),
+
     commandScope: discordCommandScopeSchema.optional(),
+
     roles: z.record(z.string(), z.string()).optional(),
+
     channels: z.record(discordChannelPurposeSchema, z.string()).optional(),
+
     featureFlags: z.record(z.string(), z.boolean()).optional(),
   })
   .strict();
@@ -167,12 +164,19 @@ export const discordGuildSchema = z
 export const discordWebhookSchema = z
   .object({
     name: nonEmptyStringSchema,
-    enabled: z.boolean(),
-    purpose: discordChannelPurposeSchema,
+
+    enabled: z.boolean().default(true),
+
+    purpose: discordChannelPurposeSchema.default('general'),
+
     channelId: optionalNonEmptyStringSchema,
+
     urlRef: optionalNonEmptyStringSchema,
+
     username: optionalNonEmptyStringSchema,
+
     avatarUrl: optionalUrlSchema,
+
     allowedEvents: stringArraySchema.optional(),
   })
   .strict()
@@ -190,10 +194,15 @@ export const discordWebhookSchema = z
 export const discordEventSchema = z
   .object({
     name: nonEmptyStringSchema,
-    enabled: z.boolean(),
-    delivery: discordEventDeliverySchema,
+
+    enabled: z.boolean().default(true),
+
+    delivery: discordEventDeliverySchema.default('disabled'),
+
     queue: optionalNonEmptyStringSchema,
+
     requiredIntents: stringArraySchema.optional(),
+
     requiredFeatureFlags: stringArraySchema.optional(),
   })
   .strict();
@@ -201,9 +210,13 @@ export const discordEventSchema = z
 export const discordModerationSchema = z
   .object({
     enabled: z.boolean().default(false),
+
     requireConfirmation: z.boolean().optional(),
+
     auditLogEnabled: z.boolean().optional(),
+
     auditChannel: optionalNonEmptyStringSchema,
+
     requiredPermissions: stringArraySchema.optional(),
   })
   .strict();
@@ -211,9 +224,13 @@ export const discordModerationSchema = z
 export const discordTicketsSchema = z
   .object({
     enabled: z.boolean().default(false),
+
     categoryId: optionalNonEmptyStringSchema,
+
     transcriptChannelId: optionalNonEmptyStringSchema,
+
     staffRoleIds: stringArraySchema.optional(),
+
     externalTranscriptStorageEnabled: z.boolean().optional(),
   })
   .strict();
@@ -360,16 +377,24 @@ export const discordSchema = z
               'Discord event name should match its registry key for predictable lookups.',
           });
         }
+
+        if (event.delivery === 'queue' && !event.queue) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['events', eventKey, 'queue'],
+            message: 'queue is required when Discord event delivery is queue.',
+          });
+        }
       }
     }
-  }) satisfies z.ZodType<DiscordConfig>;
+  });
 
 export type DiscordConfigInput = z.input<typeof discordSchema>;
 
 export type DiscordConfigOutput = z.output<typeof discordSchema>;
 
 export function parseDiscordConfig(input: DiscordConfigInput): DiscordConfig {
-  return discordSchema.parse(input);
+  return discordSchema.parse(input) as DiscordConfig;
 }
 
 export function safeParseDiscordConfig(input: unknown) {

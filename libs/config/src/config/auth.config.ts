@@ -59,7 +59,7 @@ export function createAuthConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as AuthConfig;
 }
 
 export function buildAuthConfigOverrides(

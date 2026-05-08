@@ -8,7 +8,7 @@ import {
   defaultLocalAppConfig,
 } from '../defaults/app.defaults';
 import { appSchema } from '../schema/app.schema';
-import { deepMerge } from '../utils/deep-merge';
+import { deepClone, deepMerge } from '../utils/deep-merge';
 import {
   ConfigValidationError,
   safeValidateConfig,
@@ -146,7 +146,7 @@ export function loadConfigFromYamlDetailed(
   }
 
   return {
-    config: validation.data,
+    config: validation.data as AppConfig,
     warnings,
   };
 }
@@ -214,21 +214,21 @@ export function mergeYamlConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as AppConfig;
 }
 
 export function resolveYamlConfigDefaults(
   profile: YamlConfigProfile = 'default',
 ): AppConfig {
   if (profile === 'cloudflare') {
-    return defaultCloudflareAppConfig;
+    return deepClone(defaultCloudflareAppConfig);
   }
 
   if (profile === 'local') {
-    return defaultLocalAppConfig;
+    return deepClone(defaultLocalAppConfig);
   }
 
-  return defaultAppConfig;
+  return deepClone(defaultAppConfig);
 }
 
 function createYamlErrorMessage(

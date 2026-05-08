@@ -117,7 +117,7 @@ export function createDiscordConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as DiscordConfig;
 }
 
 export function buildDiscordConfigOverrides(

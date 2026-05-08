@@ -2,10 +2,10 @@
 
 import type { ReactNode } from 'react';
 
-import FaroProvider, { type FaroProviderProps } from './faro.provider.js';
+import FaroProvider, { type FaroProviderProps } from './faro.provider';
 import ThemeProvider, {
   type ThemeProviderDefaultMode,
-} from './theme.provider.js';
+} from './theme.provider';
 
 export type HelixProvidersProps = {
   /**

@@ -37,6 +37,7 @@ export const authRuntimeSchema = z.union([
   z.literal('nextjs'),
   z.literal('cloudflare-worker'),
   z.literal('node'),
+  z.literal('nodejs'),
   z.literal('container'),
   z.literal('kubernetes'),
   z.literal('local'),
@@ -104,7 +105,7 @@ export const oauthProviderSchema = z
 
     redirectUri: optionalUrlSchema,
 
-    scopes: stringArraySchema.optional(),
+    scopes: stringArraySchema,
 
     issuer: optionalUrlSchema,
   })
@@ -179,7 +180,7 @@ export const passkeyAuthSchema = z
 
     rpName: optionalNonEmptyStringSchema,
 
-    origins: z.array(z.string().trim().url()).optional(),
+    origins: z.array(z.string().trim().url()).default([]),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -203,7 +204,7 @@ export const passkeyAuthSchema = z
       });
     }
 
-    if (!value.origins || value.origins.length === 0) {
+    if (value.origins.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['origins'],
@@ -300,7 +301,7 @@ export const authCookieSchema = z
     }
   });
 
-export const authSchema = z
+const authSchemaInternal = z
   .object({
     enabled: z.boolean().default(false),
 
@@ -314,25 +315,46 @@ export const authSchema = z
 
     google: oauthProviderSchema.default({
       enabled: false,
+      scopes: [],
     }),
 
-    github: oauthProviderSchema.optional(),
+    github: oauthProviderSchema.default({
+      enabled: false,
+      scopes: [],
+    }),
 
-    discord: oauthProviderSchema.optional(),
+    discord: oauthProviderSchema.default({
+      enabled: false,
+      scopes: [],
+    }),
 
-    credentials: credentialsAuthSchema.optional(),
+    credentials: credentialsAuthSchema.default({
+      enabled: false,
+    }),
 
-    passkeys: passkeyAuthSchema.optional(),
+    passkeys: passkeyAuthSchema.default({
+      enabled: false,
+      origins: [],
+    }),
 
-    magicLink: magicLinkAuthSchema.optional(),
+    magicLink: magicLinkAuthSchema.default({
+      enabled: false,
+    }),
 
-    apiKeys: apiKeyAuthSchema.optional(),
+    apiKeys: apiKeyAuthSchema.default({
+      enabled: false,
+    }),
 
-    cookies: authCookieSchema.optional(),
+    cookies: authCookieSchema.default({
+      secure: true,
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+    }),
 
-    requiredSecretRefs: stringArraySchema.optional(),
+    requiredSecretRefs: stringArraySchema,
 
-    metadata: metadataSchema.optional(),
+    metadata: metadataSchema.default({}),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -357,7 +379,7 @@ export const authSchema = z
       });
     }
 
-    if (value.providers.includes('github') && value.github?.enabled !== true) {
+    if (value.providers.includes('github') && value.github.enabled !== true) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['github', 'enabled'],
@@ -366,7 +388,7 @@ export const authSchema = z
       });
     }
 
-    if (value.providers.includes('discord') && value.discord?.enabled !== true) {
+    if (value.providers.includes('discord') && value.discord.enabled !== true) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['discord', 'enabled'],
@@ -377,7 +399,7 @@ export const authSchema = z
 
     if (
       value.providers.includes('credentials') &&
-      value.credentials?.enabled !== true
+      value.credentials.enabled !== true
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -387,7 +409,7 @@ export const authSchema = z
       });
     }
 
-    if (value.providers.includes('passkey') && value.passkeys?.enabled !== true) {
+    if (value.providers.includes('passkey') && value.passkeys.enabled !== true) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['passkeys', 'enabled'],
@@ -398,7 +420,7 @@ export const authSchema = z
 
     if (
       value.providers.includes('magic-link') &&
-      value.magicLink?.enabled !== true
+      value.magicLink.enabled !== true
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -408,7 +430,7 @@ export const authSchema = z
       });
     }
 
-    if (value.providers.includes('api-key') && value.apiKeys?.enabled !== true) {
+    if (value.providers.includes('api-key') && value.apiKeys.enabled !== true) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['apiKeys', 'enabled'],
@@ -417,7 +439,7 @@ export const authSchema = z
       });
     }
 
-    if (value.nextAuth.enabled && !value.providers.length) {
+    if (value.nextAuth.enabled && value.providers.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['providers'],
@@ -435,7 +457,7 @@ export const authSchema = z
       });
     }
 
-    if (value.runtime === 'cloudflare-worker' && value.cookies?.secure === false) {
+    if (value.runtime === 'cloudflare-worker' && value.cookies.secure === false) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['cookies', 'secure'],
@@ -443,22 +465,22 @@ export const authSchema = z
       });
     }
 
-    if (value.requiredSecretRefs) {
-      const unique = new Set(value.requiredSecretRefs);
+    const uniqueRequiredSecretRefs = new Set(value.requiredSecretRefs);
 
-      if (unique.size !== value.requiredSecretRefs.length) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['requiredSecretRefs'],
-          message: 'requiredSecretRefs must not contain duplicates.',
-        });
-      }
+    if (uniqueRequiredSecretRefs.size !== value.requiredSecretRefs.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['requiredSecretRefs'],
+        message: 'requiredSecretRefs must not contain duplicates.',
+      });
     }
-  }) satisfies z.ZodType<AuthConfig>;
+  });
 
-export type AuthConfigInput = z.input<typeof authSchema>;
+export const authSchema = authSchemaInternal as unknown as z.ZodType<AuthConfig>;
 
-export type AuthConfigOutput = z.output<typeof authSchema>;
+export type AuthConfigInput = z.input<typeof authSchemaInternal>;
+
+export type AuthConfigOutput = z.output<typeof authSchemaInternal>;
 
 export function parseAuthConfig(input: AuthConfigInput): AuthConfig {
   return authSchema.parse(input);

@@ -4,9 +4,9 @@ import * as React from 'react';
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 
-import { applyCssVars } from '../theme/cssVars.js';
-import type { Mode } from '../theme/constants.js';
-import { getMuiTheme } from '../theme/mui.js';
+import { applyCssVars } from '../theme/cssVars';
+import type { Mode } from '../theme/constants';
+import { getMuiTheme } from '../theme/mui';
 
 export type ThemeProviderDefaultMode = 'system' | Mode;
 

@@ -12,28 +12,11 @@ const optionalUrlSchema = urlSchema.optional();
 
 const stringArraySchema = z.array(nonEmptyStringSchema).default([]);
 
-export const githubAuthModeSchema = z.union([
-  z.literal('oauth-app'),
-  z.literal('github-app'),
-  z.literal('personal-access-token'),
-  z.literal('none'),
-  nonEmptyStringSchema,
-]);
+export const githubAuthModeSchema = nonEmptyStringSchema;
 
-export const githubRepositoryVisibilitySchema = z.union([
-  z.literal('public'),
-  z.literal('private'),
-  z.literal('internal'),
-  nonEmptyStringSchema,
-]);
+export const githubRepositoryVisibilitySchema = nonEmptyStringSchema;
 
-export const githubPermissionLevelSchema = z.union([
-  z.literal('none'),
-  z.literal('read'),
-  z.literal('write'),
-  z.literal('admin'),
-  nonEmptyStringSchema,
-]);
+export const githubPermissionLevelSchema = nonEmptyStringSchema;
 
 export const githubRepositorySchema = z
   .object({
@@ -116,9 +99,9 @@ export const githubSchema = z
 
     redirectUri: optionalUrlSchema,
 
-    repoUrl: urlSchema,
+    repoUrl: optionalUrlSchema,
 
-    repository: githubRepositorySchema,
+    repository: githubRepositorySchema.optional(),
 
     oauth: githubOAuthAppSchema.optional(),
 
@@ -128,7 +111,7 @@ export const githubSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.repository.url !== value.repoUrl) {
+    if (value.repository && value.repoUrl && value.repository.url !== value.repoUrl) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['repoUrl'],
@@ -136,7 +119,11 @@ export const githubSchema = z
       });
     }
 
-    if (value.oauth?.clientId && value.clientId && value.oauth.clientId !== value.clientId) {
+    if (
+      value.oauth?.clientId &&
+      value.clientId &&
+      value.oauth.clientId !== value.clientId
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['oauth', 'clientId'],
@@ -156,7 +143,27 @@ export const githubSchema = z
       });
     }
 
-    if (!value.enabled || value.authMode === 'none') {
+    if (!value.enabled) {
+      return;
+    }
+
+    if (!value.repoUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['repoUrl'],
+        message: 'repoUrl is required when GitHub integration is enabled.',
+      });
+    }
+
+    if (!value.repository) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['repository'],
+        message: 'repository is required when GitHub integration is enabled.',
+      });
+    }
+
+    if (value.authMode === 'none') {
       return;
     }
 
@@ -165,7 +172,8 @@ export const githubSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['oauth', 'clientId'],
-          message: 'oauth.clientId or clientId is required when authMode is oauth-app.',
+          message:
+            'oauth.clientId or clientId is required when authMode is oauth-app.',
         });
       }
 
@@ -224,14 +232,14 @@ export const githubSchema = z
           'api.tokenRef is required when authMode is personal-access-token. Store a secret reference, not the raw token.',
       });
     }
-  }) satisfies z.ZodType<GithubConfig>;
+  });
 
 export type GithubConfigInput = z.input<typeof githubSchema>;
 
 export type GithubConfigOutput = z.output<typeof githubSchema>;
 
 export function parseGithubConfig(input: GithubConfigInput): GithubConfig {
-  return githubSchema.parse(input);
+  return githubSchema.parse(input) as GithubConfig;
 }
 
 export function safeParseGithubConfig(input: unknown) {

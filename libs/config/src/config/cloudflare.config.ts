@@ -251,7 +251,7 @@ export function createCloudflareConfig(
   const configName = options.name ?? 'cloudflare config';
   const profile = resolveCloudflareConfigProfile(env, options.profile ?? 'auto');
   const defaults = options.defaults ?? resolveCloudflareConfigDefaults(profile);
-  const overrides = buildCloudflareConfigOverrides(env);
+  const overrides = buildCloudflareConfigOverrides(env, profile);
 
   const mergedConfig = deepMerge(defaults, overrides, {
     arrayStrategy: 'replace',
@@ -266,23 +266,24 @@ export function createCloudflareConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as CloudflareConfig;
 }
 
 export function buildCloudflareConfigOverrides(
   env: EnvRecord,
+  profile: ResolvedCloudflareConfigProfile = resolveCloudflareConfigProfile(env),
 ): Record<string, unknown> {
   const overrides: Record<string, unknown> = {};
 
   applyRootOverrides(env, overrides);
   applyAccountOverrides(env, overrides);
-  applyWorkerOverrides(env, overrides);
+  applyWorkerOverrides(env, overrides, profile);
   applyDefaultBindingOverrides(env, overrides);
   applyEnvironmentOverrides(env, overrides);
   applyCiOverrides(env, overrides);
   applyRequiredBindingKindsOverrides(env, overrides);
   applyMetadataOverrides(env, overrides);
-  applyDerivedCloudflareOverrides(env, overrides);
+  applyDerivedCloudflareOverrides(env, overrides, profile);
 
   return overrides;
 }
@@ -384,10 +385,25 @@ function applyAccountOverrides(
 function applyWorkerOverrides(
   env: EnvRecord,
   overrides: Record<string, unknown>,
+  profile: ResolvedCloudflareConfigProfile,
 ): void {
-  applyOptionalString(env, overrides, 'CLOUDFLARE_WORKER_NAME', 'worker.name');
-  applyOptionalString(env, overrides, 'WORKER_NAME', 'worker.name');
-  applyOptionalString(env, overrides, 'CLOUDFLARE_WORKER_RUNTIME', 'worker.runtime');
+  const environment = resolveAppEnvironment(env);
+
+  const runtime =
+    getEnv(env, 'CLOUDFLARE_WORKER_RUNTIME') ??
+    getEnv(env, 'WORKER_RUNTIME') ??
+    getEnv(env, 'APP_RUNTIME') ??
+    getEnv(env, 'HELIX_RUNTIME') ??
+    (profile === 'local' ? 'nodejs' : 'cloudflare-worker');
+
+  const workerName =
+    getEnv(env, 'CLOUDFLARE_WORKER_NAME') ??
+    getEnv(env, 'WORKER_NAME') ??
+    (environment === 'production' ? 'helix-frontend' : 'helix-frontend-dev');
+
+  setDeepValue(overrides, 'worker.runtime', runtime);
+  setDeepValue(overrides, 'worker.name', workerName);
+
   applyOptionalString(env, overrides, 'CLOUDFLARE_WORKER_MAIN', 'worker.main');
   applyOptionalString(env, overrides, 'WORKER_MAIN', 'worker.main');
   applyOptionalString(
@@ -1077,6 +1093,7 @@ function applyMetadataOverrides(
 function applyDerivedCloudflareOverrides(
   env: EnvRecord,
   overrides: Record<string, unknown>,
+  profile: ResolvedCloudflareConfigProfile,
 ): void {
   const environment = resolveAppEnvironment(env);
   const domain =
@@ -1092,6 +1109,15 @@ function applyDerivedCloudflareOverrides(
     (environment === 'production'
       ? `https://${domain}`
       : 'http://localhost:3000');
+
+  const workerRuntime =
+    getEnv(env, 'CLOUDFLARE_WORKER_RUNTIME') ??
+    getEnv(env, 'WORKER_RUNTIME') ??
+    getEnv(env, 'APP_RUNTIME') ??
+    getEnv(env, 'HELIX_RUNTIME') ??
+    (profile === 'local' ? 'nodejs' : 'cloudflare-worker');
+
+  setDeepValue(overrides, 'worker.runtime', workerRuntime);
 
   if (isCloudflareEnv(env) || hasCloudflareSignal(env)) {
     setDeepValue(overrides, 'enabled', true);
@@ -1116,7 +1142,11 @@ function applyDerivedCloudflareOverrides(
   if (environment === 'production') {
     setDeepValue(overrides, 'enabled', true);
     setDeepValue(overrides, 'worker.workersDev', false);
-    setDeepValue(overrides, 'worker.name', getEnv(env, 'CLOUDFLARE_WORKER_NAME') ?? 'helix-frontend');
+    setDeepValue(
+      overrides,
+      'worker.name',
+      getEnv(env, 'CLOUDFLARE_WORKER_NAME') ?? 'helix-frontend',
+    );
 
     if (getEnv(env, 'CLOUDFLARE_ROUTES') === undefined) {
       setDeepValue(overrides, 'environments.production.routes', [

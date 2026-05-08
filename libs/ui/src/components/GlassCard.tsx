@@ -4,7 +4,7 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import { useTheme, type SxProps, type Theme } from '@mui/material/styles';
 
-import { themes } from '../theme/constants.js';
+import { themes } from '../theme/constants';
 
 export interface GlassCardProps {
   /** The main content of the card. */

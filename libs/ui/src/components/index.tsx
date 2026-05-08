@@ -6,55 +6,55 @@
 export {
   default as Background,
   BackgroundImage,
-} from './Background.js';
+} from './Background';
 
 export type {
   BackgroundImageProps,
   BackgroundImageSource,
-} from './Background.js';
+} from './Background';
 
 // -----------------------------------------------------------------------------
 // Cards & Containers
 // -----------------------------------------------------------------------------
-export { default as GlassCard } from './GlassCard.js';
+export { default as GlassCard } from './GlassCard';
 
-export type { GlassCardProps } from './GlassCard.js';
+export type { GlassCardProps } from './GlassCard';
 
-export { default as HelixCard } from './Card.js';
+export { default as HelixCard } from './Card';
 
 export type {
   CardProps,
   HelixCardImageSource,
   HelixCardListItem,
   ListItemProps,
-} from './Card.js';
+} from './Card';
 
 // -----------------------------------------------------------------------------
 // Banners & Alerts
 // -----------------------------------------------------------------------------
-export { default as DevelopmentBanner } from './development-banner.js';
+export { default as DevelopmentBanner } from './development-banner';
 
 export type {
   DevelopmentBannerFixedPosition,
   DevelopmentBannerProps,
-} from './development-banner.js';
+} from './development-banner';
 
 // -----------------------------------------------------------------------------
 // Modals
 // -----------------------------------------------------------------------------
-export { default as PrimitiveModal } from './modal.js';
+export { default as PrimitiveModal } from './modal';
 
-export type { PrimitiveModalProps } from './modal.js';
+export type { PrimitiveModalProps } from './modal';
 
 // -----------------------------------------------------------------------------
 // Header & Navigation
 // -----------------------------------------------------------------------------
-export { default as Header } from './Header.js';
+export { default as Header } from './Header';
 
 export type {
   HeaderProps,
   Page,
-} from './Header.js';
+} from './Header';
 
 // -----------------------------------------------------------------------------
 // Waitlist / Hero
@@ -62,10 +62,10 @@ export type {
 export {
   default as HeroSection,
   HeroWaitlist,
-} from './Waitlist.js';
+} from './Waitlist';
 
 export type {
   HeroSectionProps,
   HeroWaitlistProps,
   WaitlistStatus,
-} from './Waitlist.js';
+} from './Waitlist';

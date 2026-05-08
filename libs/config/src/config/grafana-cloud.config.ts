@@ -62,7 +62,7 @@ export function createGrafanaCloudConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as GrafanaCloudConfig;
 }
 
 export function buildGrafanaCloudConfigOverrides(

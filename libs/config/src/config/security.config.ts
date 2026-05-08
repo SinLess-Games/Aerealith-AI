@@ -58,7 +58,7 @@ export function createSecurityConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as SecurityConfig;
 }
 
 export function buildSecurityConfigOverrides(

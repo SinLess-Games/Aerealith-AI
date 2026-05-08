@@ -52,7 +52,7 @@ export function createStorageConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as StorageConfig;
 }
 
 export function buildStorageConfigOverrides(

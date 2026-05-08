@@ -6,30 +6,18 @@ const nonEmptyStringSchema = z.string().trim().min(1);
 
 const optionalNonEmptyStringSchema = nonEmptyStringSchema.optional();
 
-const optionalUrlSchema = z.string().trim().url().optional();
+const urlSchema = z.string().trim().url();
+
+const optionalUrlSchema = urlSchema.optional();
 
 const metadataSchema = z.record(
   z.string(),
   z.union([z.string(), z.number(), z.boolean(), z.null()]),
 );
 
-export const grafanaCloudRegionSchema = z.union([
-  z.literal('us'),
-  z.literal('eu'),
-  z.literal('au'),
-  z.literal('prod-us-central-0'),
-  z.literal('prod-eu-west-0'),
-  nonEmptyStringSchema,
-]);
+export const grafanaCloudRegionSchema = nonEmptyStringSchema;
 
-export const grafanaCloudSignalSchema = z.union([
-  z.literal('logs'),
-  z.literal('metrics'),
-  z.literal('traces'),
-  z.literal('profiles'),
-  z.literal('frontend-observability'),
-  nonEmptyStringSchema,
-]);
+export const grafanaCloudSignalSchema = nonEmptyStringSchema;
 
 export const grafanaCloudApiSchema = z
   .object({
@@ -78,17 +66,18 @@ export const faroSessionTrackingSchema = z
   })
   .strict();
 
+export const faroTraceUrlSchema = z.union([
+  nonEmptyStringSchema,
+  z.instanceof(RegExp),
+]);
+
 export const faroTracingSchema = z
   .object({
     enabled: z.boolean().default(false),
 
-    traceUrls: z
-      .array(z.union([z.string().trim().min(1), z.instanceof(RegExp)]))
-      .optional(),
+    traceUrls: z.array(faroTraceUrlSchema).optional(),
 
-    propagateTraceHeaderCorsUrls: z
-      .array(z.union([z.string().trim().min(1), z.instanceof(RegExp)]))
-      .optional(),
+    propagateTraceHeaderCorsUrls: z.array(faroTraceUrlSchema).optional(),
   })
   .strict();
 
@@ -96,9 +85,9 @@ export const faroSchema = z
   .object({
     enabled: z.boolean().default(false),
 
-    url: z.string().trim().url().nullable().optional(),
+    url: urlSchema.nullable().optional(),
 
-    publicUrl: z.string().trim().url().nullable().optional(),
+    publicUrl: urlSchema.nullable().optional(),
 
     appName: optionalNonEmptyStringSchema,
 
@@ -145,14 +134,6 @@ export const faroSchema = z
         message: 'appName is required when Faro is enabled.',
       });
     }
-
-    if (value.url && value.publicUrl && value.url !== value.publicUrl) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['publicUrl'],
-        message: 'publicUrl must match url when both are provided.',
-      });
-    }
   });
 
 export const grafanaCloudAddonSchema = z
@@ -189,7 +170,7 @@ export const grafanaCloudSchema = z
           'At least one Grafana Cloud API integration, Faro addon, or enabled signal is required when Grafana Cloud is enabled.',
       });
     }
-  }) satisfies z.ZodType<GrafanaCloudConfig>;
+  });
 
 export type GrafanaCloudConfigInput = z.input<typeof grafanaCloudSchema>;
 
@@ -198,7 +179,7 @@ export type GrafanaCloudConfigOutput = z.output<typeof grafanaCloudSchema>;
 export function parseGrafanaCloudConfig(
   input: GrafanaCloudConfigInput,
 ): GrafanaCloudConfig {
-  return grafanaCloudSchema.parse(input);
+  return grafanaCloudSchema.parse(input) as GrafanaCloudConfig;
 }
 
 export function safeParseGrafanaCloudConfig(input: unknown) {

@@ -13,70 +13,17 @@ const metadataSchema = z.record(
   z.union([z.string(), z.number(), z.boolean(), z.null()]),
 );
 
-export const databaseProviderSchema = z.union([
-  z.literal('postgres'),
-  z.literal('postgresql'),
-  z.literal('cockroachdb'),
-  z.literal('neon'),
-  z.literal('cloudflare-hyperdrive'),
-  z.literal('cloudflare-d1'),
-  z.literal('sqlite'),
-  z.literal('libsql'),
-  z.literal('mysql'),
-  z.literal('mariadb'),
-  z.literal('memory'),
-  z.literal('disabled'),
-  nonEmptyStringSchema,
-]);
+export const databaseProviderSchema = nonEmptyStringSchema;
 
-export const databaseOrmSchema = z.union([
-  z.literal('mikro-orm'),
-  z.literal('drizzle'),
-  z.literal('prisma'),
-  z.literal('kysely'),
-  z.literal('raw-sql'),
-  z.literal('none'),
-  nonEmptyStringSchema,
-]);
+export const databaseOrmSchema = nonEmptyStringSchema;
 
-export const databaseRuntimeSchema = z.union([
-  z.literal('cloudflare-worker'),
-  z.literal('cloudflare-pages'),
-  z.literal('node'),
-  z.literal('container'),
-  z.literal('kubernetes'),
-  z.literal('local'),
-  z.literal('test'),
-  nonEmptyStringSchema,
-]);
+export const databaseRuntimeSchema = nonEmptyStringSchema;
 
-export const databaseSslModeSchema = z.union([
-  z.literal('disable'),
-  z.literal('allow'),
-  z.literal('prefer'),
-  z.literal('require'),
-  z.literal('verify-ca'),
-  z.literal('verify-full'),
-  nonEmptyStringSchema,
-]);
+export const databaseSslModeSchema = nonEmptyStringSchema;
 
-export const databaseMigrationModeSchema = z.union([
-  z.literal('disabled'),
-  z.literal('manual'),
-  z.literal('startup'),
-  z.literal('ci'),
-  z.literal('github-actions'),
-  nonEmptyStringSchema,
-]);
+export const databaseMigrationModeSchema = nonEmptyStringSchema;
 
-export const databaseConnectionModeSchema = z.union([
-  z.literal('direct'),
-  z.literal('pooled'),
-  z.literal('hyperdrive'),
-  z.literal('serverless'),
-  z.literal('binding'),
-  nonEmptyStringSchema,
-]);
+export const databaseConnectionModeSchema = nonEmptyStringSchema;
 
 export const databasePoolSchema = z
   .object({
@@ -96,7 +43,11 @@ export const databasePoolSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.min !== undefined && value.max !== undefined && value.min > value.max) {
+    if (
+      value.min !== undefined &&
+      value.max !== undefined &&
+      value.min > value.max
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['min'],
@@ -165,7 +116,7 @@ export const databaseConnectionSchema = z
 
     passwordRef: optionalNonEmptyStringSchema,
 
-    mode: databaseConnectionModeSchema,
+    mode: databaseConnectionModeSchema.default('direct'),
 
     ssl: databaseSslSchema.optional(),
 
@@ -365,7 +316,7 @@ export const databaseReadReplicaSchema = z
   .object({
     name: nonEmptyStringSchema,
 
-    enabled: z.boolean(),
+    enabled: z.boolean().default(true),
 
     connection: databaseConnectionSchema,
 
@@ -379,13 +330,13 @@ export const databaseInstanceSchema = z
   .object({
     name: nonEmptyStringSchema,
 
-    enabled: z.boolean(),
+    enabled: z.boolean().default(true),
 
-    provider: databaseProviderSchema,
+    provider: databaseProviderSchema.default('postgres'),
 
-    runtime: databaseRuntimeSchema,
+    runtime: databaseRuntimeSchema.default('node'),
 
-    orm: databaseOrmSchema,
+    orm: databaseOrmSchema.default('mikro-orm'),
 
     connection: databaseConnectionSchema,
 
@@ -443,7 +394,10 @@ export const databaseInstanceSchema = z
         });
       }
 
-      if (value.runtime !== 'cloudflare-worker' && value.runtime !== 'cloudflare-pages') {
+      if (
+        value.runtime !== 'cloudflare-worker' &&
+        value.runtime !== 'cloudflare-pages'
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['runtime'],
@@ -549,26 +503,24 @@ export const databaseSchema = z
       }
     }
 
-    if (value.provider && value.instances[value.defaultInstance]) {
-      const defaultProvider = value.instances[value.defaultInstance].provider;
+    const defaultInstance = value.instances[value.defaultInstance];
 
-      if (value.provider !== defaultProvider) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['provider'],
-          message:
-            'Top-level provider must match the default database instance provider when provided.',
-        });
-      }
+    if (value.provider && defaultInstance && value.provider !== defaultInstance.provider) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['provider'],
+        message:
+          'Top-level provider must match the default database instance provider when provided.',
+      });
     }
-  }) satisfies z.ZodType<DatabaseConfig>;
+  });
 
 export type DatabaseConfigInput = z.input<typeof databaseSchema>;
 
 export type DatabaseConfigOutput = z.output<typeof databaseSchema>;
 
 export function parseDatabaseConfig(input: DatabaseConfigInput): DatabaseConfig {
-  return databaseSchema.parse(input);
+  return databaseSchema.parse(input) as DatabaseConfig;
 }
 
 export function safeParseDatabaseConfig(input: unknown) {

@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect } from 'react';
 
-import { initFaro, type FaroClientConfig } from '../utils/faro.js';
+import { initFaro, type FaroClientConfig } from '../utils/faro';
 
 export type FaroProviderProps = {
   children: ReactNode;

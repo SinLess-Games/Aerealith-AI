@@ -103,7 +103,7 @@ export function loadConfigFromObjectDetailed(
   }
 
   return {
-    config: validation.data,
+    config: validation.data as AppConfig,
     profile,
     defaults,
     overrides,
@@ -189,7 +189,7 @@ export function mergeObjectConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as AppConfig;
 }
 
 export function validateObjectConfig(
@@ -197,12 +197,19 @@ export function validateObjectConfig(
   options: LoadConfigFromObjectOptions = {},
 ): AppConfig {
   const configName = options.name ?? 'object config';
+  const profile = options.profile ?? 'default';
   const objectConfig = normalizeObjectConfigInput(input, {
     name: configName,
     allowEmpty: options.allowEmpty ?? false,
   });
 
-  const validation = safeValidateConfig(appSchema, objectConfig, {
+  const defaults = resolveObjectConfigDefaults(profile);
+  const mergedConfig = deepMerge(defaults, objectConfig, {
+    arrayStrategy: options.arrayStrategy ?? 'replace',
+    undefinedStrategy: options.undefinedStrategy ?? 'ignore',
+  });
+
+  const validation = safeValidateConfig(appSchema, mergedConfig, {
     name: configName,
   });
 
@@ -210,7 +217,7 @@ export function validateObjectConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as AppConfig;
 }
 
 export function createObjectConfigOverride(

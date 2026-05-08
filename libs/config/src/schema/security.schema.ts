@@ -2,11 +2,15 @@ import { z } from 'zod';
 
 import type { SecurityConfig } from '../types/security';
 
+const DEFAULT_UUID_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+
 const nonEmptyStringSchema = z.string().trim().min(1);
 
 const optionalNonEmptyStringSchema = nonEmptyStringSchema.optional();
 
 const stringArraySchema = z.array(nonEmptyStringSchema).default([]);
+
+const uuidSchema = z.string().trim().uuid();
 
 const metadataValueSchema = z.union([
   z.string(),
@@ -15,76 +19,51 @@ const metadataValueSchema = z.union([
   z.null(),
 ]);
 
-const sensitivityLevelSchema = z.union([
-  z.literal('public'),
-  z.literal('internal'),
-  z.literal('personal'),
-  z.literal('private'),
-  z.literal('sensitive'),
-  z.literal('business'),
-  z.literal('technical'),
-  z.literal('restricted'),
-  z.literal('regulated'),
-  z.literal('secret-reference'),
-  nonEmptyStringSchema,
-]);
+const metadataSchema = z.record(z.string(), metadataValueSchema);
 
-export const securityEnvironmentSchema = z.union([
-  z.literal('development'),
-  z.literal('preview'),
-  z.literal('staging'),
-  z.literal('production'),
-  z.literal('test'),
-  nonEmptyStringSchema,
-]);
+const sensitivityLevelSchema = nonEmptyStringSchema;
 
-export const secretProviderSchema = z.union([
-  z.literal('cloudflare-secrets'),
-  z.literal('cloudflare-secrets-store'),
-  z.literal('github-actions'),
-  z.literal('vault'),
-  z.literal('doppler'),
-  z.literal('onepassword'),
-  z.literal('environment'),
-  z.literal('local-dev-vars'),
-  nonEmptyStringSchema,
-]);
+export const securityEnvironmentSchema = nonEmptyStringSchema;
 
-export const sameSitePolicySchema = z.union([
-  z.literal('lax'),
-  z.literal('strict'),
-  z.literal('none'),
-  nonEmptyStringSchema,
-]);
+export const secretProviderSchema = nonEmptyStringSchema;
 
-export const referrerPolicySchema = z.union([
-  z.literal('no-referrer'),
-  z.literal('no-referrer-when-downgrade'),
-  z.literal('origin'),
-  z.literal('origin-when-cross-origin'),
-  z.literal('same-origin'),
-  z.literal('strict-origin'),
-  z.literal('strict-origin-when-cross-origin'),
-  z.literal('unsafe-url'),
-  nonEmptyStringSchema,
-]);
+export const sameSitePolicySchema = nonEmptyStringSchema;
 
-export const hstsPreloadModeSchema = z.union([
-  z.literal('disabled'),
-  z.literal('enabled'),
-  z.literal('candidate'),
-  nonEmptyStringSchema,
-]);
+export const referrerPolicySchema = nonEmptyStringSchema;
+
+export const hstsPreloadModeSchema = nonEmptyStringSchema;
+
+const httpMethodSchema = nonEmptyStringSchema;
+
+function normalizeSecurityConfigInput(input: unknown): unknown {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return input;
+  }
+
+  const record = input as Record<string, unknown>;
+
+  const uuidNamespace =
+    record.uuidNamespace ?? record.uuid_namespace ?? DEFAULT_UUID_NAMESPACE;
+
+  const uuid_namespace =
+    record.uuid_namespace ?? record.uuidNamespace ?? DEFAULT_UUID_NAMESPACE;
+
+  return {
+    ...record,
+    uuidNamespace,
+    uuid_namespace,
+  };
+}
 
 export const secretRefSchema = z
   .object({
     name: nonEmptyStringSchema,
 
-    provider: secretProviderSchema,
+    provider: secretProviderSchema.default('environment'),
 
     ref: nonEmptyStringSchema,
 
-    required: z.boolean(),
+    required: z.boolean().default(true),
 
     description: optionalNonEmptyStringSchema,
 
@@ -116,20 +95,7 @@ export const corsSecuritySchema = z
 
     allowedOrigins: stringArraySchema,
 
-    allowedMethods: z
-      .array(
-        z.union([
-          z.literal('GET'),
-          z.literal('POST'),
-          z.literal('PUT'),
-          z.literal('PATCH'),
-          z.literal('DELETE'),
-          z.literal('OPTIONS'),
-          z.literal('HEAD'),
-          nonEmptyStringSchema,
-        ]),
-      )
-      .default(['GET', 'POST', 'OPTIONS']),
+    allowedMethods: z.array(httpMethodSchema).default(['GET', 'POST', 'OPTIONS']),
 
     allowedHeaders: stringArraySchema,
 
@@ -170,7 +136,7 @@ export const contentSecurityPolicySchema = z
     reportOnly: z.boolean().default(false),
 
     directives: z
-      .record(z.string(), z.array(z.string().trim().min(1)))
+      .record(z.string(), z.array(nonEmptyStringSchema))
       .default({
         'default-src': ["'self'"],
         'base-uri': ["'self'"],
@@ -199,13 +165,9 @@ export const securityHeadersSchema = z
 
     hstsIncludeSubDomains: z.boolean().optional(),
 
-    frameOptions: z
-      .union([z.literal('DENY'), z.literal('SAMEORIGIN'), nonEmptyStringSchema])
-      .optional(),
+    frameOptions: nonEmptyStringSchema.optional(),
 
-    contentTypeOptions: z
-      .union([z.literal('nosniff'), nonEmptyStringSchema])
-      .optional(),
+    contentTypeOptions: nonEmptyStringSchema.optional(),
 
     referrerPolicy: referrerPolicySchema.optional(),
 
@@ -310,109 +272,112 @@ export const encryptionSecuritySchema = z
     }
   });
 
-export const securitySchema = z
-  .object({
-    enabled: z.boolean().default(true),
+export const securitySchema = z.preprocess(
+  normalizeSecurityConfigInput,
+  z
+    .object({
+      enabled: z.boolean().default(true),
 
-    environment: securityEnvironmentSchema.default('development'),
+      environment: securityEnvironmentSchema.default('development'),
 
-    uuidNamespace: z.string().trim().uuid(),
+      uuidNamespace: uuidSchema.default(DEFAULT_UUID_NAMESPACE),
 
-    uuid_namespace: z.string().trim().uuid(),
+      uuid_namespace: uuidSchema.default(DEFAULT_UUID_NAMESPACE),
 
-    defaultSensitivity: sensitivityLevelSchema.default('internal'),
+      defaultSensitivity: sensitivityLevelSchema.default('internal'),
 
-    secrets: z.record(z.string(), secretRefSchema).default({}),
+      secrets: z.record(z.string(), secretRefSchema).default({}),
 
-    cookies: cookieSecuritySchema.default({
-      secure: true,
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-    }),
+      cookies: cookieSecuritySchema.default({
+        secure: true,
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+      }),
 
-    cors: corsSecuritySchema.default({
-      enabled: false,
-      allowedOrigins: [],
-      allowedMethods: ['GET', 'POST', 'OPTIONS'],
-      allowedHeaders: [],
-      allowCredentials: false,
-    }),
+      cors: corsSecuritySchema.default({
+        enabled: false,
+        allowedOrigins: [],
+        allowedMethods: ['GET', 'POST', 'OPTIONS'],
+        allowedHeaders: [],
+        allowCredentials: false,
+      }),
 
-    headers: securityHeadersSchema.default({
-      contentSecurityPolicy: {
-        enabled: true,
-        reportOnly: false,
-        directives: {
-          'default-src': ["'self'"],
-          'base-uri': ["'self'"],
-          'frame-ancestors': ["'none'"],
-          'object-src': ["'none'"],
+      headers: securityHeadersSchema.default({
+        contentSecurityPolicy: {
+          enabled: true,
+          reportOnly: false,
+          directives: {
+            'default-src': ["'self'"],
+            'base-uri': ["'self'"],
+            'frame-ancestors': ["'none'"],
+            'object-src': ["'none'"],
+          },
         },
-      },
-    }),
+      }),
 
-    rateLimit: rateLimitSecuritySchema.default({
-      enabled: false,
-    }),
+      rateLimit: rateLimitSecuritySchema.default({
+        enabled: false,
+      }),
 
-    audit: auditSecuritySchema.default({
-      enabled: true,
-      signingEnabled: false,
-    }),
+      audit: auditSecuritySchema.default({
+        enabled: true,
+        signingEnabled: false,
+      }),
 
-    encryption: encryptionSecuritySchema.default({
-      enabled: false,
-    }),
+      encryption: encryptionSecuritySchema.default({
+        enabled: false,
+      }),
 
-    metadata: z.record(z.string(), metadataValueSchema).optional(),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    if (value.uuidNamespace !== value.uuid_namespace) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['uuid_namespace'],
-        message: 'uuid_namespace must match uuidNamespace.',
-      });
-    }
-
-    if (value.environment === 'production') {
-      if (!value.cookies.secure) {
+      metadata: metadataSchema.optional(),
+    })
+    .strict()
+    .superRefine((value, ctx) => {
+      if (value.uuidNamespace !== value.uuid_namespace) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['cookies', 'secure'],
-          message: 'Production auth/application cookies should be secure.',
+          path: ['uuid_namespace'],
+          message: 'uuid_namespace must match uuidNamespace.',
         });
       }
 
-      if (!value.headers.contentSecurityPolicy.enabled) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['headers', 'contentSecurityPolicy', 'enabled'],
-          message: 'Content Security Policy should be enabled in production.',
-        });
-      }
-    }
+      if (value.environment === 'production') {
+        if (!value.cookies.secure) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['cookies', 'secure'],
+            message: 'Production auth/application cookies should be secure.',
+          });
+        }
 
-    for (const [secretKey, secret] of Object.entries(value.secrets)) {
-      if (secret.name !== secretKey) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['secrets', secretKey, 'name'],
-          message:
-            'Secret reference name should match its registry key for predictable lookups.',
-        });
+        if (!value.headers.contentSecurityPolicy.enabled) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['headers', 'contentSecurityPolicy', 'enabled'],
+            message: 'Content Security Policy should be enabled in production.',
+          });
+        }
       }
-    }
-  }) satisfies z.ZodType<SecurityConfig>;
+
+      for (const [secretKey, secret] of Object.entries(value.secrets)) {
+        if (secret.name !== secretKey) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['secrets', secretKey, 'name'],
+            message:
+              'Secret reference name should match its registry key for predictable lookups.',
+          });
+        }
+      }
+    }),
+);
 
 export type SecurityConfigInput = z.input<typeof securitySchema>;
 
 export type SecurityConfigOutput = z.output<typeof securitySchema>;
 
 export function parseSecurityConfig(input: SecurityConfigInput): SecurityConfig {
-  return securitySchema.parse(input);
+  return securitySchema.parse(input) as SecurityConfig;
 }
 
 export function safeParseSecurityConfig(input: unknown) {

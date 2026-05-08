@@ -87,7 +87,7 @@ export function createServicesConfig(
     throw new ConfigValidationError(configName, validation.error);
   }
 
-  return validation.data;
+  return validation.data as ServicesConfig;
 }
 
 export function buildServicesConfigOverrides(

@@ -198,6 +198,10 @@ const envConfigMappings = [
     path: 'cloudflare.worker.name',
   },
   {
+    env: ['CLOUDFLARE_WORKER_RUNTIME', 'WORKER_RUNTIME'],
+    path: 'cloudflare.worker.runtime',
+  },
+  {
     env: ['CLOUDFLARE_WORKER_MAIN', 'WORKER_MAIN'],
     path: 'cloudflare.worker.main',
   },
@@ -450,7 +454,7 @@ export function loadConfigFromEnvDetailed(
 
   const profile = resolveEnvConfigProfile(env, options.profile ?? 'auto');
   const defaults = resolveEnvConfigDefaults(profile);
-  const overrides = buildEnvConfigOverrides(env);
+  const overrides = buildEnvConfigOverrides(env, profile);
 
   const mergedConfig = deepMerge(defaults, overrides, {
     arrayStrategy: options.arrayStrategy ?? 'replace',
@@ -466,7 +470,7 @@ export function loadConfigFromEnvDetailed(
   }
 
   return {
-    config: validation.data,
+    config: validation.data as AppConfig,
     profile,
     defaults,
     overrides,
@@ -505,14 +509,15 @@ export function safeLoadConfigFromEnv(
 
 export function buildEnvConfigOverrides(
   env: EnvRecord,
+  profile: ResolvedEnvConfigProfile = resolveEnvConfigProfile(env),
 ): Record<string, unknown> {
   const overrides = mapEnvToObject(env, envConfigMappings);
 
-  applyDerivedAppEnvironment(env, overrides);
+  applyDerivedAppEnvironment(env, overrides, profile);
   applyBooleanOverrides(env, overrides);
   applyNumberOverrides(env, overrides);
   applyListOverrides(env, overrides);
-  applyCloudflareOverrides(env, overrides);
+  applyCloudflareOverrides(env, overrides, profile);
   applyDatabaseOverrides(env, overrides);
   applyRedisOverrides(env, overrides);
   applyAuthOverrides(env, overrides);
@@ -569,8 +574,16 @@ export function validateEnvConfig(
   env: EnvRecord,
   options: LoadConfigFromEnvOptions = {},
 ): AppConfig {
-  const overrides = buildEnvConfigOverrides(env);
-  const validation = safeValidateConfig(appSchema, overrides, {
+  const profile = resolveEnvConfigProfile(env, options.profile ?? 'auto');
+  const defaults = resolveEnvConfigDefaults(profile);
+  const overrides = buildEnvConfigOverrides(env, profile);
+
+  const mergedConfig = deepMerge(defaults, overrides, {
+    arrayStrategy: options.arrayStrategy ?? 'replace',
+    undefinedStrategy: options.undefinedStrategy ?? 'ignore',
+  });
+
+  const validation = safeValidateConfig(appSchema, mergedConfig, {
     name: options.name ?? 'env config',
   });
 
@@ -578,7 +591,7 @@ export function validateEnvConfig(
     throw new ConfigValidationError(options.name ?? 'env config', validation.error);
   }
 
-  return validation.data;
+  return validation.data as AppConfig;
 }
 
 export function getKnownConfigEnvKeys(): string[] {
@@ -605,20 +618,32 @@ export function getUnknownPublicEnvKeys(env: EnvRecord): string[] {
 function applyDerivedAppEnvironment(
   env: EnvRecord,
   overrides: Record<string, unknown>,
+  profile: ResolvedEnvConfigProfile,
 ): void {
   const environment = resolveAppEnvironment(env);
 
   setDeepValue(overrides, 'environment', environment);
   setDeepValue(overrides, 'publicRuntime.environment', environment);
 
+  const runtime =
+    getFirstEnv(env, ['APP_RUNTIME', 'HELIX_RUNTIME']) ??
+    (profile === 'cloudflare' || isCloudflareEnv(env)
+      ? 'cloudflare-worker'
+      : profile === 'local'
+        ? 'nodejs'
+        : 'nodejs');
+
+  setDeepValue(overrides, 'runtime', runtime);
+
   if (environment === 'production') {
     setDeepValue(overrides, 'security.environment', 'production');
   }
 
-  if (isCloudflareEnv(env)) {
+  if (profile === 'cloudflare' || isCloudflareEnv(env)) {
     setDeepValue(overrides, 'runtime', 'cloudflare-worker');
     setDeepValue(overrides, 'cloudflare.enabled', true);
     setDeepValue(overrides, 'cloudflare.defaultEnvironment', environment);
+    setDeepValue(overrides, 'cloudflare.worker.runtime', 'cloudflare-worker');
   }
 }
 
@@ -627,15 +652,45 @@ function applyBooleanOverrides(
   overrides: Record<string, unknown>,
 ): void {
   applyOptionalBoolean(env, overrides, 'CLOUDFLARE_ENABLED', 'cloudflare.enabled');
-  applyOptionalBoolean(env, overrides, 'CLOUDFLARE_WORKERS_DEV', 'cloudflare.worker.workersDev');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'CLOUDFLARE_WORKERS_DEV',
+    'cloudflare.worker.workersDev',
+  );
   applyOptionalBoolean(env, overrides, 'CLOUDFLARE_CI_ENABLED', 'cloudflare.ci.enabled');
-  applyOptionalBoolean(env, overrides, 'CLOUDFLARE_PRODUCTION_APPROVAL_REQUIRED', 'cloudflare.ci.productionApprovalRequired');
-  applyOptionalBoolean(env, overrides, 'CLOUDFLARE_GRADUAL_DEPLOYMENTS_ENABLED', 'cloudflare.ci.gradualDeploymentsEnabled');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'CLOUDFLARE_PRODUCTION_APPROVAL_REQUIRED',
+    'cloudflare.ci.productionApprovalRequired',
+  );
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'CLOUDFLARE_GRADUAL_DEPLOYMENTS_ENABLED',
+    'cloudflare.ci.gradualDeploymentsEnabled',
+  );
 
   applyOptionalBoolean(env, overrides, 'DATABASE_ENABLED', 'database.enabled');
-  applyOptionalBoolean(env, overrides, 'DATABASE_MIGRATIONS_ENABLED', 'database.instances.primary.migrations.enabled');
-  applyOptionalBoolean(env, overrides, 'DATABASE_DESTRUCTIVE_MIGRATIONS_ALLOWED', 'database.instances.primary.migrations.destructiveAllowed');
-  applyOptionalBoolean(env, overrides, 'DATABASE_MIGRATIONS_REQUIRE_APPROVAL', 'database.instances.primary.migrations.requireApproval');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'DATABASE_MIGRATIONS_ENABLED',
+    'database.instances.primary.migrations.enabled',
+  );
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'DATABASE_DESTRUCTIVE_MIGRATIONS_ALLOWED',
+    'database.instances.primary.migrations.destructiveAllowed',
+  );
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'DATABASE_MIGRATIONS_REQUIRE_APPROVAL',
+    'database.instances.primary.migrations.requireApproval',
+  );
 
   applyOptionalBoolean(env, overrides, 'REDIS_ENABLED', 'redis.enabled');
 
@@ -649,15 +704,40 @@ function applyBooleanOverrides(
 
   applyOptionalBoolean(env, overrides, 'DISCORD_ENABLED', 'discord.enabled');
   applyOptionalBoolean(env, overrides, 'DISCORD_BOT_ENABLED', 'discord.bot.enabled');
-  applyOptionalBoolean(env, overrides, 'DISCORD_INTERACTIONS_ENABLED', 'discord.interactions.enabled');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'DISCORD_INTERACTIONS_ENABLED',
+    'discord.interactions.enabled',
+  );
   applyOptionalBoolean(env, overrides, 'DISCORD_GATEWAY_ENABLED', 'discord.gateway.enabled');
-  applyOptionalBoolean(env, overrides, 'DISCORD_VERIFY_SIGNATURES', 'discord.interactions.verifySignatures');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'DISCORD_VERIFY_SIGNATURES',
+    'discord.interactions.verifySignatures',
+  );
 
   applyOptionalBoolean(env, overrides, 'GRAFANA_CLOUD_ENABLED', 'grafanaCloud.enabled');
-  applyOptionalBoolean(env, overrides, 'GRAFANA_CLOUD_API_ENABLED', 'grafanaCloud.api.enabled');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'GRAFANA_CLOUD_API_ENABLED',
+    'grafanaCloud.api.enabled',
+  );
   applyOptionalBoolean(env, overrides, 'FARO_ENABLED', 'grafanaCloud.addons.faro.enabled');
-  applyOptionalBoolean(env, overrides, 'FARO_SESSION_TRACKING_ENABLED', 'grafanaCloud.addons.faro.sessionTracking.enabled');
-  applyOptionalBoolean(env, overrides, 'FARO_TRACING_ENABLED', 'grafanaCloud.addons.faro.tracing.enabled');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'FARO_SESSION_TRACKING_ENABLED',
+    'grafanaCloud.addons.faro.sessionTracking.enabled',
+  );
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'FARO_TRACING_ENABLED',
+    'grafanaCloud.addons.faro.tracing.enabled',
+  );
 
   applyOptionalBoolean(env, overrides, 'TELEMETRY_ENABLED', 'telemetry.enabled');
   applyOptionalBoolean(env, overrides, 'OTEL_ENABLED', 'telemetry.otel.enabled');
@@ -665,8 +745,18 @@ function applyBooleanOverrides(
   applyOptionalBoolean(env, overrides, 'FARO_TRACING_ENABLED', 'telemetry.faro.tracingEnabled');
 
   applyOptionalBoolean(env, overrides, 'STORAGE_ENABLED', 'storage.enabled');
-  applyOptionalBoolean(env, overrides, 'SIGNED_UPLOADS_ENABLED', 'storage.signedUploadsEnabled');
-  applyOptionalBoolean(env, overrides, 'WORKER_MEDIATED_DOWNLOADS_ENABLED', 'storage.workerMediatedDownloadsEnabled');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'SIGNED_UPLOADS_ENABLED',
+    'storage.signedUploadsEnabled',
+  );
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'WORKER_MEDIATED_DOWNLOADS_ENABLED',
+    'storage.workerMediatedDownloadsEnabled',
+  );
 
   applyOptionalBoolean(env, overrides, 'SECURITY_ENABLED', 'security.enabled');
   applyOptionalBoolean(env, overrides, 'CORS_ENABLED', 'security.cors.enabled');
@@ -681,23 +771,73 @@ function applyNumberOverrides(
   env: EnvRecord,
   overrides: Record<string, unknown>,
 ): void {
-  applyOptionalInteger(env, overrides, 'DATABASE_PORT', 'database.instances.primary.connection.port');
-  applyOptionalInteger(env, overrides, 'DATABASE_POOL_MIN', 'database.instances.primary.connection.pool.min');
-  applyOptionalInteger(env, overrides, 'DATABASE_POOL_MAX', 'database.instances.primary.connection.pool.max');
-  applyOptionalInteger(env, overrides, 'DATABASE_CONNECT_TIMEOUT_MS', 'database.instances.primary.connection.connectTimeoutMs');
-  applyOptionalInteger(env, overrides, 'DATABASE_STATEMENT_TIMEOUT_MS', 'database.instances.primary.connection.statementTimeoutMs');
+  applyOptionalInteger(
+    env,
+    overrides,
+    'DATABASE_PORT',
+    'database.instances.primary.connection.port',
+  );
+  applyOptionalInteger(
+    env,
+    overrides,
+    'DATABASE_POOL_MIN',
+    'database.instances.primary.connection.pool.min',
+  );
+  applyOptionalInteger(
+    env,
+    overrides,
+    'DATABASE_POOL_MAX',
+    'database.instances.primary.connection.pool.max',
+  );
+  applyOptionalInteger(
+    env,
+    overrides,
+    'DATABASE_CONNECT_TIMEOUT_MS',
+    'database.instances.primary.connection.connectTimeoutMs',
+  );
+  applyOptionalInteger(
+    env,
+    overrides,
+    'DATABASE_STATEMENT_TIMEOUT_MS',
+    'database.instances.primary.connection.statementTimeoutMs',
+  );
 
   applyOptionalInteger(env, overrides, 'REDIS_PORT', 'redis.port');
   applyOptionalInteger(env, overrides, 'REDIS_CACHE_EXPIRATION_MS', 'redis.cacheExpirationMs');
 
-  applyOptionalInteger(env, overrides, 'AUTH_SESSION_MAX_AGE_SECONDS', 'auth.nextAuth.sessionMaxAgeSeconds');
-  applyOptionalInteger(env, overrides, 'AUTH_SESSION_UPDATE_AGE_SECONDS', 'auth.nextAuth.sessionUpdateAgeSeconds');
-  applyOptionalInteger(env, overrides, 'API_KEY_DEFAULT_EXPIRATION_DAYS', 'auth.apiKeys.defaultExpirationDays');
+  applyOptionalInteger(
+    env,
+    overrides,
+    'AUTH_SESSION_MAX_AGE_SECONDS',
+    'auth.nextAuth.sessionMaxAgeSeconds',
+  );
+  applyOptionalInteger(
+    env,
+    overrides,
+    'AUTH_SESSION_UPDATE_AGE_SECONDS',
+    'auth.nextAuth.sessionUpdateAgeSeconds',
+  );
+  applyOptionalInteger(
+    env,
+    overrides,
+    'API_KEY_DEFAULT_EXPIRATION_DAYS',
+    'auth.apiKeys.defaultExpirationDays',
+  );
 
-  applyOptionalInteger(env, overrides, 'DISCORD_INITIAL_RESPONSE_TIMEOUT_MS', 'discord.interactions.initialResponseTimeoutMs');
+  applyOptionalInteger(
+    env,
+    overrides,
+    'DISCORD_INITIAL_RESPONSE_TIMEOUT_MS',
+    'discord.interactions.initialResponseTimeoutMs',
+  );
   applyOptionalInteger(env, overrides, 'DISCORD_SHARD_COUNT', 'discord.gateway.shardCount');
 
-  applyOptionalInteger(env, overrides, 'FARO_MAX_SESSION_PERSISTENCE_TIME_MS', 'grafanaCloud.addons.faro.sessionTracking.maxSessionPersistenceTimeMs');
+  applyOptionalInteger(
+    env,
+    overrides,
+    'FARO_MAX_SESSION_PERSISTENCE_TIME_MS',
+    'grafanaCloud.addons.faro.sessionTracking.maxSessionPersistenceTimeMs',
+  );
   applyOptionalNumber(env, overrides, 'FARO_SAMPLING_RATE', 'grafanaCloud.addons.faro.samplingRate');
 
   applyOptionalInteger(env, overrides, 'RATE_LIMIT_LIMIT', 'security.rateLimit.limit');
@@ -723,10 +863,25 @@ function applyListOverrides(
   applyOptionalList(env, overrides, 'DISCORD_BOT_SCOPES', 'discord.bot.scopes');
   applyOptionalList(env, overrides, 'DISCORD_GATEWAY_INTENTS', 'discord.gateway.intents');
 
-  applyOptionalList(env, overrides, 'CLOUDFLARE_COMPATIBILITY_FLAGS', 'cloudflare.worker.compatibilityFlags');
-  applyOptionalList(env, overrides, 'GRAFANA_CLOUD_ENABLED_SIGNALS', 'grafanaCloud.addons.enabledSignals');
+  applyOptionalList(
+    env,
+    overrides,
+    'CLOUDFLARE_COMPATIBILITY_FLAGS',
+    'cloudflare.worker.compatibilityFlags',
+  );
+  applyOptionalList(
+    env,
+    overrides,
+    'GRAFANA_CLOUD_ENABLED_SIGNALS',
+    'grafanaCloud.addons.enabledSignals',
+  );
   applyOptionalList(env, overrides, 'FARO_TRACE_URLS', 'grafanaCloud.addons.faro.tracing.traceUrls');
-  applyOptionalList(env, overrides, 'FARO_PROPAGATE_TRACE_HEADER_CORS_URLS', 'grafanaCloud.addons.faro.tracing.propagateTraceHeaderCorsUrls');
+  applyOptionalList(
+    env,
+    overrides,
+    'FARO_PROPAGATE_TRACE_HEADER_CORS_URLS',
+    'grafanaCloud.addons.faro.tracing.propagateTraceHeaderCorsUrls',
+  );
 
   applyOptionalList(env, overrides, 'CORS_ALLOWED_ORIGINS', 'security.cors.allowedOrigins');
   applyOptionalList(env, overrides, 'CORS_ALLOWED_METHODS', 'security.cors.allowedMethods');
@@ -739,11 +894,16 @@ function applyListOverrides(
 function applyCloudflareOverrides(
   env: EnvRecord,
   overrides: Record<string, unknown>,
+  profile: ResolvedEnvConfigProfile,
 ): void {
   const compatibilityDate = getEnv(env, 'CLOUDFLARE_COMPATIBILITY_DATE');
 
   if (compatibilityDate) {
-    setDeepValue(overrides, 'cloudflare.environments.production.compatibilityDate', compatibilityDate);
+    setDeepValue(
+      overrides,
+      'cloudflare.environments.production.compatibilityDate',
+      compatibilityDate,
+    );
   }
 
   const accountIdRef = getEnv(env, 'CLOUDFLARE_ACCOUNT_ID_REF') ?? 'CLOUDFLARE_ACCOUNT_ID';
@@ -765,15 +925,36 @@ function applyCloudflareOverrides(
     setDeepValue(overrides, 'cloudflare.worker.bindings.vars.values.APP_URL', appUrl);
     setDeepValue(overrides, 'cloudflare.worker.bindings.vars.values.PUBLIC_APP_URL', appUrl);
   }
+
+  const workerRuntime =
+    getFirstEnv(env, [
+      'CLOUDFLARE_WORKER_RUNTIME',
+      'WORKER_RUNTIME',
+      'APP_RUNTIME',
+      'HELIX_RUNTIME',
+    ]) ??
+    (profile === 'cloudflare' || isCloudflareEnv(env) ? 'cloudflare-worker' : 'nodejs');
+
+  const workerName =
+    getFirstEnv(env, ['CLOUDFLARE_WORKER_NAME', 'WORKER_NAME']) ??
+    (resolveAppEnvironment(env) === 'production'
+      ? 'helix-frontend'
+      : 'helix-frontend-dev');
+
+  setDeepValue(overrides, 'cloudflare.worker.runtime', workerRuntime);
+  setDeepValue(overrides, 'cloudflare.worker.name', workerName);
 }
 
 function applyDatabaseOverrides(
   env: EnvRecord,
   overrides: Record<string, unknown>,
 ): void {
+  const databaseProvider = getEnv(env, 'DATABASE_PROVIDER') ?? 'postgres';
   const databaseUrlRef = getEnv(env, 'DATABASE_URL_REF') ?? 'DATABASE_URL';
 
+  setDeepValue(overrides, 'database.provider', databaseProvider);
   setDeepValue(overrides, 'database.urlRef', databaseUrlRef);
+  setDeepValue(overrides, 'database.instances.primary.provider', databaseProvider);
   setDeepValue(overrides, 'database.instances.primary.connection.urlRef', databaseUrlRef);
   setDeepValue(overrides, 'database.instances.primary.requiredSecretRefs', [databaseUrlRef]);
 
@@ -781,11 +962,36 @@ function applyDatabaseOverrides(
   applyOptionalString(env, overrides, 'DATABASE_NAME', 'database.instances.primary.connection.database');
   applyOptionalString(env, overrides, 'DATABASE_SCHEMA', 'database.instances.primary.connection.schema');
   applyOptionalString(env, overrides, 'DATABASE_USERNAME', 'database.instances.primary.connection.username');
-  applyOptionalString(env, overrides, 'DATABASE_USERNAME_REF', 'database.instances.primary.connection.usernameRef');
-  applyOptionalString(env, overrides, 'DATABASE_PASSWORD_REF', 'database.instances.primary.connection.passwordRef');
-  applyOptionalString(env, overrides, 'DATABASE_CONNECTION_MODE', 'database.instances.primary.connection.mode');
-  applyOptionalString(env, overrides, 'DATABASE_SSL_MODE', 'database.instances.primary.connection.ssl.mode');
-  applyOptionalString(env, overrides, 'DATABASE_MIGRATION_MODE', 'database.instances.primary.migrations.mode');
+  applyOptionalString(
+    env,
+    overrides,
+    'DATABASE_USERNAME_REF',
+    'database.instances.primary.connection.usernameRef',
+  );
+  applyOptionalString(
+    env,
+    overrides,
+    'DATABASE_PASSWORD_REF',
+    'database.instances.primary.connection.passwordRef',
+  );
+  applyOptionalString(
+    env,
+    overrides,
+    'DATABASE_CONNECTION_MODE',
+    'database.instances.primary.connection.mode',
+  );
+  applyOptionalString(
+    env,
+    overrides,
+    'DATABASE_SSL_MODE',
+    'database.instances.primary.connection.ssl.mode',
+  );
+  applyOptionalString(
+    env,
+    overrides,
+    'DATABASE_MIGRATION_MODE',
+    'database.instances.primary.migrations.mode',
+  );
   applyOptionalString(env, overrides, 'DATABASE_REGION', 'database.instances.primary.region');
   applyOptionalString(env, overrides, 'HYPERDRIVE_BINDING', 'database.instances.primary.hyperdrive.binding');
   applyOptionalString(env, overrides, 'HYPERDRIVE_ID', 'database.instances.primary.hyperdrive.id');
