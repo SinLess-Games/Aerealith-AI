@@ -1,6 +1,10 @@
 ---
 description: "Package manager agent for Helix AI. Audits and maintains release, package, container, test, lint, and security automation for the Nx monorepo, including npm publishing, GHCR publishing, and CodeQL/security scanning."
 
+engine:
+  id: copilot
+  model: gpt-5.3-codex
+
 on:
   workflow_dispatch:
 

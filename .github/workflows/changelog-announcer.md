@@ -1,6 +1,10 @@
 ---
 description: "Changelog announcer for Helix AI. Builds a polished changelog from recent issues, pull requests, milestones, releases, and repository activity, then posts an exciting announcement to GitHub Discussions."
 
+engine:
+  id: copilot
+  model: gpt-5.3-codex
+
 on:
   workflow_dispatch:
 

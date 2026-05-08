@@ -1,6 +1,10 @@
 ---
 description: "Repo manager agent for Helix AI. Intelligently triages issues and pull requests, applies labels, assigns milestones, links related issues and PRs, and audits GitHub repository-management automation while preserving deterministic scripts as the source of truth."
 
+engine:
+  id: copilot
+  model: gpt-5.3-codex
+
 on:
   workflow_dispatch:
 
