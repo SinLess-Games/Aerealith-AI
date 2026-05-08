@@ -1,9 +1,7 @@
 ---
 description: "Reviewer IPR manager for Helix AI. Reviews open issues and pull requests, leaves useful comments, marks stale items, and safely closes stale issues or pull requests when repository policy allows."
 
-engine:
-  id: copilot
-  model: gpt-41-copilot
+engine: copilot
 
 on:
   workflow_dispatch:
