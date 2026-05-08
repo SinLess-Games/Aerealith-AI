@@ -47,6 +47,8 @@ permissions:
   actions: read
 
 safe-outputs:
+  noop:
+
   create-discussion:
     title-prefix: "🚀 Helix AI Changelog — "
     category: "announcements"
@@ -66,23 +68,17 @@ tools:
   github:
   bash:
     - "git status --short"
-    - "git log --no-merges --date=short --pretty=format:'%h%x09%ad%x09%an%x09%s' -n 100"
-    - "git log --merges --date=short --pretty=format:'%h%x09%ad%x09%an%x09%s' -n 60"
+    - "git log --no-merges --date=short --pretty=format:'%h%x09%ad%x09%an%x09%s' -n 80"
+    - "git log --merges --date=short --pretty=format:'%h%x09%ad%x09%an%x09%s' -n 40"
     - "git tag --sort=-creatordate | head -n 20"
     - "git describe --tags --abbrev=0 2>/dev/null || true"
     - "test -f CHANGELOG.md && sed -n '1,220p' CHANGELOG.md || true"
-    - "test -f package.json && node -e \"const p=require('./package.json'); console.log(JSON.stringify({name:p.name,version:p.version,private:p.private}, null, 2))\" || true"
-    - "find apps -maxdepth 3 -type f \\( -name 'project.json' -o -name 'package.json' -o -name 'Dockerfile' -o -name 'Dockerfile.*' \\) -print | sort"
-    - "find libs -maxdepth 3 -type f \\( -name 'project.json' -o -name 'package.json' -o -name 'tsconfig.lib.json' \\) -print | sort"
+    - "test -f package.json && cat package.json || true"
+    - "find apps -maxdepth 3 -name project.json -print | sort"
+    - "find apps -maxdepth 3 -name package.json -print | sort"
+    - "find libs -maxdepth 3 -name project.json -print | sort"
+    - "find libs -maxdepth 3 -name package.json -print | sort"
     - "find .github/workflows -maxdepth 1 -type f | sort"
-    - "gh issue list --state all --limit 100 --json number,title,state,labels,milestone,assignees,author,createdAt,updatedAt,closedAt,url"
-    - "gh pr list --state all --limit 100 --json number,title,state,labels,milestone,assignees,author,createdAt,updatedAt,closedAt,mergedAt,isDraft,mergeStateStatus,reviewDecision,headRefName,baseRefName,url"
-    - "gh release list --limit 20"
-    - "gh run list --limit 30 --json databaseId,name,status,conclusion,createdAt,updatedAt,url"
-    - "gh label list --limit 300 --json name,color,description"
-    - "gh api repos/$GITHUB_REPOSITORY/milestones?state=all --paginate"
-    - "gh api repos/$GITHUB_REPOSITORY/issues?state=closed\\&per_page=100 --paginate"
-    - "gh api repos/$GITHUB_REPOSITORY/pulls?state=closed\\&per_page=100 --paginate"
 
 timeout-minutes: 30
 ---
@@ -100,6 +96,41 @@ Use emojis, tables, headings, short summaries, and clean formatting.
 Do not create boring release notes.
 
 Do not exaggerate or claim work was completed unless the repository data supports it.
+
+## Mandatory Completion Rule
+
+Every run must end with exactly one of these outcomes:
+
+1. A `create-discussion` safe-output call when there is enough meaningful changelog activity.
+2. A `create-issue` safe-output call when Discussions are unavailable, required repository data is missing, or setup needs maintainer action.
+3. A `noop` safe-output call when no announcement should be posted.
+
+Never finish with only a written explanation. Never end without calling a safe-output tool.
+
+## GitHub Data Rules
+
+Use the GitHub MCP server for GitHub reads.
+
+Do not use the unauthenticated `gh` CLI for issues, pull requests, releases, workflow runs, labels, milestones, or discussions.
+
+Before deciding no announcement is needed, use GitHub MCP to inspect:
+
+- Recent merged pull requests.
+- Recent open pull requests with meaningful progress.
+- Recent closed issues.
+- Recent open issues with meaningful progress.
+- Recent releases.
+- Recent milestones.
+- Recent workflow runs.
+- Existing recent changelog announcements if available.
+
+Only call `noop` after this discovery step confirms there is no meaningful changelog to post.
+
+Use this exact pattern when no announcement is needed:
+
+```json
+{"noop": {"message": "No action needed: changelog discovery completed, and there was not enough meaningful activity to post a new announcement."}}
+````
 
 ## Primary Goal
 
@@ -127,111 +158,113 @@ This repository is the Helix AI Nx monorepo.
 
 Known app layout:
 
-- `apps`
-- `apps/e2e`
-- `apps/e2e/frontend-e2e`
-- `apps/e2e/.gitkeep`
-- `apps/frontend`
-- `apps/integrations`
-- `apps/integrations/.gitkeep`
-- `apps/services`
-- `apps/services/.gitkeep`
+* `apps`
+* `apps/e2e`
+* `apps/e2e/frontend-e2e`
+* `apps/e2e/.gitkeep`
+* `apps/frontend`
+* `apps/integrations`
+* `apps/integrations/.gitkeep`
+* `apps/services`
+* `apps/services/.gitkeep`
 
 Known library layout:
 
-- `libs/ui`
-- `libs/config`
-- `libs/db`
-- `libs/flags`
+* `libs/ui`
+* `libs/config`
+* `libs/db`
+* `libs/flags`
 
 Important project direction:
 
-- Frontend app lives at `apps/frontend`.
-- Frontend deployment target is Cloudflare Workers through OpenNext.
-- Public app domain is `helixaibot.com`.
-- Use `@helix-ai/config` for shared config.
-- Use `@helix-ai/flags` for feature flag abstraction.
-- Do not reintroduce `@helix-ai/hypertune` or `libs/hypertune`.
-- Use pnpm.
-- Use Nx targets instead of ad-hoc commands when targets exist.
+* Frontend app lives at `apps/frontend`.
+* Frontend deployment target is Cloudflare Workers through OpenNext.
+* Public app domain is `helixaibot.com`.
+* Use `@helix-ai/config` for shared config.
+* Use `@helix-ai/flags` for feature flag abstraction.
+* Do not reintroduce `@helix-ai/hypertune` or `libs/hypertune`.
+* Use pnpm.
+* Use Nx targets instead of ad-hoc commands when targets exist.
 
 ## Announcement Style
 
 The announcement should be:
 
-- Professional.
-- Exciting.
-- Easy to skim.
-- Useful to maintainers.
-- Useful to contributors.
-- Honest and evidence-based.
-- Richly formatted, but not noisy.
+* Professional.
+* Exciting.
+* Easy to skim.
+* Useful to maintainers.
+* Useful to contributors.
+* Honest and evidence-based.
+* Richly formatted, but not noisy.
 
 Use emojis in headings and table labels.
 
 Good examples of tone:
 
-- “🚀 This week moved Helix AI closer to a cleaner Cloudflare-ready frontend and smarter repository automation.”
-- “🧠 The repo-management layer got sharper with better labels, milestones, and agent-safe workflows.”
-- “☁️ Cloudflare deployment prep continued with OpenNext, Wrangler, and frontend workflow improvements.”
+* “🚀 This week moved Helix AI closer to a cleaner Cloudflare-ready frontend and smarter repository automation.”
+* “🧠 The repo-management layer got sharper with better labels, milestones, and agent-safe workflows.”
+* “☁️ Cloudflare deployment prep continued with OpenNext, Wrangler, and frontend workflow improvements.”
 
 Avoid empty hype such as:
 
-- “Everything is amazing.”
-- “The platform is complete.”
-- “Production-ready” unless evidence supports it.
+* “Everything is amazing.”
+* “The platform is complete.”
+* “Production-ready” unless evidence supports it.
 
 ## Changelog Scope
 
 When manually dispatched:
 
-- Build the changelog from the most recent meaningful activity.
-- Prefer activity since the latest tag if tags exist.
-- If tags are unavailable, use the latest 7 to 14 days of repository activity.
-- If neither is clear, use the most recent 50 issues, PRs, and commits.
+* Build the changelog from the most recent meaningful activity.
+* Prefer activity since the latest tag if tags exist.
+* If tags are unavailable, use the latest 7 to 14 days of repository activity.
+* If neither is clear, use the most recent 50 issues, PRs, and commits.
 
 When triggered by a release:
 
-- Build the changelog around the published release.
-- Prefer the release tag, merged PRs, closed issues, and commits associated with that release.
-- Include the release version in the announcement title.
+* Build the changelog around the published release.
+* Prefer the release tag, merged PRs, closed issues, and commits associated with that release.
+* Include the release version in the announcement title.
 
 When triggered by a push to `main`:
 
-- Build a smaller changelog from recent merged PRs, closed issues, and commits.
-- Avoid posting duplicate announcements for tiny or no-op changes.
-- If there is not enough meaningful change, call `noop`.
+* Build a smaller changelog from recent merged PRs, closed issues, open PRs with meaningful progress, and commits.
+* Avoid posting duplicate announcements for tiny or no-op changes.
+* If there is not enough meaningful change, call `noop`.
 
 When triggered by schedule:
 
-- Create a weekly changelog if there was meaningful activity.
-- If there was no meaningful activity, call `noop`.
+* Create a weekly changelog if there was meaningful activity.
+* If there was no meaningful activity, call `noop`.
 
 ## Meaningful Activity
 
 Meaningful activity includes:
 
-- Merged pull requests.
-- Closed issues.
-- New or updated milestones.
-- New release tags.
-- Workflow improvements.
-- Frontend page or UI changes.
-- Cloudflare setup changes.
-- Library changes.
-- Database/config/flags changes.
-- Security scanning changes.
-- CI/CD or release automation changes.
-- Documentation or ADR updates.
+* Merged pull requests.
+* Closed issues.
+* Open pull requests with active review, labels, milestone movement, or CI progress.
+* Open issues with recent meaningful comments, label changes, milestone movement, or clear scope refinement.
+* New or updated milestones.
+* New release tags.
+* Workflow improvements.
+* Frontend page or UI changes.
+* Cloudflare setup changes.
+* Library changes.
+* Database/config/flags changes.
+* Security scanning changes.
+* CI/CD or release automation changes.
+* Documentation or ADR updates.
 
 Non-meaningful activity includes:
 
-- Pure bot noise with no merge.
-- Repeated failed runs without code changes.
-- Label-only churn.
-- Generated lockfile churn without meaningful dependency changes.
-- Empty commits.
-- Formatting-only changes unless they unblock CI.
+* Pure bot noise with no merge.
+* Repeated failed runs without code changes.
+* Label-only churn.
+* Generated lockfile churn without meaningful dependency changes.
+* Empty commits.
+* Formatting-only changes unless they unblock CI.
 
 ## Required Discussion Title
 
@@ -354,11 +387,11 @@ The change summary must be short and high-signal.
 
 It should answer:
 
-- What changed?
-- Why does it matter?
-- What areas moved forward?
-- What milestone did this support?
-- What should maintainers or contributors look at next?
+* What changed?
+* Why does it matter?
+* What areas moved forward?
+* What milestone did this support?
+* What should maintainers or contributors look at next?
 
 Use tables where helpful.
 
@@ -372,31 +405,31 @@ Group work into logical areas.
 
 Supported area names:
 
-- ☁️ Cloudflare
-- 🎨 Frontend
-- 🧩 UI Library
-- ⚙️ Config
-- 🗄️ Database
-- 🚩 Flags
-- 🤖 Agentic Workflows
-- 🧪 CI/CD
-- 🛡️ Security
-- 📦 Package Management
-- 📚 Documentation
-- 🏗️ Infrastructure
-- 📈 Observability
-- 🔌 Integrations
-- 🧠 Product Planning
+* ☁️ Cloudflare
+* 🎨 Frontend
+* 🧩 UI Library
+* ⚙️ Config
+* 🗄️ Database
+* 🚩 Flags
+* 🤖 Agentic Workflows
+* 🧪 CI/CD
+* 🛡️ Security
+* 📦 Package Management
+* 📚 Documentation
+* 🏗️ Infrastructure
+* 📈 Observability
+* 🔌 Integrations
+* 🧠 Product Planning
 
 Infer areas from:
 
-- Labels.
-- Milestones.
-- PR titles.
-- Issue titles.
-- Changed path hints.
-- Commit messages.
-- Workflow files.
+* Labels.
+* Milestones.
+* PR titles.
+* Issue titles.
+* Changed path hints.
+* Commit messages.
+* Workflow files.
 
 Use the smallest useful set of areas.
 
@@ -408,23 +441,23 @@ Use the milestone names from repository data.
 
 If no milestone is attached to issues or PRs:
 
-- Add a short note that no explicit milestone was attached.
-- Infer likely milestone only in the narrative, not as a table fact.
-- Do not pretend a milestone was assigned.
+* Add a short note that no explicit milestone was attached.
+* Infer likely milestone only in the narrative, not as a table fact.
+* Do not pretend a milestone was assigned.
 
 Important known milestones may include:
 
-- Backlog
-- MVP
-- Frontend
-- Cloudflare Setup
-- Infrastructure
-- Security
-- Observability
-- Agentic Workflows
-- Documentation
-- Release
-- CI/CD
+* Backlog
+* MVP
+* Frontend
+* Cloudflare Setup
+* Infrastructure
+* Security
+* Observability
+* Agentic Workflows
+* Documentation
+* Release
+* CI/CD
 
 ## Issues Table Rules
 
@@ -454,12 +487,12 @@ Required columns:
 
 Rules:
 
-- Use `#123` format for same-repository issues.
-- Keep titles short.
-- Use comma-separated labels.
-- Use `—` when unknown or empty.
-- Do not use raw JSON.
-- Do not invent labels or milestones.
+* Use `#123` format for same-repository issues.
+* Keep titles short.
+* Use comma-separated labels.
+* Use `—` when unknown or empty.
+* Do not use raw JSON.
+* Do not invent labels or milestones.
 
 ## Pull Requests Table Rules
 
@@ -490,27 +523,28 @@ Required columns:
 
 Rules:
 
-- Use `#123` format for same-repository PRs.
-- State should be one of:
-  - `merged`
-  - `open`
-  - `closed`
-  - `draft`
-- Keep titles short.
-- Use comma-separated labels.
-- Use `—` when unknown or empty.
-- Do not use raw JSON.
-- Do not invent labels or milestones.
+* Use `#123` format for same-repository PRs.
+* State should be one of:
+
+  * `merged`
+  * `open`
+  * `closed`
+  * `draft`
+* Keep titles short.
+* Use comma-separated labels.
+* Use `—` when unknown or empty.
+* Do not use raw JSON.
+* Do not invent labels or milestones.
 
 ## Quality, CI, and Security Rules
 
 Include:
 
-- Latest workflow run health if available.
-- CodeQL/security changes if relevant.
-- Dependency management changes if relevant.
-- CI/lint/test/build status if visible from workflow runs.
-- Known caveats if validation status is unclear.
+* Latest workflow run health if available.
+* CodeQL/security changes if relevant.
+* Dependency management changes if relevant.
+* CI/lint/test/build status if visible from workflow runs.
+* Known caveats if validation status is unclear.
 
 If the data does not prove tests passed, say:
 
@@ -520,10 +554,10 @@ Validation status was not fully determined from available workflow data.
 
 Do not claim:
 
-- “All tests passed”
-- “Production ready”
-- “Secure”
-- “Fully compliant”
+* “All tests passed”
+* “Production ready”
+* “Secure”
+* “Fully compliant”
 
 unless workflow and repository data clearly supports it.
 
@@ -573,8 +607,8 @@ Before creating a new announcement:
 
 If discussion lookup is not available through tools:
 
-- Proceed cautiously.
-- Mention in traceability that discussion de-duplication was based on available repository data only.
+* Proceed cautiously.
+* Mention in traceability that discussion de-duplication was based on available repository data only.
 
 ## Discussion Category Rules
 
@@ -609,7 +643,7 @@ When manually dispatched:
 
 When triggered by a push to `main`:
 
-1. Review recent commits, PRs, and issues.
+1. Review recent commits, PRs, issues, milestones, releases, and workflow runs using GitHub MCP and local git context.
 2. Determine whether the push represents meaningful user-facing or maintainer-facing change.
 3. Create a changelog only if there is enough meaningful activity.
 4. If the push is small or duplicates a recent announcement, call `noop`.
@@ -638,25 +672,27 @@ Use `create-discussion` to post the changelog announcement.
 
 Use `create-issue` only when:
 
-- Discussion creation is unavailable and fallback occurs.
-- There is missing setup that prevents a good announcement.
-- Repository-level configuration problems need maintainer attention.
+* Discussion creation is unavailable and fallback occurs.
+* There is missing setup that prevents a good announcement.
+* Repository-level configuration problems need maintainer attention.
 
 Use `noop` when:
 
-- There is no meaningful activity.
-- The data is insufficient to create an honest changelog.
-- A matching announcement already exists.
-- Discussion category lookup or repository data is too incomplete and no useful fallback issue is needed.
+* There is no meaningful activity.
+* The data is insufficient to create an honest changelog.
+* A matching announcement already exists.
+* Discussion category lookup or repository data is too incomplete and no useful fallback issue is needed.
 
 Never end without a safe-output action or `noop`.
+
+Do not call `noop` if a `create-discussion` or `create-issue` safe-output action was taken.
 
 ## Required Output For create-discussion
 
 When calling `create-discussion`, provide:
 
-- A title.
-- A body.
+* A title.
+* A body.
 
 The title should be exciting and clear.
 
@@ -664,47 +700,50 @@ The body must follow the required discussion body format.
 
 The body should include:
 
-- Emojis.
-- Tables.
-- Change summary.
-- Areas worked on.
-- Milestones worked on.
-- Issues table.
-- PR table.
-- Quality/security section.
-- Next-up section.
-- Traceability section.
+* Emojis.
+* Tables.
+* Change summary.
+* Areas worked on.
+* Milestones worked on.
+* Issues table.
+* PR table.
+* Quality/security section.
+* Next-up section.
+* Traceability section.
 
 ## Safety Rules
 
 Do not:
 
-- Invent completed work.
-- Claim tests passed unless the data supports it.
-- Claim security/compliance status unless the data supports it.
-- Expose secrets.
-- Ask for secret values.
-- Create duplicate announcements.
-- Post raw JSON dumps.
-- Include extremely long commit logs.
-- Mention private credentials, tokens, or environment values.
-- Merge pull requests.
-- Close issues.
-- Close pull requests.
-- Edit files.
-- Publish releases.
-- Publish packages.
-- Push Docker images.
+* Invent completed work.
+* Claim tests passed unless the data supports it.
+* Claim security/compliance status unless the data supports it.
+* Expose secrets.
+* Ask for secret values.
+* Create duplicate announcements.
+* Post raw JSON dumps.
+* Include extremely long commit logs.
+* Mention private credentials, tokens, or environment values.
+* Merge pull requests.
+* Close issues.
+* Close pull requests.
+* Edit files.
+* Publish releases.
+* Publish packages.
+* Push Docker images.
+* Use the unauthenticated `gh` CLI for GitHub reads.
+* Finish without a safe-output action.
 
 Prefer:
 
-- Honest summaries.
-- Evidence-backed statements.
-- Clean tables.
-- Emojis used tastefully.
-- Short useful sections.
-- Maintainer-friendly traceability.
-- `noop` when there is nothing useful to announce.
+* Honest summaries.
+* Evidence-backed statements.
+* Clean tables.
+* Emojis used tastefully.
+* Short useful sections.
+* Maintainer-friendly traceability.
+* GitHub MCP for repository reads.
+* `noop` when there is nothing useful to announce.
 
 ## Expected Behavior Summary
 
