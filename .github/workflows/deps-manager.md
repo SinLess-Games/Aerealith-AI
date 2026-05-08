@@ -77,6 +77,8 @@ permissions:
   security-events: read
 
 safe-outputs:
+  noop:
+
   add-comment:
     target: "*"
     max: 10
@@ -244,23 +246,40 @@ You may review, comment, label, update PR metadata, submit PR reviews, push safe
 
 You must not directly merge pull requests unless a supported safe-output merge mechanism is available. If direct merge is not available, use review approval plus `auto-merge` labeling and commentary to allow native GitHub auto-merge, Renovate, Dependabot, or a deterministic workflow to complete the merge.
 
+## Mandatory Completion Rule
+
+Every run must end with exactly one of these outcomes:
+
+1. A safe-output action such as `add-labels`, `remove-labels`, `add-comment`, `update-pull-request`, `submit-pull-request-review`, `push-to-pull-request-branch`, `close-pull-request`, or `create-issue`.
+2. A `noop` safe-output call.
+
+If this run is triggered by a push to `main` and there is no dependency issue or dependency pull request in context, call `noop`.
+
+Use this exact pattern when no action is needed:
+
+```json
+{"noop": {"message": "No action needed: this push did not target a dependency issue or dependency pull request, and no actionable dependency automation problem was found."}}
+````
+
+Never finish with only a written explanation. Never end without calling a safe-output tool.
+
 ## Primary Goal
 
 Keep dependency work moving safely.
 
 For each dependency issue or PR, decide:
 
-- Is this dependency work?
-- Is it from Dependabot, Renovate, GitHub Actions, or a maintainer?
-- Is it a patch, minor, major, lockfile, security, Docker, GitHub Actions, Kubernetes, Terraform, or Ansible update?
-- Are checks passing?
-- Is the branch mergeable?
-- Is there a conflict that can be safely fixed?
-- Is it safe to approve?
-- Is it safe to mark for auto-merge?
-- Does it need maintainer review?
-- Does it need a comment?
-- Does it need to be closed because it is obsolete or superseded?
+* Is this dependency work?
+* Is it from Dependabot, Renovate, GitHub Actions, or a maintainer?
+* Is it a patch, minor, major, lockfile, security, Docker, GitHub Actions, Kubernetes, Terraform, or Ansible update?
+* Are checks passing?
+* Is the branch mergeable?
+* Is there a conflict that can be safely fixed?
+* Is it safe to approve?
+* Is it safe to mark for auto-merge?
+* Does it need maintainer review?
+* Does it need a comment?
+* Does it need to be closed because it is obsolete or superseded?
 
 ## Repository Context
 
@@ -268,68 +287,69 @@ This repository is the Helix AI Nx monorepo.
 
 Known app layout:
 
-- `apps`
-- `apps/e2e`
-- `apps/e2e/frontend-e2e`
-- `apps/e2e/.gitkeep`
-- `apps/frontend`
-- `apps/integrations`
-- `apps/integrations/.gitkeep`
-- `apps/services`
-- `apps/services/.gitkeep`
+* `apps`
+* `apps/e2e`
+* `apps/e2e/frontend-e2e`
+* `apps/e2e/.gitkeep`
+* `apps/frontend`
+* `apps/integrations`
+* `apps/integrations/.gitkeep`
+* `apps/services`
+* `apps/services/.gitkeep`
 
 Known library layout:
 
-- `libs/ui`
-- `libs/config`
-- `libs/db`
-- `libs/flags`
+* `libs/ui`
+* `libs/config`
+* `libs/db`
+* `libs/flags`
 
 Important project direction:
 
-- Frontend app lives at `apps/frontend`.
-- Frontend deploy target is Cloudflare Workers through OpenNext.
-- Public app domain is `helixaibot.com`.
-- Use `@helix-ai/config` for shared config.
-- Use `@helix-ai/flags` for feature flag abstraction.
-- Do not reintroduce `@helix-ai/hypertune` or `libs/hypertune`.
-- Use pnpm.
-- Use Nx targets instead of ad-hoc commands when targets exist.
-- Cloudflare deployment should use OpenNext and Wrangler.
+* Frontend app lives at `apps/frontend`.
+* Frontend deploy target is Cloudflare Workers through OpenNext.
+* Public app domain is `helixaibot.com`.
+* Use `@helix-ai/config` for shared config.
+* Use `@helix-ai/flags` for feature flag abstraction.
+* Do not reintroduce `@helix-ai/hypertune` or `libs/hypertune`.
+* Use pnpm.
+* Use Nx targets instead of ad-hoc commands when targets exist.
+* Cloudflare deployment should use OpenNext and Wrangler.
 
 ## Dependency Scope
 
 This workflow manages only issues and PRs matching at least one of these conditions:
 
-- Has label `dependencies`.
-- Has label `actions-update`.
-- Has label `ansible-dependencies`.
-- Has label `terraform-dependencies`.
-- Has label `k8s-dependencies`.
-- Has label `auto-merge`.
-- Author is `dependabot[bot]`.
-- Author is `renovate[bot]`.
-- Title mentions dependency, dependencies, deps, update, upgrade, bump, lockfile, npm, pnpm, Docker, GitHub Actions, Terraform, Ansible, Helm, Kubernetes, Kustomize, or Renovate.
-- Changed files are dependency-related:
-  - `package.json`
-  - `pnpm-lock.yaml`
-  - `pnpm-workspace.yaml`
-  - `**/package.json`
-  - `Dockerfile`
-  - `**/Dockerfile`
-  - `**/Dockerfile.*`
-  - `.github/dependabot.yaml`
-  - `.github/dependabot.yml`
-  - `.github/renovate.json5`
-  - `renovate.json`
-  - `renovate.json5`
-  - `.github/workflows/**`
-  - `Kubernetes/**`
-  - `kubernetes/**`
-  - `Ansible/**`
-  - `ansible/**`
-  - `Terraform/**`
-  - `terraform/**`
+* Has label `dependencies`.
+* Has label `actions-update`.
+* Has label `ansible-dependencies`.
+* Has label `terraform-dependencies`.
+* Has label `k8s-dependencies`.
+* Has label `auto-merge`.
+* Author is `dependabot[bot]`.
+* Author is `renovate[bot]`.
+* Title mentions dependency, dependencies, deps, update, upgrade, bump, lockfile, npm, pnpm, Docker, GitHub Actions, Terraform, Ansible, Helm, Kubernetes, Kustomize, or Renovate.
+* Changed files are dependency-related:
+
+  * `package.json`
+  * `pnpm-lock.yaml`
+  * `pnpm-workspace.yaml`
+  * `**/package.json`
+  * `Dockerfile`
+  * `**/Dockerfile`
+  * `**/Dockerfile.*`
+  * `.github/dependabot.yaml`
+  * `.github/dependabot.yml`
+  * `.github/renovate.json5`
+  * `renovate.json`
+  * `renovate.json5`
+  * `.github/workflows/**`
+  * `Kubernetes/**`
+  * `kubernetes/**`
+  * `Ansible/**`
+  * `ansible/**`
+  * `Terraform/**`
+  * `terraform/**`
 
 If an item does not match the dependency scope, call `noop` or ignore it.
 
@@ -347,19 +367,19 @@ You may push fixes only to dependency PR branches that:
 
 Never push to a PR branch if:
 
-- It is from a fork.
-- It is not a dependency PR.
-- It changes unrelated source code.
-- It changes secrets.
-- It changes `.env` files.
-- It changes compiled outputs.
-- It changes production Kubernetes secrets or sealed secrets.
-- It changes Vault/KMS policy files without maintainer review.
-- It changes authentication or authorization logic beyond dependency version bumps.
-- It changes workflow permissions broadly.
-- It is labeled `do-not-merge`.
-- It is labeled `priority:critical` and the fix is not obvious.
-- It is a major version upgrade requiring migration work.
+* It is from a fork.
+* It is not a dependency PR.
+* It changes unrelated source code.
+* It changes secrets.
+* It changes `.env` files.
+* It changes compiled outputs.
+* It changes production Kubernetes secrets or sealed secrets.
+* It changes Vault/KMS policy files without maintainer review.
+* It changes authentication or authorization logic beyond dependency version bumps.
+* It changes workflow permissions broadly.
+* It is labeled `do-not-merge`.
+* It is labeled `priority:critical` and the fix is not obvious.
+* It is a major version upgrade requiring migration work.
 
 ## Merge Policy
 
@@ -396,16 +416,16 @@ A dependency PR may be marked for auto-merge when all are true:
 
 A dependency PR must not be auto-merged when any are true:
 
-- Major version update.
-- Framework update involving Next.js, React, TypeScript, Nx, MikroORM, Wrangler, OpenNext, GitHub Actions core workflow behavior, Docker base images with OS major changes, Kubernetes control-plane components, Terraform provider major updates, or Ansible collection major updates.
-- Security alert with unclear impact.
-- CI failing.
-- Merge conflict not safely fixable.
-- Human review requested.
-- `do-not-merge` label present.
-- PR body indicates breaking changes.
-- PR includes migration steps.
-- PR touches runtime auth, billing, database migration, security policy, release workflow, or production deployment behavior beyond dependency versions.
+* Major version update.
+* Framework update involving Next.js, React, TypeScript, Nx, MikroORM, Wrangler, OpenNext, GitHub Actions core workflow behavior, Docker base images with OS major changes, Kubernetes control-plane components, Terraform provider major updates, or Ansible collection major updates.
+* Security alert with unclear impact.
+* CI failing.
+* Merge conflict not safely fixable.
+* Human review requested.
+* `do-not-merge` label present.
+* PR body indicates breaking changes.
+* PR includes migration steps.
+* PR touches runtime auth, billing, database migration, security policy, release workflow, or production deployment behavior beyond dependency versions.
 
 ## Review Policy
 
@@ -413,29 +433,29 @@ Use `submit-pull-request-review`.
 
 Submit `APPROVE` only when:
 
-- The PR satisfies all auto-merge criteria.
-- It is low risk.
-- There is no evidence of failing checks.
-- The dependency update is clearly mechanical.
-- The branch is mergeable or conflict was safely fixed.
-- The PR has no unresolved security concerns.
+* The PR satisfies all auto-merge criteria.
+* It is low risk.
+* There is no evidence of failing checks.
+* The dependency update is clearly mechanical.
+* The branch is mergeable or conflict was safely fixed.
+* The PR has no unresolved security concerns.
 
 Submit `COMMENT` when:
 
-- The PR is useful but needs checks, review, or clarification.
-- The PR is medium risk.
-- The PR needs human verification.
-- The PR is waiting on CI.
+* The PR is useful but needs checks, review, or clarification.
+* The PR is medium risk.
+* The PR needs human verification.
+* The PR is waiting on CI.
 
 Submit `REQUEST_CHANGES` when:
 
-- The PR is unsafe.
-- The PR changes unrelated code.
-- The PR is a major upgrade without a migration plan.
-- The PR removes required packages.
-- The PR downgrades dependencies without justification.
-- The PR appears malicious or suspicious.
-- The PR changes security-sensitive files without clear need.
+* The PR is unsafe.
+* The PR changes unrelated code.
+* The PR is a major upgrade without a migration plan.
+* The PR removes required packages.
+* The PR downgrades dependencies without justification.
+* The PR appears malicious or suspicious.
+* The PR changes security-sensitive files without clear need.
 
 ## Conflict Fix Policy
 
@@ -443,22 +463,22 @@ When a dependency PR has conflicts, attempt to fix only mechanical conflicts.
 
 Safe conflict fixes include:
 
-- Re-running or reconciling `pnpm-lock.yaml`.
-- Resolving `package.json` version conflicts by preserving the intended update and current base branch dependencies.
-- Resolving grouped dependency version conflicts from Renovate or Dependabot.
-- Updating `.github/renovate.json5` or `.github/dependabot.yaml` only when the conflict is caused by dependency automation config.
-- Resolving Docker image version conflicts where the intended update is clear.
-- Resolving Kubernetes/Helm/Terraform/Ansible dependency references where the intended update is clear.
+* Re-running or reconciling `pnpm-lock.yaml`.
+* Resolving `package.json` version conflicts by preserving the intended update and current base branch dependencies.
+* Resolving grouped dependency version conflicts from Renovate or Dependabot.
+* Updating `.github/renovate.json5` or `.github/dependabot.yaml` only when the conflict is caused by dependency automation config.
+* Resolving Docker image version conflicts where the intended update is clear.
+* Resolving Kubernetes/Helm/Terraform/Ansible dependency references where the intended update is clear.
 
 Unsafe conflict fixes include:
 
-- Guessing application code behavior.
-- Editing business logic.
-- Editing auth, billing, secrets, KMS, Vault, policy, or production safety controls.
-- Choosing between two incompatible major versions.
-- Editing migrations without domain review.
-- Removing tests to make the PR pass.
-- Broadly changing workflow permissions.
+* Guessing application code behavior.
+* Editing business logic.
+* Editing auth, billing, secrets, KMS, Vault, policy, or production safety controls.
+* Choosing between two incompatible major versions.
+* Editing migrations without domain review.
+* Removing tests to make the PR pass.
+* Broadly changing workflow permissions.
 
 When a conflict is safe to fix:
 
@@ -480,41 +500,41 @@ Apply labels intelligently.
 
 Required dependency labels:
 
-- `dependencies` on all dependency issues and PRs.
-- `actions-update` for GitHub Actions updates.
-- `ansible-dependencies` for Ansible dependency updates.
-- `terraform-dependencies` for Terraform dependency updates.
-- `k8s-dependencies` for Kubernetes, Helm, Kustomize, or Helmfile updates.
-- `kind:security` for vulnerability/security dependency updates.
-- `kind:chore` for routine dependency updates.
-- `kind:release` for publishing/release dependency work.
-- `area:ci` for CI/build/test dependency updates.
-- `area:github-actions` for GitHub Actions updates.
-- `area:frontend` for Next.js, React, MUI, Emotion, UI dependencies.
-- `area:db` for MikroORM, pg, database, migration tool dependencies.
-- `area:cloudflare` for Wrangler, OpenNext, Cloudflare dependencies.
-- `area:kubernetes` for Kubernetes/Helm/Kustomize updates.
-- `area:ansible` for Ansible collection/role updates.
-- `area:terraform` for Terraform provider/module updates.
+* `dependencies` on all dependency issues and PRs.
+* `actions-update` for GitHub Actions updates.
+* `ansible-dependencies` for Ansible dependency updates.
+* `terraform-dependencies` for Terraform dependency updates.
+* `k8s-dependencies` for Kubernetes, Helm, Kustomize, or Helmfile updates.
+* `kind:security` for vulnerability/security dependency updates.
+* `kind:chore` for routine dependency updates.
+* `kind:release` for publishing/release dependency work.
+* `area:ci` for CI/build/test dependency updates.
+* `area:github-actions` for GitHub Actions updates.
+* `area:frontend` for Next.js, React, MUI, Emotion, UI dependencies.
+* `area:db` for MikroORM, pg, database, migration tool dependencies.
+* `area:cloudflare` for Wrangler, OpenNext, Cloudflare dependencies.
+* `area:kubernetes` for Kubernetes/Helm/Kustomize updates.
+* `area:ansible` for Ansible collection/role updates.
+* `area:terraform` for Terraform provider/module updates.
 
 Status labels:
 
-- Add `status:ready` when the dependency item is clear and actionable.
-- Add `status:blocked` when blocked by CI, conflicts, human decision, or unsafe upgrade.
-- Add `status:needs-info` when the PR lacks enough detail.
-- Add `status:in-progress` when a conflict fix is being pushed.
+* Add `status:ready` when the dependency item is clear and actionable.
+* Add `status:blocked` when blocked by CI, conflicts, human decision, or unsafe upgrade.
+* Add `status:needs-info` when the PR lacks enough detail.
+* Add `status:in-progress` when a conflict fix is being pushed.
 
 Priority labels:
 
-- Add `priority:critical` for actively exploited vulnerabilities or production-breaking dependency failures.
-- Add `priority:high` for security updates, release blockers, build blockers, or framework/runtime upgrades.
-- Add `priority:medium` for normal minor upgrades and infrastructure dependency updates.
-- Add `priority:low` for routine patch or lockfile maintenance.
+* Add `priority:critical` for actively exploited vulnerabilities or production-breaking dependency failures.
+* Add `priority:high` for security updates, release blockers, build blockers, or framework/runtime upgrades.
+* Add `priority:medium` for normal minor upgrades and infrastructure dependency updates.
+* Add `priority:low` for routine patch or lockfile maintenance.
 
 Auto-merge label:
 
-- Add `auto-merge` only when the PR satisfies auto-merge criteria.
-- Remove `auto-merge` if the PR becomes unsafe, blocked, major, failing, or conflicted.
+* Add `auto-merge` only when the PR satisfies auto-merge criteria.
+* Remove `auto-merge` if the PR becomes unsafe, blocked, major, failing, or conflicted.
 
 ## Issue Policy
 
@@ -553,82 +573,82 @@ Use these risk levels in comments and reviews.
 
 Examples:
 
-- Patch update for leaf npm dependency.
-- Lockfile-only maintenance.
-- GitHub Actions patch update.
-- Minor dev-only tooling update with passing checks.
-- Docker image patch update with no OS major change.
+* Patch update for leaf npm dependency.
+* Lockfile-only maintenance.
+* GitHub Actions patch update.
+* Minor dev-only tooling update with passing checks.
+* Docker image patch update with no OS major change.
 
 Allowed actions:
 
-- Add `dependencies`.
-- Add `priority:low`.
-- Add `status:ready`.
-- Add `auto-merge` if checks are acceptable.
-- Submit `APPROVE`.
+* Add `dependencies`.
+* Add `priority:low`.
+* Add `status:ready`.
+* Add `auto-merge` if checks are acceptable.
+* Submit `APPROVE`.
 
 ### Medium Risk
 
 Examples:
 
-- Minor production dependency update.
-- Minor build tool update.
-- Kubernetes/Helm chart minor update.
-- Terraform provider minor update.
-- Ansible collection minor update.
-- Observability dependency update.
+* Minor production dependency update.
+* Minor build tool update.
+* Kubernetes/Helm chart minor update.
+* Terraform provider minor update.
+* Ansible collection minor update.
+* Observability dependency update.
 
 Allowed actions:
 
-- Add `dependencies`.
-- Add `priority:medium`.
-- Add `status:ready` or `status:blocked`.
-- Submit `COMMENT`.
-- Add `auto-merge` only if explicitly safe and checks are clean.
+* Add `dependencies`.
+* Add `priority:medium`.
+* Add `status:ready` or `status:blocked`.
+* Submit `COMMENT`.
+* Add `auto-merge` only if explicitly safe and checks are clean.
 
 ### High Risk
 
 Examples:
 
-- Major update.
-- Framework update.
-- Nx update.
-- Next.js update.
-- React update.
-- TypeScript update.
-- MikroORM update.
-- Wrangler/OpenNext update.
-- Docker base image OS major update.
-- Terraform provider major update.
-- Security vulnerability update.
-- Production deployment dependency.
+* Major update.
+* Framework update.
+* Nx update.
+* Next.js update.
+* React update.
+* TypeScript update.
+* MikroORM update.
+* Wrangler/OpenNext update.
+* Docker base image OS major update.
+* Terraform provider major update.
+* Security vulnerability update.
+* Production deployment dependency.
 
 Allowed actions:
 
-- Add `priority:high`.
-- Add `status:blocked` until reviewed.
-- Remove `auto-merge`.
-- Request maintainer review.
-- Submit `COMMENT` or `REQUEST_CHANGES`.
+* Add `priority:high`.
+* Add `status:blocked` until reviewed.
+* Remove `auto-merge`.
+* Request maintainer review.
+* Submit `COMMENT` or `REQUEST_CHANGES`.
 
 ### Critical Risk
 
 Examples:
 
-- Active exploit.
-- Secret exposure dependency.
-- Production outage caused by dependency.
-- Build fully blocked on main.
-- Security patch required immediately.
+* Active exploit.
+* Secret exposure dependency.
+* Production outage caused by dependency.
+* Build fully blocked on main.
+* Security patch required immediately.
 
 Allowed actions:
 
-- Add `priority:critical`.
-- Add `kind:security`.
-- Add `area:security`.
-- Add `status:blocked` or `status:ready`.
-- Request maintainer review.
-- Do not auto-merge unless the fix is clearly safe and required checks pass.
+* Add `priority:critical`.
+* Add `kind:security`.
+* Add `area:security`.
+* Add `status:blocked` or `status:ready`.
+* Request maintainer review.
+* Do not auto-merge unless the fix is clearly safe and required checks pass.
 
 ## Standard Comments
 
@@ -657,7 +677,7 @@ Actions:
 - Submitted approval when policy allowed.
 
 Native GitHub auto-merge or deterministic merge automation may merge this after required checks pass.
-````
+```
 
 ### Needs Human Review Comment
 
@@ -872,10 +892,11 @@ When triggered by a pull request event:
 
 When dependency config changes on `main`:
 
-1. Review dependency automation configuration.
-2. Check labels and Renovate/Dependabot alignment.
+1. Review dependency automation configuration if enough repository data is available.
+2. Check labels and Renovate/Dependabot alignment when relevant.
 3. Create a report issue only if there are actionable problems.
-4. Call `noop` if no action is needed.
+4. If no dependency issue, dependency pull request, or actionable config problem is found, call `noop`.
+5. Do not attempt PR review, conflict repair, or auto-merge behavior on a push event without a pull request context.
 
 ### Scheduled Trigger
 
