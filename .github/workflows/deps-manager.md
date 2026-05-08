@@ -220,18 +220,14 @@ tools:
     - "git log --oneline -n 25"
     - "find .github -maxdepth 4 -type f | sort"
     - "find . -maxdepth 5 -name package.json -print | sort"
-    - "find . -maxdepth 5 \\( -name Dockerfile -o -name 'Dockerfile.*' \\) -print | sort"
     - "test -f package.json && cat package.json || true"
     - "test -f pnpm-workspace.yaml && cat pnpm-workspace.yaml || true"
     - "test -f pnpm-lock.yaml && head -n 120 pnpm-lock.yaml || true"
-    - "test -f .github/dependabot.yaml && sed -n '1,260p' .github/dependabot.yaml || true"
-    - "test -f .github/dependabot.yml && sed -n '1,260p' .github/dependabot.yml || true"
-    - "test -f .github/renovate.json5 && sed -n '1,320p' .github/renovate.json5 || true"
-    - "test -f .github/labels.yaml && sed -n '1,260p' .github/labels.yaml || true"
-    - "test -f .github/assignees.yaml && sed -n '1,260p' .github/assignees.yaml || true"
-    - "grep -R \"dependencies\\|dependabot\\|renovate\\|auto-merge\\|pnpm-lock\" -n .github package.json pnpm-workspace.yaml 2>/dev/null || true"
-    - "pnpm --version 2>/dev/null || true"
-    - "node --version 2>/dev/null || true"
+    - "test -f .github/dependabot.yaml && sed -n '1,220p' .github/dependabot.yaml || true"
+    - "test -f .github/dependabot.yml && sed -n '1,220p' .github/dependabot.yml || true"
+    - "test -f .github/renovate.json5 && sed -n '1,260p' .github/renovate.json5 || true"
+    - "test -f .github/labels.yaml && sed -n '1,220p' .github/labels.yaml || true"
+    - "test -f .github/assignees.yaml && sed -n '1,220p' .github/assignees.yaml || true"
 
 timeout-minutes: 45
 ---
