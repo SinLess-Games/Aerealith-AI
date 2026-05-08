@@ -249,15 +249,21 @@ Every run must end with exactly one of these outcomes:
 1. A safe-output action such as `add-labels`, `remove-labels`, `add-comment`, `update-pull-request`, `submit-pull-request-review`, `push-to-pull-request-branch`, `close-pull-request`, or `create-issue`.
 2. A `noop` safe-output call.
 
-If this run is triggered by a push to `main` and there is no dependency issue or dependency pull request in context, call `noop`.
+Never finish with only a written explanation. Never end without calling a safe-output tool.
+
+## No-op Guard
+
+Do not call `noop` until dependency discovery has been completed.
+
+A `push` event does not mean there is no dependency work. The repository may already have open dependency PRs from Dependabot or Renovate. On push, manual, and scheduled runs, always discover open dependency PRs and issues first.
+
+A run may call `noop` only after discovery confirms that no dependency issue, dependency pull request, or dependency automation problem needs action.
 
 Use this exact pattern when no action is needed:
 
 ```json
-{"noop": {"message": "No action needed: this push did not target a dependency issue or dependency pull request, and no actionable dependency automation problem was found."}}
+{"noop": {"message": "No action needed: dependency discovery completed, and no dependency issue, dependency pull request, or actionable dependency automation problem required a safe-output action."}}
 ````
-
-Never finish with only a written explanation. Never end without calling a safe-output tool.
 
 ## Primary Goal
 
@@ -347,7 +353,63 @@ This workflow manages only issues and PRs matching at least one of these conditi
   * `Terraform/**`
   * `terraform/**`
 
-If an item does not match the dependency scope, call `noop` or ignore it.
+If an item does not match the dependency scope, ignore it.
+
+## Global Dependency Discovery
+
+Before deciding that no action is needed, every run must discover dependency work from the repository.
+
+Use the GitHub MCP server, not the unauthenticated `gh` CLI, to find:
+
+1. Open pull requests with the `dependencies` label.
+2. Open pull requests with the `auto-merge` label.
+3. Open pull requests with dependency-specific labels:
+
+   * `actions-update`
+   * `ansible-dependencies`
+   * `terraform-dependencies`
+   * `k8s-dependencies`
+4. Open pull requests authored by:
+
+   * `dependabot[bot]`
+   * `renovate[bot]`
+5. Open issues with the `dependencies` label.
+6. Open issues with dependency-specific labels:
+
+   * `actions-update`
+   * `ansible-dependencies`
+   * `terraform-dependencies`
+   * `k8s-dependencies`
+
+Discovery must happen on:
+
+* `workflow_dispatch`
+* `push`
+* `schedule`
+* dependency-related issue events
+* dependency-related pull request events
+
+Do not assume a push event has no dependency work just because `github.event.pull_request.number` is empty.
+
+After discovery, prioritize work in this order:
+
+1. Open dependency PRs with failing, blocked, or conflicted status.
+2. Open dependency PRs with `auto-merge`.
+3. Open dependency PRs authored by Dependabot or Renovate.
+4. Open dependency PRs labeled `dependencies`.
+5. Open dependency issues labeled `dependencies`.
+6. Repository-level dependency automation configuration problems.
+
+When there are many dependency PRs, process a small safe batch first. Prefer the highest-signal items:
+
+* PRs with `auto-merge`.
+* PRs with failing checks.
+* PRs with merge conflicts.
+* PRs that are patch or lockfile-only.
+* PRs that are security-related.
+* PRs that are older and still open.
+
+Do not no-op merely because there is no triggering PR context.
 
 ## Safety Boundary
 
@@ -851,60 +913,75 @@ Brief status.
 
 When manually dispatched:
 
-1. Review all open issues and PRs with the `dependencies` label.
-2. Review all open Dependabot and Renovate PRs.
-3. Classify risk.
-4. Fix safe conflicts.
-5. Comment when useful.
-6. Submit reviews.
-7. Add `auto-merge` only for safe candidates.
-8. Create a report issue only if actionable.
-9. Call `noop` if no action is needed.
+1. Discover all open dependency issues and pull requests.
+2. Review all open issues and PRs with the `dependencies` label.
+3. Review all open Dependabot and Renovate PRs.
+4. Classify risk.
+5. Fix safe conflicts.
+6. Comment when useful.
+7. Submit reviews.
+8. Add `auto-merge` only for safe candidates.
+9. Create a report issue only if actionable.
+10. Call `noop` only if discovery finds no useful action.
 
 ### Issue Trigger
 
 When triggered by an issue event:
 
-1. Review only the triggering issue unless repository-level dependency automation is clearly broken.
-2. If dependency-related, label it.
-3. Comment only when useful.
-4. Link relevant PRs if visible.
-5. Call `noop` if no action is needed.
+1. Review the triggering issue.
+2. If the triggering issue is dependency-related, discover open dependency PRs and issues.
+3. If dependency-related, label it.
+4. Comment only when useful.
+5. Link relevant PRs if visible.
+6. Call `noop` only if no action is needed after reviewing the triggering issue and discovered dependency work.
 
 ### Pull Request Trigger
 
 When triggered by a pull request event:
 
-1. Review only the triggering PR unless repository-level dependency automation is clearly broken.
-2. Proceed only if it is dependency-related.
-3. Classify risk.
-4. Fix safe conflicts if needed.
-5. Add or remove `auto-merge` based on policy.
-6. Submit a review.
-7. Comment only when useful.
-8. Call `noop` if no action is needed.
+1. Review the triggering PR.
+2. If the triggering PR is dependency-related or authored by Dependabot/Renovate, discover open dependency PRs.
+3. Proceed only if it is dependency-related.
+4. Classify risk.
+5. Fix safe conflicts if needed.
+6. Add or remove `auto-merge` based on policy.
+7. Submit a review.
+8. Comment only when useful.
+9. Call `noop` only if no action is needed.
 
 ### Push Trigger
 
 When dependency config changes on `main`:
 
-1. Review dependency automation configuration if enough repository data is available.
-2. Check labels and Renovate/Dependabot alignment when relevant.
-3. Create a report issue only if there are actionable problems.
-4. If no dependency issue, dependency pull request, or actionable config problem is found, call `noop`.
-5. Do not attempt PR review, conflict repair, or auto-merge behavior on a push event without a pull request context.
+1. Discover all open dependency issues and pull requests.
+2. Review dependency automation configuration if enough repository data is available.
+3. Review open dependency PRs with:
+
+   * `dependencies`
+   * `auto-merge`
+   * `actions-update`
+   * `ansible-dependencies`
+   * `terraform-dependencies`
+   * `k8s-dependencies`
+4. Review open Dependabot and Renovate PRs.
+5. Classify each discovered PR by risk.
+6. Submit reviews or comments when useful.
+7. Add or remove `auto-merge` based on policy.
+8. Create a report issue only if there are actionable repository-level problems.
+9. Call `noop` only if discovery finds no dependency PRs, no dependency issues, and no actionable config problem.
 
 ### Scheduled Trigger
 
 On weekly schedule:
 
-1. Review open dependency issues and PRs.
-2. Identify safe auto-merge candidates.
-3. Identify blocked PRs.
-4. Identify conflict candidates.
-5. Push safe fixes.
-6. Create a report issue only if there are actionable findings.
-7. Call `noop` if no action is needed.
+1. Discover all open dependency issues and pull requests.
+2. Review open dependency issues and PRs.
+3. Identify safe auto-merge candidates.
+4. Identify blocked PRs.
+5. Identify conflict candidates.
+6. Push safe fixes.
+7. Create a report issue only if there are actionable findings.
+8. Call `noop` only if discovery finds no useful action.
 
 ## Validation Guidance
 
@@ -949,7 +1026,7 @@ Use safe outputs exactly like this:
 * Use `push-to-pull-request-branch` only for safe mechanical conflict fixes.
 * Use `close-pull-request` only when a dependency PR is obsolete, superseded, and safe to close.
 * Use `create-issue` only for repository-level reports.
-* Use `noop` when no useful action is needed.
+* Use `noop` when discovery confirms no useful action is needed.
 
 Never end without a safe-output action or `noop`.
 
@@ -977,6 +1054,7 @@ Do not:
 * Delete labels.
 * Delete milestones.
 * Close active dependency work.
+* Call `noop` before dependency discovery.
 
 Prefer:
 
@@ -987,19 +1065,20 @@ Prefer:
 * Native auto-merge after required checks.
 * Deterministic merge automation outside the agent.
 * Minimal useful comments.
-* `noop` when no useful action is needed.
+* `noop` only after discovery proves no useful action is needed.
 
 ## Expected Behavior Summary
 
 This workflow should make dependency management easier by:
 
-1. Managing issues with the `dependencies` label.
-2. Managing PRs with the `dependencies` label.
-3. Reviewing Dependabot and Renovate PRs.
-4. Commenting with useful dependency guidance.
-5. Fixing safe mechanical dependency conflicts.
-6. Submitting PR reviews.
-7. Adding `auto-merge` only when safe.
-8. Removing `auto-merge` when unsafe.
-9. Creating reports for dependency automation problems.
-10. Keeping final merges controlled by branch protection, native auto-merge, Renovate, Dependabot, or deterministic merge automation.
+1. Discovering open dependency issues and pull requests on every run.
+2. Managing issues with the `dependencies` label.
+3. Managing PRs with the `dependencies` label.
+4. Reviewing Dependabot and Renovate PRs.
+5. Commenting with useful dependency guidance.
+6. Fixing safe mechanical dependency conflicts.
+7. Submitting PR reviews.
+8. Adding `auto-merge` only when safe.
+9. Removing `auto-merge` when unsafe.
+10. Creating reports for dependency automation problems.
+11. Keeping final merges controlled by branch protection, native auto-merge, Renovate, Dependabot, or deterministic merge automation.
