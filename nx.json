@@ -59,9 +59,7 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": [
-        "apps/services/user-e2e/**/*"
-      ]
+      "exclude": ["apps/services/user-e2e/**/*"]
     },
     {
       "plugin": "@nx/rollup/plugin",
@@ -73,10 +71,7 @@
     }
   ],
   "namedInputs": {
-    "default": [
-      "{projectRoot}/**/*",
-      "sharedGlobals"
-    ],
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "production": [
       "default",
       "!{projectRoot}/**/*.spec.ts",
@@ -118,99 +113,51 @@
   },
   "targetDefaults": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "production",
-        "^production"
-      ],
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
       "cache": true
     },
     "typecheck": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "default",
-        "^production"
-      ],
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^production"],
       "cache": true
     },
     "lint": {
-      "inputs": [
-        "default",
-        "^production"
-      ],
+      "inputs": ["default", "^production"],
       "cache": true
     },
     "test": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "default",
-        "^production"
-      ],
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^production"],
       "cache": true
     },
     "e2e": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "default",
-        "^production"
-      ],
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^production"],
       "cache": true
     },
     "e2e-ci": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "default",
-        "^production"
-      ],
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^production"],
       "cache": true
     },
     "preview": {
-      "dependsOn": [
-        "build"
-      ],
-      "inputs": [
-        "production",
-        "^production",
-        "cloudflare"
-      ],
+      "dependsOn": ["build"],
+      "inputs": ["production", "^production", "cloudflare"],
       "cache": false
     },
     "deploy": {
-      "dependsOn": [
-        "build"
-      ],
-      "inputs": [
-        "production",
-        "^production",
-        "cloudflare"
-      ],
+      "dependsOn": ["build"],
+      "inputs": ["production", "^production", "cloudflare"],
       "cache": false
     },
     "upload": {
-      "dependsOn": [
-        "build"
-      ],
-      "inputs": [
-        "production",
-        "^production",
-        "cloudflare"
-      ],
+      "dependsOn": ["build"],
+      "inputs": ["production", "^production", "cloudflare"],
       "cache": false
     },
     "cf:typegen": {
-      "inputs": [
-        "cloudflare"
-      ],
+      "inputs": ["cloudflare"],
       "cache": true
     }
   }
