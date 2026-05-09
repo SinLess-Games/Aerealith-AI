@@ -22,6 +22,8 @@ FROM node:24-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="${PNPM_HOME}:${PATH}"
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NX_DAEMON=false
+ENV CI=true
 
 RUN corepack enable
 
@@ -34,7 +36,7 @@ FROM base AS deps
 
 RUN apk add --no-cache libc6-compat
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json tsconfig.json ./
 COPY apps/frontend/package.json ./apps/frontend/package.json
 COPY libs ./libs
 
@@ -51,7 +53,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/frontend/node_modules ./apps/frontend/node_modules
 COPY --from=deps /app/libs ./libs
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json tsconfig.json ./
 COPY apps/frontend ./apps/frontend
 
 RUN pnpm exec nx run frontend:build
@@ -71,8 +73,6 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-# Next standalone output layout depends on your Next distDir.
-# Your frontend build writes to dist/apps/frontend outside Vercel.
 COPY --from=builder --chown=nextjs:nodejs /app/dist/apps/frontend/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/dist/apps/frontend/static ./apps/frontend/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/public ./apps/frontend/public
