@@ -1,26 +1,66 @@
+// apps/e2e/frontend-e2e/src/support/e2e.ts
+
 // ***********************************************************
-// This example support/e2e.ts is processed and
-// loaded automatically before your test files.
-//
-// This is a great place to put global configuration and
-// behavior that modifies Cypress.
-//
-// You can change the location of this file or turn off
-// automatically serving support files with the
-// 'supportFile' configuration option.
-//
-// You can read more here:
-// https://on.cypress.io/configuration
+// This support file is processed and loaded automatically
+// before Cypress test files.
 // ***********************************************************
 
-// Import commands.ts using ES2015 syntax:
 import './commands';
 
+const githubLatestReleaseUrl =
+  /^https:\/\/api\.github\.com\/repos\/(?:Sinless777|SinLess-Games)\/Helix\/releases\/latest(?:\?.*)?$/;
+
+const turnstileScriptUrl =
+  /^https:\/\/challenges\.cloudflare\.com\/turnstile\/v0\/api\.js(?:\?.*)?$/;
+
 beforeEach(() => {
-  cy.intercept('GET', 'https://api.github.com/repos/Sinless777/Helix/releases/latest', {
-    statusCode: 200,
-    body: {
-      tag_name: 'v1.0.0',
+  cy.intercept(
+    {
+      method: 'GET',
+      url: githubLatestReleaseUrl,
     },
-  }).as('githubRelease');
+    {
+      statusCode: 200,
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: {
+        tag_name: 'v1.0.0',
+        name: 'v1.0.0',
+        draft: false,
+        prerelease: false,
+        published_at: '2026-05-08T00:00:00.000Z',
+      },
+    },
+  ).as('githubRelease');
+
+  cy.intercept(
+    {
+      method: 'GET',
+      url: turnstileScriptUrl,
+    },
+    {
+      statusCode: 200,
+      headers: {
+        'content-type': 'application/javascript',
+      },
+      body: `
+        window.turnstile = {
+          render: function (_container, options) {
+            var widgetId = 'cypress-turnstile-widget';
+
+            window.setTimeout(function () {
+              if (options && typeof options.callback === 'function') {
+                options.callback('cypress-turnstile-token');
+              }
+            }, 0);
+
+            return widgetId;
+          },
+          reset: function () {},
+          remove: function () {}
+        };
+      `,
+    },
+  ).as('turnstileScript');
 });

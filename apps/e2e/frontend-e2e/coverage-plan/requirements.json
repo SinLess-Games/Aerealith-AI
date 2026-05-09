@@ -1,0 +1,90 @@
+{
+  "threshold": 80,
+  "requirements": [
+    {
+      "id": "home.hero",
+      "description": "Home page renders the hero, development banner, and skip link.",
+      "specs": ["src/e2e/app.cy.ts"]
+    },
+    {
+      "id": "home.accessibility.skip-link",
+      "description": "Keyboard users can jump directly to main content.",
+      "specs": ["src/e2e/app.cy.ts"]
+    },
+    {
+      "id": "navigation.desktop",
+      "description": "Desktop navigation lists and routes through configured pages.",
+      "specs": ["src/e2e/navigation.cy.ts"]
+    },
+    {
+      "id": "navigation.mobile",
+      "description": "Mobile drawer supports primary route navigation.",
+      "specs": ["src/e2e/navigation.cy.ts"]
+    },
+    {
+      "id": "about.cards",
+      "description": "About content renders every configured card section.",
+      "specs": ["src/e2e/about.cy.ts"]
+    },
+    {
+      "id": "contact.cards",
+      "description": "Contact content renders every configured contact channel and CTA.",
+      "specs": ["src/e2e/contact.cy.ts"]
+    },
+    {
+      "id": "technology.index",
+      "description": "Technology index renders all configured technology cards in order.",
+      "specs": ["src/e2e/technology.cy.ts"]
+    },
+    {
+      "id": "technology.links",
+      "description": "Technology cards expose expected internal and external links.",
+      "specs": ["src/e2e/technology.cy.ts"]
+    },
+    {
+      "id": "waitlist.validation",
+      "description": "Waitlist form blocks invalid email addresses before submit.",
+      "specs": ["src/e2e/waitlist.cy.ts"]
+    },
+    {
+      "id": "waitlist.turnstile",
+      "description": "Waitlist form supports bot verification before submitting.",
+      "specs": ["src/e2e/waitlist.cy.ts"]
+    },
+    {
+      "id": "waitlist.success",
+      "description": "Waitlist form submits a trimmed email and shows success.",
+      "specs": ["src/e2e/waitlist.cy.ts"]
+    },
+    {
+      "id": "waitlist.duplicate",
+      "description": "Waitlist form surfaces an already-on-waitlist response without silently clearing the email.",
+      "specs": ["src/e2e/waitlist.cy.ts"]
+    },
+    {
+      "id": "waitlist.server-errors",
+      "description": "Waitlist form shows API/server error messages.",
+      "specs": ["src/e2e/waitlist.cy.ts"]
+    },
+    {
+      "id": "api.metadata",
+      "description": "API V1 metadata endpoint exposes service and endpoint details.",
+      "specs": ["src/e2e/api.cy.ts"]
+    },
+    {
+      "id": "api.health",
+      "description": "Health endpoint covers basic and deep check modes.",
+      "specs": ["src/e2e/api.cy.ts"]
+    },
+    {
+      "id": "api.waitlist.security",
+      "description": "Waitlist API rejects invalid origin, content type, email, and bot-check payloads.",
+      "specs": ["src/e2e/api.cy.ts"]
+    },
+    {
+      "id": "api.waitlist.cors",
+      "description": "Waitlist API exposes CORS preflight for allowed origins.",
+      "specs": ["src/e2e/api.cy.ts"]
+    }
+  ]
+}

@@ -1,8 +1,9 @@
-// libs/ui/src/components/HeroSection.tsx
+// libs/ui/src/components/Waitlist.tsx
 
 'use client';
 
 import * as React from 'react';
+import Script from 'next/script';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -12,6 +13,28 @@ import Typography from '@mui/material/Typography';
 import Image, { type StaticImageData } from 'next/image';
 
 export type WaitlistStatus = 'idle' | 'sending' | 'success' | 'error';
+
+type TurnstileRenderOptions = {
+  sitekey: string;
+  theme?: 'auto' | 'light' | 'dark';
+  size?: 'normal' | 'compact' | 'flexible';
+  callback?: (token: string) => void;
+  'expired-callback'?: () => void;
+  'error-callback'?: () => void;
+};
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: HTMLElement | string,
+        options: TurnstileRenderOptions,
+      ) => string | undefined;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
 
 export type HeroWaitlistProps = {
   /**
@@ -48,6 +71,18 @@ export type HeroWaitlistProps = {
    * How long feedback alerts remain visible.
    */
   feedbackDurationMs?: number;
+
+  /**
+   * Cloudflare Turnstile public site key.
+   *
+   * Defaults to NEXT_PUBLIC_TURNSTILE_SITE_KEY.
+   */
+  turnstileSiteKey?: string;
+
+  /**
+   * Cloudflare Turnstile theme.
+   */
+  turnstileTheme?: 'auto' | 'light' | 'dark';
 };
 
 export type HeroSectionProps = {
@@ -60,11 +95,21 @@ export type HeroSectionProps = {
 
 type WaitlistApiResponse = {
   ok?: boolean;
+  success?: boolean;
   message?: string;
+  data?: {
+    message?: string;
+  };
+  error?: {
+    code?: string;
+    message?: string;
+  };
 };
 
 const DEFAULT_WAITLIST_ENDPOINT = '/api/V1/waitlist';
 const DEFAULT_FEEDBACK_DURATION_MS = 5_000;
+const DEFAULT_TURNSTILE_SITE_KEY =
+  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 function isValidEmailAddress(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -86,9 +131,32 @@ function getResponseMessage(
   body: WaitlistApiResponse,
   fallback: string,
 ): string {
-  return typeof body.message === 'string' && body.message.trim().length > 0
-    ? body.message
-    : fallback;
+  if (typeof body.message === 'string' && body.message.trim().length > 0) {
+    return body.message;
+  }
+
+  if (
+    typeof body.data?.message === 'string' &&
+    body.data.message.trim().length > 0
+  ) {
+    return body.data.message;
+  }
+
+  if (
+    typeof body.error?.message === 'string' &&
+    body.error.message.trim().length > 0
+  ) {
+    return body.error.message;
+  }
+
+  return fallback;
+}
+
+function isSuccessfulWaitlistResponse(
+  response: Response,
+  body: WaitlistApiResponse,
+): boolean {
+  return response.ok && (body.ok === true || body.success === true);
 }
 
 export function HeroWaitlist({
@@ -99,16 +167,98 @@ export function HeroWaitlist({
   sendingLabel = 'Sending…',
   successMessage = 'Thanks! You’re on the waitlist. We’ll notify you when we launch.',
   feedbackDurationMs = DEFAULT_FEEDBACK_DURATION_MS,
+  turnstileSiteKey = DEFAULT_TURNSTILE_SITE_KEY,
+  turnstileTheme = 'dark',
 }: HeroWaitlistProps) {
   const [email, setEmail] = React.useState('');
   const [status, setStatus] = React.useState<WaitlistStatus>('idle');
   const [feedbackMessage, setFeedbackMessage] = React.useState('');
+  const [turnstileToken, setTurnstileToken] = React.useState('');
+  const [turnstileReady, setTurnstileReady] = React.useState(false);
+
+  const turnstileContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const turnstileWidgetIdRef = React.useRef<string | undefined>(undefined);
 
   const trimmedEmail = email.trim();
+  const trimmedTurnstileSiteKey = turnstileSiteKey.trim();
+  const isTurnstileEnabled = trimmedTurnstileSiteKey.length > 0;
+
   const isValidEmail = React.useMemo(
     () => isValidEmailAddress(trimmedEmail),
     [trimmedEmail],
   );
+
+  const canSubmit =
+    isValidEmail &&
+    status !== 'sending' &&
+    (!isTurnstileEnabled || turnstileToken.length > 0);
+
+  const resetTurnstile = React.useCallback(() => {
+    setTurnstileToken('');
+
+    if (
+      typeof window !== 'undefined' &&
+      window.turnstile &&
+      turnstileWidgetIdRef.current
+    ) {
+      window.turnstile.reset(turnstileWidgetIdRef.current);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && window.turnstile) {
+      setTurnstileReady(true);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!isTurnstileEnabled || !turnstileReady) {
+      return undefined;
+    }
+
+    if (
+      typeof window === 'undefined' ||
+      !window.turnstile ||
+      !turnstileContainerRef.current ||
+      turnstileWidgetIdRef.current
+    ) {
+      return undefined;
+    }
+
+    const widgetId = window.turnstile.render(turnstileContainerRef.current, {
+      sitekey: trimmedTurnstileSiteKey,
+      theme: turnstileTheme,
+      callback: (token: string) => {
+        setTurnstileToken(token);
+      },
+      'expired-callback': () => {
+        setTurnstileToken('');
+      },
+      'error-callback': () => {
+        setTurnstileToken('');
+        setFeedbackMessage('Bot verification failed. Please refresh and try again.');
+        setStatus('error');
+      },
+    });
+
+    turnstileWidgetIdRef.current = widgetId;
+
+    return () => {
+      if (
+        typeof window !== 'undefined' &&
+        window.turnstile &&
+        turnstileWidgetIdRef.current
+      ) {
+        window.turnstile.remove(turnstileWidgetIdRef.current);
+        turnstileWidgetIdRef.current = undefined;
+      }
+    };
+  }, [
+    isTurnstileEnabled,
+    trimmedTurnstileSiteKey,
+    turnstileReady,
+    turnstileTheme,
+  ]);
 
   React.useEffect(() => {
     if (status === 'idle') {
@@ -130,6 +280,12 @@ export function HeroWaitlist({
       return;
     }
 
+    if (isTurnstileEnabled && !turnstileToken) {
+      setFeedbackMessage('Please complete the bot verification before submitting.');
+      setStatus('error');
+      return;
+    }
+
     setStatus('sending');
     setFeedbackMessage('');
 
@@ -141,12 +297,13 @@ export function HeroWaitlist({
         },
         body: JSON.stringify({
           email: trimmedEmail,
+          turnstileToken: isTurnstileEnabled ? turnstileToken : undefined,
         }),
       });
 
       const body = await readJsonResponse(response);
 
-      if (!response.ok || body.ok !== true) {
+      if (!isSuccessfulWaitlistResponse(response, body)) {
         throw new Error(
           getResponseMessage(body, 'Unable to join the waitlist right now.'),
         );
@@ -155,13 +312,24 @@ export function HeroWaitlist({
       setEmail('');
       setFeedbackMessage(getResponseMessage(body, successMessage));
       setStatus('success');
+      resetTurnstile();
     } catch (error) {
       setFeedbackMessage(
         error instanceof Error ? error.message : 'Unknown error occurred',
       );
       setStatus('error');
+      resetTurnstile();
     }
-  }, [endpoint, isValidEmail, status, successMessage, trimmedEmail]);
+  }, [
+    endpoint,
+    isTurnstileEnabled,
+    isValidEmail,
+    resetTurnstile,
+    status,
+    successMessage,
+    trimmedEmail,
+    turnstileToken,
+  ]);
 
   return (
     <Box
@@ -176,6 +344,19 @@ export function HeroWaitlist({
         width: '100%',
       }}
     >
+      {isTurnstileEnabled ? (
+        <Script
+          id="cloudflare-turnstile"
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+          async
+          defer
+          strategy="afterInteractive"
+          onLoad={() => {
+            setTurnstileReady(true);
+          }}
+        />
+      ) : null}
+
       <Typography
         variant="h2"
         sx={{
@@ -228,141 +409,165 @@ export function HeroWaitlist({
         }}
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
+          flexDirection: 'column',
           gap: 2,
-          alignItems: { xs: 'stretch', sm: 'flex-start' },
+          alignItems: 'center',
           justifyContent: 'center',
           width: '100%',
           maxWidth: 600,
         }}
       >
-        <TextField
-          fullWidth
-          label={emailLabel}
-          type="email"
-          variant="filled"
-          value={email}
-          onChange={(event) => {
-            setEmail(event.target.value);
-          }}
-          error={email.length > 0 && !isValidEmail}
-          helperText={
-            email.length > 0 && !isValidEmail
-              ? 'Please enter a valid email.'
-              : undefined
-          }
-          disabled={status === 'sending'}
-          slotProps={{
-            htmlInput: {
-              'data-testid': 'waitlist-email-input',
-              autoCapitalize: 'none',
-              autoCorrect: 'off',
-              inputMode: 'email',
-            },
-          }}
+        <Box
           sx={{
-            bgcolor: 'rgba(255, 255, 255, 0.08)',
-            borderRadius: 1.5,
-            minHeight: 56,
-
-            '& .MuiFilledInput-root': {
-              color: '#fff',
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2,
+            alignItems: { xs: 'stretch', sm: 'flex-start' },
+            justifyContent: 'center',
+            width: '100%',
+          }}
+        >
+          <TextField
+            fullWidth
+            label={emailLabel}
+            type="email"
+            variant="filled"
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value);
+            }}
+            error={email.length > 0 && !isValidEmail}
+            helperText={
+              email.length > 0 && !isValidEmail
+                ? 'Please enter a valid email.'
+                : undefined
+            }
+            disabled={status === 'sending'}
+            slotProps={{
+              htmlInput: {
+                'data-testid': 'waitlist-email-input',
+                autoCapitalize: 'none',
+                autoCorrect: 'off',
+                inputMode: 'email',
+              },
+            }}
+            sx={{
               bgcolor: 'rgba(255, 255, 255, 0.08)',
               borderRadius: 1.5,
               minHeight: 56,
-              overflow: 'hidden',
+
+              '& .MuiFilledInput-root': {
+                color: '#fff',
+                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                borderRadius: 1.5,
+                minHeight: 56,
+                overflow: 'hidden',
+
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.12)',
+                },
+
+                '&.Mui-focused': {
+                  bgcolor: 'rgba(255, 255, 255, 0.12)',
+                },
+              },
+
+              '& .MuiFilledInput-input': {
+                height: 56,
+                boxSizing: 'border-box',
+                py: 0,
+                display: 'flex',
+                alignItems: 'center',
+              },
+
+              '& .MuiFilledInput-underline:before': {
+                borderBottomColor: 'rgba(255, 255, 255, 0.3)',
+              },
+
+              '& .MuiFilledInput-underline:hover:before': {
+                borderBottomColor: '#fff',
+              },
+
+              '& .MuiFilledInput-underline:after': {
+                borderBottomColor: '#f6066f',
+              },
+
+              '& .MuiInputLabel-root': {
+                color: 'rgba(255, 255, 255, 0.7)',
+                top: '-2px',
+              },
+
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: '#fff',
+              },
+
+              '& .MuiFormHelperText-root': {
+                m: 0,
+                mt: 0.75,
+                color: 'error.light',
+              },
+            }}
+          />
+
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={!canSubmit}
+            data-testid="waitlist-submit"
+            sx={{
+              background:
+                'linear-gradient(135deg, #f6066f 0%, #7c3aed 55%, #022371 100%)',
+              color: '#fff',
+              px: 4,
+              py: 0,
+              minWidth: { xs: '100%', sm: '180px' },
+              minHeight: 56,
+              height: 56,
+              border: '1px solid rgba(255, 255, 255, 0.28)',
+              borderRadius: 1.5,
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              boxShadow:
+                '0 0 18px rgba(246, 6, 111, 0.45), 0 10px 28px rgba(2, 35, 113, 0.45)',
 
               '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.12)',
+                background:
+                  'linear-gradient(135deg, #ff2f8a 0%, #8b5cf6 50%, #0636a8 100%)',
+                boxShadow:
+                  '0 0 26px rgba(246, 6, 111, 0.65), 0 14px 34px rgba(2, 35, 113, 0.55)',
+                transform: 'translateY(-1px)',
               },
 
-              '&.Mui-focused': {
-                bgcolor: 'rgba(255, 255, 255, 0.12)',
+              '&:active': {
+                transform: 'translateY(0)',
               },
-            },
 
-            '& .MuiFilledInput-input': {
-              height: 56,
-              boxSizing: 'border-box',
-              py: 0,
+              '&.Mui-disabled': {
+                color: 'rgba(255, 255, 255, 0.72)',
+                background:
+                  'linear-gradient(135deg, rgba(246, 6, 111, 0.45) 0%, rgba(2, 35, 113, 0.7) 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                boxShadow: '0 0 14px rgba(246, 6, 111, 0.22)',
+              },
+            }}
+          >
+            {status === 'sending' ? sendingLabel : submitLabel}
+          </Button>
+        </Box>
+
+        {isTurnstileEnabled ? (
+          <Box
+            ref={turnstileContainerRef}
+            data-testid="waitlist-turnstile"
+            sx={{
               display: 'flex',
-              alignItems: 'center',
-            },
-
-            '& .MuiFilledInput-underline:before': {
-              borderBottomColor: 'rgba(255, 255, 255, 0.3)',
-            },
-
-            '& .MuiFilledInput-underline:hover:before': {
-              borderBottomColor: '#fff',
-            },
-
-            '& .MuiFilledInput-underline:after': {
-              borderBottomColor: '#f6066f',
-            },
-
-            '& .MuiInputLabel-root': {
-              color: 'rgba(255, 255, 255, 0.7)',
-              top: '-2px',
-            },
-
-            '& .MuiInputLabel-root.Mui-focused': {
-              color: '#fff',
-            },
-
-            '& .MuiFormHelperText-root': {
-              m: 0,
-              mt: 0.75,
-              color: 'error.light',
-            },
-          }}
-        />
-
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={!isValidEmail || status === 'sending'}
-          data-testid="waitlist-submit"
-          sx={{
-            background:
-              'linear-gradient(135deg, #f6066f 0%, #7c3aed 55%, #022371 100%)',
-            color: '#fff',
-            px: 4,
-            py: 0,
-            minWidth: { xs: '100%', sm: '180px' },
-            minHeight: 56,
-            height: 56,
-            border: '1px solid rgba(255, 255, 255, 0.28)',
-            borderRadius: 1.5,
-            fontWeight: 800,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            boxShadow:
-              '0 0 18px rgba(246, 6, 111, 0.45), 0 10px 28px rgba(2, 35, 113, 0.45)',
-
-            '&:hover': {
-              background:
-                'linear-gradient(135deg, #ff2f8a 0%, #8b5cf6 50%, #0636a8 100%)',
-              boxShadow:
-                '0 0 26px rgba(246, 6, 111, 0.65), 0 14px 34px rgba(2, 35, 113, 0.55)',
-              transform: 'translateY(-1px)',
-            },
-
-            '&:active': {
-              transform: 'translateY(0)',
-            },
-
-            '&.Mui-disabled': {
-              color: 'rgba(255, 255, 255, 0.72)',
-              background:
-                'linear-gradient(135deg, rgba(246, 6, 111, 0.45) 0%, rgba(2, 35, 113, 0.7) 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
-              boxShadow: '0 0 14px rgba(246, 6, 111, 0.22)',
-            },
-          }}
-        >
-          {status === 'sending' ? sendingLabel : submitLabel}
-        </Button>
+              justifyContent: 'center',
+              width: '100%',
+              minHeight: 65,
+            }}
+          />
+        ) : null}
       </Box>
     </Box>
   );

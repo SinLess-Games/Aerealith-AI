@@ -1,224 +1,266 @@
-// apps/frontend/src/app/api/V1/waitlist/route.ts
+import { randomUUID } from 'node:crypto';
 
-import type { Client as PgClient } from 'pg';
+const ALLOWED_ORIGINS = new Set([
+  'https://helixaibot.com',
+  'https://www.helixaibot.com',
+  'http://localhost:3000',
+]);
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-type WaitlistRequestBody = {
-  email?: unknown;
+type WaitlistPayload = {
+  name?: string;
+  email?: string;
+  turnstileToken?: string;
 };
 
-type WaitlistResponseBody = {
-  ok: boolean;
-  message: string;
-};
+type ApiErrorCode =
+  | 'METHOD_NOT_ALLOWED'
+  | 'INVALID_ORIGIN'
+  | 'INVALID_CONTENT_TYPE'
+  | 'VALIDATION_ERROR'
+  | 'BOT_CHECK_FAILED'
+  | 'DUPLICATE_EMAIL'
+  | 'INTERNAL_ERROR';
 
-type PgDatabaseError = Error & {
-  code?: string;
-};
+export async function OPTIONS(request: Request) {
+  return new Response(null, {
+    status: 204,
+    headers: getCorsHeaders(request),
+  });
+}
 
-function readEnvString(...keys: string[]): string | undefined {
-  for (const key of keys) {
-    const value = process.env[key];
+export async function POST(request: Request) {
+  const requestId = randomUUID();
+  const startedAt = Date.now();
 
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value.trim();
+  try {
+    if (!isAllowedOrigin(request)) {
+      logEvent('warn', 'waitlist.invalid_origin', {
+        requestId,
+        origin: request.headers.get('origin'),
+      });
+
+      return errorResponse(
+        'INVALID_ORIGIN',
+        'This origin is not allowed.',
+        403,
+        requestId,
+        request,
+      );
     }
-  }
 
-  return undefined;
+    const contentType = request.headers.get('content-type') ?? '';
+
+    if (!contentType.includes('application/json')) {
+      return errorResponse(
+        'INVALID_CONTENT_TYPE',
+        'Content-Type must be application/json.',
+        415,
+        requestId,
+        request,
+      );
+    }
+
+    const body = (await request.json()) as WaitlistPayload;
+
+    const email = body.email?.trim().toLowerCase() ?? '';
+    const turnstileToken = body.turnstileToken ?? '';
+
+    if (!email || !isValidEmail(email)) {
+      return errorResponse(
+        'VALIDATION_ERROR',
+        'A valid email address is required.',
+        400,
+        requestId,
+        request,
+      );
+    }
+
+    const ip = request.headers.get('cf-connecting-ip') ?? undefined;
+
+    const botCheckPassed = await verifyTurnstile(turnstileToken, ip);
+
+    if (!botCheckPassed) {
+      logEvent('warn', 'waitlist.bot_check_failed', {
+        requestId,
+        ipCountry: request.headers.get('cf-ipcountry'),
+      });
+
+      return errorResponse(
+        'BOT_CHECK_FAILED',
+        'Bot verification failed.',
+        403,
+        requestId,
+        request,
+      );
+    }
+
+    const emailHash = await sha256(email);
+
+    /*
+      Insert into your database here.
+
+      Recommended DB behavior:
+      - Put a UNIQUE constraint on lower(email)
+      - Catch duplicate key errors
+      - Return DUPLICATE_EMAIL instead of leaking DB errors
+    */
+
+    logEvent('info', 'waitlist.created', {
+      requestId,
+      emailHash,
+      durationMs: Date.now() - startedAt,
+      ipCountry: request.headers.get('cf-ipcountry'),
+    });
+
+    return successResponse(
+      {
+        message: 'You have been added to the waitlist.',
+      },
+      requestId,
+      201,
+      request,
+    );
+  } catch (error) {
+    logEvent('error', 'waitlist.internal_error', {
+      requestId,
+      durationMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    return errorResponse(
+      'INTERNAL_ERROR',
+      'Something went wrong.',
+      500,
+      requestId,
+      request,
+    );
+  }
 }
 
-function json(
-  body: WaitlistResponseBody,
-  init?: ResponseInit,
-): Response {
-  return Response.json(body, init);
-}
+function getCorsHeaders(request: Request): HeadersInit {
+  const origin = request.headers.get('origin');
 
-function normalizeEmail(value: unknown): string {
-  if (typeof value !== 'string') {
-    return '';
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+    return {
+      Vary: 'Origin',
+    };
   }
 
-  return value.trim().toLowerCase();
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  };
+}
+
+function isAllowedOrigin(request: Request): boolean {
+  const origin = request.headers.get('origin');
+
+  if (!origin) {
+    return true;
+  }
+
+  return ALLOWED_ORIGINS.has(origin);
+}
+
+function errorResponse(
+  code: ApiErrorCode,
+  message: string,
+  status: number,
+  requestId: string,
+  request: Request,
+) {
+  return Response.json(
+    {
+      success: false,
+      error: {
+        code,
+        message,
+        requestId,
+      },
+    },
+    {
+      status,
+      headers: getCorsHeaders(request),
+    },
+  );
+}
+
+function successResponse<T>(
+  data: T,
+  requestId: string,
+  status: number,
+  request: Request,
+) {
+  return Response.json(
+    {
+      success: true,
+      data,
+      requestId,
+    },
+    {
+      status,
+      headers: getCorsHeaders(request),
+    },
+  );
 }
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function hasUrlProtocol(value: string): boolean {
-  return /^[a-z][a-z0-9+.-]*:\/\//i.test(value);
-}
+async function verifyTurnstile(token: string, ip?: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
 
-function getDatabaseUrl(): string {
-  const rawUrl = readEnvString('DATABASE_URL', 'POSTGRES_URL', 'SUPABASE_DB_URL');
-
-  if (!rawUrl) {
-    throw new Error('Waitlist database URL is missing.');
+  if (!secret || !token) {
+    return false;
   }
 
-  if (hasUrlProtocol(rawUrl)) {
-    return rawUrl;
-  }
-
-  const username = readEnvString(
-    'DATABASE_USERNAME',
-    'DATABASE_USER',
-    'POSTGRES_USERNAME',
-    'POSTGRES_USER',
-  );
-  const password = readEnvString('DATABASE_PASSWORD', 'POSTGRES_PASSWORD');
-
-  if (!username || !password) {
-    throw new Error(
-      'POSTGRES_URL is missing a protocol and credentials. Set POSTGRES_USER and POSTGRES_PASSWORD.',
-    );
-  }
-
-  return `postgresql://${encodeURIComponent(username)}:${encodeURIComponent(
-    password,
-  )}@${rawUrl}`;
-}
-
-function isUniqueConstraintViolation(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    (error as PgDatabaseError).code === '23505'
-  );
-}
-
-async function waitlistEmailExists(
-  client: PgClient,
-  email: string,
-): Promise<boolean> {
-  const result = await client.query(
-    'select 1 from waitlist where email = $1 limit 1',
-    [email],
-  );
-
-  return result.rowCount > 0;
-}
-
-export async function POST(request: Request): Promise<Response> {
-  let body: WaitlistRequestBody;
-
-  try {
-    body = (await request.json()) as WaitlistRequestBody;
-  } catch {
-    return json(
-      {
-        ok: false,
-        message: 'Invalid request body.',
-      },
-      { status: 400 },
-    );
-  }
-
-  const email = normalizeEmail(body.email);
-
-  if (!isValidEmail(email)) {
-    return json(
-      {
-        ok: false,
-        message: 'Please enter a valid email address.',
-      },
-      { status: 400 },
-    );
-  }
-
-  try {
-    const [{ Client }, { randomUUID }] = await Promise.all([
-      import('pg'),
-      import('node:crypto'),
-    ]);
-    const client = new Client({
-      connectionString: getDatabaseUrl(),
-      ssl: {
-        rejectUnauthorized:
-          readEnvString('DATABASE_SSL_REJECT_UNAUTHORIZED') !== 'false',
-      },
-    });
-
-    await client.connect();
-
-    try {
-      if (await waitlistEmailExists(client, email)) {
-        return json(
-          {
-            ok: true,
-            message: 'You are already on the waitlist.',
-          },
-          { status: 200 },
-        );
-      }
-
-      const result = await client.query(
-        [
-          'insert into waitlist (id, email)',
-          'values ($1, $2)',
-          'on conflict (email) do nothing',
-          'returning id',
-        ].join(' '),
-        [randomUUID(), email],
-      );
-
-      if (result.rowCount === 0) {
-        return json(
-          {
-            ok: true,
-            message: 'You are already on the waitlist.',
-          },
-          { status: 200 },
-        );
-      }
-    } finally {
-      await client.end();
-    }
-
-    return json(
-      {
-        ok: true,
-        message: 'You have been added to the waitlist.',
-      },
-      { status: 201 },
-    );
-  } catch (error) {
-    if (isUniqueConstraintViolation(error)) {
-      return json(
-        {
-          ok: true,
-          message: 'You are already on the waitlist.',
-        },
-        { status: 200 },
-      );
-    }
-
-    console.error('Failed to create waitlist entry:', error);
-
-    return json(
-      {
-        ok: false,
-        message: 'Unable to join the waitlist right now.',
-      },
-      { status: 500 },
-    );
-  }
-}
-
-export function GET(): Response {
-  return json(
+  const response = await fetch(
+    'https://challenges.cloudflare.com/turnstile/v0/siteverify',
     {
-      ok: false,
-      message: 'Method not allowed.',
-    },
-    {
-      status: 405,
+      method: 'POST',
       headers: {
-        Allow: 'POST',
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        secret,
+        response: token,
+        remoteip: ip,
+      }),
     },
+  );
+
+  const result = (await response.json()) as {
+    success?: boolean;
+  };
+
+  return result.success === true;
+}
+
+async function sha256(value: string): Promise<string> {
+  const data = new TextEncoder().encode(value.toLowerCase().trim());
+  const hash = await crypto.subtle.digest('SHA-256', data);
+
+  return [...new Uint8Array(hash)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function logEvent(
+  level: 'info' | 'warn' | 'error',
+  event: string,
+  data: Record<string, unknown>,
+) {
+  console[level](
+    JSON.stringify({
+      level,
+      event,
+      service: 'helix-ai-frontend',
+      timestamp: new Date().toISOString(),
+      ...data,
+    }),
   );
 }

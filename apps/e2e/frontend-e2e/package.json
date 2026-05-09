@@ -2,9 +2,12 @@
   "name": "frontend-e2e",
   "version": "0.0.1",
   "private": true,
-  "nx": {
-    "implicitDependencies": [
-      "frontend"
-    ]
+  "scripts": {
+    "e2e": "nx run frontend-e2e:e2e",
+    "e2e:open": "nx run frontend-e2e:e2e:open",
+    "e2e:headed": "nx run frontend-e2e:e2e:headed",
+    "e2e:ci": "nx run frontend-e2e:e2e-ci",
+    "coverage": "nx run frontend-e2e:coverage",
+    "ci": "nx run frontend-e2e:ci"
   }
 }

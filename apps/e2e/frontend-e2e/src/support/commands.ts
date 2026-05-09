@@ -1,20 +1,25 @@
 /// <reference types="cypress" />
 
-// ***********************************************
-// This example commands.ts shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
+import type { Interception } from 'cypress/types/net-stubbing';
 
 import { waitlist } from './app.po';
 
+type WaitlistRequestBody = {
+  email?: string;
+  turnstileToken?: string;
+};
+
 type WaitlistResponseBody = {
-  status: 'success' | 'error';
+  ok?: boolean;
+  success?: boolean;
   message?: string;
+  data?: {
+    message?: string;
+  };
+  error?: {
+    code?: string;
+    message?: string;
+  };
 };
 
 /* eslint-disable @typescript-eslint/no-namespace */
@@ -22,45 +27,75 @@ declare global {
   namespace Cypress {
     interface Chainable<Subject = any> {
       login(email: string, password: string): Chainable<Subject>;
+
       stubWaitlist(
         statusCode?: number,
         body?: WaitlistResponseBody,
-        aliasName?: string
-      ): Chainable<Subject>;
-      submitWaitlist(email: string, aliasName?: string): Chainable<Subject>;
+        aliasName?: string,
+      ): Chainable<void>;
+
+      submitWaitlist(
+        email: string,
+        aliasName?: string,
+      ): Chainable<Interception<WaitlistRequestBody, WaitlistResponseBody>>;
     }
   }
 }
 /* eslint-enable @typescript-eslint/no-namespace */
 
-// -- This is a parent command --
-Cypress.Commands.add('login', (email, password) => {
-  console.log('Custom command example: Login', email, password);
+Cypress.Commands.add('login', (email: string, password: string): void => {
+  Cypress.log({
+    name: 'login',
+    message: `Login command called for ${email}`,
+    consoleProps: () => ({
+      email,
+      passwordLength: password.length,
+    }),
+  });
 });
 
 Cypress.Commands.add(
   'stubWaitlist',
-  (statusCode = 200, body: WaitlistResponseBody = { status: 'success' }, aliasName = 'waitlist') => {
-    cy.intercept('POST', '/api/V1/waitlist', {
-      statusCode,
-      body,
-    }).as(aliasName);
-  }
+  (
+    statusCode = 201,
+    body: WaitlistResponseBody = {
+      success: true,
+      data: {
+        message: 'You have been added to the waitlist.',
+      },
+    },
+    aliasName = 'waitlist',
+  ): void => {
+    cy.intercept(
+      {
+        method: 'POST',
+        url: '**/api/V1/waitlist',
+      },
+      {
+        statusCode,
+        headers: {
+          'content-type': 'application/json',
+        },
+        body,
+      },
+    ).as(aliasName);
+  },
 );
 
-Cypress.Commands.add('submitWaitlist', (email: string, aliasName = 'waitlist') => {
-  waitlist.emailInput().clear().type(email);
-  waitlist.submitButton().should('not.be.disabled').click();
-  cy.wait(`@${aliasName}`);
-});
-//
-// -- This is a child command --
-// Cypress.Commands.add("drag", { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add("dismiss", { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
+Cypress.Commands.add(
+  'submitWaitlist',
+  (
+    email: string,
+    aliasName = 'waitlist',
+  ): Cypress.Chainable<
+    Interception<WaitlistRequestBody, WaitlistResponseBody>
+  > => {
+    waitlist.emailInput().should('be.visible').clear().type(email);
+
+    waitlist.submitButton().should('be.visible').and('not.be.disabled').click();
+
+    return cy.wait<WaitlistRequestBody, WaitlistResponseBody>(
+      `@${aliasName}`,
+    );
+  },
+);

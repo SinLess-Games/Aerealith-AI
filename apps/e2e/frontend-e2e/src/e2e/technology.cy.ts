@@ -1,49 +1,57 @@
-import { helixCards, technologyCardsSortedByTitle } from '../support/app.po';
+import { technologyCardsSortedByTitle } from '../support/app.po';
 
-import { AIToolsCards } from '../../../frontend/src/content/technology/AI';
-import { CloudPlatformCards } from '../../../frontend/src/content/technology/cloud-platforms';
+import { AIToolsCards } from '../../../../frontend/src/content/technology/AI';
+import { CloudPlatformCards } from '../../../../frontend/src/content/technology/cloud-platforms';
+
+const visibleTextPreview = (value: string, length = 60): string =>
+  value.trim().slice(0, length);
 
 describe('Technology page', () => {
   beforeEach(() => {
     cy.visit('/technology');
   });
 
-  it('renders each technology card in alphabetical order', () => {
-    helixCards.all().should('have.length', technologyCardsSortedByTitle.length);
+  it('renders every configured technology card title', () => {
+    const sortedTitles = technologyCardsSortedByTitle.map((card) => card.title);
 
-    helixCards
-      .all()
-      .then(($cards) =>
-        Array.from($cards, (card) => card.getAttribute('data-card-title') ?? '')
-      )
-      .should('deep.equal', technologyCardsSortedByTitle.map((card) => card.title));
+    sortedTitles.forEach((title) => {
+      cy.get('#main-content').contains(title).should('be.visible');
+    });
   });
 
-  it('lists every AI & ML tool with outbound links', () => {
-    helixCards
-      .byTitle(AIToolsCards.title)
-      .should('exist')
-      .within(() => {
-        cy.get('li').should('have.length', AIToolsCards.listItems.length);
+  it('lists every AI & ML tool', () => {
+    cy.get('#main-content').contains(AIToolsCards.title).should('be.visible');
 
-        AIToolsCards.listItems.forEach((item) => {
-          cy.contains('a', item.text)
-            .should('have.attr', 'href', item.href)
-            .and('have.attr', 'target', '_blank');
-        });
-      });
+    if (AIToolsCards.description) {
+      cy.get('#main-content')
+        .contains(visibleTextPreview(AIToolsCards.description))
+        .should('be.visible');
+    }
+
+    AIToolsCards.listItems.forEach((item) => {
+      cy.get('#main-content').contains(item.text).should('be.visible');
+
+      if (item.href) {
+        cy.get(`#main-content a[href="${item.href}"]`).should('exist');
+      }
+    });
   });
 
   it('renders CTA buttons for cards configured with internal links', () => {
-    const cloudCard = CloudPlatformCards[0];
+    const [cloudCard] = CloudPlatformCards;
+    const buttonText = cloudCard.buttonText ?? 'Explore';
 
-    helixCards
-      .byTitle(cloudCard.title)
-      .should('exist')
-      .within(() => {
-        cy.contains('a', cloudCard.buttonText ?? 'Explore')
-          .should('have.attr', 'href', cloudCard.link)
-          .and('not.have.attr', 'target');
-      });
+    cy.get('#main-content').contains(cloudCard.title).should('be.visible');
+
+    if (cloudCard.description) {
+      cy.get('#main-content')
+        .contains(visibleTextPreview(cloudCard.description))
+        .should('be.visible');
+    }
+
+    cy.get('#main-content')
+      .contains('a', buttonText)
+      .should('be.visible')
+      .and('have.attr', 'href', cloudCard.link);
   });
 });

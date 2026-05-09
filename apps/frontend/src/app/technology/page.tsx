@@ -1,3 +1,5 @@
+// apps/frontend/src/app/technology/page.tsx
+
 'use client';
 
 import * as React from 'react';
@@ -18,16 +20,59 @@ declare global {
   }
 }
 
+type TechnologyListItem = {
+  text: string;
+  href?: string;
+};
+
+type TechnologyCard = CardProps & {
+  listItems?: TechnologyListItem[];
+};
+
 const TECHNOLOGY_IMAGE_URL = '/images/technology.png';
 
-export default function Technology() {
-  const allCards = React.useMemo<CardProps[]>((() => {
-    const cards = Object.values(Constants).flat() as CardProps[];
+const isTechnologyCard = (value: unknown): value is TechnologyCard =>
+  typeof value === 'object' &&
+  value !== null &&
+  'title' in value &&
+  'description' in value;
 
-    return cards.sort((a, b) => a.title.localeCompare(b.title));
-  }) as () => CardProps[], []);
+const normalizeTechnologyCards = (value: unknown): TechnologyCard[] => {
+  if (Array.isArray(value)) {
+    return value.filter(isTechnologyCard);
+  }
+
+  return isTechnologyCard(value) ? [value] : [];
+};
+
+const isExternalHref = (href: string): boolean =>
+  /^https?:\/\//i.test(href) || href.startsWith('//');
+
+const getLinkTargetProps = (
+  href: string,
+): {
+  target?: '_blank';
+  rel?: string;
+} =>
+  isExternalHref(href)
+    ? {
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      }
+    : {};
+
+export default function Technology() {
+  const allCards = React.useMemo<TechnologyCard[]>(() => {
+    const cards = Object.values(Constants).flatMap(normalizeTechnologyCards);
+
+    return [...cards].sort((a, b) => a.title.localeCompare(b.title));
+  }, []);
 
   React.useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_ADSENSE_CLIENT) {
+      return;
+    }
+
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch {
@@ -37,6 +82,7 @@ export default function Technology() {
 
   return (
     <Box
+      id="main-content"
       component="main"
       sx={{
         position: 'relative',
@@ -204,6 +250,8 @@ export default function Technology() {
               >
                 <Box
                   component="article"
+                  data-testid="helix-card"
+                  data-card-title={card.title}
                   sx={{
                     position: 'relative',
                     display: 'flex',
@@ -358,14 +406,81 @@ export default function Technology() {
                       >
                         {card.description}
                       </Typography>
+
+                      {card.listItems?.length ? (
+                        <Box
+                          component="ul"
+                          sx={{
+                            mt: 2.25,
+                            mb: 0,
+                            pl: 0,
+                            display: 'grid',
+                            gap: 1,
+                            listStyle: 'none',
+                          }}
+                        >
+                          {card.listItems.map((item) => (
+                            <Box
+                              key={`${card.title}-${item.text}-${item.href ?? 'text'}`}
+                              component="li"
+                              sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                textAlign: 'center',
+                              }}
+                            >
+                              {item.href ? (
+                                <Box
+                                  component="a"
+                                  href={item.href}
+                                  {...getLinkTargetProps(item.href)}
+                                  sx={{
+                                    color: '#ffffff',
+                                    textDecoration: 'none',
+                                    fontSize: {
+                                      xs: '0.92rem',
+                                      md: '0.95rem',
+                                    },
+                                    fontWeight: 700,
+                                    lineHeight: 1.5,
+                                    textShadow:
+                                      '0 0 12px rgba(246, 6, 111, 0.32)',
+
+                                    '&:hover': {
+                                      color: '#F6066F',
+                                      textDecoration: 'underline',
+                                    },
+                                  }}
+                                >
+                                  {item.text}
+                                </Box>
+                              ) : (
+                                <Typography
+                                  component="span"
+                                  sx={{
+                                    color: 'rgba(255, 255, 255, 0.84)',
+                                    fontSize: {
+                                      xs: '0.92rem',
+                                      md: '0.95rem',
+                                    },
+                                    fontWeight: 700,
+                                    lineHeight: 1.5,
+                                  }}
+                                >
+                                  {item.text}
+                                </Typography>
+                              )}
+                            </Box>
+                          ))}
+                        </Box>
+                      ) : null}
                     </Box>
 
                     {card.link && card.buttonText ? (
                       <Button
                         component="a"
                         href={card.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        {...getLinkTargetProps(card.link)}
                         sx={{
                           mt: 'auto',
                           px: 3,

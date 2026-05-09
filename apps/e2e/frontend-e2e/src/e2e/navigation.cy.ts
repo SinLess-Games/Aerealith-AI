@@ -1,8 +1,31 @@
 import { headerNav, navPages } from '../support/app.po';
 
+const ROUTABLE_PAGE_URLS = ['/', '/About', '/Contact', '/technology'] as const;
+
 const routablePages = navPages.filter((page) =>
-  ['/', '/About', '/Contact', '/technology'].includes(page.url)
+  ROUTABLE_PAGE_URLS.includes(page.url as (typeof ROUTABLE_PAGE_URLS)[number]),
 );
+
+const assertRouteContent = (url: string): void => {
+  if (url === '/') {
+    cy.contains('h1', 'Helix AI — Your Digital Life').should('be.visible');
+    return;
+  }
+
+  if (url === '/About') {
+    cy.contains('h1', 'About Helix AI').should('be.visible');
+    return;
+  }
+
+  if (url === '/Contact') {
+    cy.contains('h1', 'Contact').should('be.visible');
+    return;
+  }
+
+  if (url === '/technology') {
+    cy.contains('h1', 'Technology').should('be.visible');
+  }
+};
 
 describe('Header navigation', () => {
   it('lists every configured navigation link on desktop viewports', () => {
@@ -19,18 +42,10 @@ describe('Header navigation', () => {
     cy.visit('/');
 
     routablePages.forEach((page) => {
-      headerNav.desktopButton(page.name).click();
-      cy.location('pathname').should('eq', page.url);
+      headerNav.desktopButton(page.name).should('be.visible').click();
 
-      if (page.url === '/') {
-        cy.contains('Meet Helix AI').should('be.visible');
-      } else if (page.url === '/About') {
-        cy.contains('About Helix AI').should('be.visible');
-      } else if (page.url === '/Contact') {
-        cy.contains('Contact Us').should('be.visible');
-      } else if (page.url === '/technology') {
-        cy.contains('Technology').should('be.visible');
-      }
+      cy.location('pathname').should('eq', page.url);
+      assertRouteContent(page.url);
     });
   });
 
@@ -38,10 +53,10 @@ describe('Header navigation', () => {
     cy.viewport('iphone-6');
     cy.visit('/');
 
-    headerNav.mobileToggle().click();
-    headerNav.mobileItem('Contact').click();
+    headerNav.mobileToggle().should('be.visible').click();
+    headerNav.mobileItem('Contact').should('be.visible').click();
 
     cy.location('pathname').should('eq', '/Contact');
-    cy.contains('Contact Us').should('be.visible');
+    assertRouteContent('/Contact');
   });
 });

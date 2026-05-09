@@ -1,28 +1,20 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "out-tsc/cypress",
     "allowJs": true,
-    "types": [
-      "cypress",
-      "node"
-    ],
-    "sourceMap": false
+    "noEmit": true,
+    "sourceMap": false,
+    "types": ["cypress", "node"]
   },
   "include": [
-    "**/*.ts",
-    "**/*.js",
     "cypress.config.ts",
-    "**/*.cy.ts",
-    "**/*.cy.tsx",
-    "**/*.cy.js",
-    "**/*.cy.jsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx",
     "**/*.d.ts"
   ],
-  "exclude": [
-    "out-tsc",
-    "test-output"
-  ],
+  "exclude": ["out-tsc", "test-output", "dist", "coverage"],
   "references": [
     {
       "path": "../../../libs/ui"

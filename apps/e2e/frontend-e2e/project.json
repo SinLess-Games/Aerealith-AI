@@ -1,0 +1,79 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "frontend-e2e",
+  "projectType": "application",
+  "sourceRoot": "apps/e2e/frontend-e2e/src",
+  "implicitDependencies": ["frontend"],
+  "targets": {
+    "e2e": {
+      "executor": "@nx/cypress:cypress",
+      "cache": false,
+      "inputs": ["default", "^production"],
+      "outputs": [
+        "{workspaceRoot}/dist/cypress/apps/e2e/frontend-e2e/screenshots",
+        "{workspaceRoot}/dist/cypress/apps/e2e/frontend-e2e/videos"
+      ],
+      "options": {
+        "cypressConfig": "apps/e2e/frontend-e2e/cypress.config.ts",
+        "testingType": "e2e",
+        "headless": true
+      },
+      "configurations": {
+        "open": {
+          "headless": false,
+          "watch": true
+        },
+        "headed": {
+          "headless": false,
+          "watch": false
+        },
+        "ci": {
+          "headless": true,
+          "watch": false
+        }
+      }
+    },
+    "e2e-ci": {
+      "executor": "@nx/cypress:cypress",
+      "dependsOn": ["^build"],
+      "cache": false,
+      "inputs": ["default", "^production"],
+      "outputs": [
+        "{workspaceRoot}/dist/cypress/apps/e2e/frontend-e2e/screenshots",
+        "{workspaceRoot}/dist/cypress/apps/e2e/frontend-e2e/videos"
+      ],
+      "options": {
+        "cypressConfig": "apps/e2e/frontend-e2e/cypress.config.ts",
+        "testingType": "e2e",
+        "baseUrl": "http://127.0.0.1:3000",
+        "headless": true,
+        "watch": false
+      }
+    },
+    "coverage": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        "{projectRoot}/coverage-plan/requirements.json",
+        "{projectRoot}/scripts/check-e2e-coverage.mjs"
+      ],
+      "outputs": [
+        "{workspaceRoot}/dist/cypress/apps/e2e/frontend-e2e/e2e-summary.json"
+      ],
+      "options": {
+        "cwd": ".",
+        "command": "node apps/e2e/frontend-e2e/scripts/check-e2e-coverage.mjs"
+      }
+    },
+    "ci": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "dependsOn": ["e2e-ci", "coverage"],
+      "options": {
+        "cwd": ".",
+        "command": "echo frontend-e2e ci complete"
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
-// app/technology/layout.tsx
+// apps/frontend/src/app/technology/layout.tsx
 
 import type { Metadata } from 'next';
-import React from 'react';
+import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   title: 'Helix AI Technologies | Advanced AI Solutions & Architecture',
@@ -21,13 +21,13 @@ export const metadata: Metadata = {
   authors: [{ name: 'SinLess Games LLC', url: 'https://sinlessgamesllc.com' }],
   robots: { index: true, follow: true },
   alternates: {
-    canonical: 'https://helixai.com/technology',
+    canonical: 'https://helixaibot.com/technology',
   },
   openGraph: {
     title: 'Helix AI Technologies | Advanced AI Solutions & Architecture',
     description:
       'Explore Helix AI Technologies: cutting-edge AI platforms, ML infrastructure, and integrations designed for seamless enterprise and developer adoption.',
-    url: 'https://helixai.com/technology',
+    url: 'https://helixaibot.com/technology',
     siteName: 'Helix AI',
     images: [
       {
@@ -51,6 +51,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function TechnologyLayout({ children }: { children: React.ReactNode }) {
-  return <main className="flex flex-col min-h-screen bg-black text-white">{children}</main>;
+export default function TechnologyLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>;
 }
