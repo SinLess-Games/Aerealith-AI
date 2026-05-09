@@ -13,21 +13,21 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": false,
-
     "customConditions": ["Helix"],
     "paths": {
-      "@helix-ai/ui/*": ["./libs/ui/src/*"],
-      "@helix-ai/ui": ["./libs/ui/src/index.ts"],
-      "@helix-ai/config/*": ["./libs/config/src/*"],
+      "@helix-ai/api": ["libs/api/src/index.ts"],
       "@helix-ai/config": ["./libs/config/src/index.ts"],
-      "@helix-ai/db/*": ["./libs/db/src/*"],
+      "@helix-ai/config/*": ["./libs/config/src/*"],
+      "@helix-ai/contracts": ["libs/contracts/src/index.ts"],
       "@helix-ai/db": ["./libs/db/src/index.ts"],
+      "@helix-ai/db/*": ["./libs/db/src/*"],
+      "@helix-ai/flags": ["./libs/flags/src/index.ts"],
       "@helix-ai/flags/*": ["./libs/flags/src/*"],
-      "@helix-ai/flags": ["./libs/flags/src/index.ts"]
+      "@helix-ai/ui": ["./libs/ui/src/index.ts"],
+      "@helix-ai/ui/*": ["./libs/ui/src/*"]
     }
   }
 }

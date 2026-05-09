@@ -162,3 +162,6 @@ apps/frontend/.next/
 apps/frontend/.open-next/
 apps/frontend/cloudflare-env.d.ts
 apps/frontend/open-next-env.d.ts
+
+vite.config.*.timestamp*
+vitest.config.*.timestamp*

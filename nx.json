@@ -81,7 +81,9 @@
       "!{projectRoot}/jest.config.ts",
       "!{projectRoot}/eslint.config.mjs",
       "!{projectRoot}/tsconfig.spec.json",
-      "!{projectRoot}/src/test-setup.ts"
+      "!{projectRoot}/src/test-setup.ts",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/src/test-setup.[jt]s"
     ],
     "sharedGlobals": [
       "{workspaceRoot}/package.json",
@@ -159,6 +161,20 @@
     "cf:typegen": {
       "inputs": ["cloudflare"],
       "cache": true
+    },
+    "@nx/esbuild:esbuild": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
+    },
+    "@nx/vite:test": {
+      "cache": true,
+      "inputs": ["default", "^production"]
+    },
+    "@nx/js:tsc": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
     }
   }
 }

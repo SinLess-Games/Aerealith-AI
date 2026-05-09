@@ -1,0 +1,6 @@
+name = "user"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+main = "src/index.ts"
+account_id = "9517bf561f1f713ab87d1523193c7cc5"
+
