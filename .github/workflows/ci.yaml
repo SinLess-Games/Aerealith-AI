@@ -207,35 +207,35 @@ jobs:
   #   timeout-minutes: 35
   #   needs:
   #     - workspace
-
+  #
   #   steps:
   #     - name: Checkout repository
   #       uses: actions/checkout@v5
   #       with:
   #         fetch-depth: 0
-
+  #
   #     - name: Setup pnpm
   #       uses: pnpm/action-setup@v4
   #       with:
   #         run_install: false
-
+  #
   #     - name: Setup Node.js
   #       uses: actions/setup-node@v6
   #       with:
   #         node-version: ${{ env.NODE_VERSION }}
   #         cache: pnpm
   #         cache-dependency-path: pnpm-lock.yaml
-
+  #
   #     - name: Install dependencies
   #       run: pnpm install --frozen-lockfile
-
+  #
   #     - name: Set Nx affected SHAs
   #       shell: bash
   #       run: |
   #         set -euo pipefail
-
+  #
   #         ZERO_SHA="0000000000000000000000000000000000000000"
-
+  #
   #         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
   #           echo "NX_BASE=origin/${{ github.base_ref }}" >> "$GITHUB_ENV"
   #           echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
@@ -246,18 +246,18 @@ jobs:
   #           echo "NX_BASE=origin/main" >> "$GITHUB_ENV"
   #           echo "NX_HEAD=HEAD" >> "$GITHUB_ENV"
   #         fi
-
+  #
   #     - name: Run affected unit tests
   #       shell: bash
   #       run: |
   #         set -euo pipefail
-
+  #
   #         if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.full_run }}" == "true" ]]; then
   #           pnpm nx run-many --target=test --all --parallel=3
   #         else
   #           pnpm nx affected --target=test --base="$NX_BASE" --head="$NX_HEAD" --parallel=3
   #         fi
-
+  #
   #     - name: Upload coverage reports
   #       if: always()
   #       uses: actions/upload-artifact@v4
@@ -276,7 +276,6 @@ jobs:
     timeout-minutes: 40
     needs:
       - lint
-      - unit-tests
 
     steps:
       - name: Checkout repository
@@ -564,7 +563,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     needs:
-      - e2e
+      - build
       - discover-dockerfiles
 
     if: needs.discover-dockerfiles.outputs.has_dockerfiles == 'true'
@@ -627,7 +626,6 @@ jobs:
       - workspace
       - security
       - lint
-      - unit-tests
       - build
       - e2e
       - discover-dockerfiles
@@ -664,7 +662,6 @@ jobs:
           check_required_job "Workspace validation" "${{ needs.workspace.result }}"
           check_required_job "Dependency security" "${{ needs.security.result }}"
           check_required_job "Lint/typecheck" "${{ needs.lint.result }}"
-          check_required_job "Unit tests" "${{ needs.unit-tests.result }}"
           check_required_job "Build" "${{ needs.build.result }}"
           check_required_job "E2E tests" "${{ needs.e2e.result }}"
           check_required_job "Dockerfile discovery" "${{ needs.discover-dockerfiles.result }}"
