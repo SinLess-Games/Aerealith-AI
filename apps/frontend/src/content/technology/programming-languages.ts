@@ -76,7 +76,7 @@ export const ProgrammingLanguagesCards = [
           'Kotlin 2.0 (Mar 2025) completes the K2 compiler rewrite, unlocks Lightning IR for 30 % faster incremental builds, and brings Compose Multiplatform to stable—allowing shared UI code across Android, iOS, desktop, and web targets.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Programming-Languages.png',
+    image: '/images/technology/programming-languages.png',
     link: '/technology/languages',
     buttonText: 'Explore languages',
   },

@@ -1,3 +1,5 @@
+// libs/ui/src/components/HeroSection.tsx
+
 'use client';
 
 import * as React from 'react';
@@ -56,6 +58,11 @@ export type HeroSectionProps = {
   waitlist?: HeroWaitlistProps;
 };
 
+type WaitlistApiResponse = {
+  ok?: boolean;
+  message?: string;
+};
+
 const DEFAULT_WAITLIST_ENDPOINT = '/api/V1/waitlist';
 const DEFAULT_FEEDBACK_DURATION_MS = 5_000;
 
@@ -63,12 +70,12 @@ function isValidEmailAddress(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
-async function readJsonResponse(response: Response): Promise<Record<string, unknown>> {
+async function readJsonResponse(response: Response): Promise<WaitlistApiResponse> {
   try {
     const body = (await response.json()) as unknown;
 
     return typeof body === 'object' && body !== null
-      ? (body as Record<string, unknown>)
+      ? (body as WaitlistApiResponse)
       : {};
   } catch {
     return {};
@@ -76,7 +83,7 @@ async function readJsonResponse(response: Response): Promise<Record<string, unkn
 }
 
 function getResponseMessage(
-  body: Record<string, unknown>,
+  body: WaitlistApiResponse,
   fallback: string,
 ): string {
   return typeof body.message === 'string' && body.message.trim().length > 0
@@ -95,7 +102,7 @@ export function HeroWaitlist({
 }: HeroWaitlistProps) {
   const [email, setEmail] = React.useState('');
   const [status, setStatus] = React.useState<WaitlistStatus>('idle');
-  const [errorMessage, setErrorMessage] = React.useState('');
+  const [feedbackMessage, setFeedbackMessage] = React.useState('');
 
   const trimmedEmail = email.trim();
   const isValidEmail = React.useMemo(
@@ -110,7 +117,7 @@ export function HeroWaitlist({
 
     const timer = window.setTimeout(() => {
       setStatus('idle');
-      setErrorMessage('');
+      setFeedbackMessage('');
     }, feedbackDurationMs);
 
     return () => {
@@ -124,7 +131,7 @@ export function HeroWaitlist({
     }
 
     setStatus('sending');
-    setErrorMessage('');
+    setFeedbackMessage('');
 
     try {
       const response = await fetch(endpoint, {
@@ -139,23 +146,22 @@ export function HeroWaitlist({
 
       const body = await readJsonResponse(response);
 
-      if (!response.ok) {
-        throw new Error(getResponseMessage(body, `HTTP ${response.status}`));
-      }
-
-      if (body.status && body.status !== 'success') {
-        throw new Error(getResponseMessage(body, 'Server error'));
+      if (!response.ok || body.ok !== true) {
+        throw new Error(
+          getResponseMessage(body, 'Unable to join the waitlist right now.'),
+        );
       }
 
       setEmail('');
+      setFeedbackMessage(getResponseMessage(body, successMessage));
       setStatus('success');
     } catch (error) {
-      setErrorMessage(
+      setFeedbackMessage(
         error instanceof Error ? error.message : 'Unknown error occurred',
       );
       setStatus('error');
     }
-  }, [endpoint, isValidEmail, status, trimmedEmail]);
+  }, [endpoint, isValidEmail, status, successMessage, trimmedEmail]);
 
   return (
     <Box
@@ -196,7 +202,7 @@ export function HeroWaitlist({
             data-testid="waitlist-success"
             sx={{ mt: 2, width: { xs: '100%', sm: 'auto' } }}
           >
-            {successMessage}
+            {feedbackMessage || successMessage}
           </Alert>
         ) : null}
 
@@ -206,7 +212,7 @@ export function HeroWaitlist({
             data-testid="waitlist-error"
             sx={{ mt: 2, width: { xs: '100%', sm: 'auto' } }}
           >
-            Error: {errorMessage}
+            Error: {feedbackMessage}
           </Alert>
         ) : null}
       </Box>
@@ -224,7 +230,7 @@ export function HeroWaitlist({
           display: 'flex',
           flexDirection: { xs: 'column', sm: 'row' },
           gap: 2,
-          alignItems: 'flex-start',
+          alignItems: { xs: 'stretch', sm: 'flex-start' },
           justifyContent: 'center',
           width: '100%',
           maxWidth: 600,
@@ -243,7 +249,7 @@ export function HeroWaitlist({
           helperText={
             email.length > 0 && !isValidEmail
               ? 'Please enter a valid email.'
-              : ' '
+              : undefined
           }
           disabled={status === 'sending'}
           slotProps={{
@@ -256,11 +262,15 @@ export function HeroWaitlist({
           }}
           sx={{
             bgcolor: 'rgba(255, 255, 255, 0.08)',
-            borderRadius: 1,
+            borderRadius: 1.5,
+            minHeight: 56,
 
             '& .MuiFilledInput-root': {
               color: '#fff',
               bgcolor: 'rgba(255, 255, 255, 0.08)',
+              borderRadius: 1.5,
+              minHeight: 56,
+              overflow: 'hidden',
 
               '&:hover': {
                 bgcolor: 'rgba(255, 255, 255, 0.12)',
@@ -269,6 +279,14 @@ export function HeroWaitlist({
               '&.Mui-focused': {
                 bgcolor: 'rgba(255, 255, 255, 0.12)',
               },
+            },
+
+            '& .MuiFilledInput-input': {
+              height: 56,
+              boxSizing: 'border-box',
+              py: 0,
+              display: 'flex',
+              alignItems: 'center',
             },
 
             '& .MuiFilledInput-underline:before': {
@@ -285,6 +303,7 @@ export function HeroWaitlist({
 
             '& .MuiInputLabel-root': {
               color: 'rgba(255, 255, 255, 0.7)',
+              top: '-2px',
             },
 
             '& .MuiInputLabel-root.Mui-focused': {
@@ -292,10 +311,9 @@ export function HeroWaitlist({
             },
 
             '& .MuiFormHelperText-root': {
-              color:
-                email.length > 0 && !isValidEmail
-                  ? 'error.light'
-                  : 'rgba(255, 255, 255, 0.55)',
+              m: 0,
+              mt: 0.75,
+              color: 'error.light',
             },
           }}
         />
@@ -306,20 +324,40 @@ export function HeroWaitlist({
           disabled={!isValidEmail || status === 'sending'}
           data-testid="waitlist-submit"
           sx={{
-            backgroundColor: '#022371',
+            background:
+              'linear-gradient(135deg, #f6066f 0%, #7c3aed 55%, #022371 100%)',
             color: '#fff',
             px: 4,
-            py: 1.5,
-            minWidth: '180px',
+            py: 0,
+            minWidth: { xs: '100%', sm: '180px' },
             minHeight: 56,
+            height: 56,
+            border: '1px solid rgba(255, 255, 255, 0.28)',
+            borderRadius: 1.5,
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            boxShadow:
+              '0 0 18px rgba(246, 6, 111, 0.45), 0 10px 28px rgba(2, 35, 113, 0.45)',
 
             '&:hover': {
-              backgroundColor: '#f6066f',
+              background:
+                'linear-gradient(135deg, #ff2f8a 0%, #8b5cf6 50%, #0636a8 100%)',
+              boxShadow:
+                '0 0 26px rgba(246, 6, 111, 0.65), 0 14px 34px rgba(2, 35, 113, 0.55)',
+              transform: 'translateY(-1px)',
+            },
+
+            '&:active': {
+              transform: 'translateY(0)',
             },
 
             '&.Mui-disabled': {
-              color: 'rgba(255, 255, 255, 0.55)',
-              backgroundColor: 'rgba(2, 35, 113, 0.45)',
+              color: 'rgba(255, 255, 255, 0.72)',
+              background:
+                'linear-gradient(135deg, rgba(246, 6, 111, 0.45) 0%, rgba(2, 35, 113, 0.7) 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              boxShadow: '0 0 14px rgba(246, 6, 111, 0.22)',
             },
           }}
         >
@@ -341,29 +379,75 @@ export function HeroSection({
     <Box
       component="section"
       sx={{
-        px: { xs: '1.5rem', md: '4rem' },
-        py: { xs: '3rem', md: '5rem' },
+        px: { xs: '1.25rem', sm: '2rem', md: '4rem' },
+        py: { xs: '2.5rem', sm: '3.5rem', md: '5rem' },
         mx: { xs: '1rem', md: '2rem' },
-        borderRadius: '0.75rem',
-        backgroundColor: 'rgba(30, 30, 30, 0.75)',
+        borderRadius: '1.25rem',
+        background:
+          'linear-gradient(135deg, rgba(10, 10, 16, 0.52), rgba(26, 16, 42, 0.34))',
+        border: '1px solid rgba(255, 255, 255, 0.06)',
+        boxShadow:
+          '0 24px 80px rgba(0, 0, 0, 0.34), inset 0 0 48px rgba(246, 6, 111, 0.04)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      <Grid container spacing={4} alignItems="center">
+      <Grid container spacing={{ xs: 4, md: 6 }} alignItems="center">
         <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: 'center' }}>
-          <Image
-            src={imageUrl}
-            alt={imageAlt}
-            width={400}
-            height={400}
-            priority
-            style={{
-              maxWidth: '100%',
-              height: 'auto',
-              borderRadius: '0.5rem',
+          <Box
+            sx={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: {
+                xs: 400,
+                sm: 580,
+                md: 740,
+                lg: 860,
+                xl: 960,
+              },
+              aspectRatio: '16 / 9',
+              mx: 'auto',
+              borderRadius: { xs: '1rem', md: '1.35rem' },
+              overflow: 'hidden',
+              background:
+                'linear-gradient(135deg, rgba(2, 35, 113, 0.18), rgba(246, 6, 111, 0.14))',
+              border: '1px solid rgba(255, 255, 255, 0.14)',
+              boxShadow:
+                '0 0 0 1px rgba(246, 6, 111, 0.08), 0 18px 45px rgba(0, 0, 0, 0.42), 0 0 34px rgba(2, 35, 113, 0.25)',
+              transform: 'translateZ(0)',
+              transition:
+                'transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease',
+
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                inset: 0,
+                pointerEvents: 'none',
+                borderRadius: 'inherit',
+                background:
+                  'linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 28%, transparent 72%, rgba(246, 6, 111, 0.12))',
+                opacity: 0.7,
+              },
+
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                borderColor: 'rgba(246, 6, 111, 0.28)',
+                boxShadow:
+                  '0 0 0 1px rgba(246, 6, 111, 0.16), 0 22px 55px rgba(0, 0, 0, 0.48), 0 0 42px rgba(246, 6, 111, 0.18)',
+              },
             }}
-          />
+          >
+            <Image
+              src={imageUrl}
+              alt={imageAlt}
+              fill
+              priority
+              sizes="(max-width: 600px) 95vw, (max-width: 900px) 80vw, (max-width: 1200px) 50vw, 960px"
+              style={{
+                objectFit: 'cover',
+              }}
+            />
+          </Box>
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
@@ -379,7 +463,7 @@ export function HeroSection({
                 lg: '4rem',
               },
               fontFamily: '"Pinyon Script", cursive, sans-serif',
-              textAlign: { xs: 'center', md: 'left' },
+              textAlign: 'center',
             }}
             gutterBottom
           >
@@ -390,7 +474,11 @@ export function HeroSection({
             component="p"
             sx={{
               color: '#6a8db0',
-              fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem' },
+              fontSize: {
+                xs: '1rem',
+                sm: '1.125rem',
+                md: '1.25rem',
+              },
               textAlign: { xs: 'center', md: 'left' },
             }}
           >

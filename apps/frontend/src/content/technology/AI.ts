@@ -78,7 +78,7 @@ export const AIToolsCards = {
         'Ollama is a lightweight runtime that lets developers pull, run, and fine-tune quantized language models locally on macOS, Linux, and Windows WSL. Its 0.2 release (May 2025) introduced automatic GPU acceleration, customizable model composition via `Modelfile`, and a growing library of models, including Llama 3, Phi-3-mini, and Mistral 7B. Streaming REST endpoints and a `ollama run` CLI simplify swapping between cloud and on-device inference while ensuring data privacy.',
     },
   ],
-  image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/ai-tools.png',
+  image: '/images/technology/ai-tools.png',
   link: '/technology/ai-tools',
   buttonText: 'Explore tools',
 } as const satisfies CardProps;

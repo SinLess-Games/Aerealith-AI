@@ -2,19 +2,35 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "strict": false,
-    "composite": true,
-    "jsx": "preserve",
-    "skipLibCheck": true,
-    "noEmit": true,
-    "emitDeclarationOnly": false,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "types": ["node", "jest"],
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
+    "composite": false,
+    "allowJs": false,
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "incremental": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "es2022"
+    ],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "emitDeclarationOnly": false,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "target": "es2022",
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+
+    "types": [
+      "node",
+      "@cloudflare/workers-types"
+    ],
     "plugins": [
       {
         "name": "next"
@@ -22,28 +38,41 @@
     ]
   },
   "include": [
-    "next-env.d.ts",
+    "*.ts",
+    "*.tsx",
     ".next/types/**/*.ts",
-    "src/**/*.js",
-    "src/**/*.jsx",
+    "cloudflare-env.d.ts",
+    "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "../../libs/ui/src/**/*.ts",
-    "../../libs/ui/src/**/*.tsx"
+    "../../dist/apps/frontend/types/**/*.ts"
   ],
   "exclude": [
+    "node_modules",
+    ".next/cache",
+    ".open-next",
+    ".wrangler",
     "out-tsc",
     "dist",
-    "node_modules",
+    "../../dist",
+    "../../dist/apps/frontend",
     "jest.config.ts",
     "src/**/*.spec.ts",
     "src/**/*.test.ts",
-    ".next",
     "eslint.config.js",
     "eslint.config.cjs",
     "eslint.config.mjs"
   ],
   "references": [
+    {
+      "path": "../../libs/config"
+    },
+    {
+      "path": "../../libs/db"
+    },
+    {
+      "path": "../../libs/flags"
+    },
     {
       "path": "../../libs/ui"
     }

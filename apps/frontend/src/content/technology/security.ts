@@ -257,7 +257,7 @@ export const SecurityCards = [
           'TUF/Notary v2 secures OCI artifact pulls with delegations and signed metadata.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Security-&-Compliance.png',
+    image: '/images/technology/security.png',
     link: '/technology/security',
     buttonText: 'Explore security',
   },

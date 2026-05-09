@@ -13,7 +13,6 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import { alpha, useTheme, type SxProps, type Theme } from '@mui/material/styles';
 import Image, { type StaticImageData } from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -60,8 +59,8 @@ export function Header({
   style,
   sx,
   logoAlt = 'Helix logo',
-  githubReleasesUrl = 'https://github.com/Sinless777/Helix/releases',
-  latestReleaseApiUrl = 'https://api.github.com/repos/Sinless777/Helix/releases/latest',
+  githubReleasesUrl = 'https://github.com/SinLess-Games/Helix/releases',
+  latestReleaseApiUrl = 'https://api.github.com/repos/SinLess-Games/Helix/releases/latest',
 }: HeaderProps) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [latestVersion, setLatestVersion] = React.useState<string | null>(null);
@@ -70,7 +69,6 @@ export function Header({
   const pathname = usePathname();
   const router = useRouter();
   const theme = useTheme();
-  const mdUp = useMediaQuery(theme.breakpoints.up('md'), { noSsr: true });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -124,10 +122,22 @@ export function Header({
   }, []);
 
   React.useEffect(() => {
-    if (mdUp) {
-      setMenuOpen(false);
-    }
-  }, [mdUp]);
+    const mediaQuery = window.matchMedia(theme.breakpoints.up('md').replace('@media ', ''));
+
+    const closeMenuOnDesktop = (event: MediaQueryListEvent | MediaQueryList): void => {
+      if (event.matches) {
+        setMenuOpen(false);
+      }
+    };
+
+    closeMenuOnDesktop(mediaQuery);
+
+    mediaQuery.addEventListener('change', closeMenuOnDesktop);
+
+    return () => {
+      mediaQuery.removeEventListener('change', closeMenuOnDesktop);
+    };
+  }, [theme]);
 
   const displayVersion = latestVersion ?? normalizeVersion(version);
   const releaseUrl = `${githubReleasesUrl}/tag/v${displayVersion}`;
@@ -162,20 +172,26 @@ export function Header({
         <Box
           sx={{
             width: '100%',
-            maxWidth: 1280,
-            mx: 'auto',
-            px: { xs: 2, sm: 3, md: 4, lg: 5 },
-            display: 'flex',
+            maxWidth: 'none',
+            mx: 0,
+            px: { xs: 1.25, sm: 1.5, md: 2, lg: 2.5 },
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr auto',
+              md: '1fr auto 1fr',
+            },
             alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2,
+            columnGap: { xs: 1.5, md: 2.5 },
+            minHeight: { xs: 52, sm: 56, md: 58, lg: 60 },
           }}
         >
           <Stack
             direction="row"
-            spacing={2}
+            spacing={0}
             className={styles.leftSection}
             sx={{
+              justifySelf: 'start',
+              alignItems: 'center',
               minWidth: 0,
             }}
           >
@@ -192,19 +208,39 @@ export function Header({
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 flexShrink: 0,
+                width: { xs: 132, sm: 150, md: 176, lg: 190 },
+                height: { xs: 42, sm: 46, md: 50, lg: 52 },
+                overflow: 'visible',
+                transition: 'transform 180ms ease, filter 180ms ease',
+
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  filter: 'brightness(1.12)',
+                },
+
+                '&:focus-visible': {
+                  outline: '2px solid rgba(246, 6, 111, 0.85)',
+                  outlineOffset: 3,
+                  borderRadius: 1,
+                },
               }}
             >
               <Image
                 src={logo}
                 alt={logoAlt}
-                width={120}
-                height={40}
+                width={500}
+                height={100}
                 priority
+                sizes="(max-width: 600px) 132px, (max-width: 900px) 176px, 190px"
                 style={{
-                  width: 'auto',
-                  height: '40px',
+                  width: '100%',
+                  height: '100%',
                   objectFit: 'contain',
+                  objectPosition: 'left center',
+                  filter:
+                    'drop-shadow(0 0 3px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 8px rgba(246, 6, 111, 0.35))',
                 }}
               />
             </Box>
@@ -218,73 +254,112 @@ export function Header({
               sx={{
                 alignSelf: 'center',
                 whiteSpace: 'nowrap',
+                color: '#8be9ff',
+                fontWeight: 800,
+                fontSize: { xs: '0.78rem', sm: '0.85rem', md: '0.9rem' },
+                letterSpacing: '0.03em',
+                lineHeight: 1,
+                ml: {
+                  xs: '-0.85rem',
+                  sm: '-1rem',
+                  md: '-1.35rem',
+                  lg: '-1.55rem',
+                },
+                px: 0.7,
+                py: 0.42,
+                borderRadius: 1,
+                backgroundColor: 'rgba(2, 35, 113, 0.38)',
+                border: '1px solid rgba(139, 233, 255, 0.34)',
+                textShadow:
+                  '0 0 6px rgba(139, 233, 255, 0.85), 0 0 12px rgba(246, 6, 111, 0.32)',
+                boxShadow:
+                  '0 0 12px rgba(139, 233, 255, 0.18), inset 0 0 8px rgba(255, 255, 255, 0.08)',
+
+                '&:hover': {
+                  color: '#ffffff',
+                  backgroundColor: 'rgba(246, 6, 111, 0.32)',
+                  borderColor: 'rgba(246, 6, 111, 0.55)',
+                  textShadow:
+                    '0 0 8px rgba(255, 255, 255, 0.9), 0 0 14px rgba(246, 6, 111, 0.6)',
+                },
               }}
             >
               V{displayVersion}
             </MuiLink>
           </Stack>
 
-          {mdUp ? (
-            <Stack
-              component="nav"
-              direction="row"
-              className={styles.middleSection}
-              aria-label="Primary navigation"
+          <Stack
+            component="nav"
+            direction="row"
+            className={styles.middleSection}
+            aria-label="Primary navigation"
+            sx={{
+              display: { xs: 'none', md: 'flex' },
+              justifySelf: 'center',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              columnGap: { md: 2.25, lg: 3 },
+              rowGap: 0.5,
+              minWidth: 0,
+              px: 1,
+            }}
+          >
+            {pages.map((page) => {
+              const active = isActivePath(pathname, page.url);
+
+              return (
+                <Button
+                  key={`${page.name}:${page.url}`}
+                  onClick={() => navigate(page.url)}
+                  aria-current={active ? 'page' : undefined}
+                  sx={{
+                    color: 'inherit',
+                    fontWeight: active ? 700 : 500,
+                    borderBottom: active
+                      ? '2px solid #f6066f'
+                      : '2px solid transparent',
+                    borderRadius: 0,
+                    whiteSpace: 'nowrap',
+                    textTransform: 'none',
+                    px: 1,
+                    py: 0.5,
+                    minWidth: 0,
+
+                    '&:hover': {
+                      color: '#f6066f',
+                      backgroundColor: 'transparent',
+                    },
+                  }}
+                >
+                  {page.name}
+                </Button>
+              );
+            })}
+          </Stack>
+
+          <Box
+            className={styles.navSection}
+            sx={{
+              justifySelf: 'end',
+              minWidth: { xs: 'auto', md: 180, lg: 210 },
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+            }}
+          >
+            <IconButton
+              onClick={() => setMenuOpen(true)}
               sx={{
-                flexGrow: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                columnGap: { md: 2.25, lg: 3 },
-                rowGap: 0.75,
-                minWidth: 0,
-                px: 1,
+                color: '#fff',
+                display: { xs: 'inline-flex', md: 'none' },
               }}
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
+              aria-controls="helix-mobile-navigation"
             >
-              {pages.map((page) => {
-                const active = isActivePath(pathname, page.url);
-
-                return (
-                  <Button
-                    key={`${page.name}:${page.url}`}
-                    onClick={() => navigate(page.url)}
-                    aria-current={active ? 'page' : undefined}
-                    sx={{
-                      color: 'inherit',
-                      fontWeight: active ? 700 : 500,
-                      borderBottom: active
-                        ? '2px solid #f6066f'
-                        : '2px solid transparent',
-                      borderRadius: 0,
-                      whiteSpace: 'nowrap',
-                      textTransform: 'none',
-                      px: 1,
-                      minWidth: 0,
-                      '&:hover': {
-                        color: '#f6066f',
-                        backgroundColor: 'transparent',
-                      },
-                    }}
-                  >
-                    {page.name}
-                  </Button>
-                );
-              })}
-            </Stack>
-          ) : null}
-
-          <Box className={styles.navSection}>
-            {!mdUp ? (
-              <IconButton
-                onClick={() => setMenuOpen(true)}
-                sx={{ color: '#fff' }}
-                aria-label="Open menu"
-                aria-expanded={menuOpen}
-                aria-controls="helix-mobile-navigation"
-              >
-                <MenuIcon fontSize="large" />
-              </IconButton>
-            ) : null}
+              <MenuIcon fontSize="medium" />
+            </IconButton>
           </Box>
         </Box>
       </Box>
@@ -335,9 +410,11 @@ export function Header({
                   aria-current={active ? 'page' : undefined}
                   sx={{
                     color: 'inherit',
+
                     '&.Mui-selected': {
                       bgcolor: alpha(theme.palette.common.white, 0.08),
                     },
+
                     '&.Mui-selected:hover': {
                       bgcolor: alpha(theme.palette.common.white, 0.12),
                     },
@@ -351,7 +428,7 @@ export function Header({
         </List>
       </Drawer>
 
-      <Box aria-hidden sx={{ height: { xs: 64, md: 72 } }} />
+      <Box aria-hidden sx={{ height: { xs: 52, sm: 56, md: 58, lg: 60 } }} />
     </>
   );
 }

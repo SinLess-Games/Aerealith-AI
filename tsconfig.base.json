@@ -13,6 +13,11 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+
     "customConditions": ["Helix"],
     "paths": {
       "@helix-ai/ui/*": ["./libs/ui/src/*"],

@@ -121,7 +121,7 @@ export const InfrastructureCards = [
           'GitHub Packages (May 2025) supports OCI-conformant Helm and WASM artifacts, fine-grained PAT scopes, and registry firewall rules—allowing teams to co-locate images, SBOMs, and Helm charts with their code.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Infrastructure.png',
+    image: '/images/technology/infrastructure.png',
     link: '/technology/infrastructure',
     buttonText: 'Learn more',
   },

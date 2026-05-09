@@ -51,7 +51,7 @@ export const CloudPlatformCards = [
           'Linode (an Akamai company) provides affordable virtual machines, S3-compatible Object Storage, Managed Databases, and Linode Kubernetes Engine (LKE) regions across North America, Europe, and Asia, with predictable flat pricing ideal for staging and edge workloads.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Cloud-Platforms.png',
+    image: '/images/technology/cloud-platforms.png',
     link: '/technology/cloud-platforms',
     buttonText: 'Explore clouds',
   },

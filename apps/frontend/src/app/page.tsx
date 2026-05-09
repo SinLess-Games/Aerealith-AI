@@ -1,13 +1,13 @@
 'use client';
 
-import { DevelopmentBanner, Header, HeroSection } from '@helix-ai/ui';
+import { Header, HeroSection } from '@helix-ai/ui';
 
 import { headerProps } from '../content/header';
 
 const HERO_DATA = {
-  title: 'Meet Helix AI — Your Intelligent Companion for a Smarter Digital Life',
+  title: 'Helix AI — Your Digital Life, Intelligently Connected',
   subtitle:
-    'Seamlessly connect, automate, and analyze with an AI assistant built to simplify tasks, enhance productivity, and empower your decisions across every platform you use.',
+    'Helix AI is a secure virtual assistant designed to bring your digital life into one intelligent command center. It goes beyond basic voice commands by connecting your apps, organizing your data, automating repetitive tasks, monitoring important systems, and turning scattered information into clear, actionable insight. Built for work, home, creators, developers, and infrastructure operators, Helix helps you ask better questions, manage complex workflows, track what matters, and stay in control across the tools and platforms you rely on every day.',
   imageUrl: '/images/hero.png',
   imageAlt: 'Helix AI futuristic hero artwork',
 } as const;
@@ -15,23 +15,7 @@ const HERO_DATA = {
 export default function IndexPage() {
   return (
     <div className="flex min-h-screen flex-col text-white">
-      <a
-        href="#main-content"
-        className="sr-only fixed left-4 top-4 z-[60] rounded-md bg-white/10 px-3 py-2 text-sm backdrop-blur hover:bg-white/20 focus:not-sr-only"
-      >
-        Skip to content
-      </a>
-
       <Header {...headerProps} pages={[...(headerProps.pages ?? [])]} />
-
-      <DevelopmentBanner
-        fixed={false}
-        sx={{
-          mt: { xs: 8, md: 9 },
-          mx: { xs: 2, md: 4 },
-          borderRadius: 2,
-        }}
-      />
 
       <main
         id="main-content"

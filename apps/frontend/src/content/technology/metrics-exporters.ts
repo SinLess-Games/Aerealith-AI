@@ -237,7 +237,7 @@ export const MetricsExportersCards = [
           'Exports Vault metrics for seal status, token creation, lease counts, and request latencies.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Metrics-Exporters.png',
+    image: '/images/technology/metrics-exporters.png',
     link: '/technology/metrics-exporters',
     buttonText: 'Explore exporters',
   },

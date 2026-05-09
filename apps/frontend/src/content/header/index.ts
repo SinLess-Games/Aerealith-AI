@@ -18,7 +18,7 @@ export interface HeaderProps {
 }
 
 export const headerProps: HeaderProps = {
-  logo: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/Helix-Logo.webp',
+  logo: '/images/headerLogo.png',
   title: 'Helix AI',
   version: '1.0.0',
   pages,

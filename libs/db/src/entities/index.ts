@@ -13,9 +13,15 @@
 // ---------------------------------------------------------------------
 // User & Profile
 // ---------------------------------------------------------------------
-export * from './user/user.entity.js';
-export * from './user/profile.entity.js';
-export * from './user/settings.entity.js';
-export * from './user/account.entity.js';
-export * from './user/session.entity.js';
-export * from './user/verification-token.entity.js';
+export * from './user/user.entity';
+export * from './user/profile.entity';
+export * from './user/settings.entity';
+export * from './user/account.entity';
+export * from './user/session.entity';
+export * from './user/verification-token.entity';
+
+
+// ---------------------------------------------------------------------
+// System & Misc
+// ---------------------------------------------------------------------
+export * from './system/waitlist';

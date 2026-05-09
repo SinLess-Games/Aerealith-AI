@@ -65,7 +65,7 @@ export const FrameworksCards = [
           'Poetry 1.7 (Feb 2025) adds PEP 723 inline-metadata parsing, lock-file parallel downloads, and a `poetry publish --dry-run` workflow. Its virtual-env isolation and `pyproject.toml`-first config simplify reproducible builds and packaging.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Frameworks.png',
+    image: '/images/technology/frameworks.png',
     link: '/technology/frameworks',
     buttonText: 'Explore frameworks',
   },

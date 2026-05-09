@@ -4,7 +4,7 @@ import type { CardProps } from '../types/card';
 
 export const DevelopmentCards = [
   {
-    title: 'Development & DevOps',
+    title: 'Development & DevSecOps',
     description:
       'Modern CI/CD, GitOps, Infrastructure-as-Code, and AI-assisted workflows that accelerate software delivery.',
     listItems: [
@@ -93,7 +93,7 @@ export const DevelopmentCards = [
           'Powered by GPT-4o (May 2025), Copilot offers contextual inline completions across 16 languages plus a code-repair agent that opens pull requests with unit-tested fixes. Real-time vulnerability filtering catches OWASP Top-10 issues before merge.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Development.png',
+    image: '/images/technology/development.png',
     link: '/technology/development',
     buttonText: 'Learn more',
   },

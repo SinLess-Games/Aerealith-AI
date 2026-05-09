@@ -3,55 +3,27 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import type { SxProps, Theme } from '@mui/material/styles';
-import Image, { type StaticImageData } from 'next/image';
+import type { StaticImageData } from 'next/image';
 
 export type BackgroundImageSource = string | StaticImageData;
 export type BackgroundMode = 'light' | 'dark';
 
 export interface BackgroundImageProps {
-  /** Fallback background image URL or imported static image. */
   imageUrl: BackgroundImageSource;
-
-  /** Optional light-mode background image. */
   lightImageUrl?: BackgroundImageSource;
-
-  /** Optional dark-mode background image. */
   darkImageUrl?: BackgroundImageSource;
-
-  /** Force a specific mode. When omitted, system preference is used. */
   mode?: BackgroundMode;
-
-  /** Alt text for the image. Leave empty for decorative backgrounds. */
   altText?: string;
-
-  /** Optional style overrides for the foreground wrapper. */
   sx?: SxProps<Theme>;
-
-  /** Optional style overrides for the fixed background layer. */
   backgroundSx?: SxProps<Theme>;
-
-  /** Optional overlay opacity. 0 = transparent, 1 = fully dark. */
+  backgroundStyle?: React.CSSProperties;
   overlayOpacity?: number;
-
-  /** Optional light-mode overlay opacity. */
   lightOverlayOpacity?: number;
-
-  /** Optional dark-mode overlay opacity. */
   darkOverlayOpacity?: number;
-
-  /** Optional background blur intensity in pixels. */
   blur?: number;
-
-  /** Optional image priority for Next/Image. */
   priority?: boolean;
-
-  /** Optional image quality for Next/Image. */
   quality?: number;
-
-  /** CSS object-position value for the background image. */
   objectPosition?: React.CSSProperties['objectPosition'];
-
-  /** Optional children to render above the background. */
   children?: React.ReactNode;
 }
 
@@ -73,6 +45,14 @@ function mergeSx(
   ] as SxProps<Theme>;
 }
 
+function toCssUrl(source: BackgroundImageSource): string {
+  if (typeof source === 'string') {
+    return source;
+  }
+
+  return source.src;
+}
+
 function resolveImageUrl({
   mode,
   imageUrl,
@@ -84,19 +64,13 @@ function resolveImageUrl({
   lightImageUrl?: BackgroundImageSource;
   darkImageUrl?: BackgroundImageSource;
 }): BackgroundImageSource {
-  if (mode === 'light') {
-    return lightImageUrl ?? imageUrl;
-  }
-
-  return darkImageUrl ?? imageUrl;
+  return mode === 'light' ? lightImageUrl ?? imageUrl : darkImageUrl ?? imageUrl;
 }
 
-/**
- * BackgroundImage
- *
- * Fixed full-viewport background image with system light/dark image support,
- * overlay, and optional blur. Foreground children render above the background.
- */
+function getInitialMode(mode?: BackgroundMode): BackgroundMode {
+  return mode ?? 'dark';
+}
+
 export function BackgroundImage({
   imageUrl,
   lightImageUrl,
@@ -104,18 +78,17 @@ export function BackgroundImage({
   mode,
   altText = '',
   sx,
-  backgroundSx,
+  backgroundSx: _backgroundSx,
+  backgroundStyle,
   overlayOpacity = 0.4,
   lightOverlayOpacity,
   darkOverlayOpacity,
   blur = 0,
-  priority = true,
-  quality = 100,
   objectPosition = 'center',
   children,
 }: BackgroundImageProps) {
-  const [resolvedMode, setResolvedMode] = React.useState<BackgroundMode>(
-    () => mode ?? 'dark',
+  const [resolvedMode, setResolvedMode] = React.useState<BackgroundMode>(() =>
+    getInitialMode(mode),
   );
 
   React.useEffect(() => {
@@ -131,11 +104,10 @@ export function BackgroundImage({
     };
 
     updateMode();
-
-    mediaQuery.addEventListener?.('change', updateMode);
+    mediaQuery.addEventListener('change', updateMode);
 
     return () => {
-      mediaQuery.removeEventListener?.('change', updateMode);
+      mediaQuery.removeEventListener('change', updateMode);
     };
   }, [mode]);
 
@@ -154,60 +126,62 @@ export function BackgroundImage({
   const safeOverlayOpacity = clamp(selectedOverlayOpacity, 0, 1);
   const safeBlur = Math.max(0, blur);
 
-  const backgroundLayerSx: SxProps<Theme> = {
-    position: 'fixed',
-    inset: 0,
-    zIndex: -2,
-    width: '100vw',
-    height: '100vh',
-    overflow: 'hidden',
-    pointerEvents: 'none',
-    backgroundColor: resolvedMode === 'light' ? '#ffffff' : '#050716',
-
-    '&::after': {
-      content: '""',
-      position: 'absolute',
-      inset: 0,
-      zIndex: 1,
-      backgroundColor:
-        resolvedMode === 'light'
-          ? `rgba(255, 255, 255, ${safeOverlayOpacity})`
-          : `rgba(0, 0, 0, ${safeOverlayOpacity})`,
-      backdropFilter: safeBlur > 0 ? `blur(${safeBlur}px)` : undefined,
-      WebkitBackdropFilter: safeBlur > 0 ? `blur(${safeBlur}px)` : undefined,
-    },
-  };
+  const backgroundColor = resolvedMode === 'light' ? '#ffffff' : '#050716';
+  const overlayColor =
+    resolvedMode === 'light'
+      ? `rgba(255, 255, 255, ${safeOverlayOpacity})`
+      : `rgba(0, 0, 0, ${safeOverlayOpacity})`;
 
   const foregroundSx: SxProps<Theme> = {
     position: 'relative',
-    zIndex: 0,
+    zIndex: 1,
     minHeight: '100vh',
   };
 
   return (
-    <>
-      <Box
+    <Box
+      sx={{
+        position: 'relative',
+        minHeight: '100vh',
+        isolation: 'isolate',
+        backgroundColor,
+      }}
+    >
+      <div
         aria-hidden={altText.length === 0}
         data-background-mode={resolvedMode}
-        sx={mergeSx(backgroundLayerSx, backgroundSx)}
-      >
-        <Image
-          key={resolvedMode}
-          src={selectedImageUrl}
-          alt={altText}
-          fill
-          priority={priority}
-          quality={quality}
-          sizes="100vw"
-          style={{
-            objectFit: 'cover',
-            objectPosition,
-          }}
-        />
-      </Box>
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
+          width: '100vw',
+          height: '100vh',
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          backgroundColor,
+          backgroundImage: `url("${toCssUrl(selectedImageUrl)}")`,
+          backgroundSize: 'cover',
+          backgroundPosition: objectPosition?.toString() ?? 'center',
+          backgroundRepeat: 'no-repeat',
+          filter: safeBlur > 0 ? `blur(${safeBlur}px)` : undefined,
+          transform: safeBlur > 0 ? 'scale(1.02)' : undefined,
+          ...backgroundStyle,
+        }}
+      />
+
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+          backgroundColor: overlayColor,
+        }}
+      />
 
       <Box sx={mergeSx(foregroundSx, sx)}>{children}</Box>
-    </>
+    </Box>
   );
 }
 

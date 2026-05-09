@@ -79,7 +79,7 @@ export const DataStorageCards = [
           'Blazing-fast open-source analytics engine for petabyte-scale workloads. ClickHouse 24.6 (June 2025) adds optimal table sorting, S3Queue refactor, and native Azure Queue ingestion—pushing real-time dashboards under 100 ms.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Data-&-Messaging.png',
+    image: '/images/technology/data-storage.png',
     link: '/technology/data-storage',
     buttonText: 'Learn more',
   },

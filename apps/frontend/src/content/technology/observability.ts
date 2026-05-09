@@ -118,7 +118,7 @@ export const ObservabilityCards = [
           'OpenTelemetry 1.5 (May 2025) stabilizes logging APIs, finalizes semantic conventions 1.0, and enables unified OTLP pipelines for logs, metrics, and traces.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Observability.png',
+    image: '/images/technology/observability.png',
     link: '/technology/observability',
     buttonText: 'Explore suite',
   },

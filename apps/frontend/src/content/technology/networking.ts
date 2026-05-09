@@ -98,7 +98,7 @@ export const NetworkingCards = [
           'Adds QUIC multiplex transport, automatic token refresh, and Kubernetes sidecar mode—creating outbound Zero-Trust tunnels that expose services without public ingress IPs.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Networking-&-CDN.png',
+    image: '/images/technology/networking.png',
     link: '/technology/networking',
     buttonText: 'Explore networking',
   },

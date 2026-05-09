@@ -19,7 +19,7 @@
       "options": {
         "cwd": "apps/frontend",
         "tty": false,
-        "command": "next build --webpack"
+        "command": "next build  && node ./scripts/ensure-middleware-manifest.mjs"
       },
       "syncGenerators": ["@nx/js:typescript-sync"],
       "parallelism": true,
@@ -109,6 +109,175 @@
       "configurations": {},
       "parallelism": true
     },
+    "db:migrate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/libs/db/src/**/*",
+        {
+          "externalDependencies": [
+            "@mikro-orm/core",
+            "@mikro-orm/migrations",
+            "@mikro-orm/postgresql",
+            "pg",
+            "tsx"
+          ]
+        }
+      ],
+      "options": {
+        "cwd": "apps/frontend",
+        "command": "pnpm run db:migrate"
+      },
+      "configurations": {},
+      "parallelism": false
+    },
+    "db:migration:up": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/libs/db/src/**/*",
+        {
+          "externalDependencies": [
+            "@mikro-orm/core",
+            "@mikro-orm/migrations",
+            "@mikro-orm/postgresql",
+            "pg",
+            "tsx"
+          ]
+        }
+      ],
+      "options": {
+        "cwd": "apps/frontend",
+        "command": "pnpm run db:migration:up"
+      },
+      "configurations": {},
+      "parallelism": false
+    },
+    "db:migration:down": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/libs/db/src/**/*",
+        {
+          "externalDependencies": [
+            "@mikro-orm/core",
+            "@mikro-orm/migrations",
+            "@mikro-orm/postgresql",
+            "pg",
+            "tsx"
+          ]
+        }
+      ],
+      "options": {
+        "cwd": "apps/frontend",
+        "command": "pnpm run db:migration:down"
+      },
+      "configurations": {},
+      "parallelism": false
+    },
+    "db:migration:create": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/libs/db/src/**/*",
+        {
+          "externalDependencies": [
+            "@mikro-orm/core",
+            "@mikro-orm/migrations",
+            "@mikro-orm/postgresql",
+            "pg",
+            "tsx"
+          ]
+        }
+      ],
+      "outputs": ["{workspaceRoot}/libs/db/src/migrations"],
+      "options": {
+        "cwd": "apps/frontend",
+        "command": "pnpm run db:migration:create"
+      },
+      "configurations": {},
+      "parallelism": false
+    },
+    "db:migration:list": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/libs/db/src/**/*",
+        {
+          "externalDependencies": [
+            "@mikro-orm/core",
+            "@mikro-orm/migrations",
+            "@mikro-orm/postgresql",
+            "pg",
+            "tsx"
+          ]
+        }
+      ],
+      "options": {
+        "cwd": "apps/frontend",
+        "command": "pnpm run db:migration:list"
+      },
+      "configurations": {},
+      "parallelism": false
+    },
+    "db:migration:pending": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/libs/db/src/**/*",
+        {
+          "externalDependencies": [
+            "@mikro-orm/core",
+            "@mikro-orm/migrations",
+            "@mikro-orm/postgresql",
+            "pg",
+            "tsx"
+          ]
+        }
+      ],
+      "options": {
+        "cwd": "apps/frontend",
+        "command": "pnpm run db:migration:pending"
+      },
+      "configurations": {},
+      "parallelism": false
+    },
+    "db:migration:check": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/libs/db/src/**/*",
+        {
+          "externalDependencies": [
+            "@mikro-orm/core",
+            "@mikro-orm/migrations",
+            "@mikro-orm/postgresql",
+            "pg",
+            "tsx"
+          ]
+        }
+      ],
+      "options": {
+        "cwd": "apps/frontend",
+        "command": "pnpm run db:migration:check"
+      },
+      "configurations": {},
+      "parallelism": false
+    },
     "cf:typegen": {
       "executor": "nx:run-commands",
       "cache": true,
@@ -137,7 +306,7 @@
       "options": {
         "cwd": "apps/frontend",
         "tty": false,
-        "command": "opennextjs-cloudflare build"
+        "command": "NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build"
       },
       "syncGenerators": ["@nx/js:typescript-sync"],
       "configurations": {},

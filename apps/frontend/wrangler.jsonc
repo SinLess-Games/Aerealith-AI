@@ -1,12 +1,19 @@
-// apps/frontend/wrangler.jsonc
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "helix-ai-frontend",
-  "main": ".open-next/worker.js",
-  "compatibility_date": "2026-05-07",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-05-08",
+  "workers_dev": true,
   "compatibility_flags": [
     "nodejs_compat",
+    "nodejs_compat_populate_process_env",
     "global_fetch_strictly_public"
+  ],
+  "routes": [
+    {
+      "pattern": "helixaibot.com",
+      "custom_domain": true
+    }
   ],
   "assets": {
     "directory": ".open-next/assets",
@@ -18,7 +25,28 @@
       "service": "helix-ai-frontend"
     }
   ],
+  "vars": {
+    "DATABASE_PROVIDER": "postgresql",
+    "DATABASE_SSL_ENABLED": "true",
+    "DATABASE_SSL_MODE": "verify-full",
+    "DATABASE_SSL_REJECT_UNAUTHORIZED": "true",
+    "DATABASE_POOL_MIN": "0",
+    "DATABASE_POOL_MAX": "1",
+    "DATABASE_APPLICATION_NAME": "helix",
+    "MIKRO_ORM_DEBUG": "false"
+  },
   "observability": {
-    "enabled": true
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    },
+    "traces": {
+      "enabled": true
+    }
+  },
+  "secrets": {
+    "required": [
+      "POSTGRES_URL"
+    ]
   }
 }

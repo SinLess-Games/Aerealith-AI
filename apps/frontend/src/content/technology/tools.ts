@@ -15,7 +15,7 @@ import type { CardProps } from '../types/card';
  */
 export const ToolsCards = [
   {
-    title: 'Dev Tools',
+    title: 'Development Tools',
     description:
       'CLI and UI utilities that streamline container builds, local iteration loops, GitOps workflows, API development, and cloud-native deployment.',
     listItems: [
@@ -132,7 +132,7 @@ export const ToolsCards = [
           'Bazel 7.0 (Jan 2025) locks Starlark 2.0, ships `bzlmod` module downloads, and integrates Remote Execution API 2, delivering hermetic, cache-friendly builds for monorepos in Go, Rust, and TypeScript.',
       },
     ],
-    image: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/technology/Dev-Tools.png',
+    image: '/images/technology/dev-tools.png',
     link: '/technology/tools',
     buttonText: 'Explore tools',
   },

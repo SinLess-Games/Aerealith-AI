@@ -2,13 +2,25 @@
   "name": "frontend",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf:upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "build": "next build  && node ./scripts/ensure-middleware-manifest.mjs",
+    "db:migrate": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts up",
+    "db:migration:up": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts up",
+    "db:migration:down": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts down",
+    "db:migration:create": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts create",
+    "db:migration:list": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts list",
+    "db:migration:pending": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts pending",
+    "db:migration:check": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts check",
+    "db:tables": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts tables",
+    "cf:build": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build",
+    "cf:preview": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf:upload": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
@@ -17,17 +29,19 @@
     "@helix-ai/config": "workspace:*",
     "@helix-ai/flags": "workspace:*",
     "@helix-ai/ui": "workspace:*",
+    "@helix-ai/db": "workspace:*",
     "@mui/material": "^7.3.5",
-    "next": "~16.0.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "next": "15.5.16",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260507.0",
-    "@opennextjs/cloudflare": "latest",
+    "@opennextjs/cloudflare": "1.19.8",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
-    "wrangler": "latest"
+    "cross-env": "^10.1.0",
+    "wrangler": "4.90.0"
   }
 }
