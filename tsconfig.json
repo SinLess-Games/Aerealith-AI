@@ -21,6 +21,12 @@
     },
     {
       "path": "./libs/flags"
+    },
+    {
+      "path": "./libs/contracts"
+    },
+    {
+      "path": "./libs/api"
     }
   ]
 }

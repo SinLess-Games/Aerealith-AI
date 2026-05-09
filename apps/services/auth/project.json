@@ -1,9 +1,9 @@
 {
-  "name": "auth",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "auth",
   "sourceRoot": "apps/services/auth/src",
   "projectType": "application",
-  "tags": [],
+  "tags": ["scope:auth", "type:service", "runtime:cloudflare"],
   "targets": {
     "prune-lockfile": {
       "dependsOn": ["build"],
@@ -33,7 +33,7 @@
     "serve": {
       "executor": "@naxodev/nx-cloudflare:serve",
       "options": {
-        "port": 8787
+        "port": 8000
       }
     },
     "test": {

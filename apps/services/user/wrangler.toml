@@ -1,6 +1,12 @@
 name = "user"
-compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat"]
 main = "src/index.ts"
+compatibility_date = "2026-05-09"
+compatibility_flags = ["nodejs_compat"]
 account_id = "9517bf561f1f713ab87d1523193c7cc5"
 
+workers_dev = true
+
+[vars]
+SERVICE_NAME = "user"
+API_VERSION = "v1"
+API_BASE_PATH = "/V1/user"

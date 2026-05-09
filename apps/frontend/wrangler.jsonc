@@ -7,23 +7,31 @@
   "compatibility_flags": [
     "nodejs_compat",
     "nodejs_compat_populate_process_env",
-    "global_fetch_strictly_public"
+    "global_fetch_strictly_public",
   ],
   "routes": [
     {
       "pattern": "helixaibot.com",
-      "custom_domain": true
-    }
+      "custom_domain": true,
+    },
   ],
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "helix-ai-frontend"
-    }
+      "service": "helix-ai-frontend",
+    },
+    {
+      "binding": "AUTH_SERVICE",
+      "service": "auth",
+    },
+    {
+      "binding": "USER_SERVICE",
+      "service": "user",
+    },
   ],
   "vars": {
     "DATABASE_PROVIDER": "postgresql",
@@ -33,20 +41,20 @@
     "DATABASE_POOL_MIN": "0",
     "DATABASE_POOL_MAX": "1",
     "DATABASE_APPLICATION_NAME": "helix",
-    "MIKRO_ORM_DEBUG": "false"
+    "MIKRO_ORM_DEBUG": "false",
+    "AUTH_SERVICE_BASE_PATH": "/V1/auth",
+    "USER_SERVICE_BASE_PATH": "/V1/user",
   },
   "observability": {
     "enabled": true,
     "logs": {
-      "enabled": true
+      "enabled": true,
     },
     "traces": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
   "secrets": {
-    "required": [
-      "POSTGRES_URL"
-    ]
-  }
+    "required": ["POSTGRES_URL"],
+  },
 }
