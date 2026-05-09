@@ -53,17 +53,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          corepack prepare "$PACKAGE_MANAGER" --activate
+
+          pnpm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -89,9 +94,6 @@ jobs:
             echo "NX_HEAD=HEAD" >> "$GITHUB_ENV"
           fi
 
-      - name: Validate lockfile
-        run: pnpm install --frozen-lockfile --offline
-
       - name: Check formatting
         shell: bash
         run: |
@@ -108,7 +110,7 @@ jobs:
 
       - name: Upload workspace graph
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: workspace-graph
           path: .nx/workspace-graph.html
@@ -126,17 +128,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          corepack prepare "$PACKAGE_MANAGER" --activate
+
+          pnpm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -157,17 +164,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          corepack prepare "$PACKAGE_MANAGER" --activate
+
+          pnpm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -214,17 +226,22 @@ jobs:
   #       with:
   #         fetch-depth: 0
   #
-  #     - name: Setup pnpm
-  #       uses: pnpm/action-setup@v4
-  #       with:
-  #         run_install: false
-  #
   #     - name: Setup Node.js
   #       uses: actions/setup-node@v6
   #       with:
   #         node-version: ${{ env.NODE_VERSION }}
-  #         cache: pnpm
-  #         cache-dependency-path: pnpm-lock.yaml
+  #
+  #     - name: Setup pnpm
+  #       shell: bash
+  #       run: |
+  #         set -euo pipefail
+  #
+  #         corepack enable
+  #
+  #         PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+  #         corepack prepare "$PACKAGE_MANAGER" --activate
+  #
+  #         pnpm --version
   #
   #     - name: Install dependencies
   #       run: pnpm install --frozen-lockfile
@@ -260,7 +277,7 @@ jobs:
   #
   #     - name: Upload coverage reports
   #       if: always()
-  #       uses: actions/upload-artifact@v4
+  #       uses: actions/upload-artifact@v6
   #       with:
   #         name: unit-test-coverage
   #         path: |
@@ -283,17 +300,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          corepack prepare "$PACKAGE_MANAGER" --activate
+
+          pnpm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -329,7 +351,7 @@ jobs:
 
       - name: Upload build outputs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-outputs
           path: |
@@ -354,17 +376,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          corepack prepare "$PACKAGE_MANAGER" --activate
+
+          pnpm --version
 
       - name: Restore Cypress cache
         uses: actions/cache@v4
@@ -420,7 +447,7 @@ jobs:
 
       - name: Upload E2E coverage summary
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: e2e-coverage-summary
           path: dist/cypress/apps/e2e/**/e2e-summary.json
@@ -429,7 +456,7 @@ jobs:
 
       - name: Upload Cypress screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cypress-screenshots
           path: |
@@ -442,7 +469,7 @@ jobs:
 
       - name: Upload Cypress videos
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cypress-videos
           path: |
@@ -516,13 +543,7 @@ jobs:
               if not dockerfile.is_file():
                   continue
 
-              context_dir = dockerfile.parent
-              context_relative = context_dir.relative_to(workspace)
-
-              if str(context_relative) == ".":
-                  context_slug = "root"
-              else:
-                  context_slug = slugify(str(context_relative))
+              context_slug = "root" if dockerfile.parent == workspace else slugify(str(dockerfile.parent.relative_to(workspace)))
 
               if dockerfile.name == "Dockerfile":
                   image_suffix = context_slug
@@ -537,7 +558,7 @@ jobs:
               entries.append(
                   {
                       "name": image_suffix,
-                      "context": str(context_relative) if str(context_relative) != "." else ".",
+                      "context": ".",
                       "dockerfile": str(relative),
                       "image": image_name,
                   }
