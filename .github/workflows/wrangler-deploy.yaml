@@ -1,0 +1,366 @@
+name: Wrangler Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+  workflow_dispatch:
+    inputs:
+      deploy_all:
+        description: Deploy all discovered Wrangler apps
+        required: false
+        default: false
+        type: boolean
+      ref_base:
+        description: Optional base ref/SHA to compare against
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: wrangler-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  NODE_VERSION: '24'
+  PNPM_HOME: ~/.local/share/pnpm
+  NX_DAEMON: 'false'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  discover:
+    name: Discover Changed Wrangler Apps
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+      has_changes: ${{ steps.discover.outputs.has_changes }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Discover changed Wrangler apps
+        id: discover
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DEPLOY_ALL: ${{ inputs.deploy_all || false }}
+          REF_BASE: ${{ inputs.ref_base || '' }}
+        run: |
+          set -euo pipefail
+
+          python <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          workspace = Path.cwd()
+
+          ignored_parts = {
+              ".git",
+              ".github",
+              ".next",
+              ".nx",
+              ".turbo",
+              "coverage",
+              "dist",
+              "node_modules",
+              "out-tsc",
+              "test-output",
+          }
+
+          root_change_files = {
+              ".npmrc",
+              "nx.json",
+              "package.json",
+              "pnpm-lock.yaml",
+              "pnpm-workspace.yaml",
+              "tsconfig.base.json",
+              ".github/workflows/wrangler-deploy.yaml",
+          }
+
+          shared_prefixes = (
+              "libs/",
+              "packages/",
+              "tools/",
+          )
+
+          zero_sha = "0000000000000000000000000000000000000000"
+
+          event_name = os.environ["EVENT_NAME"]
+          before_sha = os.environ.get("BEFORE_SHA", "")
+          current_sha = os.environ["CURRENT_SHA"]
+          default_branch = os.environ.get("DEFAULT_BRANCH", "main")
+          deploy_all = os.environ.get("DEPLOY_ALL", "false").lower() == "true"
+          ref_base = os.environ.get("REF_BASE", "").strip()
+
+          def run(command: list[str]) -> str:
+              return subprocess.check_output(command, text=True).strip()
+
+          def slugify(value: str) -> str:
+              value = value.lower()
+              value = re.sub(r"[^a-z0-9]+", "-", value)
+              value = value.strip("-")
+              return value or "root"
+
+          def is_ignored(path: Path) -> bool:
+              return any(part in ignored_parts for part in path.parts)
+
+          def is_wrangler_file(path: Path) -> bool:
+              name = path.name.lower()
+
+              if name.startswith("wrangler") and name.endswith(".jsonc"):
+                  return True
+
+              if name.startswith("wrangler") and name.endswith(".json"):
+                  return True
+
+              if name.startswith("wrangler") and name.endswith(".toml"):
+                  return True
+
+              return False
+
+          def resolve_base_ref() -> str:
+              if ref_base:
+                  return ref_base
+
+              if event_name == "push" and before_sha and before_sha != zero_sha:
+                  return before_sha
+
+              try:
+                  run(["git", "rev-parse", f"origin/{default_branch}"])
+                  return f"origin/{default_branch}"
+              except subprocess.CalledProcessError:
+                  return "HEAD~1"
+
+          def get_changed_files() -> set[str]:
+              if deploy_all:
+                  return set()
+
+              base_ref = resolve_base_ref()
+
+              try:
+                  diff_output = run(
+                      [
+                          "git",
+                          "diff",
+                          "--name-only",
+                          f"{base_ref}...{current_sha}",
+                      ]
+                  )
+              except subprocess.CalledProcessError:
+                  diff_output = run(
+                      [
+                          "git",
+                          "diff",
+                          "--name-only",
+                          f"{base_ref}",
+                          current_sha,
+                      ]
+                  )
+
+              return {
+                  line.strip()
+                  for line in diff_output.splitlines()
+                  if line.strip()
+              }
+
+          def has_root_or_shared_change(changed_files: set[str]) -> bool:
+              return any(
+                  changed_file in root_change_files
+                  or changed_file.startswith(shared_prefixes)
+                  for changed_file in changed_files
+              )
+
+          wrangler_files = [
+              path
+              for path in sorted(workspace.rglob("*"))
+              if path.is_file() and is_wrangler_file(path) and not is_ignored(path.relative_to(workspace))
+          ]
+
+          changed_files = get_changed_files()
+          root_or_shared_changed = has_root_or_shared_change(changed_files)
+
+          entries = []
+
+          for wrangler_file in wrangler_files:
+              relative_wrangler = wrangler_file.relative_to(workspace)
+              app_root = wrangler_file.parent
+              relative_app_root = app_root.relative_to(workspace)
+
+              app_root_str = "." if str(relative_app_root) == "." else str(relative_app_root)
+              wrangler_path_str = str(relative_wrangler)
+
+              app_changed = deploy_all or root_or_shared_changed
+
+              if not app_changed:
+                  prefix = "" if app_root_str == "." else f"{app_root_str}/"
+
+                  app_changed = any(
+                      changed_file == wrangler_path_str
+                      or changed_file.startswith(prefix)
+                      for changed_file in changed_files
+                  )
+
+              if not app_changed:
+                  continue
+
+              app_name = slugify(app_root_str)
+              config_name = slugify(wrangler_file.name)
+
+              if config_name not in {"wrangler-jsonc", "wrangler-json", "wrangler-toml"}:
+                  app_name = slugify(f"{app_name}-{config_name}")
+
+              entries.append(
+                  {
+                      "name": app_name,
+                      "root": app_root_str,
+                      "config": wrangler_path_str,
+                  }
+              )
+
+          print(f"has_changes={'true' if entries else 'false'}")
+          print(
+              "matrix="
+              + json.dumps(
+                  {"include": entries},
+                  separators=(",", ":"),
+              )
+          )
+          PY
+
+      - name: Show deployment matrix
+        shell: bash
+        run: |
+          echo '${{ steps.discover.outputs.matrix }}' | python -m json.tool
+
+  deploy:
+    name: Deploy ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    needs:
+      - discover
+
+    if: needs.discover.outputs.has_changes == 'true'
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+            echo "Missing required secret: CLOUDFLARE_API_TOKEN"
+            exit 1
+          fi
+
+      - name: Show Wrangler version
+        run: pnpm exec wrangler --version
+
+      - name: Build app when build script exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APP_ROOT="${{ matrix.root }}"
+
+          if [[ -f "$APP_ROOT/package.json" ]]; then
+            if node -e "const p=require('./${APP_ROOT}/package.json'); process.exit(p.scripts?.['cf:build'] ? 0 : 1)"; then
+              pnpm --dir "$APP_ROOT" run cf:build
+            elif node -e "const p=require('./${APP_ROOT}/package.json'); process.exit(p.scripts?.build ? 0 : 1)"; then
+              pnpm --dir "$APP_ROOT" run build
+            else
+              echo "No cf:build or build script found for $APP_ROOT. Skipping app build."
+            fi
+          else
+            echo "No package.json found in $APP_ROOT. Skipping app build."
+          fi
+
+      - name: Deploy with Wrangler
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pnpm exec wrangler deploy --config "${{ matrix.config }}"
+
+  deploy-complete:
+    name: Wrangler Deploy Complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    needs:
+      - discover
+      - deploy
+
+    if: always()
+
+    steps:
+      - name: Check deployment result
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ needs.discover.result }}" != "success" ]]; then
+            echo "Wrangler app discovery failed."
+            exit 1
+          fi
+
+          if [[ "${{ needs.discover.outputs.has_changes }}" != "true" ]]; then
+            echo "No changed Wrangler apps found. Nothing to deploy."
+            exit 0
+          fi
+
+          if [[ "${{ needs.deploy.result }}" != "success" ]]; then
+            echo "One or more Wrangler deployments failed."
+            exit 1
+          fi
+
+          echo "Wrangler deployments passed."
