@@ -36,7 +36,7 @@ FROM base AS deps
 
 RUN apk add --no-cache libc6-compat
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json tsconfig.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json tsconfig.json eslint.config.mjs ./
 COPY apps/frontend/package.json ./apps/frontend/package.json
 COPY libs ./libs
 
@@ -53,10 +53,37 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/frontend/node_modules ./apps/frontend/node_modules
 COPY --from=deps /app/libs ./libs
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json tsconfig.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json tsconfig.json eslint.config.mjs ./
 COPY apps/frontend ./apps/frontend
 
 RUN pnpm exec nx run frontend:build
+
+# Normalize Next standalone output into a stable Docker copy location.
+RUN set -eux; \
+  mkdir -p /app/.docker/frontend; \
+  if [ -d /app/apps/frontend/.next/standalone ]; then \
+    cp -R /app/apps/frontend/.next/standalone/. /app/.docker/frontend/; \
+  elif [ -d /app/dist/apps/frontend/.next/standalone ]; then \
+    cp -R /app/dist/apps/frontend/.next/standalone/. /app/.docker/frontend/; \
+  elif [ -d /app/dist/apps/frontend/standalone ]; then \
+    cp -R /app/dist/apps/frontend/standalone/. /app/.docker/frontend/; \
+  else \
+    echo "Could not find Next standalone output."; \
+    find /app -maxdepth 5 -type d \( -name standalone -o -name .next -o -name static \) | sort; \
+    exit 1; \
+  fi; \
+  mkdir -p /app/.docker/frontend/apps/frontend/.next; \
+  if [ -d /app/apps/frontend/.next/static ]; then \
+    cp -R /app/apps/frontend/.next/static /app/.docker/frontend/apps/frontend/.next/static; \
+  elif [ -d /app/dist/apps/frontend/.next/static ]; then \
+    cp -R /app/dist/apps/frontend/.next/static /app/.docker/frontend/apps/frontend/.next/static; \
+  elif [ -d /app/dist/apps/frontend/static ]; then \
+    cp -R /app/dist/apps/frontend/static /app/.docker/frontend/apps/frontend/.next/static; \
+  else \
+    echo "Could not find Next static output."; \
+    find /app -maxdepth 5 -type d \( -name standalone -o -name .next -o -name static \) | sort; \
+    exit 1; \
+  fi
 
 # -----------------------------------------------------------------------------
 # Runtime
@@ -73,8 +100,7 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-COPY --from=builder --chown=nextjs:nodejs /app/dist/apps/frontend/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/dist/apps/frontend/static ./apps/frontend/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.docker/frontend ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/public ./apps/frontend/public
 
 USER nextjs
