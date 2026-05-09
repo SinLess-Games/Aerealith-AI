@@ -1,11 +1,11 @@
-import cypress from "eslint-plugin-cypress/flat";
-import baseConfig from "../../eslint.config.mjs";
+import cypress from "eslint-plugin-cypress";
+import baseConfig from "../../../eslint.config.mjs";
 
 export default [
-    cypress.configs["recommended"],
-    ...baseConfig,
-    {
-        // Override or add rules here
-        rules: {}
-    }
+  cypress.configs["recommended"],
+  ...baseConfig,
+  {
+    // Override or add rules here
+    rules: {},
+  },
 ];

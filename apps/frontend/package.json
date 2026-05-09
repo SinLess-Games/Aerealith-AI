@@ -21,7 +21,8 @@
     "cf:preview": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf:deploy": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf:upload": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare upload",
-    "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "lint": "eslint --no-warn-ignored . --ignore-pattern next-env.d.ts --ignore-pattern cloudflare-env.d.ts --ignore-pattern open-next-env.d.ts --ignore-pattern .next/** --ignore-pattern .open-next/**"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

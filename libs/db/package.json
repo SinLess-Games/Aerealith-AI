@@ -28,8 +28,8 @@
   "dependencies": {
     "@helix-ai/config": "workspace:*",
     "@mikro-orm/core": "^6.5.9",
+    "@mikro-orm/migrations": "6.6.14",
     "@mikro-orm/postgresql": "^6.5.9",
-    "pg": ">=8.16.3",
     "uuid": "^13.0.0"
   }
 }

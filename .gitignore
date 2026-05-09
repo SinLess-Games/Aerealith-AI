@@ -145,3 +145,20 @@ apps/**/.dev.vars.*
 # Project-specific generated files
 # ─────────────────────────────────────────────
 docker/hashicorp/certs/
+# Frontend generated build output
+apps/frontend/.open-next/
+apps/frontend/.next/
+apps/frontend/open-next-env.d.ts
+apps/frontend/cloudflare-env.d.ts
+
+# Frontend generated files
+apps/frontend/.next/
+apps/frontend/.open-next/
+apps/frontend/cloudflare-env.d.ts
+apps/frontend/open-next-env.d.ts
+
+# Frontend generated output
+apps/frontend/.next/
+apps/frontend/.open-next/
+apps/frontend/cloudflare-env.d.ts
+apps/frontend/open-next-env.d.ts
