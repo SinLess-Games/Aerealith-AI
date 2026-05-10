@@ -113,7 +113,8 @@ export function resolveServicesConfigProfile(
     return profile;
   }
 
-  const explicitRuntime = getEnv(env, 'APP_RUNTIME') ?? getEnv(env, 'HELIX_RUNTIME');
+  const explicitRuntime =
+    getEnv(env, 'APP_RUNTIME') ?? getEnv(env, 'HELIX_RUNTIME');
 
   if (explicitRuntime === 'cloudflare-worker') {
     return 'cloudflare';
@@ -228,7 +229,12 @@ function applySingleServiceOverrides(
   const basePath = `registry.${service.key}`;
   const prefix = service.envPrefix;
 
-  applyOptionalBoolean(env, overrides, `${prefix}_ENABLED`, `${basePath}.enabled`);
+  applyOptionalBoolean(
+    env,
+    overrides,
+    `${prefix}_ENABLED`,
+    `${basePath}.enabled`,
+  );
   applyOptionalString(env, overrides, `${prefix}_NAME`, `${basePath}.name`);
   applyOptionalString(
     env,
@@ -262,6 +268,8 @@ function applySingleServiceOverrides(
     `${prefix}_EXPOSURE`,
     `${basePath}.exposure`,
   );
+
+  applyServiceShortcutEndpointOverrides(env, overrides, service);
 
   applyServiceEndpointOverrides(env, overrides, service, 'PUBLIC', 'public');
   applyServiceEndpointOverrides(env, overrides, service, 'INTERNAL', 'internal');
@@ -346,6 +354,77 @@ function applySingleServiceOverrides(
 
   if (hasServiceSignal(env, prefix)) {
     setDeepValue(overrides, `${basePath}.name`, service.key);
+  }
+}
+
+function applyServiceShortcutEndpointOverrides(
+  env: EnvRecord,
+  overrides: Record<string, unknown>,
+  service: KnownServiceConfig,
+): void {
+  const prefix = service.envPrefix;
+  const basePath = `registry.${service.key}`;
+
+  const origin = getEnv(env, `${prefix}_ORIGIN`);
+  const url = getEnv(env, `${prefix}_URL`);
+  const basePathValue = getEnv(env, `${prefix}_BASE_PATH`);
+  const healthPath = getEnv(env, `${prefix}_HEALTH_PATH`);
+  const timeoutMs = getEnvInteger(env, `${prefix}_TIMEOUT_MS`);
+
+  if (
+    origin === undefined &&
+    url === undefined &&
+    basePathValue === undefined &&
+    healthPath === undefined &&
+    timeoutMs === undefined
+  ) {
+    return;
+  }
+
+  const publicUrl = origin ?? url;
+
+  if (publicUrl !== undefined) {
+    setDeepValue(overrides, `${basePath}.endpoints.public.name`, 'public');
+    setDeepValue(overrides, `${basePath}.endpoints.public.url`, publicUrl);
+    setDeepValue(overrides, `${basePath}.endpoints.public.exposure`, 'public');
+  }
+
+  if (basePathValue !== undefined) {
+    setDeepValue(overrides, `${basePath}.endpoints.public.name`, 'public');
+    setDeepValue(
+      overrides,
+      `${basePath}.endpoints.public.basePath`,
+      basePathValue,
+    );
+
+    setDeepValue(overrides, `${basePath}.endpoints.internal.name`, 'internal');
+    setDeepValue(
+      overrides,
+      `${basePath}.endpoints.internal.basePath`,
+      basePathValue,
+    );
+  }
+
+  if (healthPath !== undefined) {
+    setDeepValue(overrides, `${basePath}.endpoints.health.name`, 'health');
+    setDeepValue(
+      overrides,
+      `${basePath}.endpoints.health.healthPath`,
+      healthPath,
+    );
+  }
+
+  if (timeoutMs !== undefined) {
+    setDeepValue(
+      overrides,
+      `${basePath}.endpoints.public.timeoutMs`,
+      timeoutMs,
+    );
+    setDeepValue(
+      overrides,
+      `${basePath}.endpoints.internal.timeoutMs`,
+      timeoutMs,
+    );
   }
 }
 
@@ -575,6 +654,11 @@ function hasServiceSignal(env: EnvRecord, prefix: string): boolean {
       getEnv(env, `${prefix}_OWNER`) ||
       getEnv(env, `${prefix}_DESCRIPTION`) ||
       getEnv(env, `${prefix}_EXPOSURE`) ||
+      getEnv(env, `${prefix}_ORIGIN`) ||
+      getEnv(env, `${prefix}_URL`) ||
+      getEnv(env, `${prefix}_BASE_PATH`) ||
+      getEnv(env, `${prefix}_HEALTH_PATH`) ||
+      getEnv(env, `${prefix}_TIMEOUT_MS`) ||
       getEnv(env, `${prefix}_REQUIRED_CONFIG_KEYS`) ||
       getEnv(env, `${prefix}_REQUIRED_SECRET_REFS`) ||
       getEnv(env, `${prefix}_TAGS`),

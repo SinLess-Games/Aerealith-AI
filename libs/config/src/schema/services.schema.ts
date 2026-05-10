@@ -10,18 +10,57 @@ const optionalUrlSchema = z.string().trim().url().optional();
 
 const stringArraySchema = z.array(nonEmptyStringSchema).default([]);
 
-const metadataSchema = z.record(
+const metadataValueSchema = z.union([
   z.string(),
-  z.union([z.string(), z.number(), z.boolean(), z.null()]),
-);
+  z.number(),
+  z.boolean(),
+  z.null(),
+]);
 
-export const serviceProtocolSchema = nonEmptyStringSchema;
+const metadataSchema = z.record(z.string(), metadataValueSchema);
 
-export const serviceRuntimeSchema = nonEmptyStringSchema;
+export const SERVICE_PROTOCOLS = [
+  'internal',
+  'http',
+  'https',
+  'grpc',
+  'websocket',
+  'queue',
+  'worker-binding',
+] as const;
 
-export const serviceExposureSchema = nonEmptyStringSchema;
+export const SERVICE_RUNTIMES = [
+  'node',
+  'nextjs',
+  'cloudflare-worker',
+  'cloudflare-pages',
+  'container',
+  'kubernetes',
+  'external',
+] as const;
 
-export const serviceHealthStatusSchema = nonEmptyStringSchema;
+export const SERVICE_EXPOSURES = [
+  'public',
+  'internal',
+  'private',
+  'admin',
+] as const;
+
+export const SERVICE_HEALTH_STATUSES = [
+  'unknown',
+  'healthy',
+  'degraded',
+  'unhealthy',
+  'disabled',
+] as const;
+
+export const serviceProtocolSchema = z.enum(SERVICE_PROTOCOLS);
+
+export const serviceRuntimeSchema = z.enum(SERVICE_RUNTIMES);
+
+export const serviceExposureSchema = z.enum(SERVICE_EXPOSURES);
+
+export const serviceHealthStatusSchema = z.enum(SERVICE_HEALTH_STATUSES);
 
 export const serviceEndpointSchema = z
   .object({
@@ -248,13 +287,13 @@ export const serviceSchema = z
   .strict()
   .superRefine((value, ctx) => {
     if (
-      value.cloudflareBinding?.rpcEnabled &&
-      value.cloudflareBinding.entrypoint === ''
+      value.cloudflareBinding?.rpcEnabled === true &&
+      value.cloudflareBinding.entrypoint === undefined
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['cloudflareBinding', 'entrypoint'],
-        message: 'entrypoint must not be empty when RPC is enabled.',
+        message: 'entrypoint is required when RPC is enabled.',
       });
     }
 
@@ -319,40 +358,61 @@ export const servicesSchema = z
         });
       }
 
-      if (service.dependencies) {
-        for (const [dependencyIndex, dependency] of service.dependencies.entries()) {
-          if (dependency.service === serviceKey) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: [
-                'registry',
-                serviceKey,
-                'dependencies',
-                dependencyIndex,
-                'service',
-              ],
-              message: 'A service should not depend on itself.',
-            });
-          }
+      if (!service.dependencies) {
+        continue;
+      }
 
-          if (!(dependency.service in value.registry) && dependency.required) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: [
-                'registry',
-                serviceKey,
-                'dependencies',
-                dependencyIndex,
-                'service',
-              ],
-              message:
-                'Required service dependencies should reference another service in the registry.',
-            });
-          }
+      for (const [
+        dependencyIndex,
+        dependency,
+      ] of service.dependencies.entries()) {
+        if (dependency.service === serviceKey) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [
+              'registry',
+              serviceKey,
+              'dependencies',
+              dependencyIndex,
+              'service',
+            ],
+            message: 'A service should not depend on itself.',
+          });
+        }
+
+        if (!(dependency.service in value.registry) && dependency.required) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [
+              'registry',
+              serviceKey,
+              'dependencies',
+              dependencyIndex,
+              'service',
+            ],
+            message:
+              'Required service dependencies should reference another service in the registry.',
+          });
         }
       }
     }
   });
+
+export type ServiceProtocolSchema = z.infer<typeof serviceProtocolSchema>;
+export type ServiceRuntimeSchema = z.infer<typeof serviceRuntimeSchema>;
+export type ServiceExposureSchema = z.infer<typeof serviceExposureSchema>;
+export type ServiceHealthStatusSchema = z.infer<
+  typeof serviceHealthStatusSchema
+>;
+export type ServiceEndpointSchema = z.infer<typeof serviceEndpointSchema>;
+export type CloudflareServiceBindingSchema = z.infer<
+  typeof cloudflareServiceBindingSchema
+>;
+export type ServiceQueueSchema = z.infer<typeof serviceQueueSchema>;
+export type ServiceDependencySchema = z.infer<typeof serviceDependencySchema>;
+export type ServiceRetrySchema = z.infer<typeof serviceRetrySchema>;
+export type ServiceRateLimitSchema = z.infer<typeof serviceRateLimitSchema>;
+export type ServiceSchema = z.infer<typeof serviceSchema>;
 
 export type ServicesConfigInput = z.input<typeof servicesSchema>;
 

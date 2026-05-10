@@ -9,7 +9,7 @@ import {
   defaultCloudflareHyperdriveDatabaseConfig,
   defaultDatabaseConfig,
 } from './database.defaults';
-import { defaultDiscordConfig } from './discord.defaults'
+import { defaultDiscordConfig } from './discord.defaults';
 import {
   defaultGithubConfig,
   defaultGithubOAuthConfig,
@@ -23,11 +23,17 @@ import {
   defaultUpstashRedisConfig,
 } from './redis.defaults';
 import {
+  defaultCloudflareRoutesConfig,
+  defaultLocalRoutesConfig,
+  defaultRoutesConfig,
+} from './routes.defaults';
+import {
   defaultProductionSecurityConfig,
   defaultSecurityConfig,
 } from './security.defaults';
 import {
   defaultCloudflareServicesConfig,
+  defaultLocalServicesConfig,
   defaultServicesConfig,
 } from './services.defaults';
 import {
@@ -66,6 +72,8 @@ export const defaultAppConfig = {
   security: defaultSecurityConfig,
 
   auth: defaultAuthConfig,
+
+  routes: defaultRoutesConfig,
 
   telemetry: defaultTelemetryConfig,
 
@@ -119,6 +127,8 @@ export const defaultCloudflareAppConfig = {
   security: defaultProductionSecurityConfig,
 
   auth: defaultProductionAuthConfig,
+
+  routes: defaultCloudflareRoutesConfig,
 
   telemetry: {
     ...defaultTelemetryConfig,
@@ -201,9 +211,11 @@ export const defaultLocalAppConfig = {
 
   auth: defaultAuthConfig,
 
+  routes: defaultLocalRoutesConfig,
+
   telemetry: defaultTelemetryConfig,
 
-  services: defaultServicesConfig,
+  services: defaultLocalServicesConfig,
 
   redis: defaultRedisConfig,
 

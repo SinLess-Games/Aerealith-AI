@@ -1,10 +1,64 @@
 {
-  "name": "user",
+  "name": "user-service",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/services/user/src",
   "projectType": "application",
-  "tags": [],
+  "tags": ["scope:user", "type:service", "platform:cloudflare"],
   "targets": {
+    "build": {
+      "executor": "@nx/vite:build",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/services/user",
+        "configFile": "apps/services/user/vite.config.ts"
+      },
+      "configurations": {
+        "development": {
+          "mode": "development"
+        },
+        "production": {
+          "mode": "production"
+        }
+      }
+    },
+    "serve": {
+      "executor": "@naxodev/nx-cloudflare:serve",
+      "options": {
+        "port": 8787
+      }
+    },
+    "deploy": {
+      "executor": "@naxodev/nx-cloudflare:deploy"
+    },
+    "preview": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "wrangler dev --local --config apps/services/user/wrangler.toml"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "tsc -p apps/services/user/tsconfig.app.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["apps/services/user/**/*.{ts,tsx,js,jsx,mjs,cjs}"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "config": "apps/services/user/vitest.config.ts",
+        "reportsDirectory": "coverage/apps/services/user"
+      }
+    },
     "prune-lockfile": {
       "dependsOn": ["build"],
       "cache": true,
@@ -14,37 +68,21 @@
         "{workspaceRoot}/dist/apps/services/user/pnpm-lock.yaml"
       ],
       "options": {
-        "buildTarget": "build"
+        "buildTarget": "user-service:build"
       }
     },
     "copy-workspace-modules": {
       "dependsOn": ["build"],
       "cache": true,
-      "outputs": ["{workspaceRoot}/dist/apps/services/user/workspace_modules"],
       "executor": "@nx/js:copy-workspace-modules",
+      "outputs": ["{workspaceRoot}/dist/apps/services/user/workspace_modules"],
       "options": {
-        "buildTarget": "build"
+        "buildTarget": "user-service:build"
       }
     },
     "prune": {
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
       "executor": "nx:noop"
-    },
-    "serve": {
-      "executor": "@naxodev/nx-cloudflare:serve",
-      "options": {
-        "port": 8787
-      }
-    },
-    "test": {
-      "executor": "@nx/vitest:test",
-      "outputs": ["{options.reportsDirectory}"],
-      "options": {
-        "reportsDirectory": "../../../coverage/apps/services/user"
-      }
-    },
-    "deploy": {
-      "executor": "@naxodev/nx-cloudflare:deploy"
     }
   }
 }

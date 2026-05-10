@@ -1,25 +1,47 @@
-import { defineConfig } from 'vite';
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
-import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-export default defineConfig(() => ({
-  root: __dirname,
-  cacheDir: '../../../node_modules/.vite/apps/services/user',
-  plugins: [nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
-  // Uncomment this if you are using workers.
-  // worker: {
-  //  plugins: [ nxViteTsPaths() ],
-  // },
-  test: {
-    name: 'user',
-    watch: false,
-    globals: true,
-    environment: 'node',
-    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    reporters: ['default'],
-    coverage: {
-      reportsDirectory: '../../../coverage/apps/services/user',
-      provider: 'v8' as const,
+import { defineConfig } from 'vite';
+
+const root = dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = resolve(root, '../../..');
+
+export default defineConfig({
+  root,
+  cacheDir: join(workspaceRoot, 'node_modules/.vite/apps/services/user'),
+
+  resolve: {
+    alias: {
+      '@helix-ai/api': resolve(workspaceRoot, 'libs/api/src/index.ts'),
+      '@helix-ai/config': resolve(workspaceRoot, 'libs/config/src/index.ts'),
+      '@helix-ai/contracts': resolve(
+        workspaceRoot,
+        'libs/contracts/src/index.ts',
+      ),
+      '@helix-ai/db': resolve(workspaceRoot, 'libs/db/src/index.ts'),
+      '@helix-ai/flags': resolve(workspaceRoot, 'libs/flags/src/index.ts'),
     },
   },
-}));
+
+  build: {
+    emptyOutDir: true,
+    outDir: resolve(workspaceRoot, 'dist/apps/services/user'),
+    sourcemap: true,
+    target: 'es2022',
+    minify: 'esbuild',
+
+    lib: {
+      entry: resolve(root, 'src/main.ts'),
+      formats: ['es'],
+      fileName: () => 'main.js',
+    },
+
+    rollupOptions: {
+      output: {
+        entryFileNames: 'main.js',
+        chunkFileNames: 'chunks/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
+      },
+    },
+  },
+});

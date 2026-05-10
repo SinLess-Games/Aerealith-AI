@@ -56,13 +56,27 @@ export const defaultCloudflareServicesConfig = {
         },
       },
 
+      cloudflareBinding: {
+        binding: 'WORKER_SELF_REFERENCE',
+        service: 'helix-ai-frontend',
+        entrypoint: undefined,
+        rpcEnabled: false,
+      },
+
       dependencies: [
         {
-          service: 'api-gateway',
+          service: 'auth',
           required: true,
-          protocol: 'cloudflare-service-binding',
-          binding: 'API_GATEWAY_SERVICE',
-          purpose: 'Route frontend API requests to internal Helix API gateway.',
+          protocol: 'worker-binding',
+          binding: 'AUTH_SERVICE',
+          purpose: 'Route frontend auth requests to the internal auth Worker.',
+        },
+        {
+          service: 'users',
+          required: true,
+          protocol: 'worker-binding',
+          binding: 'USER_SERVICE',
+          purpose: 'Route frontend user requests to the internal user Worker.',
         },
       ],
 
@@ -99,7 +113,7 @@ export const defaultCloudflareServicesConfig = {
       owner: 'SinLess Games LLC',
       description:
         'Internal API gateway for Helix AI services, used by the frontend and public API routes.',
-      exposure: 'edge',
+      exposure: 'internal',
 
       endpoints: {
         health: {
@@ -143,14 +157,14 @@ export const defaultCloudflareServicesConfig = {
         {
           service: 'auth',
           required: true,
-          protocol: 'cloudflare-service-binding',
+          protocol: 'worker-binding',
           binding: 'AUTH_SERVICE',
           purpose: 'Authenticate requests and resolve user/session context.',
         },
         {
           service: 'users',
           required: true,
-          protocol: 'cloudflare-service-binding',
+          protocol: 'worker-binding',
           binding: 'USER_SERVICE',
           purpose: 'Read and update user profile/account data.',
         },
@@ -201,9 +215,19 @@ export const defaultCloudflareServicesConfig = {
       endpoints: {
         internal: {
           name: 'internal',
-          protocol: 'cloudflare-rpc',
-          basePath: '/internal/auth',
-          healthPath: '/health',
+          protocol: 'worker-binding',
+          basePath: '/api/V1/auth',
+          healthPath: '/api/V1/auth/health',
+          timeoutMs: 5_000,
+          exposure: 'internal',
+          headers: {},
+          requiredSecretRefs: [],
+        },
+        health: {
+          name: 'health',
+          protocol: 'worker-binding',
+          basePath: '/api/V1/auth',
+          healthPath: '/api/V1/auth/health',
           timeoutMs: 5_000,
           exposure: 'internal',
           headers: {},
@@ -222,9 +246,10 @@ export const defaultCloudflareServicesConfig = {
         {
           service: 'users',
           required: true,
-          protocol: 'cloudflare-service-binding',
+          protocol: 'worker-binding',
           binding: 'USER_SERVICE',
-          purpose: 'Resolve users and profile metadata during authentication.',
+          purpose:
+            'Create, resolve, and synchronize user records during authentication.',
         },
       ],
 
@@ -243,9 +268,10 @@ export const defaultCloudflareServicesConfig = {
         keyBy: 'ip',
       },
 
-      requiredConfigKeys: ['auth'],
+      requiredConfigKeys: ['auth', 'database'],
       requiredSecretRefs: [
         'AUTH_SECRET',
+        'POSTGRES_URL',
         'GOOGLE_CLIENT_SECRET',
         'GITHUB_CLIENT_SECRET',
         'DISCORD_CLIENT_SECRET',
@@ -271,9 +297,19 @@ export const defaultCloudflareServicesConfig = {
       endpoints: {
         internal: {
           name: 'internal',
-          protocol: 'cloudflare-rpc',
-          basePath: '/internal/users',
-          healthPath: '/health',
+          protocol: 'worker-binding',
+          basePath: '/api/V1/users',
+          healthPath: '/api/V1/users/health',
+          timeoutMs: 5_000,
+          exposure: 'internal',
+          headers: {},
+          requiredSecretRefs: [],
+        },
+        health: {
+          name: 'health',
+          protocol: 'worker-binding',
+          basePath: '/api/V1/users',
+          healthPath: '/api/V1/users/health',
           timeoutMs: 5_000,
           exposure: 'internal',
           headers: {},
@@ -290,8 +326,16 @@ export const defaultCloudflareServicesConfig = {
 
       dependencies: [
         {
-          service: 'events',
+          service: 'auth',
           required: true,
+          protocol: 'worker-binding',
+          binding: 'AUTH_SERVICE',
+          purpose:
+            'Validate authenticated session and ownership checks for user routes.',
+        },
+        {
+          service: 'events',
+          required: false,
           protocol: 'queue',
           binding: 'HELIX_EVENTS_QUEUE',
           purpose: 'Publish user lifecycle events.',
@@ -311,7 +355,7 @@ export const defaultCloudflareServicesConfig = {
       },
 
       requiredConfigKeys: ['database'],
-      requiredSecretRefs: ['DATABASE_URL'],
+      requiredSecretRefs: ['POSTGRES_URL'],
       tags: ['users', 'identity', 'cloudflare', 'internal'],
       metadata: {
         serviceType: 'domain',
@@ -390,7 +434,7 @@ export const defaultCloudflareServicesConfig = {
       owner: 'SinLess Games LLC',
       description:
         'Discord interactions endpoint, bot command handling, and Discord event bridge.',
-      exposure: 'webhook',
+      exposure: 'public',
 
       endpoints: {
         interactions: {
@@ -400,7 +444,7 @@ export const defaultCloudflareServicesConfig = {
           basePath: '/api/discord',
           healthPath: '/health',
           timeoutMs: 3_000,
-          exposure: 'webhook',
+          exposure: 'public',
           headers: {},
           requiredSecretRefs: ['DISCORD_PUBLIC_KEY'],
         },
@@ -425,9 +469,10 @@ export const defaultCloudflareServicesConfig = {
         {
           service: 'api-gateway',
           required: false,
-          protocol: 'cloudflare-service-binding',
+          protocol: 'worker-binding',
           binding: 'API_GATEWAY_SERVICE',
-          purpose: 'Call shared API workflows when Discord commands need app data.',
+          purpose:
+            'Call shared API workflows when Discord commands need app data.',
         },
         {
           service: 'events',
@@ -504,11 +549,18 @@ export const defaultLocalServicesConfig = {
 
       dependencies: [
         {
-          service: 'api-gateway',
+          service: 'auth',
           required: false,
           protocol: 'http',
           endpoint: 'public',
-          purpose: 'Call the local API gateway during development.',
+          purpose: 'Call the local auth service during development.',
+        },
+        {
+          service: 'users',
+          required: false,
+          protocol: 'http',
+          endpoint: 'public',
+          purpose: 'Call the local user service during development.',
         },
       ],
 
@@ -553,7 +605,22 @@ export const defaultLocalServicesConfig = {
         },
       },
 
-      dependencies: [],
+      dependencies: [
+        {
+          service: 'auth',
+          required: false,
+          protocol: 'http',
+          endpoint: 'public',
+          purpose: 'Call the local auth service during development.',
+        },
+        {
+          service: 'users',
+          required: false,
+          protocol: 'http',
+          endpoint: 'public',
+          purpose: 'Call the local user service during development.',
+        },
+      ],
 
       retry: {
         enabled: false,
@@ -568,6 +635,153 @@ export const defaultLocalServicesConfig = {
       tags: ['api', 'gateway', 'local'],
       metadata: {
         serviceType: 'gateway',
+      },
+    },
+
+    auth: {
+      name: 'auth',
+      displayName: 'Helix Local Auth Service',
+      enabled: true,
+      runtime: 'node',
+      version: undefined,
+      environment: 'development',
+      owner: 'SinLess Games LLC',
+      description: 'Local development auth service.',
+      exposure: 'private',
+
+      endpoints: {
+        public: {
+          name: 'public',
+          protocol: 'http',
+          url: 'http://localhost:8787',
+          basePath: '/api/V1/auth',
+          healthPath: '/api/V1/auth/health',
+          timeoutMs: 10_000,
+          exposure: 'private',
+          headers: {},
+          requiredSecretRefs: [],
+        },
+      },
+
+      dependencies: [
+        {
+          service: 'users',
+          required: false,
+          protocol: 'http',
+          endpoint: 'public',
+          purpose:
+            'Create, resolve, and synchronize user records during local auth development.',
+        },
+      ],
+
+      retry: {
+        enabled: false,
+      },
+
+      rateLimit: {
+        enabled: false,
+      },
+
+      requiredConfigKeys: ['auth', 'database'],
+      requiredSecretRefs: ['POSTGRES_URL'],
+      tags: ['auth', 'security', 'local'],
+      metadata: {
+        serviceType: 'security',
+      },
+    },
+
+    users: {
+      name: 'users',
+      displayName: 'Helix Local User Service',
+      enabled: true,
+      runtime: 'node',
+      version: undefined,
+      environment: 'development',
+      owner: 'SinLess Games LLC',
+      description: 'Local development user service.',
+      exposure: 'private',
+
+      endpoints: {
+        public: {
+          name: 'public',
+          protocol: 'http',
+          url: 'http://localhost:8788',
+          basePath: '/api/V1/users',
+          healthPath: '/api/V1/users/health',
+          timeoutMs: 10_000,
+          exposure: 'private',
+          headers: {},
+          requiredSecretRefs: [],
+        },
+      },
+
+      dependencies: [
+        {
+          service: 'auth',
+          required: false,
+          protocol: 'http',
+          endpoint: 'public',
+          purpose:
+            'Validate authenticated session and ownership checks during local development.',
+        },
+      ],
+
+      retry: {
+        enabled: false,
+      },
+
+      rateLimit: {
+        enabled: false,
+      },
+
+      requiredConfigKeys: ['database'],
+      requiredSecretRefs: ['POSTGRES_URL'],
+      tags: ['users', 'identity', 'local'],
+      metadata: {
+        serviceType: 'domain',
+      },
+    },
+
+    events: {
+      name: 'events',
+      displayName: 'Helix Local Events Service',
+      enabled: false,
+      runtime: 'node',
+      version: undefined,
+      environment: 'development',
+      owner: 'SinLess Games LLC',
+      description: 'Local development event service placeholder.',
+      exposure: 'private',
+
+      endpoints: {
+        public: {
+          name: 'public',
+          protocol: 'http',
+          url: 'http://localhost:8789',
+          basePath: '/events',
+          healthPath: '/health',
+          timeoutMs: 10_000,
+          exposure: 'private',
+          headers: {},
+          requiredSecretRefs: [],
+        },
+      },
+
+      dependencies: [],
+
+      retry: {
+        enabled: false,
+      },
+
+      rateLimit: {
+        enabled: false,
+      },
+
+      requiredConfigKeys: [],
+      requiredSecretRefs: [],
+      tags: ['events', 'queue', 'local'],
+      metadata: {
+        serviceType: 'async',
       },
     },
   },

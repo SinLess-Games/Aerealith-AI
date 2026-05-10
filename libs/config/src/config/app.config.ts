@@ -26,6 +26,7 @@ import { createDiscordConfig } from './discord.config';
 import { createGithubConfig } from './github.config';
 import { createGrafanaCloudConfig } from './grafana-cloud.config';
 import { createRedisConfig } from './redis.config';
+import { createRoutesConfig } from './routes.config';
 import { createSecurityConfig } from './security.config';
 import { createServicesConfig } from './services.config';
 import { createStorageConfig } from './storage.config';
@@ -377,6 +378,18 @@ function applyModuleOverrides(
     overrides,
     'auth',
     createAuthConfig(env, {
+      profile: isCloudflareProfile
+        ? 'cloudflare'
+        : isLocalProfile
+          ? 'local'
+          : 'default',
+    }),
+  );
+
+  setDeepValue(
+    overrides,
+    'routes',
+    createRoutesConfig(env, {
       profile: isCloudflareProfile
         ? 'cloudflare'
         : isLocalProfile

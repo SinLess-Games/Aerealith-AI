@@ -9,6 +9,7 @@ import { discordSchema } from './discord.schema';
 import { githubSchema } from './github.schema';
 import { grafanaCloudSchema } from './grafana-cloud.schema';
 import { redisSchema } from './redis.schema';
+import { routesSchema } from './routes.schema';
 import { securitySchema } from './security.schema';
 import { servicesSchema } from './services.schema';
 import { storageSchema } from './storage.schema';
@@ -163,7 +164,9 @@ function normalizeAppDatabaseConfig(
   } as AppConfig['database'];
 }
 
-const appCloudflareSchema = cloudflareSchema.transform(normalizeAppCloudflareConfig);
+const appCloudflareSchema = cloudflareSchema.transform(
+  normalizeAppCloudflareConfig,
+);
 
 const appDatabaseSchema = databaseSchema.transform(normalizeAppDatabaseConfig);
 
@@ -281,6 +284,14 @@ const appSchemaInternal = z
       google: {
         enabled: false,
       },
+    }),
+
+    routes: routesSchema.default({
+      enabled: false,
+      apiVersion: 'V1',
+      apiBasePath: '/api/V1',
+      healthPath: '/api/V1/health',
+      registry: {},
     }),
 
     telemetry: telemetrySchema.default({

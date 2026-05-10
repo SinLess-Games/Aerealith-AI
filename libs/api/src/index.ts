@@ -6,6 +6,11 @@ export * from './errors/api-error';
 export * from './errors/auth.error';
 export * from './errors/error-mapper';
 
+export * from './headers/headers';
+
+export * from './http/content-type';
+export * from './http/status-codes';
+
 export * from './logging/request-logger';
 
 export * from './middleware/hono-cors.middleware';
@@ -36,6 +41,10 @@ export type {
 } from './middleware/hono-request-id.middleware';
 
 export * from './middleware/hono-structured-logger.middleware';
+
+export * from './params';
+export * from './routing';
+export * from './validation';
 
 export * from './response/fail';
 export * from './response/ok';

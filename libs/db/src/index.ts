@@ -3,11 +3,13 @@
 /**
  * Helix Database Library
  *
- * Central export surface for MikroORM configuration, entities, and utilities.
+ * Central export surface for MikroORM configuration, entities, repositories,
+ * and utilities.
  *
  * Usage:
- * import { getOrm, initOrm, ormConfig, entities } from '@helix-ai/db';
- * import { User, UserProfile, Waitlist } from '@helix-ai/db';
+ * import { getOrm, initOrm, ormConfig, entities, repositories } from '@helix-ai/db';
+ * import { User, Profile, Settings, Waitlist } from '@helix-ai/db';
+ * import { UserRepository, WaitlistRepository } from '@helix-ai/db';
  */
 
 import { MikroORM } from '@mikro-orm/core';
@@ -27,6 +29,9 @@ export { ormConfig };
 
 export * as entities from './entities/index.js';
 export * from './entities/index.js';
+
+export * as repositories from './repositories/index.js';
+export * from './repositories/index.js';
 
 export * from './entity.base.js';
 

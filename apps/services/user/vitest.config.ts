@@ -1,11 +1,23 @@
-import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-export default defineWorkersConfig({
+import { defineConfig } from 'vitest/config';
+
+const root = dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
   test: {
-    poolOptions: {
-      workers: {
-        wrangler: { configPath: './wrangler.toml' },
-      },
+    name: 'user-service',
+    root,
+    watch: false,
+    globals: true,
+    environment: 'node',
+    passWithNoTests: true,
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    reporters: ['default'],
+    coverage: {
+      reportsDirectory: join(root, '../../../coverage/apps/services/user'),
+      provider: 'v8',
     },
   },
 });

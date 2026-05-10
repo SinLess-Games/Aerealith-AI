@@ -20,6 +20,7 @@ export type { DiscordConfig } from './types/discord';
 export type { GithubConfig } from './types/github';
 export type { GrafanaCloudConfig } from './types/grafana-cloud';
 export type { RedisConfig } from './types/redis';
+export type { RoutesConfig } from './types/routes';
 export type { SecurityConfig } from './types/security';
 export type { ServicesConfig } from './types/services';
 export type { StorageConfig } from './types/storage';
@@ -36,6 +37,31 @@ export type {
 
 export type { FaroConfig } from './types/grafana-cloud';
 export type { FaroConfig as TelemetryFaroConfig } from './types/telemetry';
+
+/* =============================================================================
+ * Route types
+ * ============================================================================= */
+
+export {
+  ROUTE_AUTH_MODES,
+  ROUTE_CACHE_MODES,
+  ROUTE_EXPOSURES,
+  ROUTE_HTTP_METHODS,
+} from './types/routes';
+
+export type {
+  ApiRoutePath,
+  RouteAuthMode,
+  RouteCacheConfig,
+  RouteCacheMode,
+  RouteConfig,
+  RouteCorsConfig,
+  RouteExposure,
+  RouteGroupConfig,
+  RouteHttpMethod,
+  RoutePath,
+  RouteRateLimitConfig,
+} from './types/routes';
 
 /* =============================================================================
  * App schema
@@ -257,6 +283,44 @@ export type {
 } from './schema/redis.schema';
 
 /* =============================================================================
+ * Routes schema
+ * ============================================================================= */
+
+export {
+  apiRoutePathSchema,
+  parseRoutesConfig,
+  routeAuthModeSchema,
+  routeCacheConfigSchema,
+  routeCacheModeSchema,
+  routeConfigSchema,
+  routeCorsConfigSchema,
+  routeExposureSchema,
+  routeGroupConfigSchema,
+  routeHttpMethodSchema,
+  routePathSchema,
+  routeRateLimitConfigSchema,
+  routesSchema,
+  safeParseRoutesConfig,
+} from './schema/routes.schema';
+
+export type {
+  ApiRoutePathSchema,
+  RouteAuthModeSchema,
+  RouteCacheConfigSchema,
+  RouteCacheModeSchema,
+  RouteConfigSchema,
+  RouteCorsConfigSchema,
+  RouteExposureSchema,
+  RouteGroupConfigSchema,
+  RouteHttpMethodSchema,
+  RoutePathSchema,
+  RouteRateLimitConfigSchema,
+  RoutesConfigInput,
+  RoutesConfigOutput,
+  RoutesConfigSchema,
+} from './schema/routes.schema';
+
+/* =============================================================================
  * Security schema
  * ============================================================================= */
 
@@ -289,6 +353,10 @@ export type {
  * ============================================================================= */
 
 export {
+  SERVICE_EXPOSURES,
+  SERVICE_HEALTH_STATUSES,
+  SERVICE_PROTOCOLS,
+  SERVICE_RUNTIMES,
   cloudflareServiceBindingSchema as serviceCloudflareBindingSchema,
   parseServicesConfig,
   safeParseServicesConfig,
@@ -306,6 +374,17 @@ export {
 } from './schema/services.schema';
 
 export type {
+  CloudflareServiceBindingSchema,
+  ServiceDependencySchema,
+  ServiceEndpointSchema,
+  ServiceExposureSchema,
+  ServiceHealthStatusSchema,
+  ServiceProtocolSchema,
+  ServiceQueueSchema,
+  ServiceRateLimitSchema,
+  ServiceRetrySchema,
+  ServiceRuntimeSchema,
+  ServiceSchema,
   ServicesConfigInput,
   ServicesConfigOutput,
 } from './schema/services.schema';
@@ -365,6 +444,7 @@ export * from './defaults/discord.defaults';
 export * from './defaults/github.defaults';
 export * from './defaults/grafana-cloud.defaults';
 export * from './defaults/redis.defaults';
+export * from './defaults/routes.defaults';
 export * from './defaults/security.defaults';
 export * from './defaults/services.defaults';
 export * from './defaults/storage.defaults';
@@ -485,6 +565,20 @@ export type {
   RedisConfigProfile,
   ResolvedRedisConfigProfile,
 } from './config/redis.config';
+
+export {
+  buildRoutesConfigOverrides,
+  createRoutesConfig,
+  resolveRoutesConfigDefaults,
+  resolveRoutesConfigProfile,
+  routesConfig,
+} from './config/routes.config';
+
+export type {
+  ResolvedRoutesConfigProfile,
+  RoutesConfigOptions,
+  RoutesConfigProfile,
+} from './config/routes.config';
 
 export {
   buildSecurityConfigOverrides,

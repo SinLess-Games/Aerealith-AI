@@ -5,6 +5,7 @@ import type { DiscordConfig } from './discord';
 import type { GithubConfig } from './github';
 import type { GrafanaCloudConfig } from './grafana-cloud';
 import type { RedisConfig } from './redis';
+import type { RoutesConfig } from './routes';
 import type { SecurityConfig } from './security';
 import type { ServicesConfig } from './services';
 import type { StorageConfig } from './storage';
@@ -191,6 +192,11 @@ export interface AppConfig {
    * Authentication config.
    */
   auth: AuthConfig;
+
+  /**
+   * Route registry config.
+   */
+  routes: RoutesConfig;
 
   /**
    * Telemetry/observability config.
