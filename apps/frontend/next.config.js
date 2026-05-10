@@ -23,16 +23,18 @@ const nextConfig = {
     emotion: true,
   },
 
+  // Nx runs ESLint as a separate lint target in CI. Keeping Next's build-time
+  // lint pass disabled avoids duplicate linting and its flat-config probe.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // Transpile browser/UI-safe workspace libraries.
   //
   // Do NOT include @helix-ai/db here.
   // The DB package contains MikroORM decorators and should be consumed from
   // its compiled output during the frontend build.
-  transpilePackages: [
-    '@helix-ai/ui',
-    '@helix-ai/config',
-    '@helix-ai/flags',
-  ],
+  transpilePackages: ['@helix-ai/ui', '@helix-ai/config', '@helix-ai/flags'],
 
   images: {
     remotePatterns: [],
@@ -85,13 +87,16 @@ const nextConfig = {
       '.cjs': ['.cts', '.cjs'],
     };
 
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings ?? []),
+      (warning) =>
+        warning.message.includes(
+          'require function is used in a way in which dependencies cannot be statically extracted',
+        ) && (warning.module?.resource ?? '').includes('require-in-the-middle'),
+    ];
+
     return config;
   },
 };
-
-// Safety: strip any accidental legacy `eslint` key.
-if ('eslint' in nextConfig) {
-  delete nextConfig.eslint;
-}
 
 export default nextConfig;

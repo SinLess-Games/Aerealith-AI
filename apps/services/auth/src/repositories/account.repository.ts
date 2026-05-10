@@ -4,7 +4,8 @@ import type {
   RequiredEntityData,
 } from '@mikro-orm/core';
 
-import { User, UserAccount } from '@helix-ai/db';
+import type { User } from '@helix-ai/db';
+import { UserAccount } from '@helix-ai/db';
 import {
   AUTH_ACCOUNT_PROVIDER,
   type AuthAccountProvider,

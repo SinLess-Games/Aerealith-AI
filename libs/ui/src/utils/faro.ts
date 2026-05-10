@@ -1,10 +1,6 @@
 'use client';
 
-import {
-  getWebInstrumentations,
-  initializeFaro,
-} from '@grafana/faro-web-sdk';
-import { TracingInstrumentation } from '@grafana/faro-web-tracing';
+import type { initializeFaro as initializeFaroType } from '@grafana/faro-web-sdk';
 
 // This package is the source of truth for Helix config.
 //
@@ -15,7 +11,7 @@ import { TracingInstrumentation } from '@grafana/faro-web-tracing';
 // @ts-ignore TS6305: referenced project declarations may not exist before config build.
 import { appConfig } from '@helix-ai/config';
 
-type FaroInstance = ReturnType<typeof initializeFaro>;
+type FaroInstance = ReturnType<typeof initializeFaroType>;
 
 export type FaroClientConfig = {
   enabled: boolean;
@@ -301,9 +297,9 @@ function setStoredFaro(faro: FaroInstance | null): void {
   }
 }
 
-export function initFaro(
+export async function initFaro(
   overrides: Partial<FaroClientConfig> = {},
-): FaroInstance | null {
+): Promise<FaroInstance | null> {
   if (typeof window === 'undefined') {
     return null;
   }
@@ -334,6 +330,14 @@ export function initFaro(
         },
       });
     }
+
+    const [
+      { getWebInstrumentations, initializeFaro },
+      { TracingInstrumentation },
+    ] = await Promise.all([
+      import('@grafana/faro-web-sdk'),
+      import('@grafana/faro-web-tracing'),
+    ]);
 
     const faro = initializeFaro({
       url: config.url,

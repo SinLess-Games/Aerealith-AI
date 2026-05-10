@@ -67,8 +67,32 @@ function resolveImageUrl({
   return mode === 'light' ? lightImageUrl ?? imageUrl : darkImageUrl ?? imageUrl;
 }
 
-function getInitialMode(mode?: BackgroundMode): BackgroundMode {
-  return mode ?? 'dark';
+function getColorSchemeSnapshot(): BackgroundMode {
+  if (typeof window === 'undefined') {
+    return 'dark';
+  }
+
+  return window.matchMedia('(prefers-color-scheme: light)').matches
+    ? 'light'
+    : 'dark';
+}
+
+function getColorSchemeServerSnapshot(): BackgroundMode {
+  return 'dark';
+}
+
+function subscribeToColorScheme(onStoreChange: () => void): () => void {
+  if (typeof window === 'undefined') {
+    return () => undefined;
+  }
+
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+
+  mediaQuery.addEventListener('change', onStoreChange);
+
+  return () => {
+    mediaQuery.removeEventListener('change', onStoreChange);
+  };
 }
 
 export function BackgroundImage({
@@ -87,29 +111,13 @@ export function BackgroundImage({
   objectPosition = 'center',
   children,
 }: BackgroundImageProps) {
-  const [resolvedMode, setResolvedMode] = React.useState<BackgroundMode>(() =>
-    getInitialMode(mode),
+  const systemMode = React.useSyncExternalStore(
+    subscribeToColorScheme,
+    getColorSchemeSnapshot,
+    getColorSchemeServerSnapshot,
   );
 
-  React.useEffect(() => {
-    if (mode) {
-      setResolvedMode(mode);
-      return undefined;
-    }
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
-
-    const updateMode = (): void => {
-      setResolvedMode(mediaQuery.matches ? 'light' : 'dark');
-    };
-
-    updateMode();
-    mediaQuery.addEventListener('change', updateMode);
-
-    return () => {
-      mediaQuery.removeEventListener('change', updateMode);
-    };
-  }, [mode]);
+  const resolvedMode = mode ?? systemMode;
 
   const selectedImageUrl = resolveImageUrl({
     mode: resolvedMode,

@@ -22,6 +22,10 @@ type WaitlistResponseBody = {
   };
 };
 
+/*
+ * Cypress declares Chainable with `Subject = any`.
+ * Declaration merging requires the type parameters to match exactly.
+ */
 /* eslint-disable @typescript-eslint/no-namespace */
 declare global {
   namespace Cypress {
@@ -94,8 +98,6 @@ Cypress.Commands.add(
 
     waitlist.submitButton().should('be.visible').and('not.be.disabled').click();
 
-    return cy.wait<WaitlistRequestBody, WaitlistResponseBody>(
-      `@${aliasName}`,
-    );
+    return cy.wait<WaitlistRequestBody, WaitlistResponseBody>(`@${aliasName}`);
   },
 );

@@ -1,10 +1,8 @@
 import { AuthError } from '@helix-ai/api';
 import type { User, UserSession } from '@helix-ai/db';
 
-import {
-  SessionRepository,
-  type ListUserSessionsOptions,
-} from '../repositories/session.repository';
+import type { SessionRepository } from '../repositories/session.repository';
+import { type ListUserSessionsOptions } from '../repositories/session.repository';
 import {
   tokenService as defaultTokenService,
   type TokenService,

@@ -4,18 +4,6 @@
   "include": [],
   "references": [
     {
-      "path": "../../../libs/contracts/tsconfig.lib.json"
-    },
-    {
-      "path": "../../../libs/config/tsconfig.lib.json"
-    },
-    {
-      "path": "../../../libs/api/tsconfig.lib.json"
-    },
-    {
-      "path": "../../../libs/db/tsconfig.lib.json"
-    },
-    {
       "path": "./tsconfig.app.json"
     },
     {

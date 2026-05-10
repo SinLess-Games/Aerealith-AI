@@ -11,6 +11,10 @@ import { HELIX_COLORS, HelixFonts, type Mode } from './constants';
 
 const DEFAULT_MODE: Mode = 'dark';
 
+type MuiBreakpointsWithProductionKeys = Theme['breakpoints'] & {
+  internal_mediaKeys?: Theme['breakpoints']['keys'];
+};
+
 function resolveMode(mode: Mode | string | null | undefined): Mode {
   if (mode === 'light' || mode === 'dark') {
     return mode;
@@ -42,7 +46,10 @@ export function getMuiTheme(mode: Mode | string = DEFAULT_MODE): Theme {
         primary: colors.textPrimary,
         secondary: colors.textSecondary,
       },
-      divider: alpha(colors.textSecondary, resolvedMode === 'dark' ? 0.24 : 0.28),
+      divider: alpha(
+        colors.textSecondary,
+        resolvedMode === 'dark' ? 0.24 : 0.28,
+      ),
     },
 
     typography: {
@@ -225,5 +232,10 @@ export function getMuiTheme(mode: Mode | string = DEFAULT_MODE): Theme {
     },
   };
 
-  return createTheme(themeOptions);
+  const theme = createTheme(themeOptions);
+  const breakpoints = theme.breakpoints as MuiBreakpointsWithProductionKeys;
+
+  breakpoints.internal_mediaKeys = breakpoints.keys;
+
+  return theme;
 }

@@ -2,10 +2,8 @@ import { AuthError } from '@helix-ai/api';
 import type { User, UserVerificationToken } from '@helix-ai/db';
 import { AuthVerificationSchemas } from '@helix-ai/contracts';
 
-import {
-  VerificationTokenRepository,
-  type ListUserVerificationTokensOptions,
-} from '../repositories/verification-token.repository';
+import type { VerificationTokenRepository } from '../repositories/verification-token.repository';
+import { type ListUserVerificationTokensOptions } from '../repositories/verification-token.repository';
 import {
   tokenService as defaultTokenService,
   type TokenService,

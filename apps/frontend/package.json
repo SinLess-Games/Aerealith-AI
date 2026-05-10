@@ -22,27 +22,28 @@
     "cf:deploy": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf:upload": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "lint": "eslint --no-warn-ignored . --ignore-pattern next-env.d.ts --ignore-pattern cloudflare-env.d.ts --ignore-pattern open-next-env.d.ts --ignore-pattern .next/** --ignore-pattern .open-next/**"
+    "lint": "eslint --max-warnings=0 \"src/**/*.{js,jsx,ts,tsx}\" \"scripts/**/*.{js,mjs,cjs,ts,tsx}\" \"*.{js,mjs,cjs,ts,tsx}\""
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@helix-ai/config": "workspace:*",
+    "@helix-ai/db": "workspace:*",
     "@helix-ai/flags": "workspace:*",
     "@helix-ai/ui": "workspace:*",
-    "@helix-ai/db": "workspace:*",
-    "@mui/material": "^7.3.5",
+    "@mui/material": "^9.0.1",
     "next": "15.5.16",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260507.0",
+    "@cloudflare/workers-types": "^4.20260509.1",
     "@opennextjs/cloudflare": "1.19.8",
-    "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "cross-env": "^10.1.0",
+    "eslint-config-next": "15.5.16",
     "wrangler": "4.90.0"
   }
 }

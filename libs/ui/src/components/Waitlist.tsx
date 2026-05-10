@@ -115,7 +115,9 @@ function isValidEmailAddress(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
-async function readJsonResponse(response: Response): Promise<WaitlistApiResponse> {
+async function readJsonResponse(
+  response: Response,
+): Promise<WaitlistApiResponse> {
   try {
     const body = (await response.json()) as unknown;
 
@@ -159,6 +161,10 @@ function isSuccessfulWaitlistResponse(
   return response.ok && (body.ok === true || body.success === true);
 }
 
+function getInitialTurnstileReady(): boolean {
+  return typeof window !== 'undefined' && Boolean(window.turnstile);
+}
+
 export function HeroWaitlist({
   endpoint = DEFAULT_WAITLIST_ENDPOINT,
   title = 'Join our waitlist!',
@@ -174,7 +180,9 @@ export function HeroWaitlist({
   const [status, setStatus] = React.useState<WaitlistStatus>('idle');
   const [feedbackMessage, setFeedbackMessage] = React.useState('');
   const [turnstileToken, setTurnstileToken] = React.useState('');
-  const [turnstileReady, setTurnstileReady] = React.useState(false);
+  const [turnstileReady, setTurnstileReady] = React.useState(
+    getInitialTurnstileReady,
+  );
 
   const turnstileContainerRef = React.useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = React.useRef<string | undefined>(undefined);
@@ -206,12 +214,6 @@ export function HeroWaitlist({
   }, []);
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined' && window.turnstile) {
-      setTurnstileReady(true);
-    }
-  }, []);
-
-  React.useEffect(() => {
     if (!isTurnstileEnabled || !turnstileReady) {
       return undefined;
     }
@@ -236,7 +238,9 @@ export function HeroWaitlist({
       },
       'error-callback': () => {
         setTurnstileToken('');
-        setFeedbackMessage('Bot verification failed. Please refresh and try again.');
+        setFeedbackMessage(
+          'Bot verification failed. Please refresh and try again.',
+        );
         setStatus('error');
       },
     });
@@ -281,7 +285,9 @@ export function HeroWaitlist({
     }
 
     if (isTurnstileEnabled && !turnstileToken) {
-      setFeedbackMessage('Please complete the bot verification before submitting.');
+      setFeedbackMessage(
+        'Please complete the bot verification before submitting.',
+      );
       setStatus('error');
       return;
     }

@@ -5,7 +5,7 @@ import type {
   AuthUserId,
   AuthUsername,
   AuthenticatedUser,
-} from '../../../../../libs/contracts/src/types/auth-user.type';
+} from '@helix-ai/contracts';
 import type {
   AuthTokenClaims,
   AuthTokenScope,

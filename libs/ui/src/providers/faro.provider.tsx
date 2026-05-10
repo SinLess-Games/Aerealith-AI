@@ -22,23 +22,25 @@ export type FaroProviderProps = {
   config?: Partial<FaroClientConfig>;
 };
 
+const DEFAULT_FARO_CONFIG: Partial<FaroClientConfig> = {};
+
 export function FaroProvider({
   children,
   enabled = true,
-  config = {},
+  config = DEFAULT_FARO_CONFIG,
 }: FaroProviderProps) {
   useEffect(() => {
     if (!enabled) {
       return;
     }
 
-    initFaro({
+    void initFaro({
       ...config,
       enabled: config.enabled ?? enabled,
     });
   }, [enabled, config]);
 
-  return <>{children}</>;
+  return children;
 }
 
 export default FaroProvider;

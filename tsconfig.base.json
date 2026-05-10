@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "importHelpers": true,
     "isolatedModules": true,
     "lib": ["es2022"],
@@ -22,14 +21,18 @@
     "paths": {
       "@helix-ai/api": ["./libs/api/src/index.ts"],
       "@helix-ai/api/*": ["./libs/api/src/*"],
+
       "@helix-ai/config": ["./libs/config/src/index.ts"],
       "@helix-ai/config/*": ["./libs/config/src/*"],
+
       "@helix-ai/contracts": ["./libs/contracts/src/index.ts"],
-      "@helix-ai/contracts/*": ["./libs/contracts/src/*"],
+
       "@helix-ai/db": ["./libs/db/src/index.ts"],
       "@helix-ai/db/*": ["./libs/db/src/*"],
+
       "@helix-ai/flags": ["./libs/flags/src/index.ts"],
       "@helix-ai/flags/*": ["./libs/flags/src/*"],
+
       "@helix-ai/ui": ["./libs/ui/src/index.ts"],
       "@helix-ai/ui/*": ["./libs/ui/src/*"]
     }

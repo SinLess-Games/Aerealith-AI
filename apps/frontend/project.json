@@ -95,7 +95,7 @@
       "outputs": ["{options.outputFile}"],
       "options": {
         "cwd": "apps/frontend",
-        "command": "eslint . --ignore-pattern next-env.d.ts --ignore-pattern cloudflare-env.d.ts --ignore-pattern open-next-env.d.ts --ignore-pattern .next/** --ignore-pattern .open-next/**"
+        "command": "eslint --max-warnings=0 \"src/**/*.{js,jsx,ts,tsx}\" \"scripts/**/*.{js,mjs,cjs,ts,tsx}\" \"*.{js,mjs,cjs,ts,tsx}\""
       },
       "metadata": {
         "technologies": ["eslint"],

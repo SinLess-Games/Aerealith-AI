@@ -2,7 +2,7 @@ import type {
   AuthSessionId,
   AuthUserId,
   AuthUsername,
-} from '../../../../../libs/contracts/src/types/auth-user.type';
+} from '@helix-ai/contracts';
 
 export const AUTH_TOKEN_TYPE = {
   ACCESS: 'access',

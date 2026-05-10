@@ -27,9 +27,9 @@
   },
   "dependencies": {
     "@helix-ai/config": "workspace:*",
-    "@mikro-orm/core": "^6.5.9",
+    "@mikro-orm/core": "6.6.14",
     "@mikro-orm/migrations": "6.6.14",
-    "@mikro-orm/postgresql": "^6.5.9",
-    "uuid": "^13.0.0"
+    "@mikro-orm/postgresql": "6.6.14",
+    "uuid": "^14.0.0"
   }
 }

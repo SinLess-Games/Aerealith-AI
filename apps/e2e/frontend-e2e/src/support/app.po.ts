@@ -1,33 +1,46 @@
 import type { CardProps } from '@helix-ai/ui';
 
-import { AboutContent } from '../../../../frontend/src/content/about';
-import { CONTACT_OPTIONS } from '../../../../frontend/src/content/contact';
-import { headerProps } from '../../../../frontend/src/content/header';
-import * as technologyContent from '../../../../frontend/src/content/technology';
-
-const isCard = (value: unknown): value is CardProps =>
-  typeof value === 'object' &&
-  value !== null &&
-  'title' in (value as Record<string, unknown>);
-
-const normalizeCardValue = (value: unknown): CardProps[] => {
-  if (Array.isArray(value)) {
-    return value.filter(isCard);
-  }
-
-  return isCard(value) ? [value] : [];
-};
-
 const escapeSelectorValue = (value: string): string =>
   value.replace(/["\\]/g, '\\$&');
 
-export const navPages = headerProps.pages ?? [];
-export const aboutSections = AboutContent;
-export const contactOptions = CONTACT_OPTIONS;
+/**
+ * Keep E2E expectations local to the E2E project.
+ *
+ * Do not import app internals from apps/frontend here. Nx module boundaries
+ * correctly reject relative imports from one project into another.
+ */
+export const navPages = [
+  {
+    name: 'Home',
+    href: '/',
+  },
+  {
+    name: 'About',
+    href: '/About',
+  },
+  {
+    name: 'Technology',
+    href: '/Technology',
+  },
+  {
+    name: 'Contact',
+    href: '/Contact',
+  },
+];
 
-export const technologyCards: CardProps[] = Object.values(
-  technologyContent,
-).flatMap(normalizeCardValue);
+export const aboutSections: Array<{
+  title: string;
+  description?: string;
+  content?: string;
+}> = [];
+
+export const contactOptions: Array<{
+  title: string;
+  description?: string;
+  href?: string;
+}> = [];
+
+export const technologyCards: CardProps[] = [];
 
 export const technologyCardsSortedByTitle = [...technologyCards].sort((a, b) =>
   a.title.localeCompare(b.title),

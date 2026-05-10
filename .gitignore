@@ -165,3 +165,4 @@ apps/frontend/open-next-env.d.ts
 
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
+.claude/worktrees

@@ -14,9 +14,6 @@
   "include": [],
   "references": [
     {
-      "path": "../contracts"
-    },
-    {
       "path": "./tsconfig.lib.json"
     }
   ]

@@ -3,13 +3,21 @@
   "compilerOptions": {
     "rootDir": "../../..",
     "outDir": "../../../dist/out-tsc/apps/services/auth-spec",
-    "types": [
-      "vitest/globals",
-      "vitest/importMeta",
-      "vite/client",
-      "node",
-      "vitest"
-    ]
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "lib": ["es2022"],
+    "types": ["node", "vitest/globals"],
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
   },
   "include": [
     "vite.config.ts",
@@ -25,5 +33,19 @@
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx",
     "src/**/*.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../../../libs/api/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/config/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/contracts/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/db/tsconfig.lib.json"
+    }
   ]
 }

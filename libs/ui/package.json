@@ -55,6 +55,6 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "@grafana/faro-rollup-plugin": "^0.7.0"
+    "@grafana/faro-rollup-plugin": "^0.10.0"
   }
 }

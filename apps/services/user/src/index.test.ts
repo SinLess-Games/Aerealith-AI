@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 import app from '.';
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 

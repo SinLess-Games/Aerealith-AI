@@ -5,12 +5,6 @@
   "include": [],
   "references": [
     {
-      "path": "./apps/e2e/frontend-e2e"
-    },
-    {
-      "path": "./apps/frontend"
-    },
-    {
       "path": "./libs/db"
     },
     {

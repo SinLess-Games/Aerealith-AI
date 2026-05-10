@@ -1,13 +1,15 @@
 import { AuthError } from '@helix-ai/api';
 import type { User } from '@helix-ai/db';
-import {
-  AUTH_ACCOUNT_PROVIDER,
-  AUTH_USER_STATUS,
+import type {
   AuthLoginSchemas,
   AuthPasswordSchemas,
   AuthRegisterSchemas,
   AuthSessionSchemas,
   AuthVerificationSchemas,
+} from '@helix-ai/contracts';
+import {
+  AUTH_ACCOUNT_PROVIDER,
+  AUTH_USER_STATUS,
   canAccessUsername,
   isAuthUserStatus,
   type AuthUserStatus,
@@ -16,14 +18,14 @@ import {
 
 import type { AccountRepository } from '../repositories/account.repository';
 import type { UserRepository } from '../repositories/user.repository';
+import type { SessionService } from './session.service';
 import {
-  SessionService,
   type AuthSessionResponse,
   type ListSessionsResult,
   type RevokeSessionResult,
 } from './session.service';
+import type { VerificationTokenService } from './verification-token.service';
 import {
-  VerificationTokenService,
   type VerificationTokenConsumeResult,
   type VerificationTokenCreateResult,
   type VerificationTokenRevokeResult,
