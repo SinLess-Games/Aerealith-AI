@@ -4,7 +4,13 @@
 <!-- markdownlint-disable MD004 -->
 <!-- markdownlint-disable MD060 -->
 <p align="center">
-  <img src="https://cdn.sinlessgamesllc.com/Helix-AI/images/Helix_Logo.png" alt="Helix AI Logo" width="260" />
+  <img
+  src="/Docs/images/hero.png"
+  alt="Helix AI Logo"
+  width="260"
+  height="260"
+  style="border-radius: 50%; object-fit: cover; border: 2px solid rgba(255, 255, 255, 0.2);"
+/>
 </p>
 
 <p align="center">
