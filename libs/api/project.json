@@ -1,5 +1,5 @@
 {
-  "name": "api",
+  "name": "@helix-ai/api",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/api/src",
   "projectType": "library",

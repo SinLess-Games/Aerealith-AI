@@ -1,21 +1,156 @@
-name = "auth"
-main = "src/index.ts"
+# =============================================================================
+# Helix Auth Service — Cloudflare Worker
+# -----------------------------------------------------------------------------
+# Deploy:
+#   pnpm exec wrangler deploy --config apps/services/auth/wrangler.toml
+#
+# Deploy preview:
+#   pnpm exec wrangler deploy --config apps/services/auth/wrangler.toml --env preview
+#
+# Deploy production:
+#   pnpm exec wrangler deploy --config apps/services/auth/wrangler.toml --env production
+#
+# Dev:
+#   pnpm exec wrangler dev --config apps/services/auth/wrangler.toml
+#
+# Dev with frontend service binding:
+#   pnpm exec wrangler dev \
+#     --config apps/frontend/wrangler.jsonc \
+#     --config apps/services/auth/wrangler.toml
+#
+# Secrets:
+#   Do not put DATABASE_URL, JWT secrets, OAuth secrets, API keys, or tokens here.
+#   Use `.dev.vars` for local development and `wrangler secret put <NAME>` for
+#   deployed environments.
+# =============================================================================
+
+"$schema" = "../../../node_modules/wrangler/config-schema.json"
+
+name = "helix-auth-service"
+main = "src/main.ts"
+
 compatibility_date = "2026-05-09"
 compatibility_flags = ["nodejs_compat"]
+
 account_id = "9517bf561f1f713ab87d1523193c7cc5"
 
 workers_dev = true
+preview_urls = true
+
+minify = true
+keep_names = true
+
+# -----------------------------------------------------------------------------
+# Bundling aliases
+# -----------------------------------------------------------------------------
+# MikroORM/Knex includes optional dialect loaders for MariaDB and SQLite even
+# though this service uses PostgreSQL. Wrangler still sees those require() calls
+# during bundling, so alias the unused optional drivers to a Worker-safe shim.
+# -----------------------------------------------------------------------------
+
+[alias]
+"mariadb/callback" = "./src/shims/unused-db-driver.ts"
+"better-sqlite3" = "./src/shims/unused-db-driver.ts"
+"libsql" = "./src/shims/unused-db-driver.ts"
+
+# -----------------------------------------------------------------------------
+# Non-secret runtime variables
+# -----------------------------------------------------------------------------
 
 [vars]
-SERVICE_NAME = "auth"
+NODE_ENV = "development"
+SERVICE_NAME = "helix-auth-service"
+SERVICE_DISPLAY_NAME = "Helix Auth Service"
 API_VERSION = "v1"
-API_BASE_PATH = "/V1/auth"
+API_BASE_PATH = "/api/V1/auth"
+LOG_LEVEL = "debug"
+
+# Frontend origin used for CORS decisions inside the auth service.
+FRONTEND_SERVICE_NAME = "helix-ai-frontend"
+FRONTEND_ORIGIN = "https://helixaibot.com"
+
+# -----------------------------------------------------------------------------
+# Observability
+# -----------------------------------------------------------------------------
+# [observability] enables persisted Workers logs.
+# [observability.traces] enables Workers traces separately while tracing is beta.
+# Lower sampling rates are recommended for higher-traffic environments.
+# -----------------------------------------------------------------------------
 
 [observability]
 enabled = true
-
-[observability.logs]
-enabled = true
+head_sampling_rate = 1.0
 
 [observability.traces]
 enabled = true
+head_sampling_rate = 1.0
+
+# -----------------------------------------------------------------------------
+# Local development
+# -----------------------------------------------------------------------------
+
+[dev]
+ip = "127.0.0.1"
+port = 8787
+local_protocol = "http"
+
+# =============================================================================
+# Preview environment
+# =============================================================================
+
+[env.preview]
+name = "helix-auth-service-preview"
+workers_dev = true
+preview_urls = true
+
+[env.preview.vars]
+NODE_ENV = "preview"
+SERVICE_NAME = "helix-auth-service-preview"
+SERVICE_DISPLAY_NAME = "Helix Auth Service Preview"
+API_VERSION = "v1"
+API_BASE_PATH = "/api/V1/auth"
+LOG_LEVEL = "debug"
+FRONTEND_SERVICE_NAME = "helix-ai-frontend"
+FRONTEND_ORIGIN = "https://helixaibot.com"
+
+[env.preview.observability]
+enabled = true
+head_sampling_rate = 1.0
+
+[env.preview.observability.traces]
+enabled = true
+head_sampling_rate = 1.0
+
+# =============================================================================
+# Production environment
+# =============================================================================
+
+[env.production]
+name = "helix-auth-service"
+workers_dev = false
+preview_urls = false
+
+# Keep this commented while the frontend Worker owns helixaibot.com.
+# The frontend can still call this Worker privately through AUTH_SERVICE.
+#
+# [[env.production.routes]]
+# pattern = "helixaibot.com/api/V1/auth*"
+# zone_name = "helixaibot.com"
+
+[env.production.vars]
+NODE_ENV = "production"
+SERVICE_NAME = "helix-auth-service"
+SERVICE_DISPLAY_NAME = "Helix Auth Service"
+API_VERSION = "v1"
+API_BASE_PATH = "/api/V1/auth"
+LOG_LEVEL = "info"
+FRONTEND_SERVICE_NAME = "helix-ai-frontend"
+FRONTEND_ORIGIN = "https://helixaibot.com"
+
+[env.production.observability]
+enabled = true
+head_sampling_rate = 0.1
+
+[env.production.observability.traces]
+enabled = true
+head_sampling_rate = 0.05

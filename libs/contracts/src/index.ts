@@ -33,6 +33,40 @@ export type { SortDirection as CommonSortDirection } from './zod-schemas/common.
 export { emailSchema } from './zod-schemas/auth.schema';
 export { emailSchema as userEmailSchema } from './zod-schemas/user.schema';
 
+// Auth type conflicts:
+// DTO files already export AuthEmail, AuthSessionId, AuthUserId, and
+// AuthUserStatus. Keep DTO names canonical at the flat root and expose the
+// newer auth-user.type.ts versions through aliases and the AuthTypes namespace.
+export {
+  AUTH_ACCOUNT_PROVIDER,
+  AUTH_USER_STATUS,
+  canAccessUsername,
+  isAuthAccountProvider,
+  isAuthUserStatus,
+  toPublicAuthUser,
+} from './types/auth-user.type';
+
+export type {
+  AuthAccountId,
+  AuthAccountIdentity,
+  AuthAccountProvider,
+  AuthenticatedUser,
+  AuthEmail as AuthContractEmail,
+  AuthSessionId as AuthContractSessionId,
+  AuthUserAccessCheck,
+  AuthUserId as AuthContractUserId,
+  AuthUserIdentity,
+  AuthUserLookup,
+  AuthUsername,
+  AuthUserStatus as AuthContractUserStatus,
+  PublicAuthUser,
+} from './types/auth-user.type';
+
+// Auth schema conflicts:
+// auth.schema already exports authSessionIdSchema. Keep that canonical at the
+// flat root and expose the newer auth-session.schema.ts version through an alias.
+export { authSessionIdSchema as authServiceSessionIdSchema } from './zod-schemas/auth-session.schema';
+
 // -----------------------------------------------------------------------------
 // DTOs
 // -----------------------------------------------------------------------------
@@ -58,7 +92,7 @@ export * from './response-types/error.response';
 export * from './response-types/paginated.response';
 
 // -----------------------------------------------------------------------------
-// Zod schemas
+// Existing Zod schemas
 // -----------------------------------------------------------------------------
 
 export * from './zod-schemas/auth.schema';
@@ -66,15 +100,34 @@ export * from './zod-schemas/common.schema';
 export * from './zod-schemas/user.schema';
 
 // -----------------------------------------------------------------------------
+// Auth service Zod schemas
+// -----------------------------------------------------------------------------
+// Export these through namespaces to avoid collisions with the older auth.schema
+// and DTO contracts.
+//
+// Example:
+// import { AuthRegisterSchemas } from '@helix-ai/contracts';
+//
+// AuthRegisterSchemas.authRegisterSchema
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
 // Namespaced exports
 // -----------------------------------------------------------------------------
 // Use these when you want to avoid future naming collisions entirely:
 //
-// import { AuthSchemas, UserSchemas, AuthDtos } from '@helix-ai/contracts';
+// import {
+//   AuthDtos,
+//   AuthSchemas,
+//   AuthRegisterSchemas,
+//   AuthTypes,
+//   UserSchemas,
+// } from '@helix-ai/contracts';
 //
 // AuthSchemas.emailSchema
 // UserSchemas.emailSchema
-// AuthDtos.LoginRequestDto
+// AuthTypes.AUTH_USER_STATUS
+// AuthRegisterSchemas.authRegisterSchema
 // -----------------------------------------------------------------------------
 
 export * as AuthDtos from './DTOs/auth.dto';
@@ -89,6 +142,13 @@ export * as ApiResponses from './response-types/api.response';
 export * as ErrorResponses from './response-types/error.response';
 export * as PaginatedResponses from './response-types/paginated.response';
 
+export * as AuthTypes from './types/auth-user.type';
+
 export * as AuthSchemas from './zod-schemas/auth.schema';
+export * as AuthLoginSchemas from './zod-schemas/auth-login.schema';
+export * as AuthPasswordSchemas from './zod-schemas/auth-password.schema';
+export * as AuthRegisterSchemas from './zod-schemas/auth-register.schema';
+export * as AuthSessionSchemas from './zod-schemas/auth-session.schema';
+export * as AuthVerificationSchemas from './zod-schemas/auth-verification.schema';
 export * as CommonSchemas from './zod-schemas/common.schema';
 export * as UserSchemas from './zod-schemas/user.schema';

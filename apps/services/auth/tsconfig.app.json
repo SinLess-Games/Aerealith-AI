@@ -11,7 +11,7 @@
     "esModuleInterop": true,
     "target": "es2021",
     "lib": ["es2021"],
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "allowJs": true,
     "checkJs": false,
@@ -36,5 +36,19 @@
     "src/**/*.spec.js",
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx"
+  ],
+  "references": [
+    {
+      "path": "../../../libs/api/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/config/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/contracts/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/db/tsconfig.lib.json"
+    }
   ]
 }

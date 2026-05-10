@@ -1,0 +1,162 @@
+"$schema" = "../../node_modules/wrangler/config-schema.json"
+
+name = "helix-ai-frontend"
+main = "./src/worker.ts"
+compatibility_date = "2026-05-09"
+workers_dev = true
+
+compatibility_flags = [
+  "nodejs_compat",
+  "nodejs_compat_populate_process_env",
+  "global_fetch_strictly_public",
+]
+
+[[routes]]
+pattern = "helixaibot.com"
+custom_domain = true
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "helix-ai-frontend"
+
+[[services]]
+binding = "AUTH_SERVICE"
+service = "helix-auth-service"
+
+[[services]]
+binding = "USER_SERVICE"
+service = "user"
+
+[vars]
+DATABASE_PROVIDER = "postgresql"
+DATABASE_SSL_ENABLED = "true"
+DATABASE_SSL_MODE = "verify-full"
+DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
+DATABASE_POOL_MIN = "0"
+DATABASE_POOL_MAX = "1"
+DATABASE_APPLICATION_NAME = "helix"
+
+MIKRO_ORM_DEBUG = "false"
+
+AUTH_SERVICE_NAME = "helix-auth-service"
+AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
+
+USER_SERVICE_NAME = "user"
+USER_SERVICE_BASE_PATH = "/api/V1/user"
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+
+[observability.traces]
+enabled = true
+
+# Keep this only if your repo tooling reads it.
+# Wrangler secrets are normally managed with:
+#   wrangler secret put POSTGRES_URL
+[secrets]
+required = ["POSTGRES_URL"]
+
+# =============================================================================
+# Preview environment
+# =============================================================================
+
+[env.preview]
+name = "helix-ai-frontend-preview"
+workers_dev = true
+preview_urls = true
+
+[[env.preview.services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "helix-ai-frontend-preview"
+
+[[env.preview.services]]
+binding = "AUTH_SERVICE"
+service = "helix-auth-service-preview"
+
+[[env.preview.services]]
+binding = "USER_SERVICE"
+service = "user-preview"
+
+[env.preview.vars]
+DATABASE_PROVIDER = "postgresql"
+DATABASE_SSL_ENABLED = "true"
+DATABASE_SSL_MODE = "verify-full"
+DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
+DATABASE_POOL_MIN = "0"
+DATABASE_POOL_MAX = "1"
+DATABASE_APPLICATION_NAME = "helix-preview"
+
+MIKRO_ORM_DEBUG = "false"
+
+AUTH_SERVICE_NAME = "helix-auth-service-preview"
+AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
+
+USER_SERVICE_NAME = "user-preview"
+USER_SERVICE_BASE_PATH = "/api/V1/user"
+
+[env.preview.observability]
+enabled = true
+
+[env.preview.observability.logs]
+enabled = true
+
+[env.preview.observability.traces]
+enabled = true
+
+# =============================================================================
+# Production environment
+# =============================================================================
+
+[env.production]
+name = "helix-ai-frontend"
+workers_dev = false
+preview_urls = false
+
+[[env.production.routes]]
+pattern = "helixaibot.com"
+custom_domain = true
+
+[[env.production.services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "helix-ai-frontend"
+
+[[env.production.services]]
+binding = "AUTH_SERVICE"
+service = "helix-auth-service"
+
+[[env.production.services]]
+binding = "USER_SERVICE"
+service = "user"
+
+[env.production.vars]
+DATABASE_PROVIDER = "postgresql"
+DATABASE_SSL_ENABLED = "true"
+DATABASE_SSL_MODE = "verify-full"
+DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
+DATABASE_POOL_MIN = "0"
+DATABASE_POOL_MAX = "1"
+DATABASE_APPLICATION_NAME = "helix"
+
+MIKRO_ORM_DEBUG = "false"
+
+AUTH_SERVICE_NAME = "helix-auth-service"
+AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
+
+USER_SERVICE_NAME = "user"
+USER_SERVICE_BASE_PATH = "/api/V1/user"
+
+[env.production.observability]
+enabled = true
+
+[env.production.observability.logs]
+enabled = true
+
+[env.production.observability.traces]
+enabled = true

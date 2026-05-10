@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "baseUrl": "../../",
+    "baseUrl": ".",
     "importHelpers": true,
     "isolatedModules": true,
     "lib": ["es2022"],
@@ -17,12 +17,15 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": false,
+    "ignoreDeprecations": "5.0",
     "customConditions": ["Helix"],
     "paths": {
-      "@helix-ai/api": ["libs/api/src/index.ts"],
+      "@helix-ai/api": ["./libs/api/src/index.ts"],
+      "@helix-ai/api/*": ["./libs/api/src/*"],
       "@helix-ai/config": ["./libs/config/src/index.ts"],
       "@helix-ai/config/*": ["./libs/config/src/*"],
-      "@helix-ai/contracts": ["libs/contracts/src/index.ts"],
+      "@helix-ai/contracts": ["./libs/contracts/src/index.ts"],
+      "@helix-ai/contracts/*": ["./libs/contracts/src/*"],
       "@helix-ai/db": ["./libs/db/src/index.ts"],
       "@helix-ai/db/*": ["./libs/db/src/*"],
       "@helix-ai/flags": ["./libs/flags/src/index.ts"],

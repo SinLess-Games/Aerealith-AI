@@ -1,26 +1,40 @@
-# Helix AI — The Autonomous Assistant Platform
+# Helix AI — Autonomous Assistant Platform
 
 <!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable MD004 -->
+<!-- markdownlint-disable MD060 -->
 <p align="center">
   <img src="https://cdn.sinlessgamesllc.com/Helix-AI/images/Helix_Logo.png" alt="Helix AI Logo" width="260" />
 </p>
-<p align="center"><strong>Automation-grade AI copilots for teams, creators, and businesses.</strong></p>
+
+<p align="center">
+  <strong>Automation-grade AI assistants for users, creators, developers, teams, and businesses.</strong>
+</p>
+
+<p align="center">
+  <em>Unify your tools. Remember what matters. Automate with confidence.</em>
+</p>
+
 <p align="center">
   <strong>Project Pulse</strong><br />
   <a href="https://github.com/Sinless777/Helix/blob/main/LICENSE.md">
-    <img src="https://img.shields.io/github/license/Sinless777/Helix?style=for-the-badge" alt="License: Polyform" />
+    <img src="https://img.shields.io/github/license/Sinless777/Helix?style=for-the-badge" alt="License" />
   </a>
   <a href="https://github.com/Sinless777/Helix/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/Sinless777/Helix/ci.yml?branch=main&style=for-the-badge" alt="Build Status" />
+    <img src="https://img.shields.io/github/actions/workflow/status/Sinless777/Helix/ci.yaml?branch=main&style=for-the-badge" alt="CI Status" />
   </a>
   <a href="https://github.com/Sinless777/Helix">
     <img src="https://img.shields.io/github/stars/Sinless777/Helix?style=for-the-badge" alt="GitHub Stars" />
   </a>
 </p>
+
 <p align="center">
   <strong>Momentum</strong><br />
   <a href="https://github.com/Sinless777/Helix/issues">
     <img src="https://img.shields.io/github/issues/Sinless777/Helix?style=for-the-badge" alt="GitHub Issues" />
+  </a>
+  <a href="https://github.com/Sinless777/Helix/pulls">
+    <img src="https://img.shields.io/github/issues-pr/Sinless777/Helix?style=for-the-badge" alt="GitHub Pull Requests" />
   </a>
   <a href="https://github.com/Sinless777/Helix/graphs/contributors">
     <img src="https://img.shields.io/github/contributors/Sinless777/Helix?style=for-the-badge" alt="Contributors" />
@@ -29,6 +43,7 @@
     <img src="https://img.shields.io/github/commit-activity/m/Sinless777/Helix?style=for-the-badge" alt="Commit Activity" />
   </a>
 </p>
+
 <p align="center">
   <strong>Community</strong><br />
   <a href="https://discord.gg/Za8MVstYnr">
@@ -40,264 +55,620 @@
 </p>
 <!-- markdownlint-enable MD033 -->
 
-Helix is an **intelligent digital companion** built for users, creators, and businesses — combining automation, contextual memory, and a secure plugin system in one extensible platform.
-> “Unify your tools. Amplify your mind.”
+Helix AI is a modular assistant platform built by **SinLess Games LLC**. It combines conversational AI, contextual memory, workflow automation, analytics, secure integrations, and a plugin runtime into one extensible system.
+
+Helix is designed to run across cloud, edge, local, and future air-gapped environments while keeping user control, provenance, observability, and security at the center of the platform.
 
 ---
 
-## 🚀 What is Helix?
+## Contents
 
-**Helix is a modular AI assistant platform designed to unify your tools, workflows, and intelligence into a single, secure, human-friendly experience.**
-
-Unlike traditional assistants or bots, Helix is built as a full-stack system that spans chat interfaces, automation, memory, observability, and secure plugin execution. It adapts to each user or organization with contextual awareness, intelligent orchestration, and powerful extensibility — across web, Discord, mobile, and even the OS level.
-
-Helix isn't just reactive — it's proactive, modular, programmable, and privacy-conscious.
-
----
-
-### 🧠 🤖 Virtual Assistant
-
-Helix serves as a natural-language assistant that can **answer questions, manage workflows, run automations, and execute commands across your connected tools**. It understands user intent, tracks goals, and provides reasoning with memory and persona context — not just static answers.
-
----
-
-### 🧠 📚 Contextual Memory
-
-Powered by **pgvector** and long-term embedding memory, Helix tracks context per user, conversation, tool, and organization. It remembers what matters — conversations, facts, files, decisions — and lets you query or forget them at will. Think of it as a second brain with search and TTL.
-
----
-
-### 🔌 Plugin Runtime
-
-Helix introduces a **secure sandboxed runtime** for custom tools, automations, and third-party extensions. Developers can publish skills using signed manifests, and users can run tools with explicit scopes like `read:calendar` or `write:memory`. This bridges the gap between assistant and operating system.
+- [What Is Helix AI?](#what-is-helix-ai)
+- [Project Goals](#project-goals)
+- [Core Capabilities](#core-capabilities)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Monorepo Structure](#monorepo-structure)
+- [Getting Started](#getting-started)
+- [Environment Configuration](#environment-configuration)
+- [Common Commands](#common-commands)
+- [Development Workflow](#development-workflow)
+- [Deployment Model](#deployment-model)
+- [Security Model](#security-model)
+- [Observability](#observability)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-### 🎛️ Chat Interface
+## What Is Helix AI?
 
-Helix’s UI is built to **streamline how users interact with AI, memory, and tools**. Features include a plugin drawer, toolcall inspection, persistent conversations, personas, and live updates. Whether via web, mobile, or Discord — the experience is consistent, assistive, and extensible.
+**Helix AI is an autonomous assistant platform for managing tools, memory, automations, workflows, analytics, and integrations through a natural-language interface.**
 
----
+It is not just a chatbot. Helix is being built as a full-stack assistant operating layer that can:
 
-### 📡 Hybrid Inference
+- Answer questions with contextual awareness.
+- Remember user, project, organization, and workflow context.
+- Execute approved actions across connected tools.
+- Automate recurring work through triggers and workflows.
+- Route requests across cloud and local models.
+- Provide dashboards for usage, memory, skills, automations, and system health.
+- Support developers through APIs, SDKs, plugins, and marketplace-ready extensions.
+- Operate across web, Discord, mobile, desktop, CLI, and future edge environments.
 
-Helix can route tasks dynamically across multiple model providers: OpenAI, Claude, Ollama (local), and fine-tuned internal models. This lets users choose between performance, privacy, and cost — all controlled by tier, policy, or inference health. It’s an intelligent LLM load balancer and policy enforcer in one.
-
----
-
-### 📈 Analytics Dashboards
-
-Users and orgs can view **personalized dashboards with memory usage, plugin activity, skill latency, and AI model performance**. These dashboards are powered by OTEL and Grafana, and support annotations, sharing, and custom metrics per tenant.
-
----
-
-### 💬 Discord Bot
-
-HelixBot brings the full assistant experience to Discord — combining **Dyno moderation**, **TicketTool**, **Tupperbox**, and **AI agent capabilities**. Users can create tickets, assign skills, run commands, or collaborate with Helix directly inside their communities.
+Helix is designed around a long-term vision: a trustworthy digital companion that can assist, organize, automate, explain, and adapt without hiding what it is doing.
 
 ---
 
-### 🌐 Open API & SDK
+## Project Goals
 
-Every part of Helix is accessible via its **open API and TypeScript SDK** (`@helix/sdk`). Developers can integrate memory, skill runs, automations, or chat experiences into their own tools, allowing Helix to act as a platform, not just a product.
+Helix AI is built around a few core principles:
 
----
-
-### 🔒 Zero-Trust by Design
-
-Helix is engineered with enterprise-grade security from the start:
-
-* **Per-tenant secrets** stored via Vault/KMS
-* **mTLS mesh** for edge and plugin traffic
-* **Signed Audit Logs** (Ed25519)
-* **RBAC/ABAC** controls for every tool and API
-* **Air-gapped deployment support** for compliance environments (SOC2, HIPAA, GDPR)
-
----
-
-**In short:** Helix is not just another assistant — it’s a full-stack, programmable, privacy-first, user-centric AI operating system that runs anywhere: browser, Discord, mobile, or serverless edge.
+| Principle | Meaning |
+| --- | --- |
+| **User-controlled memory** | Users can review, edit, delete, export, pause, or scope memory. |
+| **Transparent automation** | Actions should be inspectable, auditable, and permissioned. |
+| **Integrations-first design** | Helix should unify tools like Discord, GitHub, Google, Cloudflare, Stripe, and internal services. |
+| **Hybrid inference** | Requests can route across hosted models, local models, and future self-hosted inference. |
+| **Security by default** | RBAC, ABAC, audit logs, scoped permissions, secret isolation, and zero-trust patterns are first-class. |
+| **Open-source core** | The core platform should be inspectable and community-friendly, with commercial add-ons where appropriate. |
+| **Cloud or air-gapped** | Helix should support SaaS, self-hosted, and offline-capable deployments over time. |
+| **Explainable autonomy** | Helix can act proactively only inside clear user-approved boundaries. |
 
 ---
 
-## 🧠 Features
+## Core Capabilities
 
-| Type          | Highlights                                                                 |
-| ------------- | -------------------------------------------------------------------------- |
-| Memory        | Short-term (Redis) + long-term (pgvector) with embedded provenance         |
-| Skills        | Deno sandboxed plugin runtime with signed manifests and scoped permissions |
-| Automations   | Triggers → Filters → Actions (webhooks, schedules, events)                 |
-| Security      | RBAC/ABAC, per-tenant secrets, audit logs (Ed25519 signed)                 |
-| Observability | OTEL tracing, Grafana dashboards, k6 load tests, Chaos mode                |
-| Chat UI       | Multimodal assistant with persona overlays, memory viewer, skill drawer    |
-| API           | Open REST API + TypeScript SDK (`@helix/sdk`)                              |
-| Integrations  | Discord, Stripe, GitHub, Google, Slack, Notion, and more (via marketplace) |
-
----
-
-## 🏗️ Architecture Overview
-
-Helix is built on a **modular, secure, multi-tenant architecture** designed to scale across personal devices, cloud workloads, and enterprise environments — including fully **air-gapped deployments**.
+| Area | Capabilities |
+| --- | --- |
+| **Assistant UI** | Chat, personas, tool calls, memory inspection, workflow controls, and live assistant interactions. |
+| **Memory** | Short-term session memory, long-term semantic memory, scoped recall, retention controls, and provenance. |
+| **Automations** | Event, schedule, webhook, and integration-driven automation flows. |
+| **Plugin Runtime** | Sandboxed tools with signed manifests, scoped permissions, review flow, and audit trails. |
+| **Integrations** | Discord, GitHub, Google, Stripe, PayPal, Cloudflare, Notion, Slack, and future marketplace connectors. |
+| **Analytics** | Dashboards for usage, automations, plugin activity, model behavior, memory health, and system events. |
+| **Inference Router** | Model routing by cost, latency, privacy, capability, tenant policy, and fallback health. |
+| **API & SDK** | REST API, TypeScript SDK, future Python client, OpenAPI documentation, and developer tooling. |
+| **Security** | RBAC, ABAC, audit logs, per-tenant secrets, signed events, and policy-aware execution. |
+| **Deployment** | Cloudflare-first SaaS, Vercel frontend deployment, GitHub Actions CI/CD, and future self-hosted support. |
 
 ---
 
-### 💻 Frontend
+## Architecture
 
-* **Framework:** [Next.js](https://nextjs.org/) (App Router, Server Components)
-* **Styling:** TailwindCSS + [shadcn/ui](https://ui.shadcn.com/) for clean, component-driven UI
-* **Modes:** Web app, Discord bot UI, upcoming mobile (React Native)
-* **UX Architecture:** Chat interface + plugin drawer + memory viewer + dashboard panels
+Helix is designed as a multi-tenant assistant platform with clear separation between user experience, inference, memory, automation, integrations, and observability.
 
----
+```mermaid
+flowchart TD
+  User[User / Team / Organization]
+  UI[Web App / Discord / Mobile / CLI]
+  Edge[Cloudflare Edge / API Gateway]
+  Auth[AuthN / AuthZ / Tenant Context]
+  Flags[Hypertune Feature Flags]
+  Memory[Memory Service<br />Redis + Postgres + pgvector]
+  Router[Inference Router]
+  Models[Model Providers<br />OpenAI / Anthropic / Ollama / Local]
+  Plugins[Plugin Runtime<br />Sandboxed Skills]
+  Automations[Automation Engine]
+  Integrations[External Integrations]
+  Audit[Signed Audit Log]
+  Telemetry[OpenTelemetry]
+  Grafana[Grafana Dashboards]
 
-### 🔧 Backend Core
+  User --> UI
+  UI --> Edge
+  Edge --> Auth
+  Auth --> Flags
+  Auth --> Memory
+  Auth --> Router
+  Router --> Models
+  Router --> Plugins
+  Plugins --> Integrations
+  Automations --> Plugins
+  Plugins --> Audit
+  Memory --> Audit
+  Edge --> Telemetry
+  Router --> Telemetry
+  Plugins --> Telemetry
+  Automations --> Telemetry
+  Telemetry --> Grafana
+````
 
-* **Database:** [Supabase](https://supabase.com/) (Postgres + Realtime + Auth)
-* **ORM:** [MikroORM](https://mikro-orm.io/) for schema-driven, typesafe Postgres modeling
-* **Cache & Queues:** Redis (short-term memory, task queues, session context)
-* **Vector Memory:** pgvector (HNSW/IVFFlat) for long-term memory & context embeddings
+### Runtime Flow
 
----
-
-### ⚙️ Inference & Intelligence
-
-* **Router:** Model control plane routes inference requests across providers based on cost, latency, org policy
-* **Supported Models:**
-
-  * `openai:gpt-4`, `openai:gpt-3.5-turbo`
-  * `claude-3-opus` / `claude-3-sonnet`
-  * `ollama:llama3-70b`, `mistral`, custom fine-tunes
-* **Fallback Logic:** Retry-on-failure, tier-aware switches, hybrid local/cloud override
-
----
-
-### 🌍 Edge Runtime
-
-* **Primary Edge:** [Cloudflare Workers](https://developers.cloudflare.com/workers/) (webhooks, automations, inference)
-* **UI Delivery:** Vercel Edge Functions + CDN
-* **Chaos Ready:** Workers are instrumented for chaos testing (latency spikes, plugin sandbox failures)
-
----
-
-### 🔐 Secrets & Isolation
-
-* **Secrets Backend:** Vault, AWS KMS, or on-prem HSM per tenant/org
-* **Audit Trails:** Append-only audit logs (Ed25519-signed)
-* **Plugin Isolation:** Each skill/tool runs in a Deno sandbox with scope-limited memory and access
-* **RBAC/ABAC:** Fully enforced at plugin, API, memory, and automation layers
-
----
-
-### 📊 Observability & Monitoring
-
-* **Tracing:** OpenTelemetry (OTEL)
-* **Dashboards:** [Grafana Cloud](https://grafana.com/), with panels for:
-
-  * Skill execution latency
-  * Plugin failures
-  * Memory recall precision
-  * Usage metrics per org/user/tier
-* **Telemetry Stack:**
-
-  * `Tempo` for traces
-  * `Loki` for logs
-  * `Mimir` for metrics
-  * `Pyroscope` for CPU profiles
-  * `k6` for load testing
-  * `Alertmanager` for incident ops
+1. A user sends a message, command, webhook, or automation trigger.
+2. The gateway enriches the request with tenant, user, persona, policy, and feature-flag context.
+3. Memory loads relevant short-term and long-term context.
+4. The inference router selects the right model or local runtime.
+5. Tools and plugins run only with approved scopes.
+6. Results are returned with provenance, structured metadata, and audit events.
+7. Telemetry is emitted for traces, logs, metrics, profiles, and dashboard analytics.
 
 ---
 
-### 🔁 DevOps & Infra
+## Tech Stack
 
-* **Deployment:** GitOps-based (GitHub Actions → Vercel + Cloudflare deploys)
-* **Multi-Tenant Support:**
+### Application Layer
 
-  * Per-org data isolation
-  * Custom memory scopes (`org|user|tool|conversation`)
-* **Air-Gapped Mode:**
+| Layer           | Technology                                                    |
+| --------------- | ------------------------------------------------------------- |
+| Monorepo        | Nx                                                            |
+| Package Manager | pnpm                                                          |
+| Frontend        | Next.js App Router                                            |
+| UI              | React, Tailwind CSS, shadcn/ui, shared `@helix-ai/ui` package |
+| API Runtime     | Hono / Cloudflare Workers-ready services                      |
+| Auth            | NextAuth-compatible authentication architecture               |
+| ORM             | MikroORM                                                      |
+| Database        | Postgres / Supabase-compatible Postgres                       |
+| Vector Search   | pgvector                                                      |
+| Cache / Queues  | Redis                                                         |
+| Feature Flags   | Hypertune                                                     |
+| Content / CMS   | Contentful-ready architecture                                 |
+| Payments        | Stripe and PayPal                                             |
+| Analytics       | Hypertune, Google Analytics, internal event tables            |
 
-  * BYO Postgres, Redis, KMS, Workers
-  * No public SaaS dependencies
-  * CLI-based provisioning via `helixctl` (WIP)
+### Infrastructure Layer
+
+| Layer               | Technology                                              |
+| ------------------- | ------------------------------------------------------- |
+| Edge                | Cloudflare Workers, Cloudflare DNS, Cloudflare CDN      |
+| Frontend Hosting    | Vercel or Cloudflare-compatible deployment target       |
+| CI/CD               | GitHub Actions                                          |
+| Observability       | OpenTelemetry, Grafana, Tempo, Loki, Mimir, Pyroscope   |
+| Load Testing        | k6                                                      |
+| Secrets             | Vault/KMS-compatible secret envelope model              |
+| Audit               | Append-only signed audit events                         |
+| Self-hosting Target | BYO Postgres, Redis, object storage, and secret backend |
 
 ---
 
-### 📦 Extensibility
+## Monorepo Structure
 
-* **Plugin Runtime:** Deno VM, signed manifest, permissions + review queue
-* **Automation Engine:** Trigger (event/webhook/schedule) → Filter → Action (tool/skill/memory)
-* **SDKs:**
-
-  * TypeScript: `@helix/sdk`
-  * Python (beta)
-  * REST API (OpenAPI Spec WIP)
-* **Marketplace:** Users and orgs can install 3rd-party tools securely
-
----
-
-## 📦 Monorepo Structure
-
-```bash
-/apps
-  frontend            # App Router UI with Tailwind + shadcn/ui
-  frontend-e2e        # Cypress smoke + regression specs for the UI
-  services/
-    user              # NestJS user/domain service (auth, accounts, org graph)
-    user-e2e          # Jest e2e targets for the user service
-/libs
-  config              # Runtime config objects, secrets, telemetry helpers
-  db                  # MikroORM entities, repositories, and base models
-  hypertune           # Hypertune feature-flag client + React bindings
-  ui                  # Shared component system, providers, and theme tokens
-/Docs
-  Features.md         # Product tiers and capabilities
-  DEPLOY.md           # Deployment notes and cloud prerequisites
-  ThirdParty.md       # Vendor/third-party integration references
+```text
+.
+├── apps
+│   ├── frontend
+│   │   └── Next.js web app for helixaibot.com
+│   └── frontend-e2e
+│       └── End-to-end tests for the frontend
+│
+├── libs
+│   ├── api
+│   │   └── Shared API helpers, response utilities, CORS, auth, and logging
+│   ├── config
+│   │   └── Runtime configuration, schemas, environment parsing, and app metadata
+│   ├── db
+│   │   └── MikroORM entities, repositories, migrations, and database helpers
+│   ├── hypertune
+│   │   └── Feature flag client, typed flags, and React bindings
+│   └── ui
+│       └── Shared components, layouts, providers, theme tokens, and brand assets
+│
+├── Docs
+│   ├── Features.md
+│   ├── DEPLOY.md
+│   └── ThirdParty.md
+│
+├── tools
+│   └── Repo tooling, generators, scripts, and developer utilities
+│
+├── .github
+│   └── GitHub Actions workflows, issue templates, and repository automation
+│
+├── nx.json
+├── package.json
+├── pnpm-lock.yaml
+└── Readme.md
 ```
 
 ---
 
-## 🧪 Dev & Plugin Testing
+## Getting Started
 
-Helix supports a plugin manifest format for external tools.
+### Requirements
+
+Install the following before working on the repo:
+
+* Node.js 24+
+* pnpm 10+
+* Git
+* Docker, optional but recommended
+* Cloudflare Wrangler, required for Cloudflare Worker workflows
+* A Postgres-compatible database for local persistence
+* Redis for local cache/session/queue development
+
+### Install Dependencies
 
 ```bash
-pnpm plugin run ./plugins/my-plugin.ts
+pnpm install
 ```
 
-Skills run inside a Deno sandbox with scoped permissions (`read:calendar`, `write:memory`, etc).
+### Start the Frontend
 
-Use `/docs/plugin-guide.md` (coming soon) to build, sign, and test new tools.
+```bash
+pnpm nx dev frontend
+```
+
+Alternative Nx form:
+
+```bash
+pnpm nx serve frontend
+```
+
+### Build the Frontend
+
+```bash
+pnpm nx build frontend
+```
+
+### Run Tests
+
+```bash
+pnpm nx test frontend
+pnpm nx e2e frontend-e2e
+```
+
+### Run Linting
+
+```bash
+pnpm nx lint frontend
+```
+
+### View the Nx Project Graph
+
+```bash
+pnpm nx graph
+```
 
 ---
 
-| ✅ / ⚙️ / 🧱 | Milestone                               | Description                                                                                                                                                                                                   |
-| --------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ⚙️              | **Core Memory System**                  | Implemented contextual memory with Redis (short-term) and `pgvector`-backed long-term embeddings, organized by `MemorySpace` and `MemoryShard`. Includes time-bounded retention and persona-aware recall.     |
-| ⚙️              | **Hybrid Inference Router**             | Fully operational routing layer that dynamically switches between OpenAI, Claude, and Ollama/local models. Supports fallback logic, model policy enforcement, and latency- or tier-based switching.           |
-| ⚙️            | **Plugin Runtime MVP**                  | Sandbox-ready Deno VM to run signed tools with manifest-defined permissions. Current focus: execution tracing, audit logs, scoped memory access. Used for skills like “schedule.post”, “summarize.page”, etc. |
-| ⚙️            | **Web + Discord UI**                    | Unified assistant interface across web (Next.js + shadcn/ui) and Discord (`HelixBot`) with support for chat, memory inspection, tool drawer, personas, and message context.                                   |
-| 🧱             | **Chaos Engineering Toolkit**           | Controlled failure injection for memory, inference, automations, and plugin runtime. Includes OTEL-backed observability, rollback hooks, and pre-prod harness. Will support `chaos_mode_enabled` flag.        |
-| 🧱             | **IoT Edge Agent + Smart Home Control** | MQTT/Zigbee-capable `Agent` model with support for edge heartbeat, command dispatch, and state sync. Helix will control devices via text or scheduled automations.                                            |
-| 🧱             | **Helix Linux Distro**                  | Privacy-first Linux environment with Helix as the core AI assistant. Includes native CLI (`helixctl`), voice activation, secure local inference, and offline plugin support.                                  |
-| 🧱             | **Mobile App (Android/iOS)**            | React Native-based assistant interface with chat, notifications, memory sync, and voice input. Will support offline caching, push messaging, and native intents.                                              |
-| 🧱             | **Developer Marketplace**               | Plugin marketplace where creators can submit, review, and share skills, integrations, and workflows. Includes signed manifest submission, sandbox tests, and scoped install UI.                               |
+## Environment Configuration
+
+Create a local environment file before running services that require secrets.
+
+```bash
+cp .env.example .env.local
+```
+
+Recommended environment groups:
+
+```env
+# App
+NEXT_PUBLIC_APP_NAME="Helix AI"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# Database
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/helix"
+
+# Redis
+REDIS_URL="redis://localhost:6379"
+
+# Auth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="replace-me"
+
+# Feature Flags
+HYPERTUNE_TOKEN="replace-me"
+
+# Observability
+OTEL_SERVICE_NAME="helix-ai"
+OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
+
+# Cloudflare
+CLOUDFLARE_ACCOUNT_ID="replace-me"
+CLOUDFLARE_API_TOKEN="replace-me"
+
+# Payments
+STRIPE_SECRET_KEY="replace-me"
+PAYPAL_CLIENT_ID="replace-me"
+PAYPAL_CLIENT_SECRET="replace-me"
+```
+
+Never commit real secrets. Use local `.env*` files, GitHub Actions secrets, Cloudflare secrets, or a Vault/KMS-backed secret provider.
 
 ---
 
-## 🤝 Contributing
+## Common Commands
 
-Pull requests, issues, and contributions are welcome! Please follow the [Contributor Guidelines](./CONTRIBUTING.md) and review the [Code of Conduct](./CODE_OF_CONDUCT.md).
+| Command                               | Purpose                                           |
+| ------------------------------------- | ------------------------------------------------- |
+| `pnpm install`                        | Install workspace dependencies.                   |
+| `pnpm nx dev frontend`                | Start the frontend in development mode.           |
+| `pnpm nx build frontend`              | Build the frontend.                               |
+| `pnpm nx lint frontend`               | Lint the frontend project.                        |
+| `pnpm nx test frontend`               | Run frontend tests.                               |
+| `pnpm nx e2e frontend-e2e`            | Run frontend end-to-end tests.                    |
+| `pnpm nx graph`                       | Open the Nx dependency graph.                     |
+| `pnpm nx affected -t lint test build` | Run checks only on affected projects.             |
+| `pnpm exec wrangler deploy`           | Deploy Cloudflare Worker targets when configured. |
+| `pnpm exec wrangler tail`             | Tail Cloudflare Worker logs.                      |
 
 ---
 
-## 📜 License
+## Development Workflow
 
-[Polyform Noncommercial License 1.0.0](./LICENSE.md) © SinLess Games LLC
+Recommended local workflow:
 
-Helix is a source-available platform. Noncommercial use is permitted under the Polyform license.  
-Commercial use, resale, or sublicensing requires a separate license from [helixaibot.com](https://helixaibot.com).
+1. Create or update a feature branch.
+2. Run affected lint, test, and build targets.
+3. Verify the UI locally.
+4. Check formatting before opening a pull request.
+5. Open a pull request with a clear summary and validation notes.
+6. Let GitHub Actions run CI, code scanning, and project checks.
+7. Merge after review and successful validation.
+
+```bash
+git checkout -b feat/my-feature
+pnpm nx affected -t lint test build
+git status
+```
+
+Recommended pull request checklist:
+
+* [ ] Code is formatted.
+* [ ] Lint passes.
+* [ ] Tests pass or known gaps are documented.
+* [ ] Build passes.
+* [ ] Environment variables are documented when changed.
+* [ ] Security-sensitive changes include validation notes.
+* [ ] User-facing changes include screenshots where helpful.
 
 ---
 
-Made with ❤️ by [@Sinless777](https://github.com/Sinless777) and contributors
+## Deployment Model
+
+Helix is designed around a Cloudflare-first deployment strategy with GitHub-driven automation.
+
+```mermaid
+flowchart LR
+  Dev[Developer]
+  Git[GitHub Repository]
+  Actions[GitHub Actions]
+  Checks[Lint / Test / Build / Scan]
+  Vercel[Vercel Frontend Deploy]
+  Workers[Cloudflare Workers]
+  DNS[Cloudflare DNS / CDN]
+  Users[Users]
+
+  Dev --> Git
+  Git --> Actions
+  Actions --> Checks
+  Checks --> Vercel
+  Checks --> Workers
+  Vercel --> DNS
+  Workers --> DNS
+  DNS --> Users
+```
+
+Primary deployment goals:
+
+* Keep `helixaibot.com` as the main web app domain.
+* Use Cloudflare for DNS, CDN, edge routing, Workers, and future automations.
+* Use GitHub Actions for checks, builds, tests, scans, and deployments.
+* Support rollback-friendly deploys.
+* Keep infrastructure changes auditable through GitOps-style workflows.
+
+---
+
+## Security Model
+
+Helix is designed with zero-trust principles and scoped automation.
+
+### Core Controls
+
+| Control                    | Purpose                                                                       |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| **Tenant isolation**       | Keep users, teams, organizations, memory, and audit data scoped.              |
+| **RBAC**                   | Enforce role-based permissions across apps and APIs.                          |
+| **ABAC**                   | Apply contextual rules such as tenant, sensitivity, device, time, and policy. |
+| **Scoped plugins**         | Plugins request explicit permissions before accessing tools or data.          |
+| **Secret isolation**       | Secrets should live in Vault/KMS or platform secret stores, not memory.       |
+| **Signed audit logs**      | Sensitive actions should produce append-only signed events.                   |
+| **Policy-aware inference** | Model routing should respect privacy, tier, and organization controls.        |
+| **Memory controls**        | Users can view, edit, delete, pause, export, and scope memory.                |
+
+### Sensitive Action Pattern
+
+Sensitive actions should follow this pattern:
+
+1. Classify the request.
+2. Check user, tenant, role, policy, and feature flags.
+3. Confirm required permissions.
+4. Execute only the approved action.
+5. Write an audit event.
+6. Return a clear result with provenance.
+
+---
+
+## Observability
+
+Helix emits telemetry so the platform can be measured, debugged, and improved safely.
+
+### Planned Signals
+
+| Signal           | Examples                                                                           |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| **Metrics**      | Request count, latency, error rate, plugin failures, model usage, cache hit rate.  |
+| **Logs**         | API events, automation execution, plugin lifecycle, auth events, worker logs.      |
+| **Traces**       | Request path, inference routing, memory recall, tool execution, integration calls. |
+| **Profiles**     | CPU and memory profiling for hot paths and expensive workloads.                    |
+| **Audit Events** | User actions, admin actions, memory changes, permission grants, plugin execution.  |
+
+### Dashboard Areas
+
+* Assistant health
+* API latency and errors
+* Memory recall and storage
+* Plugin execution health
+* Automation success and failure rate
+* Model routing cost and latency
+* Tenant usage
+* Billing and entitlement activity
+* Security and audit events
+
+---
+
+## Plugin Runtime
+
+Helix plugins are planned around signed manifests and scoped execution.
+
+Example manifest shape:
+
+```json
+{
+  "name": "calendar-summary",
+  "version": "0.1.0",
+  "description": "Summarizes upcoming calendar events.",
+  "entry": "plugin.ts",
+  "permissions": ["read:calendar", "write:memory"],
+  "author": "SinLess Games LLC"
+}
+```
+
+Plugin goals:
+
+* Run in a sandboxed runtime.
+* Request explicit scopes.
+* Emit audit logs.
+* Support local development.
+* Support signed marketplace packages.
+* Allow organizations to approve, restrict, or block plugins.
+* Remain portable between SaaS, self-hosted, and air-gapped deployments where possible.
+
+---
+
+## API & SDK
+
+Helix is intended to expose core platform capabilities through stable APIs and SDKs.
+
+Planned developer surfaces:
+
+* REST API
+* OpenAPI specification
+* TypeScript SDK: `@helix/sdk`
+* Python client
+* Webhook system
+* Plugin SDK
+* CLI tooling through `helixctl`
+
+Example future SDK usage:
+
+```ts
+import { HelixClient } from '@helix/sdk';
+
+const helix = new HelixClient({
+  apiKey: process.env.HELIX_API_KEY,
+});
+
+const response = await helix.chat.create({
+  message: 'Summarize my open GitHub issues.',
+  memory: {
+    scope: 'project',
+  },
+});
+
+console.log(response.text);
+```
+
+---
+
+## Roadmap
+
+Status markers:
+
+* ✅ Available or partially available
+* ⚙️ In progress
+* 🧱 Planned
+* 🧪 Experimental
+
+| Status | Milestone                        | Description                                                                                                      |
+| ------ | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| ✅      | **Landing Site**                 | Public-facing Helix AI web presence and brand foundation.                                                        |
+| ✅      | **Nx Monorepo**                  | Shared workspace for frontend, UI, API helpers, config, database, and tooling.                                   |
+| ⚙️     | **Cloudflare-First API Layer**   | Worker-ready API services, request logging, CORS, response helpers, and edge deployment patterns.                |
+| ⚙️     | **Database Foundation**          | Postgres/MikroORM schema foundation for users, orgs, plans, subscriptions, memory, automations, and audit data.  |
+| ⚙️     | **Waitlist / Early Access Flow** | Public interest capture, persistence, validation, and admin review path.                                         |
+| ⚙️     | **Feature Flags & Entitlements** | Hypertune-driven tier flags, add-ons, usage controls, and rollout gates.                                         |
+| ⚙️     | **Memory System**                | Redis short-term memory and pgvector-backed long-term memory with scope, retention, sensitivity, and provenance. |
+| ⚙️     | **Hybrid Inference Router**      | Policy-aware routing across hosted and local model providers with fallback controls.                             |
+| 🧱     | **Automation Engine**            | Triggers, filters, actions, schedules, webhooks, and integration-based workflows.                                |
+| 🧱     | **Plugin Runtime MVP**           | Sandboxed tools with manifests, scopes, signing, review flow, telemetry, and audit events.                       |
+| 🧱     | **Discord Assistant**            | Discord bot integration for assistant workflows, community tools, tickets, and moderation-adjacent automation.   |
+| 🧱     | **Analytics Dashboards**         | User and organization dashboards with usage, memory, model, automation, and plugin insights.                     |
+| 🧱     | **Marketplace**                  | Official and third-party plugins, workflows, dashboards, personas, templates, and integrations.                  |
+| 🧱     | **Mobile App**                   | Mobile assistant experience with notifications, memory sync, and voice-ready interaction patterns.               |
+| 🧪     | **Local / Offline Mode**         | Local model routing, self-hosted dependencies, offline memory, and air-gapped deployment support.                |
+| 🧪     | **Helix Linux / Desktop Agent**  | Native desktop and OS-level assistant integration with local automation and privacy-first controls.              |
+
+---
+
+## Project Philosophy
+
+Helix explores what a long-term digital assistant can become when it has continuity, memory, permissions, observability, and user trust.
+
+The project may use language like “companion,” “persona,” or “autonomous assistant,” but Helix does not claim sentience. The goal is to build transparent, useful, inspectable autonomy that helps users make decisions and complete work while keeping control in human hands.
+
+---
+
+## Contributing
+
+Contributions are welcome.
+
+Before contributing:
+
+1. Read the [Contributor Guidelines](./CONTRIBUTING.md).
+2. Review the [Code of Conduct](./CODE_OF_CONDUCT.md).
+3. Open an issue for larger changes before starting major work.
+4. Keep pull requests focused and reviewable.
+5. Include validation steps in every pull request.
+
+Useful contribution areas:
+
+* UI components
+* Accessibility improvements
+* Documentation
+* Tests
+* API utilities
+* Cloudflare Workers
+* Security hardening
+* Observability
+* Plugin runtime design
+* Developer tooling
+
+---
+
+## License
+
+[Polyform Noncommercial License 1.0.0](./LICENSE.md) © SinLess Games LLC.
+
+Helix AI is source-available. Noncommercial use is permitted under the Polyform Noncommercial License.
+
+Commercial use, resale, sublicensing, hosted resale, or commercial redistribution requires a separate commercial license from SinLess Games LLC.
+
+For commercial licensing, visit:
+
+```text
+https://helixaibot.com
+```
+
+---
+
+## Links
+
+| Resource          | Link                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| Website           | [https://helixaibot.com](https://helixaibot.com)                                         |
+| Repository        | [https://github.com/Sinless777/Helix](https://github.com/Sinless777/Helix)               |
+| Issues            | [https://github.com/Sinless777/Helix/issues](https://github.com/Sinless777/Helix/issues) |
+| Pull Requests     | [https://github.com/Sinless777/Helix/pulls](https://github.com/Sinless777/Helix/pulls)   |
+| Discord           | [https://discord.gg/Za8MVstYnr](https://discord.gg/Za8MVstYnr)                           |
+| SinLess Games LLC | [https://sinlessgamesllc.com](https://sinlessgamesllc.com)                               |
+
+---
+
+<!-- markdownlint-disable MD033 -->
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/Sinless777">@Sinless777</a> and contributors.
+</p>
+<!-- markdownlint-disable MD033 -->

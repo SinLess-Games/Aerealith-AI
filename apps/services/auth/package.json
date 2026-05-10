@@ -1,4 +1,14 @@
 {
   "name": "auth",
-  "private": true
+  "private": true,
+  "version": "0.0.1",
+  "main": "src/main.ts",
+  "dependencies": {
+    "@helix-ai/api": "workspace:*",
+    "@helix-ai/config": "workspace:*",
+    "@helix-ai/contracts": "workspace:*",
+    "@helix-ai/db": "workspace:*",
+    "@mikro-orm/core": "^6.5.9",
+    "hono": "^4.9.6"
+  }
 }

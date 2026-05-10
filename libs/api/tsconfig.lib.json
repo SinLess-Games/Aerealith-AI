@@ -1,9 +1,15 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "rootDir": "./src",
     "outDir": "../../dist/out-tsc",
     "declaration": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../contracts/tsconfig.lib.json"
+    }
+  ]
 }

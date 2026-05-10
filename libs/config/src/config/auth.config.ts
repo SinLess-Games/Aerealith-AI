@@ -17,10 +17,7 @@ import {
   resolveAppEnvironment,
   type EnvRecord,
 } from '../utils/env';
-import {
-  ConfigValidationError,
-  safeValidateConfig,
-} from '../utils/validation';
+import { ConfigValidationError, safeValidateConfig } from '../utils/validation';
 
 export type AuthConfigProfile =
   | 'default'
@@ -69,6 +66,7 @@ export function buildAuthConfigOverrides(
 
   applyRootAuthOverrides(env, overrides);
   applyNextAuthOverrides(env, overrides);
+  applyAuthServiceOverrides(env, overrides);
   applyGoogleOverrides(env, overrides);
   applyGithubOverrides(env, overrides);
   applyDiscordOverrides(env, overrides);
@@ -205,6 +203,123 @@ function applyNextAuthOverrides(
   );
 }
 
+function applyAuthServiceOverrides(
+  env: EnvRecord,
+  overrides: Record<string, unknown>,
+): void {
+  /**
+   * These map to the standalone Hono auth service.
+   *
+   * The schema/defaults/types must include these paths before they will survive
+   * validation:
+   * - service.jwtSecret / service.jwtSecretRef
+   * - service.token.*
+   * - service.password.*
+   * - service.session.*
+   */
+  applyOptionalString(env, overrides, 'AUTH_JWT_SECRET', 'service.jwtSecret');
+  applyOptionalString(
+    env,
+    overrides,
+    'AUTH_JWT_SECRET_REF',
+    'service.jwtSecretRef',
+  );
+
+  applyOptionalString(
+    env,
+    overrides,
+    'AUTH_TOKEN_ISSUER',
+    'service.token.issuer',
+  );
+  applyOptionalString(
+    env,
+    overrides,
+    'AUTH_TOKEN_AUDIENCE',
+    'service.token.audience',
+  );
+  applyOptionalString(
+    env,
+    overrides,
+    'AUTH_TOKEN_ALGORITHM',
+    'service.token.algorithm',
+  );
+
+  applyOptionalInteger(
+    env,
+    overrides,
+    'AUTH_ACCESS_TOKEN_TTL_SECONDS',
+    'service.token.accessTokenTtlSeconds',
+  );
+  applyOptionalInteger(
+    env,
+    overrides,
+    'AUTH_REFRESH_TOKEN_TTL_SECONDS',
+    'service.token.refreshTokenTtlSeconds',
+  );
+  applyOptionalInteger(
+    env,
+    overrides,
+    'AUTH_EMAIL_VERIFICATION_TOKEN_TTL_SECONDS',
+    'service.token.emailVerificationTokenTtlSeconds',
+  );
+  applyOptionalInteger(
+    env,
+    overrides,
+    'AUTH_PASSWORD_RESET_TOKEN_TTL_SECONDS',
+    'service.token.passwordResetTokenTtlSeconds',
+  );
+
+  applyOptionalInteger(
+    env,
+    overrides,
+    'AUTH_PASSWORD_MIN_LENGTH',
+    'service.password.minLength',
+  );
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'AUTH_PASSWORD_REQUIRE_UPPERCASE',
+    'service.password.requireUppercase',
+  );
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'AUTH_PASSWORD_REQUIRE_LOWERCASE',
+    'service.password.requireLowercase',
+  );
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'AUTH_PASSWORD_REQUIRE_NUMBER',
+    'service.password.requireNumber',
+  );
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'AUTH_PASSWORD_REQUIRE_SYMBOL',
+    'service.password.requireSymbol',
+  );
+  applyOptionalString(
+    env,
+    overrides,
+    'AUTH_PASSWORD_ALLOWED_SYMBOLS',
+    'service.password.allowedSymbols',
+  );
+
+  applyOptionalInteger(
+    env,
+    overrides,
+    'AUTH_SESSION_TTL_SECONDS',
+    'service.session.ttlSeconds',
+  );
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'AUTH_REFRESH_TOKEN_ROTATION_ENABLED',
+    'service.session.refreshTokenRotationEnabled',
+  );
+}
+
 function applyGoogleOverrides(
   env: EnvRecord,
   overrides: Record<string, unknown>,
@@ -220,7 +335,12 @@ function applyGoogleOverrides(
     setDeepValue(overrides, 'google.clientId', clientId);
   }
 
-  applyOptionalString(env, overrides, 'GOOGLE_CLIENT_ID_REF', 'google.clientIdRef');
+  applyOptionalString(
+    env,
+    overrides,
+    'GOOGLE_CLIENT_ID_REF',
+    'google.clientIdRef',
+  );
 
   /**
    * Secret value support is kept for local/test compatibility.
@@ -243,7 +363,12 @@ function applyGoogleOverrides(
     setDeepValue(overrides, 'google.clientSecretRef', clientSecretRef);
   }
 
-  applyOptionalString(env, overrides, 'GOOGLE_REDIRECT_URI', 'google.redirectUri');
+  applyOptionalString(
+    env,
+    overrides,
+    'GOOGLE_REDIRECT_URI',
+    'google.redirectUri',
+  );
   applyOptionalList(env, overrides, 'GOOGLE_AUTH_SCOPES', 'google.scopes');
   applyOptionalString(env, overrides, 'GOOGLE_ISSUER', 'google.issuer');
   applyOptionalString(env, overrides, 'AUTH_GOOGLE_ISSUER', 'google.issuer');
@@ -264,7 +389,12 @@ function applyGithubOverrides(
     setDeepValue(overrides, 'github.clientId', clientId);
   }
 
-  applyOptionalString(env, overrides, 'GITHUB_CLIENT_ID_REF', 'github.clientIdRef');
+  applyOptionalString(
+    env,
+    overrides,
+    'GITHUB_CLIENT_ID_REF',
+    'github.clientIdRef',
+  );
 
   /**
    * Secret value support is kept for local/test compatibility.
@@ -287,7 +417,12 @@ function applyGithubOverrides(
     setDeepValue(overrides, 'github.clientSecretRef', clientSecretRef);
   }
 
-  applyOptionalString(env, overrides, 'GITHUB_REDIRECT_URI', 'github.redirectUri');
+  applyOptionalString(
+    env,
+    overrides,
+    'GITHUB_REDIRECT_URI',
+    'github.redirectUri',
+  );
   applyOptionalList(env, overrides, 'GITHUB_AUTH_SCOPES', 'github.scopes');
   applyOptionalString(env, overrides, 'GITHUB_ISSUER', 'github.issuer');
   applyOptionalString(env, overrides, 'AUTH_GITHUB_ISSUER', 'github.issuer');
@@ -297,7 +432,12 @@ function applyDiscordOverrides(
   env: EnvRecord,
   overrides: Record<string, unknown>,
 ): void {
-  applyOptionalBoolean(env, overrides, 'DISCORD_AUTH_ENABLED', 'discord.enabled');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'DISCORD_AUTH_ENABLED',
+    'discord.enabled',
+  );
 
   const clientId =
     getEnv(env, 'AUTH_DISCORD_ID') ??
@@ -308,7 +448,12 @@ function applyDiscordOverrides(
     setDeepValue(overrides, 'discord.clientId', clientId);
   }
 
-  applyOptionalString(env, overrides, 'DISCORD_CLIENT_ID_REF', 'discord.clientIdRef');
+  applyOptionalString(
+    env,
+    overrides,
+    'DISCORD_CLIENT_ID_REF',
+    'discord.clientIdRef',
+  );
 
   /**
    * Secret value support is kept for local/test compatibility.
@@ -386,7 +531,12 @@ function applyMagicLinkOverrides(
   env: EnvRecord,
   overrides: Record<string, unknown>,
 ): void {
-  applyOptionalBoolean(env, overrides, 'MAGIC_LINK_ENABLED', 'magicLink.enabled');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'MAGIC_LINK_ENABLED',
+    'magicLink.enabled',
+  );
   applyOptionalInteger(
     env,
     overrides,
@@ -406,7 +556,12 @@ function applyApiKeysOverrides(
   overrides: Record<string, unknown>,
 ): void {
   applyOptionalBoolean(env, overrides, 'API_KEYS_ENABLED', 'apiKeys.enabled');
-  applyOptionalString(env, overrides, 'API_KEY_HEADER_NAME', 'apiKeys.headerName');
+  applyOptionalString(
+    env,
+    overrides,
+    'API_KEY_HEADER_NAME',
+    'apiKeys.headerName',
+  );
   applyOptionalString(env, overrides, 'API_KEY_PREFIX', 'apiKeys.keyPrefix');
   applyOptionalInteger(
     env,
@@ -421,8 +576,18 @@ function applyCookieOverrides(
   overrides: Record<string, unknown>,
 ): void {
   applyOptionalBoolean(env, overrides, 'AUTH_COOKIE_SECURE', 'cookies.secure');
-  applyOptionalBoolean(env, overrides, 'AUTH_COOKIE_HTTP_ONLY', 'cookies.httpOnly');
-  applyOptionalString(env, overrides, 'AUTH_COOKIE_SAME_SITE', 'cookies.sameSite');
+  applyOptionalBoolean(
+    env,
+    overrides,
+    'AUTH_COOKIE_HTTP_ONLY',
+    'cookies.httpOnly',
+  );
+  applyOptionalString(
+    env,
+    overrides,
+    'AUTH_COOKIE_SAME_SITE',
+    'cookies.sameSite',
+  );
   applyOptionalString(env, overrides, 'AUTH_COOKIE_DOMAIN', 'cookies.domain');
   applyOptionalString(env, overrides, 'AUTH_COOKIE_PATH', 'cookies.path');
 
@@ -466,10 +631,22 @@ function applyDerivedAuthOverrides(
   const authSecretRef =
     getEnv(env, 'AUTH_SECRET_REF') ??
     (getEnv(env, 'AUTH_SECRET') !== undefined ? 'AUTH_SECRET' : undefined) ??
-    (getEnv(env, 'NEXTAUTH_SECRET') !== undefined ? 'NEXTAUTH_SECRET' : undefined);
+    (getEnv(env, 'NEXTAUTH_SECRET') !== undefined
+      ? 'NEXTAUTH_SECRET'
+      : undefined);
+
+  const jwtSecretRef =
+    getEnv(env, 'AUTH_JWT_SECRET_REF') ??
+    (getEnv(env, 'AUTH_JWT_SECRET') !== undefined
+      ? 'AUTH_JWT_SECRET'
+      : undefined);
 
   if (authSecretRef !== undefined) {
     setDeepValue(overrides, 'nextAuth.secretRef', authSecretRef);
+  }
+
+  if (jwtSecretRef !== undefined) {
+    setDeepValue(overrides, 'service.jwtSecretRef', jwtSecretRef);
   }
 
   if (environment === 'production') {
@@ -517,7 +694,12 @@ function applyDerivedAuthOverrides(
     setDeepValue(overrides, 'nextAuth.enabled', true);
   }
 
-  const requiredSecretRefs = collectRequiredSecretRefs(env, providers, authSecretRef);
+  const requiredSecretRefs = collectRequiredSecretRefs(
+    env,
+    providers,
+    authSecretRef,
+    jwtSecretRef,
+  );
 
   if (
     requiredSecretRefs.length > 0 &&
@@ -542,6 +724,10 @@ function deriveProviderState(
   if (hasDiscordSignal(env)) {
     setDeepValue(overrides, 'discord.enabled', true);
   }
+
+  if (hasAuthServiceSignal(env)) {
+    setDeepValue(overrides, 'enabled', true);
+  }
 }
 
 function applyProviderRedirectDefaults(
@@ -549,7 +735,10 @@ function applyProviderRedirectDefaults(
   overrides: Record<string, unknown>,
   appUrl: string,
 ): void {
-  if (hasGoogleSignal(env) && getEnv(env, 'GOOGLE_REDIRECT_URI') === undefined) {
+  if (
+    hasGoogleSignal(env) &&
+    getEnv(env, 'GOOGLE_REDIRECT_URI') === undefined
+  ) {
     setDeepValue(
       overrides,
       'google.redirectUri',
@@ -557,7 +746,10 @@ function applyProviderRedirectDefaults(
     );
   }
 
-  if (hasGithubSignal(env) && getEnv(env, 'GITHUB_REDIRECT_URI') === undefined) {
+  if (
+    hasGithubSignal(env) &&
+    getEnv(env, 'GITHUB_REDIRECT_URI') === undefined
+  ) {
     setDeepValue(
       overrides,
       'github.redirectUri',
@@ -565,7 +757,10 @@ function applyProviderRedirectDefaults(
     );
   }
 
-  if (hasDiscordSignal(env) && getEnv(env, 'DISCORD_REDIRECT_URI') === undefined) {
+  if (
+    hasDiscordSignal(env) &&
+    getEnv(env, 'DISCORD_REDIRECT_URI') === undefined
+  ) {
     setDeepValue(
       overrides,
       'discord.redirectUri',
@@ -647,11 +842,16 @@ function collectRequiredSecretRefs(
   env: EnvRecord,
   providers: readonly string[],
   authSecretRef?: string,
+  jwtSecretRef?: string,
 ): string[] {
   const requiredSecretRefs = new Set<string>();
 
   if (authSecretRef !== undefined) {
     requiredSecretRefs.add(authSecretRef);
+  }
+
+  if (jwtSecretRef !== undefined) {
+    requiredSecretRefs.add(jwtSecretRef);
   }
 
   if (providers.includes('google')) {
@@ -693,36 +893,52 @@ function collectRequiredSecretRefs(
 function hasGoogleSignal(env: EnvRecord): boolean {
   return Boolean(
     getEnv(env, 'AUTH_GOOGLE_ID') ||
-      getEnv(env, 'AUTH_GOOGLE_SECRET') ||
-      getEnv(env, 'GOOGLE_CLIENT_ID') ||
-      getEnv(env, 'GOOGLE_CLIENT_SECRET') ||
-      getEnv(env, 'GOOGLE_CLIENT_SECRET_REF') ||
-      getEnv(env, 'GOOGLE_REDIRECT_URI') ||
-      getEnvBoolean(env, 'GOOGLE_AUTH_ENABLED') === true,
+    getEnv(env, 'AUTH_GOOGLE_SECRET') ||
+    getEnv(env, 'GOOGLE_CLIENT_ID') ||
+    getEnv(env, 'GOOGLE_CLIENT_SECRET') ||
+    getEnv(env, 'GOOGLE_CLIENT_SECRET_REF') ||
+    getEnv(env, 'GOOGLE_REDIRECT_URI') ||
+    getEnvBoolean(env, 'GOOGLE_AUTH_ENABLED') === true,
   );
 }
 
 function hasGithubSignal(env: EnvRecord): boolean {
   return Boolean(
     getEnv(env, 'AUTH_GITHUB_ID') ||
-      getEnv(env, 'AUTH_GITHUB_SECRET') ||
-      getEnv(env, 'GITHUB_CLIENT_ID') ||
-      getEnv(env, 'GITHUB_CLIENT_SECRET') ||
-      getEnv(env, 'GITHUB_CLIENT_SECRET_REF') ||
-      getEnv(env, 'GITHUB_REDIRECT_URI') ||
-      getEnvBoolean(env, 'GITHUB_AUTH_ENABLED') === true,
+    getEnv(env, 'AUTH_GITHUB_SECRET') ||
+    getEnv(env, 'GITHUB_CLIENT_ID') ||
+    getEnv(env, 'GITHUB_CLIENT_SECRET') ||
+    getEnv(env, 'GITHUB_CLIENT_SECRET_REF') ||
+    getEnv(env, 'GITHUB_REDIRECT_URI') ||
+    getEnvBoolean(env, 'GITHUB_AUTH_ENABLED') === true,
   );
 }
 
 function hasDiscordSignal(env: EnvRecord): boolean {
   return Boolean(
     getEnv(env, 'AUTH_DISCORD_ID') ||
-      getEnv(env, 'AUTH_DISCORD_SECRET') ||
-      getEnv(env, 'DISCORD_CLIENT_ID') ||
-      getEnv(env, 'DISCORD_CLIENT_SECRET') ||
-      getEnv(env, 'DISCORD_CLIENT_SECRET_REF') ||
-      getEnv(env, 'DISCORD_REDIRECT_URI') ||
-      getEnvBoolean(env, 'DISCORD_AUTH_ENABLED') === true,
+    getEnv(env, 'AUTH_DISCORD_SECRET') ||
+    getEnv(env, 'DISCORD_CLIENT_ID') ||
+    getEnv(env, 'DISCORD_CLIENT_SECRET') ||
+    getEnv(env, 'DISCORD_CLIENT_SECRET_REF') ||
+    getEnv(env, 'DISCORD_REDIRECT_URI') ||
+    getEnvBoolean(env, 'DISCORD_AUTH_ENABLED') === true,
+  );
+}
+
+function hasAuthServiceSignal(env: EnvRecord): boolean {
+  return Boolean(
+    getEnv(env, 'AUTH_JWT_SECRET') ||
+    getEnv(env, 'AUTH_JWT_SECRET_REF') ||
+    getEnv(env, 'AUTH_TOKEN_ISSUER') ||
+    getEnv(env, 'AUTH_TOKEN_AUDIENCE') ||
+    getEnv(env, 'AUTH_TOKEN_ALGORITHM') ||
+    getEnv(env, 'AUTH_ACCESS_TOKEN_TTL_SECONDS') ||
+    getEnv(env, 'AUTH_REFRESH_TOKEN_TTL_SECONDS') ||
+    getEnv(env, 'AUTH_EMAIL_VERIFICATION_TOKEN_TTL_SECONDS') ||
+    getEnv(env, 'AUTH_PASSWORD_RESET_TOKEN_TTL_SECONDS') ||
+    getEnv(env, 'AUTH_SESSION_TTL_SECONDS') ||
+    getEnvBoolean(env, 'AUTH_REFRESH_TOKEN_ROTATION_ENABLED') !== undefined,
   );
 }
 

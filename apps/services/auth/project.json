@@ -1,10 +1,29 @@
 {
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "name": "auth",
+  "root": "apps/services/auth",
   "sourceRoot": "apps/services/auth/src",
   "projectType": "application",
   "tags": ["scope:auth", "type:service", "runtime:cloudflare"],
   "targets": {
+    "build": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/apps/services/auth"],
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "pnpm exec wrangler deploy --dry-run --outdir dist/apps/services/auth --config apps/services/auth/wrangler.toml"
+      },
+      "configurations": {
+        "preview": {
+          "command": "pnpm exec wrangler deploy --dry-run --outdir dist/apps/services/auth --config apps/services/auth/wrangler.toml --env preview"
+        },
+        "production": {
+          "command": "pnpm exec wrangler deploy --dry-run --outdir dist/apps/services/auth --config apps/services/auth/wrangler.toml --env production"
+        }
+      },
+      "defaultConfiguration": "preview"
+    },
     "prune-lockfile": {
       "dependsOn": ["build"],
       "cache": true,
@@ -14,37 +33,101 @@
         "{workspaceRoot}/dist/apps/services/auth/pnpm-lock.yaml"
       ],
       "options": {
-        "buildTarget": "build"
+        "buildTarget": "auth:build"
       }
     },
     "copy-workspace-modules": {
       "dependsOn": ["build"],
       "cache": true,
-      "outputs": ["{workspaceRoot}/dist/apps/services/auth/workspace_modules"],
       "executor": "@nx/js:copy-workspace-modules",
+      "outputs": ["{workspaceRoot}/dist/apps/services/auth/workspace_modules"],
       "options": {
-        "buildTarget": "build"
+        "buildTarget": "auth:build"
       }
     },
     "prune": {
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
+      "cache": true,
       "executor": "nx:noop"
     },
     "serve": {
+      "cache": false,
       "executor": "@naxodev/nx-cloudflare:serve",
       "options": {
-        "port": 8000
-      }
+        "script": "apps/services/auth/src/main.ts",
+        "name": "helix-auth-service",
+        "port": 8787,
+        "ip": "127.0.0.1",
+        "compatibilityDate": "2026-05-09",
+        "compatibilityFlags": ["nodejs_compat"]
+      },
+      "configurations": {
+        "preview": {
+          "env": "preview",
+          "port": 8787
+        },
+        "production": {
+          "env": "production",
+          "port": 8787
+        }
+      },
+      "defaultConfiguration": "preview"
     },
     "test": {
-      "executor": "@nx/vite:test",
-      "outputs": ["{options.reportsDirectory}"],
+      "cache": true,
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/apps/services/auth"],
       "options": {
-        "reportsDirectory": "../../../coverage/apps/services/auth"
+        "config": "apps/services/auth/vite.config.ts",
+        "reportsDirectory": "../../../coverage/apps/services/auth",
+        "watch": false
+      },
+      "configurations": {
+        "watch": {
+          "watch": true
+        },
+        "coverage": {
+          "coverage": true
+        },
+        "ci": {
+          "coverage": true,
+          "watch": false
+        }
       }
     },
     "deploy": {
-      "executor": "@naxodev/nx-cloudflare:deploy"
+      "dependsOn": ["test"],
+      "cache": false,
+      "executor": "@naxodev/nx-cloudflare:deploy",
+      "options": {
+        "name": "helix-auth-service",
+        "env": "preview",
+        "compatibilityDate": "2026-05-09",
+        "compatibilityFlags": ["nodejs_compat"],
+        "outdir": "dist/apps/services/auth"
+      },
+      "configurations": {
+        "preview": {
+          "name": "helix-auth-service-preview",
+          "env": "preview",
+          "outdir": "dist/apps/services/auth"
+        },
+        "production": {
+          "name": "helix-auth-service",
+          "env": "production",
+          "outdir": "dist/apps/services/auth"
+        }
+      },
+      "defaultConfiguration": "preview"
+    },
+    "wrangler-types": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/worker-configuration.d.ts"],
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "pnpm exec wrangler types --config apps/services/auth/wrangler.toml"
+      }
     }
   }
 }
