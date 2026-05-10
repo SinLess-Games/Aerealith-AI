@@ -4,7 +4,7 @@
 <!-- markdownlint-disable MD004 -->
 <!-- markdownlint-disable MD060 -->
 <p align="center">
-  <img src="/Docs/images/hero-circle.png" alt="Helix AI Logo" width="420" height="420" />
+  <img src="/Docs/images/hero-circle.png" alt="Helix AI Logo" width="520" height="520" />
 </p>
 
 <p align="center">
