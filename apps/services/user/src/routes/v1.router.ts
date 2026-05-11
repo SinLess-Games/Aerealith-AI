@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 
-import { usersRouter, type UsersRouterEnv } from '../users';
+import { usersRouter, type UsersRouterEnv } from '../users/users.router';
 
 export type V1RouterEnv = UsersRouterEnv;
 
