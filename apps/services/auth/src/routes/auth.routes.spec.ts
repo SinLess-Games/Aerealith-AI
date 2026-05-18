@@ -323,6 +323,51 @@ describe('auth.routes', () => {
     });
   });
 
+  it('keeps static email verification routes ahead of the username catch-all', async () => {
+    setupRouteMocks();
+
+    const usernameRoutes = new Hono<AuthHonoEnv>();
+    usernameRoutes.get('/:username', (c) => {
+      return c.json({
+        success: true,
+        data: {
+          route: 'username',
+          username: c.req.param('username'),
+        },
+      });
+    });
+
+    const emailVerificationRoutes = new Hono<AuthHonoEnv>();
+    emailVerificationRoutes.get('/verify-email', (c) => {
+      return c.json({
+        success: true,
+        data: {
+          route: 'email-verification',
+        },
+      });
+    });
+
+    routeMockState.createAuthUsernameRoutes.mockReturnValue(usernameRoutes);
+    routeMockState.createAuthEmailVerificationRoutes.mockReturnValue(
+      emailVerificationRoutes,
+    );
+
+    const routes = createAuthRoutes({
+      authService: createMockAuthService(),
+      authContext: createMockAuthContext(),
+    });
+
+    const response = await routes.request('/verify-email?token=test-token');
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      data: {
+        route: 'email-verification',
+      },
+    });
+  });
+
   it('can be mounted under /auth by a parent Hono app', async () => {
     const { routes } = createTestRoutes();
     const app = new Hono<AuthHonoEnv>();

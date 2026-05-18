@@ -148,20 +148,43 @@ export const authPasswordResetRequestSchema = z.object({
   body: authPasswordResetSchema,
 });
 
-export const authPasswordChangeResponseSchema = z.object({
-  changed: z.boolean(),
-  changedAt: z.string(),
-});
+export const authPasswordChangeResponseSchema = z
+  .object({
+    changed: z.boolean(),
+    changedAt: z.string(),
+  })
+  .passthrough();
 
-export const authPasswordResetTokenResponseSchema = z.object({
-  created: z.boolean(),
-  expiresAt: z.string().optional(),
-});
+export const authPasswordResetTokenPublicResponseSchema = z
+  .object({
+    created: z.boolean(),
+    expiresAt: z.string().optional(),
+  })
+  .passthrough();
 
-export const authPasswordResetResponseSchema = z.object({
-  reset: z.boolean(),
-  resetAt: z.string(),
-});
+export const authPasswordResetTokenResponseSchema = z
+  .object({
+    created: z.boolean().optional(),
+    expiresAt: z.string().optional(),
+
+    /**
+     * Service-level token result fields.
+     * Public routes should normally return `response`, not raw token data.
+     */
+    id: z.string().optional(),
+    token: authPasswordTokenSchema.optional(),
+    type: z.string().optional(),
+    identifier: z.string().optional(),
+    response: authPasswordResetTokenPublicResponseSchema.optional(),
+  })
+  .passthrough();
+
+export const authPasswordResetResponseSchema = z
+  .object({
+    reset: z.boolean(),
+    resetAt: z.string(),
+  })
+  .passthrough();
 
 export type AuthPasswordParams = z.infer<typeof authPasswordParamsSchema>;
 
@@ -182,6 +205,9 @@ export type AuthPasswordResetTokenDto = z.infer<
 >;
 export type AuthPasswordResetTokenRequest = z.infer<
   typeof authPasswordResetTokenRequestSchema
+>;
+export type AuthPasswordResetTokenPublicResponse = z.infer<
+  typeof authPasswordResetTokenPublicResponseSchema
 >;
 export type AuthPasswordResetTokenResponse = z.infer<
   typeof authPasswordResetTokenResponseSchema
@@ -214,6 +240,16 @@ export const safeParseAuthPasswordChangeInput = (input: unknown) => {
   return authPasswordChangeSchema.safeParse(input);
 };
 
+export const parseAuthPasswordChangeResponse = (
+  input: unknown,
+): AuthPasswordChangeResponse => {
+  return authPasswordChangeResponseSchema.parse(input);
+};
+
+export const safeParseAuthPasswordChangeResponse = (input: unknown) => {
+  return authPasswordChangeResponseSchema.safeParse(input);
+};
+
 export const parseAuthPasswordResetTokenInput = (
   input: unknown,
 ): AuthPasswordResetTokenDto => {
@@ -224,6 +260,28 @@ export const safeParseAuthPasswordResetTokenInput = (input: unknown) => {
   return authPasswordResetTokenSchema.safeParse(input);
 };
 
+export const parseAuthPasswordResetTokenResponse = (
+  input: unknown,
+): AuthPasswordResetTokenResponse => {
+  return authPasswordResetTokenResponseSchema.parse(input);
+};
+
+export const safeParseAuthPasswordResetTokenResponse = (input: unknown) => {
+  return authPasswordResetTokenResponseSchema.safeParse(input);
+};
+
+export const parseAuthPasswordResetTokenPublicResponse = (
+  input: unknown,
+): AuthPasswordResetTokenPublicResponse => {
+  return authPasswordResetTokenPublicResponseSchema.parse(input);
+};
+
+export const safeParseAuthPasswordResetTokenPublicResponse = (
+  input: unknown,
+) => {
+  return authPasswordResetTokenPublicResponseSchema.safeParse(input);
+};
+
 export const parseAuthPasswordResetInput = (
   input: unknown,
 ): AuthPasswordResetDto => {
@@ -232,4 +290,14 @@ export const parseAuthPasswordResetInput = (
 
 export const safeParseAuthPasswordResetInput = (input: unknown) => {
   return authPasswordResetSchema.safeParse(input);
+};
+
+export const parseAuthPasswordResetResponse = (
+  input: unknown,
+): AuthPasswordResetResponse => {
+  return authPasswordResetResponseSchema.parse(input);
+};
+
+export const safeParseAuthPasswordResetResponse = (input: unknown) => {
+  return authPasswordResetResponseSchema.safeParse(input);
 };

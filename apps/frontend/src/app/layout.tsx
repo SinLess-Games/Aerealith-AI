@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     'SinLess Games',
   ],
   applicationName: 'Helix AI',
-  authors: [{ name: 'SinLess Games LLC', url: 'https://sinlessgamesllc.com' }],
+  authors: [{ name: 'SinLess Games LLC', url: 'https://sinlessgames.com' }],
   creator: 'SinLess Games LLC',
   publisher: 'SinLess Games LLC',
   robots: { index: true, follow: true },
@@ -30,14 +30,6 @@ export const metadata: Metadata = {
       'Your adaptive digital companion — connect, automate, and analyze across your ecosystem.',
     url: 'https://helixaibot.com',
     siteName: 'Helix AI',
-    images: [
-      {
-        url: 'https://cdn.sinlessgamesllc.com/Helix-AI/images/Helix_OG.png',
-        width: 1200,
-        height: 630,
-        alt: 'Helix AI',
-      },
-    ],
     locale: 'en_US',
     type: 'website',
   },
@@ -47,9 +39,7 @@ export const metadata: Metadata = {
     creator: '@Sinless777',
     title: 'Helix AI',
     description:
-      'Your adaptive digital companion — connect, automate, and analyze across your ecosystem.',
-    images: ['https://cdn.sinlessgamesllc.com/Helix-AI/images/Helix_OG.png'],
-  },
+      'Your adaptive digital companion — connect, automate, and analyze across your ecosystem.',  },
   icons: {
     icon: [
       { url: '/favicon.ico' },

@@ -6,21 +6,24 @@ import type {
 
 type DateLike = Date | string | null | undefined;
 
-export type UserSettingsTheme = 'system' | 'light' | 'dark';
-
 export interface UserSettingsMapperInput {
   id?: string;
   userId?: string;
   username?: string | null;
-
-  locale?: string | null;
-  timezone?: string | null;
-  theme?: UserSettingsTheme | string | null;
-
-  emailNotificationsEnabled?: boolean | null;
-  marketingEmailsEnabled?: boolean | null;
-  analyticsEnabled?: boolean | null;
-  memoryEnabled?: boolean | null;
+  metadata?: Record<string, unknown> | null;
+  accessibility?: Record<string, unknown> | null;
+  account?: Record<string, unknown> | null;
+  ai?: Record<string, unknown> | null;
+  appearance?: Record<string, unknown> | null;
+  communication?: Record<string, unknown> | null;
+  content?: Record<string, unknown> | null;
+  developer?: Record<string, unknown> | null;
+  integrations?: Record<string, unknown> | null;
+  localization?: Record<string, unknown> | null;
+  memory?: Record<string, unknown> | null;
+  notifications?: Record<string, unknown> | null;
+  privacy?: Record<string, unknown> | null;
+  security?: Record<string, unknown> | null;
 
   createdAt?: DateLike;
   updatedAt?: DateLike;
@@ -34,9 +37,6 @@ export interface UserSettingsMapperInput {
 export interface UserSettingsMapperOptions {
   userId?: string;
   username?: string;
-  defaultLocale?: string;
-  defaultTimezone?: string;
-  defaultTheme?: UserSettingsTheme;
 }
 
 export const toUserSettingsDto = (
@@ -47,15 +47,23 @@ export const toUserSettingsDto = (
   const username = resolveUsername(settings, options);
 
   return {
+    id: resolveSettingsId(settings),
     userId: userId as UserServiceUserId,
     username: username as UserServiceUsername,
-    locale: settings.locale ?? options.defaultLocale ?? 'en-US',
-    timezone: settings.timezone ?? options.defaultTimezone ?? 'UTC',
-    theme: normalizeTheme(settings.theme, options.defaultTheme),
-    emailNotificationsEnabled: settings.emailNotificationsEnabled ?? true,
-    marketingEmailsEnabled: settings.marketingEmailsEnabled ?? false,
-    analyticsEnabled: settings.analyticsEnabled ?? true,
-    memoryEnabled: settings.memoryEnabled ?? true,
+    metadata: settings.metadata ?? {},
+    accessibility: settings.accessibility ?? {},
+    account: settings.account ?? {},
+    ai: settings.ai ?? {},
+    appearance: settings.appearance ?? {},
+    communication: settings.communication ?? {},
+    content: settings.content ?? {},
+    developer: settings.developer ?? {},
+    integrations: settings.integrations ?? {},
+    localization: settings.localization ?? {},
+    memory: settings.memory ?? {},
+    notifications: settings.notifications ?? {},
+    privacy: settings.privacy ?? {},
+    security: settings.security ?? {},
     createdAt: toIsoString(settings.createdAt),
     updatedAt: toIsoString(settings.updatedAt),
   };
@@ -80,6 +88,14 @@ function resolveUserId(
   return userId;
 }
 
+function resolveSettingsId(settings: UserSettingsMapperInput): string {
+  if (!settings.id) {
+    throw new Error('USER_SETTINGS_MAPPER_MISSING_SETTINGS_ID');
+  }
+
+  return settings.id;
+}
+
 function resolveUsername(
   settings: UserSettingsMapperInput,
   options: UserSettingsMapperOptions,
@@ -91,17 +107,6 @@ function resolveUsername(
   }
 
   return username;
-}
-
-function normalizeTheme(
-  theme: UserSettingsMapperInput['theme'],
-  fallback: UserSettingsTheme = 'system',
-): UserSettingsTheme {
-  if (theme === 'light' || theme === 'dark' || theme === 'system') {
-    return theme;
-  }
-
-  return fallback;
 }
 
 function toIsoString(value: DateLike): string {

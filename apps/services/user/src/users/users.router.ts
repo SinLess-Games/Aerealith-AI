@@ -10,6 +10,8 @@ import {
   getUserSettingsController,
   listUsersController,
   updateUserController,
+  updateUserProfileController,
+  updateUserSettingsController,
 } from './controllers';
 
 export type UsersRouterEnv = {
@@ -43,7 +45,9 @@ usersRouter.patch('/:username', updateUserController);
 usersRouter.delete('/:username', deleteUserController);
 
 usersRouter.get('/:username/profile', getUserProfileController);
+usersRouter.patch('/:username/profile', updateUserProfileController);
 
 usersRouter.get('/:username/settings', getUserSettingsController);
+usersRouter.patch('/:username/settings', updateUserSettingsController);
 
 export default usersRouter;

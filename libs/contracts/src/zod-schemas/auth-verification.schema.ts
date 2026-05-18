@@ -79,6 +79,19 @@ export const authVerifyEmailSchema = z.object({
   token: authVerificationTokenSchema,
 });
 
+export const authResendEmailVerificationSchema = z
+  .object({
+    username: authVerificationUsernameSchema.optional(),
+    email: authVerificationEmailSchema.optional(),
+  })
+  .refine(
+    (value) => value.username !== undefined || value.email !== undefined,
+    {
+      message: 'Resending email verification requires either username or email.',
+      path: ['email'],
+    },
+  );
+
 export const authCreateVerificationTokenSchema = z
   .object({
     username: authVerificationUsernameSchema.optional(),
@@ -112,6 +125,18 @@ export const authVerifyEmailRequestSchema = z.object({
   body: authVerifyEmailSchema,
 });
 
+export const authVerifyEmailPublicRequestSchema = z.object({
+  body: authVerifyEmailSchema,
+});
+
+export const authVerifyEmailPublicQuerySchema = z.object({
+  token: authVerificationTokenSchema,
+});
+
+export const authResendEmailVerificationRequestSchema = z.object({
+  body: authResendEmailVerificationSchema,
+});
+
 export const authCreateVerificationTokenRequestSchema = z.object({
   body: authCreateVerificationTokenSchema,
 });
@@ -120,23 +145,88 @@ export const authConsumeVerificationTokenRequestSchema = z.object({
   body: authConsumeVerificationTokenSchema,
 });
 
-export const authVerificationTokenResponseSchema = z.object({
-  created: z.boolean(),
-  type: authVerificationTokenTypeSchema,
-  expiresAt: z.string(),
-});
+export const authVerificationTokenPublicResponseSchema = z
+  .object({
+    created: z.boolean(),
+    type: authVerificationTokenTypeSchema.optional(),
+    expiresAt: z.string().optional(),
+  })
+  .passthrough();
 
-export const authEmailVerificationResponseSchema = z.object({
-  verified: z.boolean(),
-  username: z.string(),
-  email: z.string(),
-  verifiedAt: z.string(),
-});
+export const authVerificationTokenResponseSchema = z
+  .object({
+    created: z.boolean().optional(),
+    type: authVerificationTokenTypeSchema.optional(),
+    expiresAt: z.string().optional(),
 
-export const authVerificationTokenConsumeResponseSchema = z.object({
-  consumed: z.boolean(),
-  type: authVerificationTokenTypeSchema,
-  consumedAt: z.string(),
+    /**
+     * Service-level token result fields.
+     * Public routes should normally return `response`, not raw token data.
+     */
+    id: z.string().optional(),
+    token: authVerificationTokenSchema.optional(),
+    rawToken: authVerificationTokenSchema.optional(),
+    plainToken: authVerificationTokenSchema.optional(),
+    verificationToken: authVerificationTokenSchema.optional(),
+    value: authVerificationTokenSchema.optional(),
+    identifier: z.string().optional(),
+    response: authVerificationTokenPublicResponseSchema.optional(),
+  })
+  .passthrough();
+
+export const authEmailVerificationTokenForUserResponseSchema = z
+  .object({
+    user: z
+      .object({
+        id: z.string(),
+        username: z.string(),
+        email: z.string(),
+        emailVerified: z.boolean(),
+        status: z.string(),
+        displayName: z.string().optional(),
+        createdAt: z.string(),
+        updatedAt: z.string(),
+      })
+      .passthrough(),
+    emailVerificationToken: authVerificationTokenResponseSchema,
+  })
+  .passthrough();
+
+export const authEmailVerificationResponseSchema = z
+  .object({
+    verified: z.boolean(),
+    username: z.string(),
+    email: z.string(),
+    verifiedAt: z.string(),
+  })
+  .passthrough();
+
+export const authVerificationTokenConsumeResponseSchema = z
+  .object({
+    consumed: z.boolean(),
+    type: authVerificationTokenTypeSchema,
+    consumedAt: z.string(),
+  })
+  .passthrough();
+
+export const authResendEmailVerificationPublicResponseSchema = z.object({
+  user: z
+    .object({
+      id: z.string(),
+      username: z.string(),
+      email: z.string(),
+      emailVerified: z.boolean(),
+      status: z.string(),
+      displayName: z.string().optional(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    })
+    .passthrough(),
+  verification: z.object({
+    required: z.literal(true),
+    emailSent: z.boolean(),
+    message: z.string(),
+  }),
 });
 
 export type AuthVerificationParams = z.infer<
@@ -157,6 +247,22 @@ export type AuthVerifyEmailInput = z.input<typeof authVerifyEmailSchema>;
 export type AuthVerifyEmailDto = z.infer<typeof authVerifyEmailSchema>;
 export type AuthVerifyEmailRequest = z.infer<
   typeof authVerifyEmailRequestSchema
+>;
+export type AuthVerifyEmailPublicRequest = z.infer<
+  typeof authVerifyEmailPublicRequestSchema
+>;
+export type AuthVerifyEmailPublicQuery = z.infer<
+  typeof authVerifyEmailPublicQuerySchema
+>;
+
+export type AuthResendEmailVerificationInput = z.input<
+  typeof authResendEmailVerificationSchema
+>;
+export type AuthResendEmailVerificationDto = z.infer<
+  typeof authResendEmailVerificationSchema
+>;
+export type AuthResendEmailVerificationRequest = z.infer<
+  typeof authResendEmailVerificationRequestSchema
 >;
 
 export type AuthCreateVerificationTokenInput = z.input<
@@ -179,14 +285,23 @@ export type AuthConsumeVerificationTokenRequest = z.infer<
   typeof authConsumeVerificationTokenRequestSchema
 >;
 
+export type AuthVerificationTokenPublicResponse = z.infer<
+  typeof authVerificationTokenPublicResponseSchema
+>;
 export type AuthVerificationTokenResponse = z.infer<
   typeof authVerificationTokenResponseSchema
+>;
+export type AuthEmailVerificationTokenForUserResponse = z.infer<
+  typeof authEmailVerificationTokenForUserResponseSchema
 >;
 export type AuthEmailVerificationResponse = z.infer<
   typeof authEmailVerificationResponseSchema
 >;
 export type AuthVerificationTokenConsumeResponse = z.infer<
   typeof authVerificationTokenConsumeResponseSchema
+>;
+export type AuthResendEmailVerificationPublicResponse = z.infer<
+  typeof authResendEmailVerificationPublicResponseSchema
 >;
 
 export const parseAuthVerificationParams = (
@@ -221,6 +336,26 @@ export const safeParseAuthVerifyEmailInput = (input: unknown) => {
   return authVerifyEmailSchema.safeParse(input);
 };
 
+export const parseAuthVerifyEmailPublicQuery = (
+  input: unknown,
+): AuthVerifyEmailPublicQuery => {
+  return authVerifyEmailPublicQuerySchema.parse(input);
+};
+
+export const safeParseAuthVerifyEmailPublicQuery = (input: unknown) => {
+  return authVerifyEmailPublicQuerySchema.safeParse(input);
+};
+
+export const parseAuthResendEmailVerificationInput = (
+  input: unknown,
+): AuthResendEmailVerificationDto => {
+  return authResendEmailVerificationSchema.parse(input);
+};
+
+export const safeParseAuthResendEmailVerificationInput = (input: unknown) => {
+  return authResendEmailVerificationSchema.safeParse(input);
+};
+
 export const parseAuthCreateVerificationTokenInput = (
   input: unknown,
 ): AuthCreateVerificationTokenDto => {
@@ -239,4 +374,36 @@ export const parseAuthConsumeVerificationTokenInput = (
 
 export const safeParseAuthConsumeVerificationTokenInput = (input: unknown) => {
   return authConsumeVerificationTokenSchema.safeParse(input);
+};
+
+export const parseAuthVerificationTokenResponse = (
+  input: unknown,
+): AuthVerificationTokenResponse => {
+  return authVerificationTokenResponseSchema.parse(input);
+};
+
+export const safeParseAuthVerificationTokenResponse = (input: unknown) => {
+  return authVerificationTokenResponseSchema.safeParse(input);
+};
+
+export const parseAuthEmailVerificationResponse = (
+  input: unknown,
+): AuthEmailVerificationResponse => {
+  return authEmailVerificationResponseSchema.parse(input);
+};
+
+export const safeParseAuthEmailVerificationResponse = (input: unknown) => {
+  return authEmailVerificationResponseSchema.safeParse(input);
+};
+
+export const parseAuthResendEmailVerificationPublicResponse = (
+  input: unknown,
+): AuthResendEmailVerificationPublicResponse => {
+  return authResendEmailVerificationPublicResponseSchema.parse(input);
+};
+
+export const safeParseAuthResendEmailVerificationPublicResponse = (
+  input: unknown,
+) => {
+  return authResendEmailVerificationPublicResponseSchema.safeParse(input);
 };

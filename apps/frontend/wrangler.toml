@@ -11,13 +11,25 @@ compatibility_flags = [
   "global_fetch_strictly_public",
 ]
 
+# =============================================================================
+# Production custom domain for default deploys
+# =============================================================================
+
 [[routes]]
 pattern = "helixaibot.com"
 custom_domain = true
 
+# =============================================================================
+# Static assets
+# =============================================================================
+
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"
+
+# =============================================================================
+# Service bindings
+# =============================================================================
 
 [[services]]
 binding = "WORKER_SELF_REFERENCE"
@@ -29,24 +41,62 @@ service = "helix-auth-service"
 
 [[services]]
 binding = "USER_SERVICE"
-service = "user"
+service = "helix-user-service"
+
+# =============================================================================
+# Default/local vars
+# =============================================================================
 
 [vars]
+NEXTJS_ENV = "development"
+NEXT_PUBLIC_APP_NAME = "Helix AI"
+NEXT_PUBLIC_APP_ENV = "development"
+
 DATABASE_PROVIDER = "postgresql"
 DATABASE_SSL_ENABLED = "true"
 DATABASE_SSL_MODE = "verify-full"
 DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
 DATABASE_POOL_MIN = "0"
 DATABASE_POOL_MAX = "1"
-DATABASE_APPLICATION_NAME = "helix"
+DATABASE_APPLICATION_NAME = "helix-frontend-dev"
 
 MIKRO_ORM_DEBUG = "false"
 
 AUTH_SERVICE_NAME = "helix-auth-service"
 AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
 
-USER_SERVICE_NAME = "user"
-USER_SERVICE_BASE_PATH = "/api/V1/user"
+AUTH_SERVICE_URL = "http://localhost:8787"
+AUTH_SERVICE_INTERNAL_URL = "http://localhost:8787"
+
+AUTH_SERVICE_SIGNUP_PATH = "/auth/signup"
+AUTH_SERVICE_LOGIN_PATH = "/auth/login"
+AUTH_SERVICE_LOGOUT_PATH = "/auth/logout"
+AUTH_SERVICE_REFRESH_PATH = "/auth/refresh"
+AUTH_SERVICE_VERIFY_EMAIL_PATH = "/auth/verify-email"
+AUTH_SERVICE_RESEND_VERIFICATION_PATH = "/auth/resend-verification"
+AUTH_SERVICE_USERNAME_PATH_PREFIX = "/auth"
+
+AUTH_SERVICE_SIGNUP_URL = "http://localhost:8787/auth/signup"
+AUTH_SERVICE_LOGIN_URL = "http://localhost:8787/auth/login"
+
+USER_SERVICE_NAME = "helix-user-service"
+USER_SERVICE_BASE_PATH = "/api/V1/users"
+
+USER_SERVICE_URL = "http://localhost:8788"
+USER_SERVICE_INTERNAL_URL = "http://localhost:8788"
+
+USER_SERVICE_ME_PATH = "/users/me"
+USER_SERVICE_PROFILE_PATH_PREFIX = "/users"
+USER_SERVICE_PREFERENCES_PATH_PREFIX = "/users"
+USER_SERVICE_CONSENT_PATH_PREFIX = "/users"
+
+AUTH_PUBLIC_URL = "http://localhost:8787"
+FRONTEND_PUBLIC_URL = "http://localhost:3000"
+AUTH_VERIFY_EMAIL_PATH = "/api/V1/auth/verify-email"
+
+# =============================================================================
+# Observability
+# =============================================================================
 
 [observability]
 enabled = true
@@ -57,11 +107,16 @@ enabled = true
 [observability.traces]
 enabled = true
 
-# Keep this only if your repo tooling reads it.
-# Wrangler secrets are normally managed with:
-#   wrangler secret put POSTGRES_URL
-[secrets]
-required = ["POSTGRES_URL"]
+# =============================================================================
+# Secrets
+# -----------------------------------------------------------------------------
+# Do not place DATABASE_URL or POSTGRES_URL directly in this file.
+#
+# Set secrets with:
+#   pnpm exec wrangler secret put POSTGRES_URL
+#   pnpm exec wrangler secret put POSTGRES_URL --env preview
+#   pnpm exec wrangler secret put POSTGRES_URL --env production
+# =============================================================================
 
 # =============================================================================
 # Preview environment
@@ -82,24 +137,54 @@ service = "helix-auth-service-preview"
 
 [[env.preview.services]]
 binding = "USER_SERVICE"
-service = "user-preview"
+service = "helix-user-service-preview"
 
 [env.preview.vars]
+NEXTJS_ENV = "preview"
+NEXT_PUBLIC_APP_NAME = "Helix AI"
+NEXT_PUBLIC_APP_ENV = "preview"
+
 DATABASE_PROVIDER = "postgresql"
 DATABASE_SSL_ENABLED = "true"
 DATABASE_SSL_MODE = "verify-full"
 DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
 DATABASE_POOL_MIN = "0"
 DATABASE_POOL_MAX = "1"
-DATABASE_APPLICATION_NAME = "helix-preview"
+DATABASE_APPLICATION_NAME = "helix-frontend-preview"
 
 MIKRO_ORM_DEBUG = "false"
 
 AUTH_SERVICE_NAME = "helix-auth-service-preview"
 AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
 
-USER_SERVICE_NAME = "user-preview"
-USER_SERVICE_BASE_PATH = "/api/V1/user"
+AUTH_SERVICE_URL = "https://helixaibot.com/api/V1/auth"
+AUTH_SERVICE_INTERNAL_URL = "https://helixaibot.com/api/V1/auth"
+
+AUTH_SERVICE_SIGNUP_PATH = "/signup"
+AUTH_SERVICE_LOGIN_PATH = "/login"
+AUTH_SERVICE_LOGOUT_PATH = "/logout"
+AUTH_SERVICE_REFRESH_PATH = "/refresh"
+AUTH_SERVICE_VERIFY_EMAIL_PATH = "/verify-email"
+AUTH_SERVICE_RESEND_VERIFICATION_PATH = "/resend-verification"
+AUTH_SERVICE_USERNAME_PATH_PREFIX = ""
+
+AUTH_SERVICE_SIGNUP_URL = "https://helixaibot.com/api/V1/auth/signup"
+AUTH_SERVICE_LOGIN_URL = "https://helixaibot.com/api/V1/auth/login"
+
+USER_SERVICE_NAME = "helix-user-service-preview"
+USER_SERVICE_BASE_PATH = "/api/V1/users"
+
+USER_SERVICE_URL = "https://helixaibot.com/api/V1/users"
+USER_SERVICE_INTERNAL_URL = "https://helixaibot.com/api/V1/users"
+
+USER_SERVICE_ME_PATH = "/me"
+USER_SERVICE_PROFILE_PATH_PREFIX = ""
+USER_SERVICE_PREFERENCES_PATH_PREFIX = ""
+USER_SERVICE_CONSENT_PATH_PREFIX = ""
+
+AUTH_PUBLIC_URL = "https://helixaibot.com/api/V1/auth"
+FRONTEND_PUBLIC_URL = "https://helixaibot.com"
+AUTH_VERIFY_EMAIL_PATH = "/api/V1/auth/verify-email"
 
 [env.preview.observability]
 enabled = true
@@ -133,24 +218,54 @@ service = "helix-auth-service"
 
 [[env.production.services]]
 binding = "USER_SERVICE"
-service = "user"
+service = "helix-user-service"
 
 [env.production.vars]
+NEXTJS_ENV = "production"
+NEXT_PUBLIC_APP_NAME = "Helix AI"
+NEXT_PUBLIC_APP_ENV = "production"
+
 DATABASE_PROVIDER = "postgresql"
 DATABASE_SSL_ENABLED = "true"
 DATABASE_SSL_MODE = "verify-full"
 DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
 DATABASE_POOL_MIN = "0"
 DATABASE_POOL_MAX = "1"
-DATABASE_APPLICATION_NAME = "helix"
+DATABASE_APPLICATION_NAME = "helix-frontend-production"
 
 MIKRO_ORM_DEBUG = "false"
 
 AUTH_SERVICE_NAME = "helix-auth-service"
 AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
 
-USER_SERVICE_NAME = "user"
-USER_SERVICE_BASE_PATH = "/api/V1/user"
+AUTH_SERVICE_URL = "https://helixaibot.com/api/V1/auth"
+AUTH_SERVICE_INTERNAL_URL = "https://helixaibot.com/api/V1/auth"
+
+AUTH_SERVICE_SIGNUP_PATH = "/signup"
+AUTH_SERVICE_LOGIN_PATH = "/login"
+AUTH_SERVICE_LOGOUT_PATH = "/logout"
+AUTH_SERVICE_REFRESH_PATH = "/refresh"
+AUTH_SERVICE_VERIFY_EMAIL_PATH = "/verify-email"
+AUTH_SERVICE_RESEND_VERIFICATION_PATH = "/resend-verification"
+AUTH_SERVICE_USERNAME_PATH_PREFIX = ""
+
+AUTH_SERVICE_SIGNUP_URL = "https://helixaibot.com/api/V1/auth/signup"
+AUTH_SERVICE_LOGIN_URL = "https://helixaibot.com/api/V1/auth/login"
+
+USER_SERVICE_NAME = "helix-user-service"
+USER_SERVICE_BASE_PATH = "/api/V1/users"
+
+USER_SERVICE_URL = "https://helixaibot.com/api/V1/users"
+USER_SERVICE_INTERNAL_URL = "https://helixaibot.com/api/V1/users"
+
+USER_SERVICE_ME_PATH = "/me"
+USER_SERVICE_PROFILE_PATH_PREFIX = ""
+USER_SERVICE_PREFERENCES_PATH_PREFIX = ""
+USER_SERVICE_CONSENT_PATH_PREFIX = ""
+
+AUTH_PUBLIC_URL = "https://helixaibot.com/api/V1/auth"
+FRONTEND_PUBLIC_URL = "https://helixaibot.com"
+AUTH_VERIFY_EMAIL_PATH = "/api/V1/auth/verify-email"
 
 [env.production.observability]
 enabled = true

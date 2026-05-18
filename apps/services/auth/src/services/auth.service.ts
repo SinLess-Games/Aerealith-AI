@@ -40,6 +40,8 @@ import type {
   AuthTokenPair,
 } from '../types/auth-token.type';
 
+export const AUTH_PERSISTENT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
 export type AuthServiceOptions = {
   userRepository: UserRepository;
   accountRepository: AccountRepository;
@@ -64,12 +66,17 @@ export type AuthIdentityResponse = PublicAuthUser & {
   displayName?: string;
 };
 
+export type AuthPersistentSessionPolicy = {
+  persistent: true;
+  cookieMaxAgeSeconds: number;
+  cookieExpiresAt: string;
+  cookiePath: '/';
+  cookieSameSite: 'lax';
+};
+
 export type AuthRegisterResult = {
   user: AuthIdentityResponse;
-  session: AuthSessionResponse;
-  tokens: AuthTokenPair;
-  accessClaims: AuthAccessTokenClaims;
-  refreshClaims: AuthRefreshTokenClaims;
+  emailVerificationToken: VerificationTokenCreateResult;
 };
 
 export type AuthLoginResult = {
@@ -78,6 +85,7 @@ export type AuthLoginResult = {
   tokens: AuthTokenPair;
   accessClaims: AuthAccessTokenClaims;
   refreshClaims: AuthRefreshTokenClaims;
+  persistentSession: AuthPersistentSessionPolicy;
 };
 
 export type AuthRefreshResult = {
@@ -85,6 +93,7 @@ export type AuthRefreshResult = {
   tokens: AuthTokenPair;
   accessClaims: AuthAccessTokenClaims;
   refreshClaims: AuthRefreshTokenClaims;
+  persistentSession: AuthPersistentSessionPolicy;
 };
 
 export type AuthLogoutResult = RevokeSessionResult;
@@ -106,6 +115,16 @@ export type AuthPasswordResetResult = {
 };
 
 export type AuthEmailVerificationTokenResult = VerificationTokenCreateResult;
+
+export type AuthEmailVerificationTokenForUserInput = {
+  username?: string;
+  email?: string;
+};
+
+export type AuthEmailVerificationTokenForUserResult = {
+  user: AuthIdentityResponse;
+  emailVerificationToken: VerificationTokenCreateResult;
+};
 
 export type AuthEmailVerificationResult = {
   verified: boolean;
@@ -188,6 +207,18 @@ const normalizeUsername = (username: string): string => {
 
 const normalizeEmail = (email: string): string => {
   return email.trim().toLowerCase();
+};
+
+const createPersistentSessionPolicy = (): AuthPersistentSessionPolicy => {
+  return {
+    persistent: true,
+    cookieMaxAgeSeconds: AUTH_PERSISTENT_SESSION_MAX_AGE_SECONDS,
+    cookieExpiresAt: new Date(
+      Date.now() + AUTH_PERSISTENT_SESSION_MAX_AGE_SECONDS * 1000,
+    ).toISOString(),
+    cookiePath: '/',
+    cookieSameSite: 'lax',
+  };
 };
 
 const getUserId = (user: User): string => {
@@ -300,6 +331,10 @@ const assertUserCanAuthenticate = (user: User): void => {
   if (status === AUTH_USER_STATUS.DELETED) {
     throw AuthError.userDeleted();
   }
+
+  if (!getEmailVerified(user)) {
+    throw AuthError.forbidden('Please verify your email before logging in.');
+  }
 };
 
 const assertCanAccessUsername = ({
@@ -345,9 +380,43 @@ export class AuthService {
     this.passwordService = options.passwordService ?? defaultPasswordService;
   }
 
+  private async findUserForEmailVerificationToken(
+    input: AuthEmailVerificationTokenForUserInput,
+  ): Promise<User> {
+    const user =
+      input.username !== undefined
+        ? await this.userRepository.findByUsername(
+            normalizeUsername(input.username),
+          )
+        : input.email !== undefined
+          ? await this.userRepository.findByEmail(normalizeEmail(input.email))
+          : null;
+
+    if (user === null) {
+      throw AuthError.userNotFound(input.username ?? input.email);
+    }
+
+    return user;
+  }
+
+  private async createEmailVerificationTokenForUserRecord(
+    user: User,
+    identifier?: string,
+  ): Promise<VerificationTokenCreateResult> {
+    if (getEmailVerified(user)) {
+      throw AuthError.emailAlreadyVerified();
+    }
+
+    return this.verificationTokenService.createEmailVerificationToken({
+      user,
+      username: getUserUsername(user),
+      identifier: identifier ?? getUserEmail(user),
+    });
+  }
+
   public async register(
     input: AuthRegisterSchemas.AuthRegisterDto,
-    metadata: AuthRequestMetadata = {},
+    _metadata: AuthRequestMetadata = {},
   ): Promise<AuthRegisterResult> {
     const username = normalizeUsername(input.username);
     const email = normalizeEmail(input.email);
@@ -386,20 +455,12 @@ export class AuthService {
       displayName: input.displayName ?? username,
     });
 
-    const session = await this.sessionService.createSession({
-      user,
-      username,
-      deviceName: metadata.deviceName,
-      userAgent: metadata.userAgent,
-      ipAddress: metadata.ipAddress,
-    });
+    const emailVerificationToken =
+      await this.createEmailVerificationTokenForUserRecord(user, email);
 
     return {
       user: toAuthIdentityResponse(user),
-      session: session.session,
-      tokens: session.tokens,
-      accessClaims: session.accessClaims,
-      refreshClaims: session.refreshClaims,
+      emailVerificationToken,
     };
   }
 
@@ -464,6 +525,7 @@ export class AuthService {
       tokens: session.tokens,
       accessClaims: session.accessClaims,
       refreshClaims: session.refreshClaims,
+      persistentSession: createPersistentSessionPolicy(),
     };
   }
 
@@ -485,6 +547,7 @@ export class AuthService {
       tokens: result.tokens,
       accessClaims: result.accessClaims,
       refreshClaims: result.refreshClaims,
+      persistentSession: createPersistentSessionPolicy(),
     };
   }
 
@@ -610,15 +673,27 @@ export class AuthService {
       throw AuthError.userNotFound(requestedUsername);
     }
 
-    if (getEmailVerified(user)) {
-      throw AuthError.emailAlreadyVerified();
-    }
-
-    return this.verificationTokenService.createEmailVerificationToken({
+    return this.createEmailVerificationTokenForUserRecord(
       user,
-      username: getUserUsername(user),
-      identifier: input.email ?? getUserEmail(user),
-    });
+      input.email ?? getUserEmail(user),
+    );
+  }
+
+  public async createEmailVerificationTokenForUser(
+    input: AuthEmailVerificationTokenForUserInput,
+  ): Promise<AuthEmailVerificationTokenForUserResult> {
+    const user = await this.findUserForEmailVerificationToken(input);
+
+    const emailVerificationToken =
+      await this.createEmailVerificationTokenForUserRecord(
+        user,
+        input.email !== undefined ? normalizeEmail(input.email) : undefined,
+      );
+
+    return {
+      user: toAuthIdentityResponse(user),
+      emailVerificationToken,
+    };
   }
 
   public async verifyEmail(
@@ -657,6 +732,40 @@ export class AuthService {
 
     if (updatedUser === null) {
       throw AuthError.userNotFound(requestedUsername);
+    }
+
+    return {
+      verified: true,
+      username: getUserUsername(updatedUser),
+      email: getUserEmail(updatedUser),
+      verifiedAt: verifiedAt.toISOString(),
+      token,
+    };
+  }
+
+  public async verifyEmailByToken(
+    input: AuthVerificationSchemas.AuthVerifyEmailDto,
+  ): Promise<AuthEmailVerificationResult> {
+    const token =
+      await this.verificationTokenService.consumeEmailVerificationToken({
+        token: input.token,
+      });
+
+    const user = await this.userRepository.findById(token.claims.userId);
+
+    if (user === null) {
+      throw AuthError.userNotFound(token.claims.userId);
+    }
+
+    const verifiedAt = new Date();
+    const updatedUser = await this.userRepository.updateEmailVerification({
+      userId: getUserId(user),
+      verified: true,
+      verifiedAt,
+    });
+
+    if (updatedUser === null) {
+      throw AuthError.userNotFound(token.claims.userId);
     }
 
     return {

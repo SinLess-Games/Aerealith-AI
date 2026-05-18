@@ -10,11 +10,41 @@ export interface UserProfileMapperInput {
   id?: string;
   userId?: string;
   username?: string | null;
+  handle?: string | null;
   displayName?: string | null;
+  givenName?: string | null;
+  middleName?: string | null;
+  familyName?: string | null;
+  pronouns?: string | null;
   avatarUrl?: string | null;
+  bannerUrl?: string | null;
   bio?: string | null;
-  location?: string | null;
+  status?: string | null;
+  visibility?: string | null;
+  fieldVisibility?: Record<string, string> | null;
+  locationLabel?: string | null;
+  country?: string | null;
+  gender?: string | null;
+  sex?: string | number | null;
+  sexuality?: string | null;
+  primaryLanguage?: string | null;
+  languages?: Array<{
+    language: string;
+    proficiency?: string;
+    isPrimary?: boolean;
+  }> | null;
+  locale?: string | null;
+  timezone?: string | null;
+  timezoneUtc?: string | null;
+  timezoneGreenwich?: string | null;
+  weekStartDay?: string | null;
+  dateFormat?: string | null;
+  timeFormat?: string | null;
+  nameDisplayOrder?: string | null;
+  measurementSystem?: string | null;
+  contentMaturity?: string | null;
   websiteUrl?: string | null;
+  links?: Record<string, string | undefined> | null;
   createdAt?: DateLike;
   updatedAt?: DateLike;
 
@@ -40,13 +70,40 @@ export const toUserProfileDto = (
   const displayName = resolveDisplayName(profile, options, username);
 
   return {
+    id: resolveProfileId(profile),
     userId: userId as UserServiceUserId,
     username: username as UserServiceUsername,
+    handle: profile.handle ?? username,
     displayName,
+    givenName: profile.givenName ?? null,
+    middleName: profile.middleName ?? null,
+    familyName: profile.familyName ?? null,
+    pronouns: profile.pronouns ?? null,
     avatarUrl: profile.avatarUrl ?? null,
+    bannerUrl: profile.bannerUrl ?? null,
     bio: profile.bio ?? null,
-    location: profile.location ?? null,
+    status: profile.status ?? null,
+    visibility: profile.visibility ?? null,
+    fieldVisibility: profile.fieldVisibility ?? null,
+    locationLabel: profile.locationLabel ?? null,
+    country: profile.country ?? null,
+    gender: profile.gender ?? null,
+    sex: normalizeSex(profile.sex),
+    sexuality: profile.sexuality ?? null,
+    primaryLanguage: profile.primaryLanguage ?? null,
+    languages: profile.languages ?? null,
+    locale: profile.locale ?? null,
+    timezone: profile.timezone ?? null,
+    timezoneUtc: profile.timezoneUtc ?? null,
+    timezoneGreenwich: profile.timezoneGreenwich ?? null,
+    weekStartDay: profile.weekStartDay ?? null,
+    dateFormat: profile.dateFormat ?? null,
+    timeFormat: profile.timeFormat ?? null,
+    nameDisplayOrder: profile.nameDisplayOrder ?? null,
+    measurementSystem: profile.measurementSystem ?? null,
+    contentMaturity: profile.contentMaturity ?? null,
     websiteUrl: profile.websiteUrl ?? null,
+    links: profile.links ?? null,
     createdAt: toIsoString(profile.createdAt),
     updatedAt: toIsoString(profile.updatedAt),
   };
@@ -69,6 +126,14 @@ function resolveUserId(
   }
 
   return userId;
+}
+
+function resolveProfileId(profile: UserProfileMapperInput): string {
+  if (!profile.id) {
+    throw new Error('USER_PROFILE_MAPPER_MISSING_PROFILE_ID');
+  }
+
+  return profile.id;
 }
 
 function resolveUsername(
@@ -107,4 +172,12 @@ function toIsoString(value: DateLike): string {
   }
 
   return new Date().toISOString();
+}
+
+function normalizeSex(value: string | number | null | undefined): string | null {
+  if (typeof value === 'number') {
+    return ['male', 'female', 'hermaphrodite'][value] ?? null;
+  }
+
+  return value ?? null;
 }

@@ -52,14 +52,14 @@
     },
     "serve": {
       "cache": false,
+      "continuous": true,
       "executor": "@naxodev/nx-cloudflare:serve",
       "options": {
-        "script": "apps/services/auth/src/main.ts",
         "name": "helix-auth-service",
         "port": 8787,
+        "inspectorPort": 9321,
         "ip": "127.0.0.1",
-        "compatibilityDate": "2026-05-09",
-        "compatibilityFlags": ["nodejs_compat"]
+        "compatibilityDate": "2026-05-09"
       },
       "configurations": {
         "preview": {
@@ -70,8 +70,7 @@
           "env": "production",
           "port": 8787
         }
-      },
-      "defaultConfiguration": "preview"
+      }
     },
     "test": {
       "cache": true,
@@ -103,7 +102,10 @@
         "name": "helix-auth-service",
         "env": "preview",
         "compatibilityDate": "2026-05-09",
-        "compatibilityFlags": ["nodejs_compat"],
+        "compatibilityFlags": [
+          "nodejs_compat",
+          "nodejs_compat_populate_process_env"
+        ],
         "outdir": "dist/apps/services/auth"
       },
       "configurations": {

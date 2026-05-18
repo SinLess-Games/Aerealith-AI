@@ -17,5 +17,4 @@ export {
   toUserSettingsDtos,
   type UserSettingsMapperInput,
   type UserSettingsMapperOptions,
-  type UserSettingsTheme,
 } from './user-settings.mapper';

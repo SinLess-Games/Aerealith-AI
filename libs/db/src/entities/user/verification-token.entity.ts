@@ -108,7 +108,7 @@ export class UserVerificationToken extends BaseEntity {
     fieldName: 'consumed_at',
     nullable: true,
   })
-  consumedAt?: Date;
+  consumedAt?: Date | null = null;
 
   /** Returns true when the token expiration is in the past. */
   isExpired(now: Date = new Date()): boolean {

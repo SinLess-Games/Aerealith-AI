@@ -148,21 +148,64 @@ export const authDeleteSessionRequestSchema = z.object({
   params: authSessionParamsSchema,
 });
 
-export const authSessionResponseSchema = z.object({
-  id: z.string(),
-  userId: z.string().optional(),
-  username: z.string().optional(),
-  deviceName: z.string().nullable().optional(),
-  userAgent: z.string().nullable().optional(),
-  ipAddress: z.string().nullable().optional(),
-  createdAt: z.string(),
-  updatedAt: z.string().optional(),
-  lastSeenAt: z.string().nullable().optional(),
-  expiresAt: z.string(),
-  revokedAt: z.string().nullable().optional(),
-});
+export const authSessionResponseSchema = z
+  .object({
+    id: z.string(),
+    userId: z.string().optional(),
+    username: z.string().optional(),
+    deviceName: z.string().nullable().optional(),
+    userAgent: z.string().nullable().optional(),
+    ipAddress: z.string().nullable().optional(),
+    createdAt: z.string(),
+    updatedAt: z.string().optional(),
+    lastSeenAt: z.string().nullable().optional(),
+    expiresAt: z.string(),
+    revokedAt: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export const authTokenPairSchema = z
+  .object({
+    accessToken: z.string(),
+    refreshToken: z.string(),
+    tokenType: z.literal('Bearer').default('Bearer'),
+    accessTokenExpiresAt: z.string().optional(),
+    refreshTokenExpiresAt: z.string().optional(),
+  })
+  .passthrough();
+
+export const authAccessTokenClaimsSchema = z
+  .object({
+    sub: z.string().optional(),
+    username: z.string().optional(),
+    email: z.string().optional(),
+    sessionId: z.string().optional(),
+    type: z.string().optional(),
+    iat: z.number().optional(),
+    exp: z.number().optional(),
+  })
+  .passthrough();
+
+export const authRefreshTokenClaimsSchema = z
+  .object({
+    sub: z.string().optional(),
+    username: z.string().optional(),
+    email: z.string().optional(),
+    sessionId: z.string().optional(),
+    type: z.string().optional(),
+    iat: z.number().optional(),
+    exp: z.number().optional(),
+  })
+  .passthrough();
 
 export const authRefreshResponseSchema = z.object({
+  session: authSessionResponseSchema,
+  tokens: authTokenPairSchema,
+  accessClaims: authAccessTokenClaimsSchema,
+  refreshClaims: authRefreshTokenClaimsSchema,
+});
+
+export const authRefreshLegacyResponseSchema = z.object({
   session: authSessionResponseSchema,
   accessToken: z.string(),
   refreshToken: z.string(),
@@ -171,21 +214,27 @@ export const authRefreshResponseSchema = z.object({
   tokenType: z.literal('Bearer'),
 });
 
-export const authLogoutResponseSchema = z.object({
-  revoked: z.boolean(),
-  sessionId: z.string().optional(),
-  revokedAt: z.string(),
-});
+export const authLogoutResponseSchema = z
+  .object({
+    revoked: z.boolean(),
+    sessionId: z.string().optional(),
+    revokedAt: z.string(),
+  })
+  .passthrough();
 
-export const authListSessionsResponseSchema = z.object({
-  sessions: z.array(authSessionResponseSchema),
-});
+export const authListSessionsResponseSchema = z
+  .object({
+    sessions: z.array(authSessionResponseSchema),
+  })
+  .passthrough();
 
-export const authDeleteSessionResponseSchema = z.object({
-  revoked: z.boolean(),
-  sessionId: z.string(),
-  revokedAt: z.string(),
-});
+export const authDeleteSessionResponseSchema = z
+  .object({
+    revoked: z.boolean(),
+    sessionId: z.string(),
+    revokedAt: z.string(),
+  })
+  .passthrough();
 
 export type AuthUsernameParams = z.infer<typeof authUsernameParamsSchema>;
 export type AuthSessionParams = z.infer<typeof authSessionParamsSchema>;
@@ -194,6 +243,9 @@ export type AuthRefreshInput = z.input<typeof authRefreshSchema>;
 export type AuthRefreshDto = z.infer<typeof authRefreshSchema>;
 export type AuthRefreshRequest = z.infer<typeof authRefreshRequestSchema>;
 export type AuthRefreshResponse = z.infer<typeof authRefreshResponseSchema>;
+export type AuthRefreshLegacyResponse = z.infer<
+  typeof authRefreshLegacyResponseSchema
+>;
 
 export type AuthLogoutInput = z.input<typeof authLogoutSchema>;
 export type AuthLogoutDto = z.infer<typeof authLogoutSchema>;
@@ -219,6 +271,9 @@ export type AuthDeleteSessionResponse = z.infer<
 >;
 
 export type AuthSessionResponse = z.infer<typeof authSessionResponseSchema>;
+export type AuthTokenPair = z.infer<typeof authTokenPairSchema>;
+export type AuthAccessTokenClaims = z.infer<typeof authAccessTokenClaimsSchema>;
+export type AuthRefreshTokenClaims = z.infer<typeof authRefreshTokenClaimsSchema>;
 
 export const parseAuthRefreshInput = (input: unknown): AuthRefreshDto => {
   return authRefreshSchema.parse(input);
@@ -228,12 +283,32 @@ export const safeParseAuthRefreshInput = (input: unknown) => {
   return authRefreshSchema.safeParse(input);
 };
 
+export const parseAuthRefreshResponse = (
+  input: unknown,
+): AuthRefreshResponse => {
+  return authRefreshResponseSchema.parse(input);
+};
+
+export const safeParseAuthRefreshResponse = (input: unknown) => {
+  return authRefreshResponseSchema.safeParse(input);
+};
+
 export const parseAuthLogoutInput = (input: unknown): AuthLogoutDto => {
   return authLogoutSchema.parse(input);
 };
 
 export const safeParseAuthLogoutInput = (input: unknown) => {
   return authLogoutSchema.safeParse(input);
+};
+
+export const parseAuthLogoutResponse = (
+  input: unknown,
+): AuthLogoutResponse => {
+  return authLogoutResponseSchema.parse(input);
+};
+
+export const safeParseAuthLogoutResponse = (input: unknown) => {
+  return authLogoutResponseSchema.safeParse(input);
 };
 
 export const parseAuthUsernameParams = (input: unknown): AuthUsernameParams => {
@@ -250,4 +325,34 @@ export const parseAuthSessionParams = (input: unknown): AuthSessionParams => {
 
 export const safeParseAuthSessionParams = (input: unknown) => {
   return authSessionParamsSchema.safeParse(input);
+};
+
+export const parseAuthSessionResponse = (
+  input: unknown,
+): AuthSessionResponse => {
+  return authSessionResponseSchema.parse(input);
+};
+
+export const safeParseAuthSessionResponse = (input: unknown) => {
+  return authSessionResponseSchema.safeParse(input);
+};
+
+export const parseAuthListSessionsResponse = (
+  input: unknown,
+): AuthListSessionsResponse => {
+  return authListSessionsResponseSchema.parse(input);
+};
+
+export const safeParseAuthListSessionsResponse = (input: unknown) => {
+  return authListSessionsResponseSchema.safeParse(input);
+};
+
+export const parseAuthDeleteSessionResponse = (
+  input: unknown,
+): AuthDeleteSessionResponse => {
+  return authDeleteSessionResponseSchema.parse(input);
+};
+
+export const safeParseAuthDeleteSessionResponse = (input: unknown) => {
+  return authDeleteSessionResponseSchema.safeParse(input);
 };

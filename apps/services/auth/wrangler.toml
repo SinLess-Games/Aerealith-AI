@@ -30,7 +30,10 @@ name = "helix-auth-service"
 main = "src/main.ts"
 
 compatibility_date = "2026-05-09"
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = [
+  "nodejs_compat",
+  "nodejs_compat_populate_process_env",
+]
 
 account_id = "9517bf561f1f713ab87d1523193c7cc5"
 
@@ -49,6 +52,7 @@ keep_names = true
 # -----------------------------------------------------------------------------
 
 [alias]
+"pg" = "./src/shims/pg.cjs"
 "mariadb/callback" = "./src/shims/unused-db-driver.ts"
 "better-sqlite3" = "./src/shims/unused-db-driver.ts"
 "libsql" = "./src/shims/unused-db-driver.ts"

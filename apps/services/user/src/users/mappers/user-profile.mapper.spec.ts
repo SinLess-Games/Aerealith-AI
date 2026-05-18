@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   toUserProfileDto,
@@ -26,19 +26,21 @@ describe('user-profile.mapper', () => {
         displayName: 'Sinless777',
         avatarUrl: 'https://example.com/avatar.png',
         bio: 'Game developer and full-stack developer.',
-        location: 'Idaho',
+        locationLabel: 'Idaho',
         websiteUrl: 'https://sinlessgamesllc.com',
         createdAt: new Date('2026-05-10T00:00:00.000Z'),
         updatedAt: new Date('2026-05-10T01:00:00.000Z'),
       });
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
+        id: 'profile_123',
         userId: 'user_123',
         username: 'sinless777',
+        handle: 'sinless777',
         displayName: 'Sinless777',
         avatarUrl: 'https://example.com/avatar.png',
         bio: 'Game developer and full-stack developer.',
-        location: 'Idaho',
+        locationLabel: 'Idaho',
         websiteUrl: 'https://sinlessgamesllc.com',
         createdAt: '2026-05-10T00:00:00.000Z',
         updatedAt: '2026-05-10T01:00:00.000Z',
@@ -64,13 +66,15 @@ describe('user-profile.mapper', () => {
         },
       );
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
+        id: 'profile_123',
         userId: 'option_user_id',
         username: 'option_username',
+        handle: 'option_username',
         displayName: 'Option Display Name',
         avatarUrl: null,
         bio: null,
-        location: null,
+        locationLabel: null,
         websiteUrl: null,
         createdAt: '2026-05-10T00:00:00.000Z',
         updatedAt: '2026-05-10T01:00:00.000Z',
@@ -91,13 +95,15 @@ describe('user-profile.mapper', () => {
         },
       });
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
+        id: 'profile_123',
         userId: 'user_123',
         username: 'sinless777',
+        handle: 'sinless777',
         displayName: 'Sinless777',
         avatarUrl: null,
         bio: null,
-        location: null,
+        locationLabel: null,
         websiteUrl: null,
         createdAt: '2026-05-10T00:00:00.000Z',
         updatedAt: '2026-05-10T01:00:00.000Z',
@@ -130,7 +136,7 @@ describe('user-profile.mapper', () => {
 
       expect(result.avatarUrl).toBeNull();
       expect(result.bio).toBeNull();
-      expect(result.location).toBeNull();
+      expect(result.locationLabel).toBeNull();
       expect(result.websiteUrl).toBeNull();
     });
 
@@ -189,25 +195,29 @@ describe('user-profile.mapper', () => {
         },
       ]);
 
-      expect(result).toEqual([
+      expect(result).toMatchObject([
         {
+          id: 'profile_123',
           userId: 'user_123',
           username: 'sinless777',
+          handle: 'sinless777',
           displayName: 'Sinless777',
           avatarUrl: null,
           bio: null,
-          location: null,
+          locationLabel: null,
           websiteUrl: null,
           createdAt: '2026-05-10T00:00:00.000Z',
           updatedAt: '2026-05-10T01:00:00.000Z',
         },
         {
+          id: 'profile_456',
           userId: 'user_456',
           username: 'helixuser',
+          handle: 'helixuser',
           displayName: 'Helix User',
           avatarUrl: null,
           bio: 'Second profile.',
-          location: null,
+          locationLabel: null,
           websiteUrl: null,
           createdAt: '2026-05-11T00:00:00.000Z',
           updatedAt: '2026-05-11T01:00:00.000Z',

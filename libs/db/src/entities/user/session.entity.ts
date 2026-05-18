@@ -38,6 +38,27 @@ export class UserSession extends BaseEntity {
   @Property({ type: 'text', fieldName: 'session_token' })
   sessionToken!: string;
 
+  /** Friendly device label shown in session management UI. */
+  @Property({ type: 'text', fieldName: 'device_name', nullable: true })
+  deviceName?: string | null = null;
+
+  /** User agent captured when the session was last created or refreshed. */
+  @Property({ type: 'text', fieldName: 'user_agent', nullable: true })
+  userAgent?: string | null = null;
+
+  /** IP address captured when the session was last created or refreshed. */
+  @Property({ type: 'text', fieldName: 'ip_address', nullable: true })
+  ipAddress?: string | null = null;
+
+  /** Timestamp for the most recent session activity. */
+  @Property({
+    type: 'datetime',
+    columnType: 'timestamptz',
+    fieldName: 'last_seen_at',
+    nullable: true,
+  })
+  lastSeenAt?: Date | null = null;
+
   /** Expiration timestamp for this session. */
   @Property({
     type: 'datetime',

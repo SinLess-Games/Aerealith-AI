@@ -53,6 +53,7 @@ keep_names = true
 # -----------------------------------------------------------------------------
 
 [alias]
+"pg" = "./src/shims/pg.cjs"
 "mariadb/callback" = "./src/shims/unused-db-driver.ts"
 "better-sqlite3" = "./src/shims/unused-db-driver.ts"
 "libsql" = "./src/shims/unused-db-driver.ts"

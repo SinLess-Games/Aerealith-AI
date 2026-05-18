@@ -41,7 +41,46 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 };
 
 const isApiErrorLike = (error: unknown): error is ApiErrorLike => {
-  return error instanceof Error && isRecord(error);
+  return isRecord(error);
+};
+
+const readStringProperty = (
+  value: unknown,
+  property: string,
+): string | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const propertyValue = value[property];
+
+  return typeof propertyValue === 'string' ? propertyValue : undefined;
+};
+
+const readBooleanProperty = (
+  value: unknown,
+  property: string,
+): boolean | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const propertyValue = value[property];
+
+  return typeof propertyValue === 'boolean' ? propertyValue : undefined;
+};
+
+const readNumberProperty = (
+  value: unknown,
+  property: string,
+): number | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const propertyValue = value[property];
+
+  return typeof propertyValue === 'number' ? propertyValue : undefined;
 };
 
 const normalizeStatus = (error: unknown): number => {
@@ -53,7 +92,9 @@ const normalizeStatus = (error: unknown): number => {
     return 500;
   }
 
-  const status = error.status ?? error.statusCode;
+  const status =
+    readNumberProperty(error, 'status') ??
+    readNumberProperty(error, 'statusCode');
 
   if (typeof status !== 'number') {
     return 500;
@@ -77,10 +118,10 @@ const normalizeCode = (
 ): string => {
   if (
     isApiErrorLike(error) &&
-    typeof error.code === 'string' &&
-    error.code.trim()
+    readStringProperty(error, 'code') !== undefined &&
+    readStringProperty(error, 'code')?.trim()
   ) {
-    return error.code;
+    return readStringProperty(error, 'code') as string;
   }
 
   if (error instanceof HTTPException) {
@@ -99,7 +140,7 @@ const shouldExposeMessage = (error: unknown, status: number): boolean => {
     return true;
   }
 
-  if (isApiErrorLike(error) && error.expose === true) {
+  if (readBooleanProperty(error, 'expose') === true) {
     return true;
   }
 
@@ -121,6 +162,12 @@ const normalizeMessage = (
 
   if (error instanceof Error) {
     return error.message || defaultMessage;
+  }
+
+  const message = readStringProperty(error, 'message');
+
+  if (message !== undefined && message.trim()) {
+    return message;
   }
 
   if (typeof error === 'string' && error.trim()) {
@@ -147,7 +194,7 @@ const getDetails = (
     return undefined;
   }
 
-  if (isApiErrorLike(error) && error.details !== undefined) {
+  if (isApiErrorLike(error) && 'details' in error) {
     return error.details;
   }
 

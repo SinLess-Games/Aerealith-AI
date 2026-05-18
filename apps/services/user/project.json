@@ -23,9 +23,11 @@
       }
     },
     "serve": {
+      "continuous": true,
       "executor": "@naxodev/nx-cloudflare:serve",
       "options": {
-        "port": 8787
+        "port": 8788,
+        "inspectorPort": 9322
       }
     },
     "deploy": {

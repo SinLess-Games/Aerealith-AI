@@ -2,7 +2,14 @@ export {
   createAuthEmailVerificationRoutes,
   authEmailVerificationRoutes,
 } from './auth-email-verification.routes';
-export type { AuthEmailVerificationRoutesOptions } from './auth-email-verification.routes';
+export type {
+  ApiSuccessResponse as AuthEmailVerificationApiSuccessResponse,
+  ApiValidationErrorResponse as AuthEmailVerificationApiValidationErrorResponse,
+  AuthEmailVerificationMailer as AuthEmailVerificationRouteMailer,
+  AuthEmailVerificationMailInput as AuthEmailVerificationRouteMailInput,
+  AuthEmailVerificationRoutesOptions,
+  AuthResendEmailVerificationPublicResponse,
+} from './auth-email-verification.routes';
 
 export {
   createAuthPasswordRoutes,
@@ -14,11 +21,17 @@ export { createAuthPublicRoutes, authPublicRoutes } from './auth-public.routes';
 export type {
   ApiSuccessResponse as AuthPublicApiSuccessResponse,
   ApiValidationErrorResponse as AuthPublicApiValidationErrorResponse,
+  AuthEmailVerificationMailer as AuthPublicEmailVerificationMailer,
+  AuthEmailVerificationMailInput as AuthPublicEmailVerificationMailInput,
   AuthPublicRoutesOptions,
+  AuthRegisterPublicResponse,
 } from './auth-public.routes';
 
 export { createAuthRoutes, authRoutes } from './auth.routes';
-export type { AuthRoutesOptions } from './auth.routes';
+export type {
+  AuthRoutesEmailVerificationMailer,
+  AuthRoutesOptions,
+} from './auth.routes';
 
 export {
   createAuthSessionRoutes,

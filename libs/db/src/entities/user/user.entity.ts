@@ -32,9 +32,15 @@ export type UserMetadata = Record<string, unknown>;
  */
 @Entity({ tableName: 'app_user' })
 @Unique({ name: 'uq_app_user_email', properties: ['email'] })
+@Unique({ name: 'uq_app_user_username', properties: ['username'] })
 @Index({ name: 'idx_app_user_email', properties: ['email'] })
+@Index({ name: 'idx_app_user_username', properties: ['username'] })
 @Index({ name: 'idx_app_user_status', properties: ['status'] })
 export class User extends BaseEntity {
+  /** Unique login/display handle used by auth routes. */
+  @Property({ type: 'text' })
+  username!: string;
+
   /** Primary email address for the user. */
   @Property({ type: 'text' })
   email!: string;
@@ -47,13 +53,35 @@ export class User extends BaseEntity {
   @Property({ type: 'text', default: 'active' })
   status: UserStatus = 'active';
 
+  /** True after the primary email has been confirmed. */
+  @Property({ type: 'boolean', fieldName: 'email_verified', default: false })
+  emailVerified = false;
+
+  /** Timestamp for when the primary email was confirmed. */
+  @Property({
+    type: 'datetime',
+    columnType: 'timestamptz',
+    fieldName: 'email_verified_at',
+    nullable: true,
+  })
+  emailVerifiedAt?: Date | null = null;
+
+  /** Hashed credentials password. Never expose this in API responses. */
+  @Property({
+    type: 'text',
+    fieldName: 'password_hash',
+    nullable: true,
+    hidden: true,
+  })
+  hashedPassword?: string | null = null;
+
   /** Optional metadata for user-owned non-sensitive attributes. */
   @Property({
     type: 'json',
     columnType: 'jsonb',
     nullable: true,
   })
-  metadata?: UserMetadata;
+  metadata: UserMetadata = {};
 
   /**
    * User profile.
@@ -98,16 +126,24 @@ export class User extends BaseEntity {
   })
   verificationTokens = new Collection<Rel<UserVerificationToken>>(this);
 
+  get passwordHash(): string | undefined {
+    return this.hashedPassword ?? undefined;
+  }
+
+  set passwordHash(value: string | undefined) {
+    this.hashedPassword = value;
+  }
+
   /**
    * Stable deterministic ID seed.
    *
-   * Email is unique, so this keeps user IDs stable for the same email.
+   * Username is unique, so this keeps user IDs stable for the same username.
    */
   protected override getDeterministicIdSeed(): string | undefined {
-    if (!this.email) {
+    if (!this.username) {
       return undefined;
     }
 
-    return `user:${this.email.toLowerCase()}`;
+    return `user:${this.username.toLowerCase()}`;
   }
 }

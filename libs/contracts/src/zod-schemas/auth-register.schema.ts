@@ -9,6 +9,8 @@ export const AUTH_REGISTER_LIMITS = {
   DISPLAY_NAME_MAX_LENGTH: 120,
   TIMEZONE_MAX_LENGTH: 64,
   LOCALE_MAX_LENGTH: 16,
+  TOKEN_MIN_LENGTH: 16,
+  TOKEN_MAX_LENGTH: 4096,
 } as const;
 
 export const AUTH_REGISTER_REGEX = {
@@ -87,6 +89,18 @@ export const authRegisterLocaleSchema = z
   )
   .default('en-US');
 
+export const authRegisterTokenSchema = z
+  .string()
+  .trim()
+  .min(
+    AUTH_REGISTER_LIMITS.TOKEN_MIN_LENGTH,
+    `Token must be at least ${AUTH_REGISTER_LIMITS.TOKEN_MIN_LENGTH} characters.`,
+  )
+  .max(
+    AUTH_REGISTER_LIMITS.TOKEN_MAX_LENGTH,
+    `Token must be at most ${AUTH_REGISTER_LIMITS.TOKEN_MAX_LENGTH} characters.`,
+  );
+
 export const authRegisterSchema = z.object({
   username: authRegisterUsernameSchema,
   email: authRegisterEmailSchema,
@@ -100,17 +114,67 @@ export const authRegisterRequestSchema = z.object({
   body: authRegisterSchema,
 });
 
-export const authRegisterResponseUserSchema = z.object({
-  id: z.string(),
-  username: z.string(),
-  email: z.string(),
-  emailVerified: z.boolean(),
-  status: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+export const authRegisterResponseUserSchema = z
+  .object({
+    id: z.string(),
+    username: z.string(),
+    email: z.string(),
+    emailVerified: z.boolean(),
+    status: z.string(),
+    displayName: z.string().optional(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .passthrough();
+
+export const authRegisterEmailVerificationTokenPublicResponseSchema = z
+  .object({
+    created: z.boolean(),
+    expiresAt: z.string().optional(),
+  })
+  .passthrough();
+
+export const authRegisterEmailVerificationTokenSchema = z
+  .object({
+    id: z.string().optional(),
+    token: authRegisterTokenSchema.optional(),
+    rawToken: authRegisterTokenSchema.optional(),
+    plainToken: authRegisterTokenSchema.optional(),
+    verificationToken: authRegisterTokenSchema.optional(),
+    value: authRegisterTokenSchema.optional(),
+    type: z.string().optional(),
+    identifier: z.string().optional(),
+    expiresAt: z.string().optional(),
+    response: authRegisterEmailVerificationTokenPublicResponseSchema.optional(),
+  })
+  .passthrough();
+
+export const authRegisterServiceResponseSchema = z.object({
+  user: authRegisterResponseUserSchema,
+  emailVerificationToken: authRegisterEmailVerificationTokenSchema,
 });
 
-export const authRegisterResponseSchema = z.object({
+export const authRegisterPublicVerificationSchema = z.object({
+  required: z.literal(true),
+  emailSent: z.boolean(),
+  message: z.string(),
+});
+
+export const authRegisterPublicResponseSchema = z.object({
+  user: authRegisterResponseUserSchema,
+  verification: authRegisterPublicVerificationSchema,
+});
+
+/**
+ * Current public register response returned by auth-public.routes.ts.
+ */
+export const authRegisterResponseSchema = authRegisterPublicResponseSchema;
+
+/**
+ * Legacy register response used when registration immediately issued tokens.
+ * Kept for backwards compatibility while older callers are migrated.
+ */
+export const authRegisterLegacyResponseSchema = z.object({
   user: authRegisterResponseUserSchema,
   accessToken: z.string(),
   refreshToken: z.string(),
@@ -122,10 +186,36 @@ export const authRegisterResponseSchema = z.object({
 export type AuthRegisterInput = z.input<typeof authRegisterSchema>;
 export type AuthRegisterDto = z.infer<typeof authRegisterSchema>;
 export type AuthRegisterRequest = z.infer<typeof authRegisterRequestSchema>;
+
 export type AuthRegisterResponseUser = z.infer<
   typeof authRegisterResponseUserSchema
 >;
+
+export type AuthRegisterEmailVerificationTokenPublicResponse = z.infer<
+  typeof authRegisterEmailVerificationTokenPublicResponseSchema
+>;
+
+export type AuthRegisterEmailVerificationToken = z.infer<
+  typeof authRegisterEmailVerificationTokenSchema
+>;
+
+export type AuthRegisterServiceResponse = z.infer<
+  typeof authRegisterServiceResponseSchema
+>;
+
+export type AuthRegisterPublicVerification = z.infer<
+  typeof authRegisterPublicVerificationSchema
+>;
+
+export type AuthRegisterPublicResponse = z.infer<
+  typeof authRegisterPublicResponseSchema
+>;
+
 export type AuthRegisterResponse = z.infer<typeof authRegisterResponseSchema>;
+
+export type AuthRegisterLegacyResponse = z.infer<
+  typeof authRegisterLegacyResponseSchema
+>;
 
 export const parseAuthRegisterInput = (input: unknown): AuthRegisterDto => {
   return authRegisterSchema.parse(input);
@@ -133,4 +223,34 @@ export const parseAuthRegisterInput = (input: unknown): AuthRegisterDto => {
 
 export const safeParseAuthRegisterInput = (input: unknown) => {
   return authRegisterSchema.safeParse(input);
+};
+
+export const parseAuthRegisterResponse = (
+  input: unknown,
+): AuthRegisterResponse => {
+  return authRegisterResponseSchema.parse(input);
+};
+
+export const safeParseAuthRegisterResponse = (input: unknown) => {
+  return authRegisterResponseSchema.safeParse(input);
+};
+
+export const parseAuthRegisterPublicResponse = (
+  input: unknown,
+): AuthRegisterPublicResponse => {
+  return authRegisterPublicResponseSchema.parse(input);
+};
+
+export const safeParseAuthRegisterPublicResponse = (input: unknown) => {
+  return authRegisterPublicResponseSchema.safeParse(input);
+};
+
+export const parseAuthRegisterServiceResponse = (
+  input: unknown,
+): AuthRegisterServiceResponse => {
+  return authRegisterServiceResponseSchema.parse(input);
+};
+
+export const safeParseAuthRegisterServiceResponse = (input: unknown) => {
+  return authRegisterServiceResponseSchema.safeParse(input);
 };

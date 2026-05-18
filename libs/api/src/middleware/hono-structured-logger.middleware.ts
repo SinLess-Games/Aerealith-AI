@@ -54,7 +54,7 @@ type StatusLikeError = Error & {
 const DEFAULT_REQUEST_ID_HEADER = STRUCTURED_LOGGER_REQUEST_ID_HEADER;
 
 const isStatusLikeError = (error: unknown): error is StatusLikeError => {
-  return error instanceof Error;
+  return typeof error === 'object' && error !== null;
 };
 
 const isValidHttpStatus = (status: unknown): status is number => {

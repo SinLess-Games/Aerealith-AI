@@ -67,7 +67,7 @@ export class UserAccount extends BaseEntity {
 
   /** Optional provider account management/settings URL. */
   @Property({ type: 'text', fieldName: 'management_url', nullable: true })
-  managementUrl?: string;
+  managementUrl?: string | null = null;
 
   /** Current connection status. */
   @Property({ type: 'text', default: 'active' })

@@ -1,0 +1,48 @@
+// libs/db/src/enums/timezone-utc.enum.ts
+
+/**
+ * TimezoneUtc enum representing UTC offset timezone values.
+ */
+export enum TimezoneUtc {
+  UtcMinus1200 = 'UTC-12:00',
+  UtcMinus1100 = 'UTC-11:00',
+  UtcMinus1000 = 'UTC-10:00',
+  UtcMinus0930 = 'UTC-09:30',
+  UtcMinus0900 = 'UTC-09:00',
+  UtcMinus0800 = 'UTC-08:00',
+  UtcMinus0700 = 'UTC-07:00',
+  UtcMinus0600 = 'UTC-06:00',
+  UtcMinus0500 = 'UTC-05:00',
+  UtcMinus0400 = 'UTC-04:00',
+  UtcMinus0330 = 'UTC-03:30',
+  UtcMinus0300 = 'UTC-03:00',
+  UtcMinus0230 = 'UTC-02:30',
+  UtcMinus0200 = 'UTC-02:00',
+  UtcMinus0100 = 'UTC-01:00',
+
+  UtcPlus0000 = 'UTC+00:00',
+  UtcPlus0100 = 'UTC+01:00',
+  UtcPlus0200 = 'UTC+02:00',
+  UtcPlus0300 = 'UTC+03:00',
+  UtcPlus0330 = 'UTC+03:30',
+  UtcPlus0400 = 'UTC+04:00',
+  UtcPlus0430 = 'UTC+04:30',
+  UtcPlus0500 = 'UTC+05:00',
+  UtcPlus0530 = 'UTC+05:30',
+  UtcPlus0545 = 'UTC+05:45',
+  UtcPlus0600 = 'UTC+06:00',
+  UtcPlus0630 = 'UTC+06:30',
+  UtcPlus0700 = 'UTC+07:00',
+  UtcPlus0800 = 'UTC+08:00',
+  UtcPlus0845 = 'UTC+08:45',
+  UtcPlus0900 = 'UTC+09:00',
+  UtcPlus0930 = 'UTC+09:30',
+  UtcPlus1000 = 'UTC+10:00',
+  UtcPlus1030 = 'UTC+10:30',
+  UtcPlus1100 = 'UTC+11:00',
+  UtcPlus1200 = 'UTC+12:00',
+  UtcPlus1245 = 'UTC+12:45',
+  UtcPlus1300 = 'UTC+13:00',
+  UtcPlus1345 = 'UTC+13:45',
+  UtcPlus1400 = 'UTC+14:00',
+}

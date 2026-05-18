@@ -85,6 +85,7 @@
     "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^11.1.19",
     "@next/eslint-plugin-next": "15.5.16",
+    "@nx-extensions/helm": "^1.1.0",
     "@nx/cypress": "22.7.1",
     "@nx/esbuild": "22.7.1",
     "@nx/eslint": "22.7.1",
@@ -150,12 +151,14 @@
     "yaml": "^2.8.4"
   },
   "dependencies": {
+    "@emotion/cache": "^11.14.0",
     "@emotion/react": "11.14.0",
     "@emotion/server": "11.11.0",
     "@emotion/styled": "11.14.1",
     "@hono/zod-validator": "^0.7.6",
     "@mikro-orm/core": "6.6.14",
     "@mikro-orm/postgresql": "6.6.14",
+    "@mui/material-nextjs": "^9.0.1",
     "@nestjs/common": "^11.1.19",
     "@nestjs/core": "^11.1.19",
     "@nestjs/platform-express": "^11.1.19",

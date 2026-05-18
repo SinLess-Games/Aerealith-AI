@@ -32,13 +32,12 @@
       "continuous": true,
       "options": {
         "cwd": "apps/frontend",
-        "command": "next dev",
-        "proxyConfig": "apps/frontend/proxy.conf.json"
+        "command": "next dev"
       },
       "syncGenerators": ["@nx/js:typescript-sync"],
       "parallelism": true,
       "configurations": {},
-      "dependsOn": ["auth:serve", "user:serve"]
+      "dependsOn": ["@helix-ai/db:build", "auth:serve", "user-service:serve"]
     },
     "start": {
       "executor": "nx:run-commands",

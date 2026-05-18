@@ -8,7 +8,13 @@ import { fileURLToPath } from 'node:url';
 
 import * as entities from './entities/index.js';
 
-const __filename = fileURLToPath(import.meta.url);
+const moduleUrl =
+  typeof import.meta.url === 'string' && import.meta.url.length > 0
+    ? import.meta.url
+    : undefined;
+const __filename = moduleUrl
+  ? fileURLToPath(moduleUrl)
+  : join(process.cwd(), 'libs/db/src/mikroorm-config.ts');
 const __dirname = dirname(__filename);
 const packageRoot = join(__dirname, '..');
 
@@ -440,6 +446,8 @@ export default defineConfig({
   entities: discoveredEntities,
 
   extensions: [Migrator],
+
+  connect: false,
 
   dynamicImportProvider: (id) => import(id),
 

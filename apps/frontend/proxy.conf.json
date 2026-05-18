@@ -1,11 +1,11 @@
 {
   "/V1/auth": {
-    "target": "http://localhost:8000",
+    "target": "http://localhost:8787",
     "secure": false,
     "changeOrigin": true
   },
   "/V1/user": {
-    "target": "http://localhost:8001",
+    "target": "http://localhost:8788",
     "secure": false,
     "changeOrigin": true
   }

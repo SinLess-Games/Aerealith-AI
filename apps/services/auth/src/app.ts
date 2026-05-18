@@ -1,20 +1,24 @@
 import { Hono } from 'hono';
 
 import {
+  ERROR_RESPONSE_HEADER,
+  createErrorResponseBody,
   honoCorsMiddleware,
   honoErrorMiddleware,
   honoRequestIdMiddleware,
   honoStructuredLoggerMiddleware,
 } from '@helix-ai/api';
 
-import type { AuthService } from './services/auth.service';
 import type { AuthContextMiddlewareOptions } from './middleware/auth-context.middleware';
-import type { AuthHonoEnv } from './types/auth-context.type';
 import { createAuthRoutes } from './routes';
+import type { AuthRoutesEmailVerificationMailer } from './routes';
+import type { AuthService } from './services/auth.service';
+import type { AuthHonoEnv } from './types/auth-context.type';
 
 export type AuthAppOptions = {
   authService: AuthService;
   authContext: Omit<AuthContextMiddlewareOptions, 'requireSession'>;
+  emailVerificationMailer?: AuthRoutesEmailVerificationMailer;
   serviceName?: string;
   version?: string;
 };
@@ -56,15 +60,42 @@ const successResponse = <TData>(data: TData) => {
 export const createAuthApp = ({
   authService,
   authContext,
+  emailVerificationMailer,
   serviceName = DEFAULT_SERVICE_NAME,
   version = DEFAULT_VERSION,
 }: AuthAppOptions): Hono<AuthHonoEnv> => {
   const app = new Hono<AuthHonoEnv>();
 
+  const emailVerificationMailerOptions =
+    emailVerificationMailer === undefined ? {} : { emailVerificationMailer };
+
   app.use('*', honoRequestIdMiddleware());
   app.use('*', honoErrorMiddleware());
   app.use('*', honoStructuredLoggerMiddleware());
   app.use('*', honoCorsMiddleware());
+
+  app.onError((error, c) => {
+    const body = createErrorResponseBody(c, error);
+    const status =
+      typeof error.status === 'number' &&
+      Number.isInteger(error.status) &&
+      error.status >= 400 &&
+      error.status <= 599
+        ? error.status
+        : typeof error.statusCode === 'number' &&
+            Number.isInteger(error.statusCode) &&
+            error.statusCode >= 400 &&
+            error.statusCode <= 599
+          ? error.statusCode
+          : 500;
+
+    return c.json(body, {
+      status,
+      headers: {
+        [ERROR_RESPONSE_HEADER]: body.error.code,
+      },
+    });
+  });
 
   app.get('/', (c) => {
     return c.json(
@@ -106,6 +137,7 @@ export const createAuthApp = ({
     createAuthRoutes({
       authService,
       authContext,
+      ...emailVerificationMailerOptions,
     }),
   );
 

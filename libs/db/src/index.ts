@@ -33,7 +33,25 @@ export * from './entities/index.js';
 export * as repositories from './repositories/index.js';
 export * from './repositories/index.js';
 
+export * from './enums/index.js';
 export * from './entity.base.js';
+export type {
+  AccessibilityUserSettings,
+  AccountUserSettings,
+  AiUserSettings,
+  AppearanceUserSettings,
+  CommunicationUserSettings,
+  ContentUserSettings,
+  DeveloperUserSettings,
+  IntegrationUserSettings,
+  LocalizationUserSettings,
+  MemoryUserSettings,
+  NotificationUserSettings,
+  PrivacyUserSettings,
+  SecurityUserSettings,
+  UserSettingsMetadata,
+  UserSettingsPatch,
+} from './types/user-settings/index.js';
 
 export type {
   EntityManager,
@@ -48,6 +66,82 @@ type HelixGlobal = typeof globalThis & {
 };
 
 const helixGlobal = globalThis as HelixGlobal;
+
+type MikroOrmRuntimeWarmable = {
+  getPkGetter(meta: unknown): unknown;
+  getPkGetterConverted(meta: unknown): unknown;
+  getPkSerializer(meta: unknown): unknown;
+  getSnapshotGenerator(entityName: string): unknown;
+  getResultMapper(entityName: string): unknown;
+  getEntityComparator(entityName: string): unknown;
+};
+
+type MikroOrmHydratorWarmable = {
+  getEntityHydrator(
+    meta: unknown,
+    type: 'full' | 'reference',
+    normalizeAccessors?: boolean,
+  ): unknown;
+};
+
+type MikroOrmMetadataWarmable = {
+  getAll(): Record<string, { className: string }>;
+};
+
+type MikroOrmWarmable = {
+  metadata: MikroOrmMetadataWarmable;
+  config: {
+    getComparator(metadata: unknown): unknown;
+    getHydrator(metadata: unknown): unknown;
+  };
+  driver?: {
+    comparator?: MikroOrmRuntimeWarmable;
+  };
+};
+
+function warmMikroOrmComparator(
+  comparator: MikroOrmRuntimeWarmable,
+  metadata: MikroOrmMetadataWarmable,
+): void {
+  for (const meta of Object.values(metadata.getAll())) {
+    comparator.getPkGetter(meta);
+    comparator.getPkGetterConverted(meta);
+    comparator.getPkSerializer(meta);
+    comparator.getSnapshotGenerator(meta.className);
+    comparator.getResultMapper(meta.className);
+    comparator.getEntityComparator(meta.className);
+  }
+}
+
+function warmMikroOrmHydrator(
+  hydrator: MikroOrmHydratorWarmable,
+  metadata: MikroOrmMetadataWarmable,
+): void {
+  for (const meta of Object.values(metadata.getAll())) {
+    hydrator.getEntityHydrator(meta, 'full', false);
+    hydrator.getEntityHydrator(meta, 'full', true);
+    hydrator.getEntityHydrator(meta, 'reference', false);
+    hydrator.getEntityHydrator(meta, 'reference', true);
+  }
+}
+
+function warmMikroOrmRuntime(orm: MikroORM<PostgreSqlDriver>): void {
+  const warmableOrm = orm as unknown as MikroOrmWarmable;
+  const metadata = warmableOrm.metadata;
+  const configComparator = warmableOrm.config.getComparator(
+    metadata,
+  ) as unknown as MikroOrmRuntimeWarmable;
+  const hydrator = warmableOrm.config.getHydrator(
+    metadata,
+  ) as unknown as MikroOrmHydratorWarmable;
+
+  warmMikroOrmComparator(configComparator, metadata);
+  warmMikroOrmHydrator(hydrator, metadata);
+
+  if (warmableOrm.driver?.comparator !== undefined) {
+    warmMikroOrmComparator(warmableOrm.driver.comparator, metadata);
+  }
+}
 
 /**
  * Initialize and return a new MikroORM instance.
@@ -69,7 +163,11 @@ export async function initOrm(): Promise<MikroORM<PostgreSqlDriver>> {
     );
   }
 
-  return MikroORM.init<PostgreSqlDriver>(ormConfig);
+  const orm = await MikroORM.init<PostgreSqlDriver>(ormConfig);
+
+  warmMikroOrmRuntime(orm);
+
+  return orm;
 }
 
 /**
@@ -107,6 +205,7 @@ export function forkEntityManager(
  */
 export async function getEntityManager(): Promise<EntityManager<PostgreSqlDriver>> {
   const orm = await getOrm();
+  await orm.reconnect();
 
   return forkEntityManager(orm);
 }

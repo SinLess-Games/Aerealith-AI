@@ -29,7 +29,7 @@ export class ProfileRepository {
   }
 
   async findByUserId(userId: string): Promise<Loaded<Profile> | null> {
-    return this.repository.findOne({ userId } as FilterQuery<Profile>);
+    return this.repository.findOne({ user: userId } as FilterQuery<Profile>);
   }
 
   async existsById(id: string): Promise<boolean> {
@@ -40,7 +40,7 @@ export class ProfileRepository {
 
   async existsByUserId(userId: string): Promise<boolean> {
     const count = await this.repository.count({
-      userId,
+      user: userId,
     } as FilterQuery<Profile>);
 
     return count > 0;

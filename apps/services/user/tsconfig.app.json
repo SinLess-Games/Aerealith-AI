@@ -36,5 +36,19 @@
     "src/**/*.spec.js",
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx"
+  ],
+  "references": [
+    {
+      "path": "../../../libs/db/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/contracts/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/config/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/api/tsconfig.lib.json"
+    }
   ]
 }

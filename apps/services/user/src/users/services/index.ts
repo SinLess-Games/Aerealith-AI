@@ -27,6 +27,12 @@ export {
   GetUserSettingsServiceError,
   type GetUserSettingsServiceOptions,
 } from './get-user-settings.service';
+export {
+  UpdateUserSettingsService,
+  UpdateUserSettingsServiceError,
+  type UpdateUserSettingsInput,
+  type UpdateUserSettingsServiceOptions,
+} from './update-user-settings.service';
 
 export {
   ListUsersService,
@@ -39,3 +45,10 @@ export {
   UpdateUserServiceError,
   type UpdateUserServiceOptions,
 } from './update-user.service';
+
+export {
+  UpdateUserProfileService,
+  UpdateUserProfileServiceError,
+  type UpdateUserProfileInput,
+  type UpdateUserProfileServiceOptions,
+} from './update-user-profile.service';

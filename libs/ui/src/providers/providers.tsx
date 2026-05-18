@@ -2,6 +2,9 @@
 
 import type { ReactNode } from 'react';
 
+import AppRouterCacheProvider, {
+  type AppRouterCacheProviderProps,
+} from './approuter-cache.provider';
 import FaroProvider, { type FaroProviderProps } from './faro.provider';
 import ThemeProvider, {
   type ThemeProviderDefaultMode,
@@ -15,6 +18,11 @@ export type HelixProvidersProps = {
   defaultMode?: ThemeProviderDefaultMode;
 
   /**
+   * Optional MUI App Router cache provider configuration.
+   */
+  appRouterCache?: Omit<AppRouterCacheProviderProps, 'children'>;
+
+  /**
    * Optional Faro provider configuration.
    */
   faro?: Omit<FaroProviderProps, 'children'>;
@@ -25,14 +33,17 @@ export type HelixProvidersProps = {
 export function HelixProviders({
   children,
   defaultMode = 'system',
+  appRouterCache,
   faro,
 }: HelixProvidersProps) {
   return (
-    <ThemeProvider defaultMode={defaultMode}>
-      <FaroProvider enabled={faro?.enabled} config={faro?.config}>
-        {children}
-      </FaroProvider>
-    </ThemeProvider>
+    <AppRouterCacheProvider options={appRouterCache?.options}>
+      <ThemeProvider defaultMode={defaultMode}>
+        <FaroProvider enabled={faro?.enabled} config={faro?.config}>
+          {children}
+        </FaroProvider>
+      </ThemeProvider>
+    </AppRouterCacheProvider>
   );
 }
 

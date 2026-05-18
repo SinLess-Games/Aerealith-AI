@@ -29,18 +29,6 @@ function isMode(value: unknown): value is Mode {
   return value === 'light' || value === 'dark';
 }
 
-function getSystemMode(): Mode {
-  if (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-  ) {
-    return 'dark';
-  }
-
-  return 'light';
-}
-
 function getDocumentMode(): Mode | null {
   if (typeof document === 'undefined') {
     return null;
@@ -52,11 +40,7 @@ function getDocumentMode(): Mode | null {
 }
 
 function getInitialMode(defaultMode: ThemeProviderDefaultMode): Mode {
-  if (defaultMode !== 'system') {
-    return defaultMode;
-  }
-
-  return getDocumentMode() ?? getSystemMode();
+  return defaultMode === 'system' ? getDocumentMode() ?? 'light' : defaultMode;
 }
 
 function applyThemeMode(mode: Mode): void {

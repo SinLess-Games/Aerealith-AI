@@ -46,7 +46,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "../../dist/apps/frontend/types/**/*.ts"
-  ],
+, "../../libs/ui/src/components/login-signup.ts"  ],
   "exclude": [
     "node_modules",
     ".next/cache",

@@ -5,22 +5,38 @@ import { optionalAuthMiddleware } from '../middleware/optional-auth.middleware';
 import type { AuthContextMiddlewareOptions } from '../middleware/auth-context.middleware';
 import type { AuthHonoEnv } from '../types/auth-context.type';
 
-import { createAuthEmailVerificationRoutes } from './auth-email-verification.routes';
+import {
+  createAuthEmailVerificationRoutes,
+  type AuthEmailVerificationMailer as AuthEmailVerificationRouteMailer,
+} from './auth-email-verification.routes';
 import { createAuthPasswordRoutes } from './auth-password.routes';
-import { createAuthPublicRoutes } from './auth-public.routes';
+import {
+  createAuthPublicRoutes,
+  type AuthEmailVerificationMailer as AuthPublicRouteMailer,
+} from './auth-public.routes';
 import { createAuthSessionRoutes } from './auth-session.routes';
 import { createAuthUsernameRoutes } from './auth-username.routes';
+
+export type AuthRoutesEmailVerificationMailer = NonNullable<
+  AuthPublicRouteMailer
+> &
+  NonNullable<AuthEmailVerificationRouteMailer>;
 
 export type AuthRoutesOptions = {
   authService: AuthService;
   authContext: Omit<AuthContextMiddlewareOptions, 'requireSession'>;
+  emailVerificationMailer?: AuthRoutesEmailVerificationMailer;
 };
 
 export const createAuthRoutes = ({
   authService,
   authContext,
+  emailVerificationMailer,
 }: AuthRoutesOptions): Hono<AuthHonoEnv> => {
   const routes = new Hono<AuthHonoEnv>();
+
+  const emailVerificationMailerOptions =
+    emailVerificationMailer === undefined ? {} : { emailVerificationMailer };
 
   routes.use(
     '*',
@@ -33,6 +49,22 @@ export const createAuthRoutes = ({
   routes.route(
     '/',
     createAuthPublicRoutes({
+      authService,
+      ...emailVerificationMailerOptions,
+    }),
+  );
+
+  routes.route(
+    '/',
+    createAuthEmailVerificationRoutes({
+      authService,
+      ...emailVerificationMailerOptions,
+    }),
+  );
+
+  routes.route(
+    '/',
+    createAuthPasswordRoutes({
       authService,
     }),
   );
@@ -47,20 +79,6 @@ export const createAuthRoutes = ({
   routes.route(
     '/',
     createAuthSessionRoutes({
-      authService,
-    }),
-  );
-
-  routes.route(
-    '/',
-    createAuthEmailVerificationRoutes({
-      authService,
-    }),
-  );
-
-  routes.route(
-    '/',
-    createAuthPasswordRoutes({
       authService,
     }),
   );
