@@ -1,0 +1,1321 @@
+---
+title: Data Policy
+description: Explains how Helix AI handles user data, ownership, storage, processing, research use, exports, deletion, retention, and data controls.
+effective_date: 2026-05-18
+last_updated: 2026-05-18
+owner: SinLess Games LLC
+status: draft
+---
+
+# Data Policy
+
+## 1. Purpose
+
+This Data Policy explains how Helix AI handles data provided by users, organizations, developers, integrations, automations, plugins, and connected services.
+
+Helix AI is operated by SinLess Games LLC.
+
+This policy explains:
+
+- Who owns user data
+- What data Helix AI may process
+- How data may be used
+- How data may not be used
+- How data is stored, retained, exported, and deleted
+- How memory, files, analytics, automations, integrations, and research use are handled
+- How organization and enterprise data controls work
+- How this policy relates to privacy, security, acceptable use, and AI transparency
+
+The core principle is simple:
+
+**Users own their data. Helix AI does not sell user data. Helix AI does not use user data outside of legitimate service business logic and approved research purposes.**
+
+## 2. Scope
+
+This policy applies to Helix AI services, including:
+
+- Websites
+- Web applications
+- Desktop applications
+- Mobile applications
+- Browser extensions
+- APIs
+- Developer tools
+- Marketplace features
+- Plugins
+- Automations
+- Integrations
+- Dashboards
+- Analytics features
+- Uploaded files
+- Memory features
+- Organization workspaces
+- Cloud-hosted deployments
+- Self-hosted deployments
+- Hybrid deployments
+- Air-gapped deployments, where applicable
+
+This policy applies to:
+
+- Individual users
+- Organization users
+- Workspace members
+- Administrators
+- Developers
+- Marketplace publishers
+- API users
+- Enterprise customers
+- Anyone who uses Helix AI through an account, workspace, integration, automation, shared agent, or connected service
+
+## 3. Core Data Commitments
+
+SinLess Games LLC makes the following commitments for Helix AI:
+
+1. **Users own their data.**
+2. **Helix AI does not sell user data.**
+3. **Helix AI does not use user data outside legitimate service business logic and approved research purposes.**
+4. **Helix AI does not claim ownership over user-uploaded content.**
+5. **Helix AI only receives the rights needed to operate, secure, improve, and support the service.**
+6. **Helix AI should minimize unnecessary data collection.**
+7. **Users should have meaningful controls over their data.**
+8. **Organizations should have administrative controls over organization data.**
+9. **Sensitive data should receive stronger handling and access controls.**
+10. **Secrets should not be stored in ordinary memory or general user content.**
+11. **Data access should be logged and limited where practical.**
+12. **Data should be exportable and deletable where supported and legally required.**
+13. **Research use should be limited, controlled, and aligned with product safety, reliability, quality, and responsible AI goals.**
+
+## 4. Data Ownership
+
+As between you and SinLess Games LLC, you retain ownership of your data.
+
+Your data may include:
+
+- Prompts
+- Messages
+- Uploaded files
+- Documents
+- Images
+- Audio
+- Video
+- Code
+- Configuration files
+- Logs
+- Notes
+- Project data
+- Workspace data
+- Organization data
+- Integration data
+- Automation data
+- Memory entries
+- Dashboard data
+- Analytics inputs
+- API inputs
+- User-generated content
+- Marketplace publisher content
+- Any other content you submit, upload, connect, create, import, or process through Helix AI
+
+SinLess Games LLC does not claim ownership of user data.
+
+By using Helix AI, you give SinLess Games LLC a limited right to process your data only as needed to provide, secure, maintain, troubleshoot, improve, support, and research Helix AI according to this policy, the Privacy Policy, the Terms of Use, and applicable agreements.
+
+## 5. Customer Data
+
+“Customer Data” means data that users or organizations submit, upload, import, connect, generate, or process through Helix AI.
+
+Customer Data may include:
+
+- User prompts and messages
+- Conversation history
+- Uploaded files
+- Connected files
+- Workspace documents
+- Organization knowledge bases
+- API requests and responses
+- Plugin inputs and outputs
+- Automation inputs and outputs
+- Integration data
+- Dashboard data
+- Project data
+- Memory entries
+- User preferences
+- Organization settings
+- Developer content
+- Marketplace publisher content
+
+Customer Data remains owned by the user or organization that provided it, subject to applicable law, contract, account ownership, organization controls, and workspace permissions.
+
+## 6. Account Data
+
+“Account Data” means information used to create, secure, administer, and support an account.
+
+Account Data may include:
+
+- Name
+- Email address
+- Username
+- Password hashes
+- Authentication methods
+- Multi-factor authentication settings
+- Passkey information
+- OAuth provider identifiers
+- Organization membership
+- Workspace membership
+- Roles and permissions
+- Billing contact information
+- Support contact information
+- Account status
+- Login metadata
+- Security events
+- Consent records
+- Communication preferences
+
+Account Data is used to operate, secure, administer, and support Helix AI.
+
+## 7. Service Data
+
+“Service Data” means operational data created by Helix AI while providing the service.
+
+Service Data may include:
+
+- Logs
+- Audit records
+- Error events
+- Performance metrics
+- Usage metrics
+- API metadata
+- Rate-limit records
+- Billing usage records
+- Feature entitlement records
+- Security telemetry
+- Abuse-prevention signals
+- Automation execution records
+- Plugin execution records
+- Model routing metadata
+- System health data
+- Support records
+
+Service Data is used for legitimate service business logic, including reliability, security, billing, support, abuse prevention, compliance, debugging, analytics, and product improvement.
+
+## 8. Derived Data
+
+Helix AI may create derived data from user activity or service operation.
+
+Derived Data may include:
+
+- Embeddings
+- Indexes
+- Search metadata
+- Summaries
+- Classifications
+- Labels
+- Feature usage metrics
+- Aggregated statistics
+- Risk signals
+- Quality signals
+- Debugging metadata
+- Safety signals
+- Recommendation metadata
+- Model evaluation metadata
+- Analytics outputs
+- Dashboard calculations
+
+Derived Data is used only for legitimate service business logic and approved research purposes.
+
+Where practical, derived data should be scoped, minimized, aggregated, anonymized, de-identified, or separated from direct identifiers.
+
+## 9. Aggregated and De-Identified Data
+
+Helix AI may use aggregated or de-identified data for:
+
+- Product improvement
+- Service reliability
+- Security analysis
+- Abuse prevention
+- Research
+- Benchmarking
+- Capacity planning
+- Feature planning
+- Documentation improvement
+- Performance analysis
+- Responsible AI evaluation
+- Business reporting
+
+Aggregated or de-identified data should not reasonably identify a specific user, customer, organization, workspace, or person.
+
+SinLess Games LLC should not attempt to re-identify de-identified data except where necessary for security, abuse prevention, legal compliance, or validation that de-identification controls work.
+
+## 10. No Sale of User Data
+
+SinLess Games LLC does not sell user data.
+
+Helix AI will not sell:
+
+- Customer Data
+- User prompts
+- User messages
+- Uploaded files
+- Memory entries
+- Workspace data
+- Organization data
+- Integration data
+- API inputs or outputs
+- Personal data
+- Private user content
+- Sensitive data
+- Secrets
+- Analytics inputs
+- Dashboard data
+
+Helix AI may use subprocessors, vendors, hosting providers, payment processors, AI providers, analytics providers, security providers, and support providers to operate the service. Use of these providers is not a sale of user data when they process data only on behalf of SinLess Games LLC or the customer according to applicable agreements and policies.
+
+Subprocessors and vendors should be disclosed in the applicable [Subprocessor Vendor List](./subprocessor-vendor-list.md).
+
+## 11. No Unrelated Use
+
+Helix AI does not use user data for purposes unrelated to Helix AI service business logic or approved research.
+
+Helix AI will not use user data to:
+
+- Sell personal data
+- Sell customer content
+- Build unrelated third-party products
+- Train unrelated external products without authorization
+- Target users with unrelated advertising based on private content
+- Share private workspace data with other customers
+- Share organization data with unrelated organizations
+- Publish identifiable user data without permission
+- Use secrets, credentials, or private keys for unrelated purposes
+- Use user data in ways that violate this policy, the Privacy Policy, or applicable agreements
+
+## 12. Permitted Business Logic Uses
+
+Helix AI may use data for legitimate service business logic.
+
+Business logic uses may include:
+
+- Providing the service
+- Generating responses
+- Processing prompts
+- Processing uploaded files
+- Running automations
+- Executing approved tool calls
+- Operating integrations
+- Supporting plugins
+- Managing dashboards
+- Managing analytics
+- Remembering user preferences
+- Managing AI memory
+- Searching connected knowledge
+- Enforcing permissions
+- Authenticating users
+- Authorizing access
+- Managing organizations and workspaces
+- Processing billing
+- Providing customer support
+- Debugging errors
+- Monitoring reliability
+- Improving performance
+- Enforcing rate limits
+- Preventing abuse
+- Detecting security threats
+- Investigating policy violations
+- Maintaining audit logs
+- Supporting backups
+- Supporting disaster recovery
+- Complying with law
+- Enforcing contracts
+- Protecting users, systems, and the public
+
+## 13. Approved Research Uses
+
+Helix AI may use data for approved research purposes that support the Helix AI product, platform, safety, reliability, security, quality, and responsible AI goals.
+
+Approved research may include:
+
+- Improving AI response quality
+- Improving retrieval accuracy
+- Improving memory behavior
+- Improving automation safety
+- Improving hallucination detection
+- Improving tool-use reliability
+- Improving model routing
+- Improving abuse detection
+- Improving security detection
+- Improving policy enforcement
+- Improving accessibility
+- Improving user experience
+- Evaluating system performance
+- Evaluating product reliability
+- Evaluating responsible AI safeguards
+- Testing new features
+- Testing model behavior
+- Testing plugin safety
+- Testing marketplace safety
+- Evaluating anonymized or aggregated usage patterns
+
+Research use should follow these principles:
+
+- Use the minimum data reasonably needed.
+- Prefer aggregated, anonymized, or de-identified data where practical.
+- Avoid unnecessary human review of private user content.
+- Restrict access to authorized personnel or systems.
+- Protect sensitive data.
+- Do not publish identifiable user or organization data without permission.
+- Do not use secrets, credentials, private keys, or tokens for research.
+- Respect user and organization settings.
+- Respect enterprise agreements and data restrictions.
+- Maintain appropriate auditability.
+
+## 14. Model Training
+
+Helix AI should clearly distinguish between:
+
+- Processing data to provide a requested response
+- Processing data to improve service quality
+- Processing data for internal research and evaluation
+- Training or fine-tuning models
+
+Unless clearly disclosed, enabled by user or organization settings, or permitted by a written agreement, Helix AI should not use private Customer Data to train public or general-purpose models.
+
+Organization and enterprise customers may have additional controls over whether their data may be used for model training, evaluation, research, or product improvement.
+
+If SinLess Games LLC offers optional training, fine-tuning, or learning features using Customer Data, those features should provide clear notice, controls, and documentation.
+
+## 15. AI Memory
+
+Helix AI may support memory features that help the assistant provide continuity and personalization.
+
+Memory may include:
+
+- User preferences
+- Assistant identity settings
+- Communication style
+- Project context
+- Workspace context
+- Organization context
+- Technical environment details
+- Prior decisions
+- Workflow preferences
+- Automation preferences
+- Analytics preferences
+
+Memory should be user-controllable where practical.
+
+Depending on the deployment and subscription, users or administrators may be able to:
+
+- View memory
+- Edit memory
+- Delete memory
+- Export memory
+- Pause memory
+- Disable memory
+- Scope memory
+- Approve memory
+- Reject memory
+- Set retention periods
+- Mark sensitivity levels
+
+Memory is not the same as cookies, logs, backups, or operational records.
+
+Deleting a memory entry may not immediately delete related logs, backups, audit records, or other records retained for security, legal, operational, or compliance reasons.
+
+## 16. Memory Sensitivity
+
+Helix AI should treat memory according to sensitivity.
+
+Memory sensitivity levels may include:
+
+- Public
+- Personal
+- Private
+- Sensitive
+- Business
+- Technical
+- Restricted
+- Regulated
+- Secret Reference
+
+Secrets should not be stored directly in ordinary memory.
+
+Sensitive or regulated information should only be stored when permitted by user settings, organization settings, deployment configuration, law, and applicable agreements.
+
+## 17. Secrets and Credentials
+
+Users should not enter secrets into ordinary prompts, files, memory, or general content unless a feature is specifically designed to handle secrets securely.
+
+Secrets may include:
+
+- Passwords
+- API keys
+- OAuth tokens
+- Session tokens
+- Private keys
+- SSH keys
+- Signing keys
+- Database credentials
+- Cloud credentials
+- Payment credentials
+- Recovery codes
+- Encryption keys
+- Access tokens
+- Webhook secrets
+
+Secrets should be stored in approved secret-management systems such as Vault, KMS, cloud secret managers, or customer-controlled secret stores.
+
+Helix AI should avoid storing secrets in plain text, logs, analytics, ordinary memory, or general user content.
+
+If secrets are detected, Helix AI may redact, restrict, rotate, remove, alert, or recommend remediation where supported.
+
+## 18. Files and Uploads
+
+Users may upload or connect files to Helix AI.
+
+Files may be used for:
+
+- Summarization
+- Search
+- Analysis
+- Retrieval
+- Classification
+- Transformation
+- Extraction
+- Documentation
+- Code review
+- Dashboard generation
+- Automation
+- Project support
+- Workspace knowledge
+- Organization knowledge
+
+Users are responsible for ensuring they have the rights and authorization to upload, connect, process, and share files.
+
+Uploaded files may be stored, indexed, embedded, cached, scanned, or processed as needed to provide the requested features, subject to user settings, organization settings, retention rules, and applicable agreements.
+
+## 19. Integrations and Connected Services
+
+Helix AI may connect to third-party services when authorized by the user or organization.
+
+Connected services may include:
+
+- Email
+- Calendar
+- Cloud storage
+- Git repositories
+- Project management tools
+- Chat platforms
+- Documentation systems
+- Infrastructure systems
+- Analytics systems
+- Payment systems
+- IoT systems
+- Developer tools
+- Marketplace systems
+
+Helix AI will only access connected services according to granted permissions, technical configuration, user instructions, organization policies, and applicable agreements.
+
+Users and administrators are responsible for managing integration permissions and disconnecting integrations that are no longer needed.
+
+## 20. Automations and Tool Calls
+
+Helix AI may process data through automations, workflows, agents, plugins, and tool calls.
+
+Automation data may include:
+
+- Trigger events
+- Input data
+- Output data
+- Action logs
+- Approval records
+- Execution status
+- Error messages
+- Tool results
+- Integration metadata
+- Rollback data
+- Audit records
+
+Automations should be configured with appropriate permissions, logging, scope limits, approval gates, and rollback plans where practical.
+
+Users and organizations are responsible for ensuring automations are authorized, safe, lawful, and appropriate.
+
+## 21. Plugins and Marketplace Items
+
+Plugins, marketplace items, workflows, dashboards, templates, connectors, and personalities may process data.
+
+Before installing or using a marketplace item, users and administrators should review:
+
+- Publisher identity
+- Requested permissions
+- Data access
+- Network access
+- Storage behavior
+- Logging behavior
+- Third-party dependencies
+- Pricing
+- Documentation
+- Security notes
+- Organization approval status
+
+Marketplace publishers may not collect, sell, exfiltrate, misuse, or retain user data outside the permissions and disclosures approved for the marketplace item.
+
+Plugins and marketplace items must follow the applicable marketplace, developer, privacy, security, and acceptable use policies.
+
+## 22. Organization Data
+
+For organization workspaces, the organization may control data associated with the workspace.
+
+Organization administrators may be able to:
+
+- Manage users
+- Manage roles
+- Manage permissions
+- Configure memory
+- Configure retention
+- Configure integrations
+- Configure marketplace access
+- Configure automations
+- View audit logs
+- Export organization data
+- Delete organization data
+- Restrict sharing
+- Restrict public links
+- Restrict model providers
+- Restrict tools
+- Restrict plugins
+- Configure compliance settings
+
+Users in an organization should understand that organization administrators may have access to data, logs, usage records, settings, and content associated with organization workspaces.
+
+## 23. Personal Data
+
+Personal data is information that identifies or can reasonably be linked to an individual.
+
+Personal data may include:
+
+- Name
+- Email address
+- Account identifiers
+- Device identifiers
+- IP address
+- Payment information
+- Messages
+- Files
+- Profile information
+- Usage records
+- Support records
+- Authentication metadata
+- Location information
+- Organization membership
+- Workspace activity
+
+Personal data handling is governed by this Data Policy and the [Privacy Policy](./privacy-policy.md).
+
+## 24. Sensitive Data
+
+Sensitive data may require stronger protection.
+
+Sensitive data may include:
+
+- Government identification numbers
+- Financial account information
+- Payment card information
+- Health information
+- Legal records
+- Biometric information
+- Precise location information
+- Children’s data
+- Credentials
+- Secrets
+- Confidential business information
+- Regulated customer data
+- Trade secrets
+- Security-sensitive infrastructure data
+
+Users should only provide sensitive data when authorized and when the account, workspace, deployment, subscription, and settings are appropriate for that type of data.
+
+## 25. Data Minimization
+
+Helix AI should collect and process only the data reasonably needed for the applicable purpose.
+
+Data minimization may include:
+
+- Limiting requested permissions
+- Limiting retained logs
+- Limiting data sent to models
+- Limiting data sent to tools
+- Avoiding unnecessary personal data
+- Redacting secrets where practical
+- Aggregating analytics where practical
+- De-identifying research data where practical
+- Deleting data when no longer needed
+- Respecting retention settings
+- Respecting user and organization controls
+
+## 26. Data Access
+
+Access to user data should be limited to authorized systems, personnel, contractors, subprocessors, or service providers with a legitimate need.
+
+Access may be allowed for:
+
+- Providing the service
+- Customer support
+- Security
+- Debugging
+- Incident response
+- Billing
+- Abuse prevention
+- Legal compliance
+- Research and product improvement
+- Enterprise support obligations
+
+Where practical, access should be:
+
+- Role-based
+- Logged
+- Audited
+- Time-limited
+- Least-privilege
+- Restricted by sensitivity
+- Restricted by organization settings
+- Restricted by deployment configuration
+
+## 27. Human Review
+
+Helix AI may involve human review of limited data in specific situations.
+
+Human review may occur for:
+
+- Customer support
+- Debugging
+- Abuse investigation
+- Security investigation
+- Incident response
+- Legal compliance
+- Trust and safety review
+- Marketplace review
+- Plugin review
+- Responsible AI evaluation
+- User-requested assistance
+- Enterprise support
+
+Human review should be limited to the data reasonably needed for the purpose.
+
+Sensitive data should receive additional safeguards.
+
+## 28. Data Sharing
+
+Helix AI may share data only as needed for legitimate business logic, approved research, legal obligations, user direction, or organization configuration.
+
+Data may be shared with:
+
+- Service providers
+- Subprocessors
+- Hosting providers
+- AI providers
+- Storage providers
+- Analytics providers
+- Security providers
+- Payment processors
+- Support providers
+- Email providers
+- Marketplace providers
+- Integration providers
+- Legal or regulatory authorities, where required
+- Organization administrators, where applicable
+- Third parties authorized by the user or organization
+
+Helix AI does not sell user data.
+
+## 29. Subprocessors and Vendors
+
+SinLess Games LLC may use subprocessors and vendors to operate Helix AI.
+
+Subprocessors may support:
+
+- Hosting
+- Storage
+- Databases
+- Authentication
+- Payments
+- Email
+- AI model processing
+- Analytics
+- Observability
+- Logging
+- Customer support
+- Security
+- Abuse prevention
+- Marketplace operations
+- Documentation
+- Content delivery
+
+Subprocessors should be listed in the [Subprocessor Vendor List](./subprocessor-vendor-list.md).
+
+SinLess Games LLC should require subprocessors to protect data according to appropriate contractual, technical, and organizational safeguards.
+
+## 30. Data Location
+
+Data may be processed and stored in the United States or other locations where SinLess Games LLC, its infrastructure providers, subprocessors, or customers operate.
+
+Data location may depend on:
+
+- Deployment type
+- Customer region
+- Hosting configuration
+- Subprocessor configuration
+- Enterprise agreement
+- Self-hosted deployment settings
+- Air-gapped deployment settings
+- Legal requirements
+- Product architecture
+
+Enterprise customers may have additional data residency terms in written agreements.
+
+## 31. Security of Data
+
+Helix AI should use reasonable technical and organizational safeguards to protect data.
+
+Safeguards may include:
+
+- Encryption in transit
+- Encryption at rest
+- Access controls
+- Role-based permissions
+- Attribute-based permissions
+- Audit logs
+- Secret management
+- Network segmentation
+- Security monitoring
+- Vulnerability management
+- Secure development practices
+- Incident response
+- Backup controls
+- Vendor review
+- Least-privilege access
+- Administrative controls
+- Organization-level controls
+
+Security commitments are described further in the [Security Policy](./security-policy.md).
+
+## 32. Data Retention
+
+Helix AI retains data only as long as reasonably needed for the purposes described in this policy, unless a longer retention period is required or permitted by law, contract, security, compliance, backup, audit, billing, dispute resolution, or legitimate business needs.
+
+Retention may vary by data type.
+
+Examples:
+
+- Account data may be retained while the account is active.
+- Billing records may be retained for tax, accounting, fraud prevention, and legal obligations.
+- Security logs may be retained for incident response and abuse prevention.
+- Audit logs may be retained for compliance and accountability.
+- Support records may be retained for customer service and dispute resolution.
+- Backups may persist for a limited period before rotation or deletion.
+- Memory may follow user or organization memory settings.
+- Organization data may follow organization retention policies.
+- Enterprise data may follow written agreements.
+
+## 33. Deletion
+
+Users may request deletion of certain data, subject to account settings, organization controls, legal requirements, technical limitations, and applicable agreements.
+
+Deletion may include:
+
+- Account deletion
+- File deletion
+- Memory deletion
+- Workspace deletion
+- Organization data deletion
+- Integration disconnection
+- Automation deletion
+- API key deletion
+- Dashboard deletion
+- Marketplace content removal
+
+Some data may not be deleted immediately if it is retained for:
+
+- Legal compliance
+- Security
+- Fraud prevention
+- Abuse prevention
+- Billing records
+- Audit logs
+- Dispute resolution
+- Backup rotation
+- Incident response
+- Contractual obligations
+- Organization retention policies
+
+Where deletion is not immediately possible, access may be restricted, data may be scheduled for deletion, or data may be retained only as required.
+
+## 34. Export
+
+Users and organizations may be able to export data depending on account type, permissions, product functionality, deployment type, and applicable law.
+
+Exportable data may include:
+
+- Account data
+- User content
+- Files
+- Memory
+- Conversation history
+- Project data
+- Workspace data
+- Organization data
+- Dashboard data
+- Analytics data
+- Automation records
+- Integration metadata
+- Plugin metadata
+- Audit logs, where permitted
+- Billing records, where permitted
+
+Exports may be provided in formats such as JSON, CSV, Markdown, PDF, ZIP archives, or other machine-readable formats where supported.
+
+Some exports may require administrator approval, identity verification, or organization authorization.
+
+## 35. Data Portability
+
+Where required by law or supported by product functionality, Helix AI may provide data portability options.
+
+Portability may allow users to receive certain data in a structured, commonly used, machine-readable format.
+
+Portability may be limited by:
+
+- Security
+- Privacy
+- Intellectual property rights
+- Organization controls
+- Legal restrictions
+- Technical limitations
+- Trade secrets
+- Data belonging to other users
+- Third-party restrictions
+- Backup or archive limitations
+
+## 36. Data Correction
+
+Users may be able to correct certain account data, profile data, memory data, or workspace data through account settings or product controls.
+
+Correction rights may depend on:
+
+- Data type
+- Account role
+- Organization permissions
+- Deployment type
+- Legal requirements
+- Technical limitations
+
+If data cannot be directly corrected, users may contact support.
+
+## 37. Data Portability, Deletion, and Access Requests
+
+Data access, export, correction, deletion, restriction, objection, and portability requests may be submitted to:
+
+`privacy@sinlessgames.com`
+
+Requests should include:
+
+- Account email
+- Organization name, if applicable
+- Workspace name, if applicable
+- Type of request
+- Data involved
+- Any relevant details needed to locate the data
+
+SinLess Games LLC may need to verify identity or authority before fulfilling a request.
+
+For organization data, users may need to contact their organization administrator.
+
+## 38. Backups
+
+Helix AI may maintain backups for reliability, disaster recovery, security, and business continuity.
+
+Backups may contain copies of user data for a limited period.
+
+When data is deleted from active systems, it may remain in backups until backup rotation, expiration, or deletion processes remove it.
+
+Backups should be protected with appropriate security controls.
+
+Backup data should not be used for ordinary business purposes except restoration, security, legal compliance, or disaster recovery.
+
+## 39. Logs and Audit Records
+
+Helix AI may maintain logs and audit records.
+
+Logs and audit records may include:
+
+- Login activity
+- Account changes
+- Workspace changes
+- Permission changes
+- API usage
+- Tool calls
+- Automation actions
+- Plugin actions
+- Integration activity
+- Security events
+- Billing events
+- Administrative actions
+- Error events
+- Support events
+
+Logs and audit records may be retained for security, compliance, debugging, billing, abuse prevention, organization administration, and legal purposes.
+
+Audit records may not be fully deletable if they are required for security, compliance, legal, or contractual reasons.
+
+## 40. Analytics Data
+
+Helix AI may process analytics data to understand and improve the service.
+
+Analytics data may include:
+
+- Feature usage
+- Page views
+- Navigation paths
+- Documentation usage
+- Performance metrics
+- Error rates
+- Subscription events
+- Onboarding progress
+- Marketplace usage
+- Dashboard usage
+- Aggregated usage trends
+
+Analytics should be minimized and aggregated where practical.
+
+Analytics data is not sold.
+
+Analytics data should not be used outside legitimate business logic and approved research purposes.
+
+## 41. Research Data Controls
+
+Research data should be controlled according to risk.
+
+Research controls may include:
+
+- Approval requirements
+- Access restrictions
+- Data minimization
+- Aggregation
+- De-identification
+- Redaction
+- Sensitive data exclusion
+- Retention limits
+- Audit logs
+- Security review
+- Responsible AI review
+- Internal documentation
+- Enterprise opt-out or contract controls
+
+Research involving sensitive, regulated, or enterprise-restricted data may require stronger controls or explicit authorization.
+
+## 42. AI Provider Data Handling
+
+Helix AI may use AI providers, local models, organization-controlled models, or self-hosted models depending on deployment and configuration.
+
+Data sent to AI providers may include relevant portions of:
+
+- Prompts
+- Conversation context
+- Files
+- Retrieved content
+- Tool outputs
+- Metadata
+- Instructions
+- Memory, where enabled and relevant
+
+Helix AI should limit data sent to AI providers to what is reasonably needed for the requested function.
+
+Enterprise and self-hosted deployments may have additional controls over which models or providers are allowed.
+
+Relevant AI providers should be listed in the [Subprocessor Vendor List](./subprocessor-vendor-list.md), where applicable.
+
+## 43. Data Sent to Tools
+
+When a user asks Helix AI to use tools, plugins, automations, or integrations, Helix AI may send relevant data to those tools.
+
+Data sent to tools may include:
+
+- User instructions
+- Files or file excerpts
+- Retrieved records
+- API parameters
+- Authentication tokens, where securely handled by the integration
+- Workspace identifiers
+- Organization identifiers
+- Action details
+- Output destinations
+- Required metadata
+
+Users and organizations should review tool permissions before enabling integrations or plugins.
+
+## 44. Public Content
+
+Some Helix AI features may allow users to publish or share content publicly.
+
+Public content may include:
+
+- Shared chats
+- Public dashboards
+- Marketplace items
+- Documentation
+- Templates
+- Plugins
+- Workflows
+- Reports
+- Generated assets
+- Community posts
+- Reviews
+- Comments
+
+Users are responsible for ensuring public content does not include private, sensitive, confidential, regulated, or unauthorized data.
+
+Public content may be indexed, copied, downloaded, cached, shared, or retained by others.
+
+## 45. Organization Administrator Access
+
+Organization administrators may have access to data associated with their organization.
+
+This may include:
+
+- Workspace content
+- Member lists
+- Usage records
+- Audit logs
+- Integrations
+- Automations
+- Marketplace installations
+- Security settings
+- Billing settings
+- Memory settings
+- Shared files
+- Reports
+- Dashboard data
+- Export tools
+
+Users should not use organization workspaces for personal data unless permitted by organization policy.
+
+## 46. Enterprise Data Controls
+
+Enterprise customers may have additional controls through written agreements or product settings.
+
+Enterprise controls may include:
+
+- Data residency
+- Retention settings
+- Custom deletion terms
+- Custom export terms
+- Model provider restrictions
+- Research opt-outs
+- Training restrictions
+- Private marketplace controls
+- Audit log retention
+- Legal hold
+- Security review
+- Custom subprocessors
+- Self-hosted deployment
+- Air-gapped deployment
+- Customer-managed keys
+- Customer-controlled backups
+- Customer-controlled logs
+
+Enterprise agreements control where they conflict with this policy.
+
+## 47. Self-Hosted and Air-Gapped Deployments
+
+For self-hosted, hybrid, private, or air-gapped deployments, the deploying organization may control much of the data environment.
+
+The organization may be responsible for:
+
+- Hosting
+- Storage
+- Backups
+- Logs
+- Access controls
+- Secret management
+- Data retention
+- Data deletion
+- Data exports
+- Model selection
+- Plugin approval
+- Marketplace controls
+- Security monitoring
+- Compliance controls
+- Incident response
+- User administration
+
+SinLess Games LLC may process limited data related to licensing, support, updates, marketplace access, billing, or telemetry only where enabled, contracted, or technically required.
+
+Air-gapped deployments should be designed to operate without public SaaS dependencies where practical.
+
+## 48. Data Breach and Incidents
+
+If SinLess Games LLC becomes aware of a data incident affecting Helix AI, it will evaluate the incident and take appropriate action.
+
+Actions may include:
+
+- Investigating the incident
+- Containing the incident
+- Preserving evidence
+- Notifying affected users or organizations, where required
+- Notifying regulators, where required
+- Notifying subprocessors, where appropriate
+- Rotating credentials, where appropriate
+- Publishing incident updates, where appropriate
+- Improving controls after the incident
+
+Incident handling is described further in the [Security Policy](./security-policy.md).
+
+## 49. Legal Requests
+
+SinLess Games LLC may disclose data when required by law, subpoena, court order, warrant, legal process, regulatory request, or emergency request.
+
+Where legally permitted and practical, SinLess Games LLC may attempt to notify affected users or organizations before disclosing data.
+
+SinLess Games LLC may challenge requests that are overbroad, unclear, unlawful, or inappropriate.
+
+## 50. Data After Account Termination
+
+After account termination, cancellation, or suspension, Helix AI may retain data for a limited period or as required by law, contract, backup rotation, security, abuse prevention, billing, audit, dispute resolution, or compliance obligations.
+
+Access to data may be limited or disabled after termination.
+
+Users should export important data before canceling or terminating service.
+
+## 51. Data After Downgrade
+
+If a user or organization downgrades a plan, some data may exceed the limits of the new plan.
+
+Helix AI may:
+
+- Restrict access
+- Make data read-only
+- Pause automations
+- Disable paid features
+- Disable advanced analytics
+- Disable marketplace items
+- Reduce storage limits
+- Require deletion of excess data
+- Archive data
+- Queue data for deletion according to retention rules
+
+Users are responsible for exporting or reducing data before downgrading where needed.
+
+## 52. Children’s Data
+
+Helix AI is not intended to collect or process children’s data unless permitted by applicable law, account settings, organization configuration, and written agreements.
+
+Use by minors is governed by the [Underage Policy](./underage-policy.md).
+
+If SinLess Games LLC learns that children’s data has been collected in violation of policy or law, it may delete, restrict, or take other appropriate action.
+
+## 53. Data Classification
+
+Helix AI may classify data by sensitivity to support security, routing, access control, memory behavior, retention, and policy enforcement.
+
+Example classifications may include:
+
+- Public
+- Internal
+- Personal
+- Private
+- Sensitive
+- Business
+- Technical
+- Restricted
+- Regulated
+- Secret Reference
+
+Classification may be manual, automatic, user-controlled, organization-controlled, or system-generated.
+
+Classification may not always be accurate.
+
+Users and organizations are responsible for applying appropriate labels and controls for sensitive or regulated data.
+
+## 54. User Responsibilities
+
+Users are responsible for:
+
+- Providing only data they are authorized to provide
+- Avoiding unnecessary sensitive data
+- Avoiding secrets in ordinary prompts or files
+- Reviewing outputs before use
+- Managing account access
+- Managing integration permissions
+- Managing shared links
+- Managing public content
+- Exporting important data before cancellation
+- Following organization policies
+- Following applicable laws and contracts
+- Reporting suspected data misuse, security issues, or privacy concerns
+
+## 55. Organization Responsibilities
+
+Organizations are responsible for:
+
+- Managing users
+- Managing roles and permissions
+- Configuring retention
+- Configuring memory
+- Configuring integrations
+- Configuring marketplace access
+- Configuring automations
+- Reviewing audit logs
+- Handling internal data requests
+- Enforcing internal policies
+- Managing sensitive and regulated data
+- Managing legal holds
+- Managing exports and deletion
+- Ensuring lawful processing of organization data
+- Training users on appropriate use
+
+## 56. Data Contact
+
+Data questions, data access requests, deletion requests, export requests, or data policy questions may be sent to:
+
+`privacy@sinlessgames.com`
+
+General support questions may be sent to:
+
+`support@sinlessgames.com`
+
+Legal questions may be sent to:
+
+`legal@sinlessgames.com`
+
+Before publishing this policy, confirm these email aliases exist and are monitored.
+
+## 57. Relationship to Other Policies
+
+This policy works together with other Helix AI policies, including:
+
+- [Terms of Use](./terms-of-use.md)
+- [Privacy Policy](./privacy-policy.md)
+- [Security Policy](./security-policy.md)
+- [Acceptable Use Policy](./acceptable-use.md)
+- [AI Transparency Policy](./ai-transparency.md)
+- [Responsible AI Policy](./responsible-ai.md)
+- [Cookie and Tracking Policy](./cookie-tracking.md)
+- [Billing, Refund, and Cancellation Policy](./billing-refund-cancellation.md)
+- [Copyright Takedown Policy](./copyright-takedown.md)
+- [User-Generated Content Policy](./user-generated-content.md)
+- [Subprocessor Vendor List](./subprocessor-vendor-list.md)
+- [Support Policy](./support-policy.md)
+- [Underage Policy](./underage-policy.md)
+
+If there is a conflict between this policy and a written agreement signed by SinLess Games LLC, the written agreement controls only to the extent of that conflict.
+
+## 58. Changes to This Policy
+
+We may update this policy from time to time.
+
+When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, email, release notes, legal notices page, or another reasonable method.
+
+Continued use of Helix AI after changes become effective means you accept the updated policy.
+
+## 59. Legal Review Notice
+
+This policy is a draft template and should be reviewed by qualified legal counsel before publication.
+
+Data ownership, privacy, security, AI processing, research use, model training, retention, deletion, export, and international data-transfer requirements may vary by jurisdiction.

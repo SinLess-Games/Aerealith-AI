@@ -1,0 +1,1377 @@
+---
+title: Developer Policy
+description: Explains Helix AI developer rules for APIs, SDKs, webhooks, plugins, integrations, marketplace items, automations, data handling, security, attribution, and responsible AI use.
+effective_date: 2026-05-19
+last_updated: 2026-05-19
+owner: SinLess Games LLC
+status: draft
+---
+
+# Developer Policy
+
+## 1. Purpose
+
+This Developer Policy explains the rules for building, integrating, publishing, automating, extending, or connecting software with Helix AI.
+
+Helix AI is operated by SinLess Games LLC.
+
+Helix AI may provide APIs, SDKs, webhooks, plugins, marketplace items, automations, workflows, dashboards, templates, personalities, connectors, developer tools, and third-party integration features. Because these features may access user data, organization data, AI memory, files, integrations, automations, billing systems, and connected services, developers must follow clear safety, security, privacy, and responsible AI requirements.
+
+This policy applies whether you are building for yourself, your organization, your customers, a private deployment, or the Helix AI marketplace.
+
+## 2. Scope
+
+This policy applies to:
+
+- APIs
+- SDKs
+- Webhooks
+- Developer accounts
+- API keys
+- OAuth applications
+- Plugins
+- Connectors
+- Integrations
+- Automations
+- Workflows
+- Dashboards
+- Templates
+- Personalities
+- Prompt packs
+- Marketplace items
+- Browser extensions
+- Desktop integrations
+- Mobile integrations
+- Self-hosted extensions
+- Air-gapped extensions
+- Developer documentation
+- Any software, service, or tool that connects to or extends Helix AI
+
+This policy applies to:
+
+- Individual developers
+- Organization developers
+- Marketplace publishers
+- API users
+- Integration developers
+- Plugin authors
+- Automation authors
+- Enterprise developers
+- Contractors
+- Third-party service providers
+- Anyone who builds on or connects to Helix AI
+
+## 3. Relationship to Other Policies
+
+This policy works together with other Helix AI policies, including:
+
+- [Terms of Use](./terms-of-use.md)
+- [Privacy Policy](./privacy.md)
+- [Data Policy](./data.md)
+- [Security Policy](./security.md)
+- [Acceptable Use Policy](./acceptable-use.md)
+- [AI Transparency Policy](./ai-transparency.md)
+- [Responsible AI Policy](./responsible-ai.md)
+- [Cookie and Tracking Policy](./cookie-tracking.md)
+- [Billing, Refund, and Cancellation Policy](./billing-refund-cancellation.md)
+- [Copyright Takedown Policy](./copyright-takedown.md)
+- [Incident Notification Policy](./incident-notification.md)
+- [Payment Processor Compliance Policy](./payment-proccessor-compliance.md)
+- [Subprocessor and Vendor List](./subprocessor-vendor-list.md)
+- [Support Policy](./support.md)
+- [Underage Policy](./underage.md)
+- [User-Generated Content Policy](./user-generated-content.md)
+- [Marketplace Policy](./marketplace.md), if published
+
+If there is a conflict between this policy and a written agreement signed by SinLess Games LLC, the written agreement controls only to the extent of that conflict.
+
+## 4. Developer Responsibilities
+
+Developers are responsible for software, services, content, automations, integrations, plugins, API calls, marketplace items, and user experiences they create with Helix AI.
+
+Developers must:
+
+- Use Helix AI lawfully and responsibly.
+- Protect user data.
+- Protect organization data.
+- Protect secrets and credentials.
+- Use only authorized data.
+- Request only necessary permissions.
+- Respect user and organization settings.
+- Respect rate limits and usage limits.
+- Respect billing limits and plan entitlements.
+- Provide accurate disclosures.
+- Follow required attribution rules.
+- Test software before release.
+- Monitor for misuse.
+- Respond to security, privacy, safety, and abuse reports.
+- Comply with applicable laws, contracts, platform rules, and Helix AI policies.
+
+## 5. Developer Account Requirements
+
+Developers may be required to create or use a Helix AI account.
+
+You must provide accurate, complete, and current information.
+
+Developer account information may include:
+
+- Name
+- Email address
+- Organization name
+- Publisher name
+- Support contact
+- Billing contact
+- Legal contact
+- Security contact
+- Website
+- App description
+- Marketplace profile
+- Tax or payout information, where applicable
+- Identity verification information, where required
+
+You may not create developer accounts using false, misleading, stolen, or unauthorized information.
+
+## 6. API Keys and Tokens
+
+You are responsible for securing API keys, tokens, OAuth secrets, webhook secrets, signing keys, private keys, and other credentials.
+
+You may not:
+
+- Share secret API keys publicly.
+- Commit API keys to public repositories.
+- Embed secret keys in public client-side code.
+- Store API keys in ordinary prompts, files, logs, or memory.
+- Transfer API keys to unauthorized users.
+- Use another person’s API keys without permission.
+- Use API keys to bypass rate limits, billing limits, or access controls.
+- Use API keys after authorization has been revoked.
+- Use API keys for prohibited activity.
+
+SinLess Games LLC may revoke, rotate, suspend, restrict, or disable API keys when needed for security, abuse prevention, billing, compliance, policy enforcement, or service stability.
+
+## 7. Authentication and Authorization
+
+Developer applications must use approved authentication and authorization methods.
+
+Where applicable, developers must:
+
+- Use OAuth, API keys, signed requests, or another approved method.
+- Request only required scopes.
+- Use least-privilege permissions.
+- Store credentials securely.
+- Support token revocation.
+- Respect organization access controls.
+- Respect user role and permission changes.
+- Respect workspace boundaries.
+- Respect tenant boundaries.
+- Respect session expiration.
+- Avoid privilege escalation.
+- Avoid permission confusion.
+- Avoid hidden or misleading authorization flows.
+
+Applications must not access data or perform actions beyond the permissions granted by the user, organization, or Helix AI.
+
+## 8. Permission Requirements
+
+Developers must clearly disclose requested permissions.
+
+Permission disclosures should explain:
+
+- What data is accessed
+- Why the data is needed
+- What actions may be performed
+- Whether data is stored
+- Whether data is sent to third parties
+- Whether AI providers are used
+- Whether external network calls are made
+- Whether logs or telemetry are collected
+- Whether the integration can modify, delete, publish, or share data
+- Whether the integration can trigger automations
+- Whether the integration can incur charges
+
+Applications must not request excessive, unnecessary, misleading, or hidden permissions.
+
+## 9. Data Ownership
+
+Users own their data.
+
+As between the user and SinLess Games LLC, users retain ownership of data they submit, upload, connect, create, generate, import, process, or produce through Helix AI.
+
+Developers do not gain ownership of user data merely because a user connects, installs, authorizes, or uses a developer application.
+
+Developers must process user data only for the purpose disclosed to the user and authorized by the user or organization.
+
+## 10. No Sale of User Data
+
+Developers may not sell user data obtained through Helix AI.
+
+Developers may not sell:
+
+- User prompts
+- User messages
+- Uploaded files
+- Memory entries
+- Workspace data
+- Organization data
+- Integration data
+- API inputs or outputs
+- Personal information
+- Private user content
+- Sensitive data
+- Secrets
+- Analytics inputs
+- Dashboard data
+- Automation data
+- Tool execution data
+- Plugin execution data
+
+Developers may not use Helix AI data for unrelated products, unrelated advertising, hidden profiling, unauthorized targeting, or unrelated model training.
+
+## 11. Data Minimization
+
+Developers must collect and process only the minimum data reasonably needed for the disclosed function.
+
+Developers should:
+
+- Request narrow scopes.
+- Avoid unnecessary data collection.
+- Avoid unnecessary retention.
+- Avoid unnecessary logs.
+- Avoid sensitive data unless required.
+- Avoid collecting secrets.
+- Redact data where practical.
+- Aggregate or de-identify data where practical.
+- Delete data when no longer needed.
+- Respect user and organization deletion requests.
+- Respect disconnected integrations.
+- Respect revoked permissions.
+
+## 12. Data Use Restrictions
+
+Developers may use data obtained through Helix AI only to provide the disclosed and authorized functionality.
+
+Developers may not use Helix AI data to:
+
+- Sell data.
+- Build unrelated products.
+- Train unrelated AI models without authorization.
+- Target unrelated advertising.
+- Build user profiles unrelated to the app’s stated purpose.
+- Share data with unauthorized third parties.
+- Re-identify de-identified data.
+- Extract secrets, credentials, or private keys.
+- Circumvent privacy settings.
+- Circumvent organization controls.
+- Circumvent Helix AI safety systems.
+- Mislead users about data use.
+
+## 13. Data Retention and Deletion
+
+Developers must retain user data only as long as reasonably necessary for the disclosed purpose or as required by law.
+
+Developers must delete or de-identify user data when:
+
+- The user disconnects the application.
+- The organization revokes access.
+- The data is no longer needed.
+- The user requests deletion.
+- The organization requests deletion.
+- Helix AI requests deletion due to policy enforcement.
+- The developer account is terminated.
+- The marketplace item is removed and retention is not legally required.
+
+Developers must not retain data indefinitely without a legitimate, disclosed, and authorized reason.
+
+## 14. User Data Requests
+
+Developers must reasonably support user and organization requests involving data handled by their applications.
+
+Requests may include:
+
+- Access
+- Export
+- Correction
+- Deletion
+- Restriction
+- Revocation
+- Consent withdrawal
+- Privacy inquiry
+- Security inquiry
+
+Developers must provide a clear contact method for users and organizations.
+
+Marketplace publishers must keep support and privacy contacts accurate.
+
+## 15. Sensitive Data
+
+Developers must apply stronger safeguards when handling sensitive data.
+
+Sensitive data may include:
+
+- Government identification numbers
+- Financial account information
+- Payment information
+- Health information
+- Legal records
+- Biometric information
+- Precise location information
+- Children’s data
+- Credentials
+- Passwords
+- API keys
+- Tokens
+- Private keys
+- Confidential business information
+- Trade secrets
+- Regulated customer data
+- Security-sensitive infrastructure data
+
+Developers should not process sensitive data unless necessary, authorized, disclosed, and protected.
+
+## 16. Secrets and Credential Handling
+
+Developers must not expose or mishandle secrets.
+
+Secrets include:
+
+- Passwords
+- API keys
+- OAuth tokens
+- Session tokens
+- Private keys
+- SSH keys
+- Signing keys
+- Database credentials
+- Cloud credentials
+- Payment credentials
+- Webhook secrets
+- Recovery codes
+- Encryption keys
+
+Secrets must be stored in approved secret-management systems or secure application storage.
+
+Secrets must not be placed in:
+
+- Public repositories
+- Public marketplace listings
+- Plain-text logs
+- Analytics events
+- Support tickets
+- User-facing errors
+- Ordinary AI memory
+- Prompt examples
+- Documentation examples using real credentials
+- Frontend code where secret exposure is possible
+
+If a developer discovers exposed secrets, they must rotate the secrets and notify affected parties where appropriate.
+
+## 17. Security Requirements
+
+Developers must use reasonable security practices.
+
+Security practices may include:
+
+- Secure coding
+- Dependency scanning
+- Secret scanning
+- Input validation
+- Output encoding
+- Authentication testing
+- Authorization testing
+- Rate-limit handling
+- Webhook signature verification
+- Replay protection
+- Secure session management
+- Encryption in transit
+- Encryption at rest where appropriate
+- Least-privilege access
+- Secure logging
+- Vulnerability management
+- Incident response
+- Secure release process
+- Patch management
+- Review of third-party dependencies
+
+Developers must promptly address security vulnerabilities in their applications.
+
+## 18. Prohibited Security Activity
+
+Developers may not use Helix AI APIs, plugins, automations, or integrations to attack, disrupt, compromise, exploit, or gain unauthorized access to systems, accounts, services, devices, models, plugins, or datasets.
+
+Prohibited activity includes:
+
+- Malware
+- Ransomware
+- Spyware
+- Credential theft
+- Token theft
+- Phishing
+- Unauthorized scanning
+- Unauthorized exploitation
+- DDoS activity
+- Privilege escalation
+- Persistence
+- Evasion
+- Exfiltration
+- Secret extraction
+- Unauthorized access
+- Bypassing safety systems
+- Bypassing access controls
+- Tampering with logs or audit trails
+
+Security restrictions are further described in the [Acceptable Use Policy](./acceptable-use.md) and [Security Policy](./security.md).
+
+## 19. Webhook Requirements
+
+Developers using webhooks must verify webhook authenticity before trusting the payload.
+
+Webhook implementations should include:
+
+- Signature verification
+- Timestamp validation
+- Replay protection
+- Idempotency
+- Secure secret storage
+- Secret rotation
+- Request size limits
+- Error handling
+- Retry handling
+- Logging
+- Monitoring
+- Alerting for repeated failures
+- Least-privilege processing
+
+Developers must not expose webhook secrets publicly.
+
+## 20. Rate Limits and Usage Limits
+
+Developers must respect rate limits, quotas, usage limits, plan entitlements, and billing controls.
+
+Developers may not:
+
+- Circumvent rate limits.
+- Use multiple accounts to bypass limits.
+- Use multiple API keys to bypass limits.
+- Abuse retry logic.
+- Create excessive traffic.
+- Generate wasteful workloads.
+- Use Helix AI for unauthorized scraping.
+- Overload systems.
+- Interfere with service stability.
+- Hide usage to avoid billing.
+- Exploit billing, quota, or entitlement bugs.
+
+SinLess Games LLC may throttle, restrict, suspend, or terminate access for excessive or abusive usage.
+
+## 21. Billing and Paid API Use
+
+Some developer features may be billed by subscription, usage, add-on, marketplace purchase, or enterprise agreement.
+
+Developers are responsible for:
+
+- Monitoring usage.
+- Securing API keys.
+- Managing usage limits.
+- Understanding plan limits.
+- Understanding usage-based charges.
+- Paying applicable fees.
+- Preventing unauthorized use.
+- Preventing runaway automation costs.
+- Preventing abuse by their own users.
+
+Billing is governed by the [Billing, Refund, and Cancellation Policy](./billing-refund-cancellation.md) and [Payment Processor Compliance Policy](./payment-proccessor-compliance.md).
+
+## 22. AI Output and Developer Responsibility
+
+Developers are responsible for how Helix AI outputs are used in their applications, plugins, workflows, and products.
+
+Developers must:
+
+- Warn users that AI outputs may be inaccurate.
+- Provide human review where appropriate.
+- Avoid presenting AI output as guaranteed fact.
+- Avoid using AI output as the sole basis for high-impact decisions.
+- Validate outputs before automated action where appropriate.
+- Test generated code before production use.
+- Provide disclosures required by law, platform rules, or professional standards.
+- Respect attribution requirements for public or commercial AI-assisted content.
+
+AI limitations are described in the [AI Transparency Policy](./ai-transparency.md) and [Responsible AI Policy](./responsible-ai.md).
+
+## 23. Required Helix AI Attribution
+
+When developers publish, distribute, sell, submit, or display AI-assisted content generated with Helix AI, they must attribute Helix AI in a reasonable manner.
+
+Attribution may include:
+
+- `Created with assistance from Helix AI.`
+- `Generated in part with Helix AI.`
+- `AI-assisted content created using Helix AI.`
+- `Portions of this code were generated with assistance from Helix AI.`
+- `This workflow was created with assistance from Helix AI.`
+- `This plugin includes AI-assisted content generated with Helix AI.`
+
+Attribution may appear in:
+
+- App UI
+- README files
+- Documentation
+- Marketplace listings
+- Release notes
+- Source file headers, where appropriate
+- Metadata
+- Credits
+- Public reports
+- Generated content descriptions
+
+Attribution does not mean SinLess Games LLC endorses, verifies, sponsors, or accepts responsibility for the developer’s application or content.
+
+Attribution requirements are further described in the [User-Generated Content Policy](./user-generated-content.md).
+
+## 24. No False Endorsement
+
+Developers may not imply that SinLess Games LLC or Helix AI endorses, certifies, sponsors, verifies, or is responsible for their application unless expressly authorized in writing.
+
+Developers may not:
+
+- Impersonate Helix AI.
+- Impersonate SinLess Games LLC.
+- Use confusing branding.
+- Use Helix AI marks without permission.
+- Misrepresent partnership status.
+- Misrepresent marketplace approval as full endorsement.
+- Misrepresent security review as a guarantee.
+- Misrepresent AI output as verified by SinLess Games LLC.
+
+## 25. User Notice Requirements
+
+Developers must provide clear user notices where appropriate.
+
+Notices may include:
+
+- AI use disclosure
+- Data access disclosure
+- Data storage disclosure
+- Third-party sharing disclosure
+- Model provider disclosure
+- Permission disclosure
+- Pricing disclosure
+- Usage limit disclosure
+- Automation disclosure
+- Human review expectations
+- Known limitations
+- Support contact
+- Privacy contact
+- Security contact
+- Attribution notice
+
+Notices must be accurate and not misleading.
+
+## 26. Privacy Policy Requirement
+
+Developers who collect or process user data through apps, plugins, integrations, marketplace items, or APIs may be required to provide a privacy policy.
+
+A developer privacy policy should explain:
+
+- What data is collected
+- Why data is collected
+- How data is used
+- How data is stored
+- How long data is retained
+- Who data is shared with
+- Whether AI providers are used
+- Whether analytics are used
+- Whether cookies or tracking are used
+- How users can request access or deletion
+- How users can contact the developer
+- How security incidents are handled
+
+The privacy policy must be accurate and consistent with actual behavior.
+
+## 27. Consent Requirements
+
+Developers are responsible for obtaining any required user consent.
+
+Consent may be required for:
+
+- Accessing personal data
+- Processing sensitive data
+- Accessing third-party integrations
+- Sending messages
+- Publishing content
+- Using analytics
+- Using cookies or tracking
+- Sending data to AI providers
+- Storing user data
+- Running automations
+- Making purchases
+- Processing minors’ data
+- Performing high-impact actions
+
+Consent must not be deceptive, hidden, bundled improperly, or obtained through manipulative design.
+
+## 28. User Interface Requirements
+
+Developer applications must not use deceptive, manipulative, or confusing interfaces.
+
+Developers may not:
+
+- Hide important permissions.
+- Hide billing behavior.
+- Hide data collection.
+- Hide AI use.
+- Hide attribution requirements.
+- Trick users into granting access.
+- Make cancellation unnecessarily difficult.
+- Make revocation unnecessarily difficult.
+- Use misleading buttons or labels.
+- Use confusing opt-out flows.
+- Pretend an optional permission is required when it is not.
+- Use dark patterns to obtain consent.
+
+## 29. Automation Requirements
+
+Developers building automations must include safeguards appropriate to the risk.
+
+Automation safeguards may include:
+
+- Clear ownership
+- Permission checks
+- Trigger validation
+- Scope limits
+- Rate limits
+- Approval gates
+- Human confirmation
+- Dry-run mode
+- Rollback plans
+- Audit logs
+- Error handling
+- Notifications
+- Expiration dates
+- Least-privilege credentials
+- Separation between read-only and write actions
+- Pause and disable controls
+- Monitoring for repeated failures
+- Alerts for unexpected behavior
+
+High-risk, destructive, irreversible, externally visible, or security-sensitive automations require stronger controls.
+
+## 30. High-Risk and Regulated Use
+
+Developers may not use Helix AI as the sole decision-maker for high-risk or regulated decisions.
+
+High-risk areas include:
+
+- Healthcare
+- Legal services
+- Financial services
+- Insurance
+- Employment
+- Housing
+- Education
+- Credit
+- Public benefits
+- Law enforcement
+- Criminal justice
+- Immigration
+- Biometric identification
+- Critical infrastructure
+- Weapons systems
+- Emergency response
+- Child safety
+- Public safety
+- Safety-critical industrial systems
+
+Developer applications in sensitive areas must include appropriate human review, disclosures, safeguards, and legal compliance.
+
+## 31. Minors and Age-Restricted Content
+
+Developers must follow the [Underage Policy](./underage.md).
+
+Developers may not build apps, plugins, integrations, workflows, or marketplace items that:
+
+- Bypass age gates.
+- Bypass parental controls.
+- Hide mature content.
+- Mislabel adult content as child-safe.
+- Collect minor data without proper authorization.
+- Sell minor data.
+- Track minors without proper disclosure and legal basis.
+- Target minors with age-restricted content.
+- Provide grooming, exploitation, harassment, or predatory tools.
+- Provide unsafe automations for minors.
+- Provide mature personalities to minors.
+- Encourage minors to hide usage from parents or guardians.
+
+Developers must use lawful and appropriate controls for age-restricted features.
+
+## 32. Marketplace Publishing
+
+Developers who publish marketplace items must follow marketplace rules.
+
+Marketplace items may include:
+
+- Plugins
+- Connectors
+- Workflows
+- Dashboards
+- Templates
+- Personalities
+- Prompt packs
+- Automation packages
+- Developer tools
+- Integration packages
+
+Marketplace publishers must provide:
+
+- Accurate listing descriptions
+- Accurate pricing
+- Accurate support contact
+- Accurate publisher identity
+- Clear permission declarations
+- Clear data-use disclosures
+- Clear AI-use disclosures
+- Clear attribution where required
+- Clear installation instructions
+- Clear uninstall instructions
+- Clear limitations
+- Clear security notes
+- Clear privacy notes
+- Clear license terms
+
+SinLess Games LLC may review, approve, reject, suspend, remove, delist, or restrict marketplace items.
+
+## 33. Marketplace Review
+
+Marketplace review may include:
+
+- Security review
+- Privacy review
+- Responsible AI review
+- Permission review
+- Dependency review
+- Malware review
+- Code review
+- Documentation review
+- Content review
+- Copyright review
+- Age-restriction review
+- Payment compliance review
+- Support readiness review
+- Publisher identity review
+
+Marketplace review does not guarantee that a marketplace item is error-free, secure, compliant, or endorsed by SinLess Games LLC.
+
+## 34. Plugin Requirements
+
+Plugins must be designed to operate safely within Helix AI.
+
+Plugins must:
+
+- Request only necessary permissions.
+- Disclose data access.
+- Disclose external network calls.
+- Disclose storage behavior.
+- Disclose AI provider use.
+- Disclose telemetry.
+- Handle errors safely.
+- Avoid hidden behavior.
+- Avoid unsafe defaults.
+- Avoid unauthorized persistence.
+- Avoid unauthorized background activity.
+- Respect user settings.
+- Respect organization controls.
+- Respect sandbox restrictions.
+- Stop operating when disabled or revoked.
+
+Plugins may not include malware, spyware, credential stealers, backdoors, hidden tracking, unauthorized data collection, or safety bypasses.
+
+## 35. External Network Calls
+
+Developer applications, plugins, and marketplace items must disclose external network calls where required.
+
+Disclosures should include:
+
+- Destination service
+- Purpose
+- Data sent
+- Data received
+- Whether data is stored
+- Whether data is shared with third parties
+- Whether AI providers are used
+- Whether analytics or telemetry are used
+
+Hidden or misleading network activity is prohibited.
+
+## 36. Telemetry and Analytics
+
+Developers may collect telemetry only when disclosed and authorized.
+
+Telemetry may include:
+
+- Error events
+- Performance metrics
+- Usage events
+- Installation events
+- Feature usage
+- Crash reports
+- Version information
+
+Telemetry must not collect unnecessary personal data, secrets, private user content, or sensitive data.
+
+Developers may not use hidden tracking.
+
+Developers must provide opt-outs where required by law, platform rules, or Helix AI policy.
+
+## 37. Cookies and Tracking
+
+Developers who use cookies, pixels, SDK identifiers, local storage, device identifiers, or similar tracking technologies must provide required notices and consent controls.
+
+Developers must follow:
+
+- Applicable cookie laws
+- Applicable privacy laws
+- Platform rules
+- Helix AI policies
+- Organization settings
+- User consent choices
+
+Developers may not use hidden tracking or deceptive consent flows.
+
+## 38. Open Source and Licensing
+
+Developers are responsible for complying with open source and third-party license obligations.
+
+Developers must:
+
+- Track dependencies.
+- Preserve license notices.
+- Preserve copyright notices.
+- Provide source code where required.
+- Follow copyleft obligations.
+- Avoid incompatible licenses.
+- Disclose licenses where appropriate.
+- Avoid using content without rights.
+- Avoid publishing marketplace items with unauthorized assets.
+
+Helix AI attribution does not replace open source license obligations.
+
+## 39. Copyright and Intellectual Property
+
+Developers may not infringe, misappropriate, or violate intellectual property rights.
+
+Developers may not:
+
+- Publish code they do not have rights to use.
+- Publish copyrighted assets without authorization.
+- Remove copyright notices.
+- Remove license notices.
+- Misrepresent ownership.
+- Use protected branding without permission.
+- Circumvent DRM or technical protection measures.
+- Publish marketplace items containing infringing content.
+- Use Helix AI to unlawfully copy protected works.
+
+Copyright complaints are handled under the [Copyright Takedown Policy](./copyright-takedown.md).
+
+## 40. Payments and Monetization
+
+Developers may monetize marketplace items, plugins, integrations, workflows, templates, dashboards, or other developer offerings only through approved methods.
+
+Developers must follow:
+
+- Billing rules
+- Marketplace rules
+- Payment processor rules
+- Tax requirements
+- Refund rules
+- Payout requirements
+- Sanctions rules
+- Fraud prevention rules
+- Consumer protection rules
+
+Developers may not:
+
+- Hide fees.
+- Misrepresent pricing.
+- Manipulate purchases.
+- Launder money.
+- Use fake purchases.
+- Evade platform fees.
+- Process payments outside approved flows to avoid rules.
+- Sell prohibited items.
+- Sell unsafe or illegal tools.
+
+Payment behavior is governed by the [Payment Processor Compliance Policy](./payment-proccessor-compliance.md).
+
+## 41. Sanctions and Export Controls
+
+Developers must comply with applicable export controls, sanctions, embargoes, restricted-party rules, and trade laws.
+
+Developers may not use Helix AI to:
+
+- Evade sanctions.
+- Hide restricted-party involvement.
+- Export controlled technology unlawfully.
+- Provide services to prohibited jurisdictions or parties.
+- Misrepresent location, ownership, or authorization.
+- Use intermediaries to bypass restrictions.
+
+SinLess Games LLC may restrict access where required or appropriate.
+
+## 42. Responsible AI Requirements
+
+Developers using Helix AI AI features must follow responsible AI requirements.
+
+Developers must:
+
+- Disclose AI use where appropriate.
+- Warn users about AI limitations.
+- Provide human review for high-impact decisions.
+- Avoid deceptive AI presentation.
+- Avoid harmful automation.
+- Avoid prohibited AI uses.
+- Avoid unsafe synthetic media.
+- Avoid manipulating vulnerable users.
+- Avoid unauthorized profiling.
+- Avoid hidden model training.
+- Respect model-routing restrictions.
+- Respect organization AI policies.
+- Monitor for misuse.
+
+Responsible AI rules are further described in the [Responsible AI Policy](./responsible-ai.md).
+
+## 43. Synthetic Media Requirements
+
+Developers using synthetic media features must prevent misuse.
+
+Developers may not create or distribute synthetic media that:
+
+- Deceives people about whether content is real.
+- Impersonates someone without authorization.
+- Creates non-consensual intimate imagery.
+- Harasses, threatens, exploits, or defames others.
+- Creates fake official records.
+- Creates fake evidence.
+- Creates fake identification.
+- Supports fraud, scams, phishing, or social engineering.
+- Misleads people in political, legal, medical, financial, emergency, or high-impact contexts.
+
+Synthetic media should be labeled or disclosed when required.
+
+Helix AI attribution is required for public or commercial AI-assisted synthetic media generated with Helix AI.
+
+## 44. Public Communications
+
+Developers must not use Helix AI to send spam, deceptive messages, unlawful marketing, phishing, harassment, or abusive communications.
+
+If a developer application sends messages, emails, posts, comments, tickets, notifications, or public content, the developer must ensure:
+
+- The communication is authorized.
+- The sender is not misleading.
+- Users can opt out where required.
+- Messages comply with applicable law.
+- Messages comply with platform rules.
+- AI-generated or AI-assisted content is disclosed where required.
+- Helix AI is attributed where required.
+
+## 45. Logging and Auditability
+
+Developers should maintain reasonable logs for security, debugging, support, compliance, and abuse prevention.
+
+Logs should avoid unnecessary sensitive data.
+
+Logs should not include:
+
+- Passwords
+- API keys
+- Private keys
+- Access tokens
+- Session tokens
+- Full payment card numbers
+- Unnecessary personal data
+- Unnecessary private user content
+- Sensitive data unless required and protected
+
+Developers must provide auditability for high-impact, security-sensitive, or destructive actions where appropriate.
+
+## 46. Incident Reporting
+
+Developers must promptly report incidents that affect Helix AI users, data, systems, or trust.
+
+Incidents may include:
+
+- Security vulnerabilities
+- Data exposure
+- Unauthorized access
+- Secret leakage
+- Malware
+- Plugin compromise
+- Marketplace item compromise
+- Unsafe automation
+- Privacy incident
+- Child safety incident
+- Payment issue
+- Abuse activity
+- Model or AI safety issue
+
+Reports should be sent to:
+
+- Security: `security@sinlessgames.com`
+- Privacy: `privacy@sinlessgames.com`
+- Abuse: `abuse@sinlessgames.com`
+- AI safety: `safety@sinlessgames.com`
+- Support: `support@sinlessgames.com`
+- Legal: `legal@sinlessgames.com`
+
+Before publishing this policy, confirm these email aliases exist and are monitored.
+
+## 47. Vulnerability Disclosure
+
+Developers and researchers should report suspected Helix AI vulnerabilities to:
+
+`security@sinlessgames.com`
+
+Good-faith security research must follow the [Security Policy](./security.md).
+
+Developers may not perform unauthorized testing, denial-of-service testing, phishing, social engineering, malware deployment, credential stuffing, destructive testing, or data exfiltration.
+
+## 48. Support Requirements
+
+Developers and marketplace publishers must provide reasonable support for their applications and marketplace items where applicable.
+
+Support information may include:
+
+- Support email
+- Documentation
+- Known issues
+- Troubleshooting steps
+- Version compatibility
+- Install instructions
+- Uninstall instructions
+- Security contact
+- Privacy contact
+- Refund contact, where applicable
+
+SinLess Games LLC may provide platform-level support but may not be responsible for supporting third-party developer software.
+
+## 49. Versioning and Updates
+
+Developers should use clear versioning practices.
+
+Updates should disclose:
+
+- Material feature changes
+- Permission changes
+- Data-use changes
+- Security fixes
+- Breaking changes
+- Deprecated features
+- New third-party services
+- New AI providers
+- New telemetry
+- New pricing or billing behavior
+- New age-restricted behavior
+- New high-risk functionality
+
+SinLess Games LLC may require review before marketplace updates are released.
+
+## 50. Deprecation
+
+Developers should provide reasonable notice when deprecating or removing public functionality.
+
+Deprecation notices may include:
+
+- Feature being deprecated
+- Reason
+- Timeline
+- Migration path
+- Data export instructions
+- Replacement features
+- Support window
+- Contact information
+
+SinLess Games LLC may remove or disable abandoned, unsupported, unsafe, or non-compliant developer items.
+
+## 51. Testing Requirements
+
+Developers must test software before releasing it to users or marketplace.
+
+Testing should include:
+
+- Functional testing
+- Security testing
+- Privacy testing
+- Permission testing
+- Rate-limit testing
+- Error handling
+- Edge cases
+- Data deletion behavior
+- Revocation behavior
+- Upgrade behavior
+- Uninstall behavior
+- AI safety behavior
+- Prompt injection behavior, where applicable
+- Automation rollback behavior, where applicable
+
+High-risk features require stronger testing.
+
+## 52. Prompt Injection and Malicious Input
+
+Developers must account for prompt injection and malicious input when building AI-powered tools.
+
+Untrusted content may include:
+
+- Webpages
+- Emails
+- Files
+- PDFs
+- Source code
+- Logs
+- Tickets
+- Chat messages
+- Plugin outputs
+- Tool outputs
+- Marketplace items
+- Retrieved documents
+- User-generated content
+
+Developers should ensure untrusted content cannot override system instructions, steal data, invoke unauthorized tools, bypass permissions, or trigger unsafe actions.
+
+## 53. Self-Hosted, Hybrid, and Air-Gapped Development
+
+Developers building for self-hosted, hybrid, private, or air-gapped deployments must respect deployment boundaries.
+
+Developers must not assume:
+
+- Internet access exists.
+- Public AI providers are available.
+- Public marketplace access is available.
+- External telemetry is allowed.
+- External network calls are permitted.
+- Hosted billing services are available.
+- Hosted authentication providers are available.
+- Automatic updates are permitted.
+
+Developers should provide offline-safe, configurable, and documented behavior where applicable.
+
+## 54. Enterprise Development
+
+Enterprise developers may be subject to additional controls.
+
+Enterprise controls may include:
+
+- SSO
+- RBAC
+- ABAC
+- Audit logs
+- Private model routing
+- Approved AI providers
+- Blocked AI providers
+- Marketplace allowlists
+- Marketplace blocklists
+- Private marketplace
+- Custom retention
+- Data residency
+- Customer-managed keys
+- Legal hold
+- Security review
+- Change management
+- Custom support escalation
+- Compliance requirements
+
+Developers must respect enterprise and organization controls.
+
+## 55. Prohibited Developer Conduct
+
+Developers may not:
+
+- Break the law.
+- Violate Helix AI policies.
+- Mislead users.
+- Sell user data.
+- Hide data collection.
+- Hide AI use.
+- Hide external network calls.
+- Hide billing behavior.
+- Hide unsafe permissions.
+- Request excessive permissions.
+- Exfiltrate data.
+- Steal credentials.
+- Include malware or backdoors.
+- Bypass safety systems.
+- Bypass organization controls.
+- Bypass marketplace review.
+- Bypass billing controls.
+- Circumvent rate limits.
+- Manipulate marketplace rankings.
+- Fake reviews or ratings.
+- Misrepresent affiliation with Helix AI.
+- Target minors with age-restricted content.
+- Use Helix AI for prohibited AI uses.
+- Continue operating after access is revoked.
+
+## 56. Enforcement
+
+SinLess Games LLC may investigate suspected violations of this policy.
+
+Depending on severity, risk, and context, SinLess Games LLC may:
+
+- Warn the developer.
+- Request changes.
+- Require additional disclosures.
+- Require security fixes.
+- Require privacy fixes.
+- Require attribution fixes.
+- Restrict API access.
+- Revoke API keys.
+- Disable OAuth applications.
+- Disable webhooks.
+- Disable integrations.
+- Disable plugins.
+- Disable automations.
+- Remove marketplace items.
+- Suspend marketplace publishing.
+- Withhold or delay payouts.
+- Refund affected customers.
+- Notify affected users or organizations.
+- Suspend accounts.
+- Terminate accounts.
+- Report unlawful activity where appropriate.
+- Refuse future service.
+
+SinLess Games LLC may act immediately without prior notice when necessary to protect users, systems, data, Helix AI, SinLess Games LLC, third parties, minors, payment systems, or the public.
+
+## 57. Appeals
+
+If a developer believes enforcement action was taken in error, they may request review.
+
+Appeals should be sent to:
+
+`support@sinlessgames.com`
+
+Appeals should include:
+
+- Developer account email
+- Organization name, if applicable
+- Marketplace item, app, API key, plugin, or integration affected
+- Description of the enforcement action
+- Reason the developer believes the action was incorrect
+- Supporting evidence
+- Contact information
+
+Submitting an appeal does not guarantee reversal, reinstatement, payout release, marketplace restoration, or API reactivation.
+
+## 58. Developer Termination
+
+If a developer account is suspended or terminated, SinLess Games LLC may:
+
+- Disable API keys.
+- Disable OAuth apps.
+- Disable webhooks.
+- Remove marketplace items.
+- Disable plugins.
+- Disable automations.
+- Restrict data access.
+- Notify affected users or organizations.
+- Preserve records where required.
+- Require data deletion.
+- Withhold payouts where permitted.
+- Refuse future developer access.
+
+Developers remain responsible for outstanding obligations, including user data deletion, incident response, refunds, taxes, support obligations, and legal compliance.
+
+## 59. Changes to Developer Features
+
+SinLess Games LLC may add, modify, restrict, suspend, deprecate, or remove developer features at any time.
+
+Changes may affect:
+
+- APIs
+- SDKs
+- Webhooks
+- Authentication methods
+- Permissions
+- Scopes
+- Rate limits
+- Billing
+- Marketplace rules
+- Plugin runtime behavior
+- Automation behavior
+- Model routing
+- Documentation
+- Security requirements
+- Review requirements
+- Support availability
+
+SinLess Games LLC may provide notice where practical or required, but emergency changes may be made without notice to protect users, systems, or the platform.
+
+## 60. No Guarantee of Availability
+
+Developer features may be unavailable, delayed, degraded, suspended, limited, changed, or discontinued.
+
+SinLess Games LLC does not guarantee uninterrupted API availability, webhook delivery, marketplace availability, model availability, plugin runtime availability, or integration availability unless expressly stated in a written agreement.
+
+Developers should design applications with retries, idempotency, fallback behavior, monitoring, and graceful degradation.
+
+## 61. Contact
+
+Developer questions may be sent to:
+
+- Developer support: `support@sinlessgames.com`
+- Security: `security@sinlessgames.com`
+- Privacy: `privacy@sinlessgames.com`
+- Abuse: `abuse@sinlessgames.com`
+- AI safety: `safety@sinlessgames.com`
+- Billing: `billing@sinlessgames.com`
+- Legal: `legal@sinlessgames.com`
+
+Before publishing this policy, confirm these email aliases exist and are monitored.
+
+## 62. Publication Checklist
+
+Before publishing this policy, complete the following:
+
+- Confirm official company name: `SinLess Games LLC`
+- Confirm official product name: `Helix AI`
+- Confirm developer portal URL
+- Confirm API documentation URL
+- Confirm SDK documentation URL
+- Confirm API authentication method
+- Confirm API key rules
+- Confirm OAuth rules
+- Confirm webhook signing method
+- Confirm rate limits
+- Confirm usage billing rules
+- Confirm marketplace review process
+- Confirm plugin runtime rules
+- Confirm plugin sandboxing rules
+- Confirm plugin signing rules
+- Confirm permission model
+- Confirm developer data-use restrictions
+- Confirm attribution requirements
+- Confirm privacy policy requirements for developers
+- Confirm security review requirements
+- Confirm AI safety requirements
+- Confirm synthetic media requirements
+- Confirm minor safety requirements
+- Confirm payment and payout requirements
+- Confirm support obligations
+- Confirm appeals workflow
+- Confirm enforcement workflow
+- Confirm all email aliases exist and are monitored
+- Have qualified legal counsel review this policy
+
+## 63. Changes to This Policy
+
+We may update this policy from time to time.
+
+When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, developer portal, account settings, support portal, email, release notes, legal notices page, or another reasonable method.
+
+Continued use of Helix AI developer features after changes become effective means you accept the updated policy.
+
+## 64. Legal Review Notice
+
+This policy is a draft template and should be reviewed by qualified legal counsel before publication.
+
+Developer platform rules, API usage, marketplace publishing, plugin liability, data protection, attribution, privacy, security, AI safety, user consent, payments, tax, export controls, sanctions, minors, intellectual property, open-source licensing, self-hosted deployments, and enterprise requirements may vary by jurisdiction, customer type, deployment model, and written agreement.
