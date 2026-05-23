@@ -10,11 +10,7 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "es2022"
-    ],
+    "lib": ["dom", "dom.iterable", "es2022"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
@@ -27,10 +23,7 @@
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": false,
 
-    "types": [
-      "node",
-      "@cloudflare/workers-types"
-    ],
+    "types": ["node", "@cloudflare/workers-types"],
     "plugins": [
       {
         "name": "next"
@@ -46,7 +39,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "../../dist/apps/frontend/types/**/*.ts"
-, "../../libs/ui/src/components/login-signup.ts"  ],
+  ],
   "exclude": [
     "node_modules",
     ".next/cache",
@@ -66,6 +59,9 @@
   "references": [
     {
       "path": "../../libs/config"
+    },
+    {
+      "path": "../../libs/content"
     },
     {
       "path": "../../libs/db"

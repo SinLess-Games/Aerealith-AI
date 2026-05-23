@@ -1,0 +1,14 @@
+export type * from './background';
+export type * from './footer';
+export type * from './header';
+export type * from './login-signup';
+export type * from './globals';
+export type * from './section';
+export type * from './card';
+export type * from './image';
+export type * from './video';
+export type * from './power-point';
+export type * from './carousel';
+export type * from './feature-grid';
+export type * from './marketing-copy';
+export type * from './marketing-section';

@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "useDaemonProcess": false,
+  "neverConnectToCloud": true,
   "useInferencePlugins": false,
   "plugins": [
     {
@@ -177,6 +178,5 @@
       "inputs": ["default", "^production"]
     }
   },
-  "nxCloudId": "6a0020ce461813b9a754e2da",
   "analytics": true
 }

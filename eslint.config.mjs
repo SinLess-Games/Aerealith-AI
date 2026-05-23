@@ -1,6 +1,5 @@
 import nextPlugin from '@next/eslint-plugin-next';
 import nx from '@nx/eslint-plugin';
-
 const sourceFiles = [
   '**/*.ts',
   '**/*.tsx',
@@ -11,11 +10,8 @@ const sourceFiles = [
   '**/*.cjs',
   '**/*.mjs',
 ];
-
 const typescriptFiles = ['**/*.ts', '**/*.tsx', '**/*.cts', '**/*.mts'];
-
 const javascriptFiles = ['**/*.js', '**/*.jsx', '**/*.cjs', '**/*.mjs'];
-
 const testFiles = [
   '**/*.spec.ts',
   '**/*.spec.tsx',
@@ -26,7 +22,6 @@ const testFiles = [
   '**/*.test.js',
   '**/*.test.jsx',
 ];
-
 const e2eFiles = [
   'apps/e2e/**/*.ts',
   'apps/e2e/**/*.tsx',
@@ -37,7 +32,6 @@ const e2eFiles = [
   '**/*.cy.js',
   '**/*.cy.jsx',
 ];
-
 const appScriptFiles = [
   'scripts/**/*.ts',
   'scripts/**/*.tsx',
@@ -58,7 +52,6 @@ const appScriptFiles = [
   'apps/*/*/scripts/**/*.mjs',
   'apps/*/*/scripts/**/*.cjs',
 ];
-
 const configFiles = [
   '**/*.config.ts',
   '**/*.config.mts',
@@ -70,7 +63,6 @@ const configFiles = [
   '**/vite.config.*',
   '**/vitest.config.*',
 ];
-
 const frontendFiles = [
   'apps/frontend/**/*.ts',
   'apps/frontend/**/*.tsx',
@@ -79,7 +71,6 @@ const frontendFiles = [
   'apps/frontend/**/*.mjs',
   'apps/frontend/**/*.cjs',
 ];
-
 const generatedFiles = [
   '**/next-env.d.ts',
   '**/cloudflare-env.d.ts',
@@ -114,7 +105,6 @@ export default [
       ...generatedFiles,
     ],
   },
-
   {
     name: 'helix/linter-options',
     linterOptions: {
@@ -122,11 +112,9 @@ export default [
       reportUnusedInlineConfigs: 'warn',
     },
   },
-
   ...nx.configs['flat/base'],
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
-
   {
     name: 'helix/source-rules',
     files: sourceFiles,
@@ -145,7 +133,6 @@ export default [
           ],
         },
       ],
-
       '@typescript-eslint/no-explicit-any': [
         'warn',
         {
@@ -153,7 +140,6 @@ export default [
           fixToUnknown: false,
         },
       ],
-
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {
@@ -166,7 +152,6 @@ export default [
       ],
     },
   },
-
   {
     name: 'helix/next',
     files: frontendFiles,
@@ -178,7 +163,6 @@ export default [
       ...nextPlugin.configs['core-web-vitals'].rules,
     },
   },
-
   {
     name: 'helix/typescript',
     files: typescriptFiles,
@@ -192,7 +176,6 @@ export default [
       ],
     },
   },
-
   {
     name: 'helix/tests',
     files: testFiles,
@@ -203,7 +186,6 @@ export default [
       '@nx/enforce-module-boundaries': 'off',
     },
   },
-
   {
     name: 'helix/e2e',
     files: e2eFiles,
@@ -214,7 +196,6 @@ export default [
       '@nx/enforce-module-boundaries': 'off',
     },
   },
-
   {
     name: 'helix/app-scripts',
     files: appScriptFiles,
@@ -222,7 +203,6 @@ export default [
       '@nx/enforce-module-boundaries': 'off',
     },
   },
-
   {
     name: 'helix/config-files',
     files: configFiles,
@@ -232,7 +212,6 @@ export default [
       '@nx/enforce-module-boundaries': 'off',
     },
   },
-
   {
     name: 'helix/javascript',
     files: javascriptFiles,
@@ -240,7 +219,6 @@ export default [
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
-
   {
     name: 'helix/generated-files',
     files: generatedFiles,
@@ -249,5 +227,8 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
     },
+  },
+  {
+    ignores: ['**/vitest.config.*.timestamp*'],
   },
 ];

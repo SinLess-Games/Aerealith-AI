@@ -252,7 +252,9 @@ function ActiveProfilePanel({
       }
 
       const response = await fetch(
-        `/api/V1/users/${encodeURIComponent(editableSettings.username)}/settings`,
+        `/api/V1/users/${encodeURIComponent(
+          editableSettings.username,
+        )}/settings`,
         {
           method: 'PATCH',
           headers: {
@@ -323,7 +325,11 @@ function ActiveProfilePanel({
         <ProfileOverviewCard />
       );
     case 'integrations':
-      return mode === 'private' ? <ProfileIntegrationsCard /> : <ProfileOverviewCard />;
+      return mode === 'private' ? (
+        <ProfileIntegrationsCard />
+      ) : (
+        <ProfileOverviewCard />
+      );
     case 'settings':
       return mode === 'private' && editableSettings ? (
         <SettingsCard
@@ -467,6 +473,7 @@ export { ProfileTopbar } from './profile-topbar';
 export { ProfileProjectsCard } from './projects-card';
 export { ProfileRecentActivityCard } from './recent-activity-card';
 export { SettingsCard } from './settings-card';
+export { UserProfileMenu } from './user-profile-menu';
 
 export type {
   ProfileCardFieldVisibility,
@@ -484,6 +491,11 @@ export type {
   SettingsSectionKey,
   SettingsSectionValue,
 } from './settings-card';
+export type {
+  UserProfileMenuAction,
+  UserProfileMenuProps,
+  UserProfileMenuUser,
+} from './user-profile-menu';
 
 export type * from './types';
 

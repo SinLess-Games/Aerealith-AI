@@ -7,6 +7,7 @@ import Script from 'next/script';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -48,9 +49,19 @@ export type HeroWaitlistProps = {
   title?: string;
 
   /**
+   * Optional supporting text shown under the heading.
+   */
+  description?: string;
+
+  /**
    * Email input label.
    */
   emailLabel?: string;
+
+  /**
+   * Email input placeholder.
+   */
+  emailPlaceholder?: string;
 
   /**
    * Submit button text.
@@ -68,7 +79,14 @@ export type HeroWaitlistProps = {
   successMessage?: string;
 
   /**
+   * Error message shown when submission fails without a server-provided message.
+   */
+  errorMessage?: string;
+
+  /**
    * How long feedback alerts remain visible.
+   *
+   * Set to 0 to keep alerts visible until the next state change.
    */
   feedbackDurationMs?: number;
 
@@ -83,6 +101,11 @@ export type HeroWaitlistProps = {
    * Cloudflare Turnstile theme.
    */
   turnstileTheme?: 'auto' | 'light' | 'dark';
+
+  /**
+   * Cloudflare Turnstile widget size.
+   */
+  turnstileSize?: 'normal' | 'compact' | 'flexible';
 };
 
 export type HeroSectionProps = {
@@ -111,6 +134,17 @@ const DEFAULT_FEEDBACK_DURATION_MS = 5_000;
 const DEFAULT_TURNSTILE_SITE_KEY =
   process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
+const DEFAULT_SUCCESS_MESSAGE =
+  "Thanks! You're on the waitlist. We'll notify you when we launch.";
+
+const DEFAULT_ERROR_MESSAGE = 'Unable to join the waitlist right now.';
+
+function getNonEmptyString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+}
+
 function isValidEmailAddress(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
@@ -133,32 +167,27 @@ function getResponseMessage(
   body: WaitlistApiResponse,
   fallback: string,
 ): string {
-  if (typeof body.message === 'string' && body.message.trim().length > 0) {
-    return body.message;
-  }
-
-  if (
-    typeof body.data?.message === 'string' &&
-    body.data.message.trim().length > 0
-  ) {
-    return body.data.message;
-  }
-
-  if (
-    typeof body.error?.message === 'string' &&
-    body.error.message.trim().length > 0
-  ) {
-    return body.error.message;
-  }
-
-  return fallback;
+  return (
+    getNonEmptyString(body.message) ??
+    getNonEmptyString(body.data?.message) ??
+    getNonEmptyString(body.error?.message) ??
+    fallback
+  );
 }
 
 function isSuccessfulWaitlistResponse(
   response: Response,
   body: WaitlistApiResponse,
 ): boolean {
-  return response.ok && (body.ok === true || body.success === true);
+  if (!response.ok) {
+    return false;
+  }
+
+  if (body.ok === false || body.success === false) {
+    return false;
+  }
+
+  return true;
 }
 
 function getInitialTurnstileReady(): boolean {
@@ -167,14 +196,18 @@ function getInitialTurnstileReady(): boolean {
 
 export function HeroWaitlist({
   endpoint = DEFAULT_WAITLIST_ENDPOINT,
-  title = 'Join our waitlist!',
-  emailLabel = 'Email',
-  submitLabel = 'Submit',
-  sendingLabel = 'Sending…',
-  successMessage = 'Thanks! You’re on the waitlist. We’ll notify you when we launch.',
+  title = 'Join our waitlist',
+  description = 'Be first in line for launch updates, early access, and product announcements.',
+  emailLabel = 'Email address',
+  emailPlaceholder = 'you@example.com',
+  submitLabel = 'Join waitlist',
+  sendingLabel = 'Joining...',
+  successMessage = DEFAULT_SUCCESS_MESSAGE,
+  errorMessage = DEFAULT_ERROR_MESSAGE,
   feedbackDurationMs = DEFAULT_FEEDBACK_DURATION_MS,
   turnstileSiteKey = DEFAULT_TURNSTILE_SITE_KEY,
   turnstileTheme = 'dark',
+  turnstileSize = 'normal',
 }: HeroWaitlistProps) {
   const [email, setEmail] = React.useState('');
   const [status, setStatus] = React.useState<WaitlistStatus>('idle');
@@ -184,41 +217,72 @@ export function HeroWaitlist({
     getInitialTurnstileReady,
   );
 
+  const formId = React.useId();
+  const descriptionId = React.useId();
+  const feedbackId = React.useId();
+  const turnstileHintId = React.useId();
+
+  const isSubmittingRef = React.useRef(false);
   const turnstileContainerRef = React.useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = React.useRef<string | undefined>(undefined);
 
+  const resolvedEndpoint = endpoint.trim() || DEFAULT_WAITLIST_ENDPOINT;
   const trimmedEmail = email.trim();
   const trimmedTurnstileSiteKey = turnstileSiteKey.trim();
   const isTurnstileEnabled = trimmedTurnstileSiteKey.length > 0;
+  const isSending = status === 'sending';
 
   const isValidEmail = React.useMemo(
     () => isValidEmailAddress(trimmedEmail),
     [trimmedEmail],
   );
 
+  const showEmailError = email.length > 0 && !isValidEmail;
+  const emailHelperText = showEmailError
+    ? 'Please enter a valid email address.'
+    : undefined;
+
   const canSubmit =
     isValidEmail &&
-    status !== 'sending' &&
+    !isSending &&
     (!isTurnstileEnabled || turnstileToken.length > 0);
 
   const resetTurnstile = React.useCallback(() => {
     setTurnstileToken('');
 
+    const widgetId = turnstileWidgetIdRef.current;
+
     if (
       typeof window !== 'undefined' &&
       window.turnstile &&
-      turnstileWidgetIdRef.current
+      widgetId !== undefined
     ) {
-      window.turnstile.reset(turnstileWidgetIdRef.current);
+      try {
+        window.turnstile.reset(widgetId);
+      } catch {
+        // Ignore reset failures caused by an already-cleared widget.
+      }
     }
   }, []);
 
   React.useEffect(() => {
-    if (!isTurnstileEnabled || !turnstileReady) {
+    if (
+      isTurnstileEnabled &&
+      typeof window !== 'undefined' &&
+      window.turnstile
+    ) {
+      setTurnstileReady(true);
+    }
+  }, [isTurnstileEnabled]);
+
+  React.useEffect(() => {
+    if (!isTurnstileEnabled) {
+      setTurnstileToken('');
       return undefined;
     }
 
     if (
+      !turnstileReady ||
       typeof window === 'undefined' ||
       !window.turnstile ||
       !turnstileContainerRef.current ||
@@ -227,45 +291,65 @@ export function HeroWaitlist({
       return undefined;
     }
 
+    setTurnstileToken('');
+
     const widgetId = window.turnstile.render(turnstileContainerRef.current, {
       sitekey: trimmedTurnstileSiteKey,
       theme: turnstileTheme,
+      size: turnstileSize,
       callback: (token: string) => {
         setTurnstileToken(token);
       },
       'expired-callback': () => {
         setTurnstileToken('');
+        setFeedbackMessage('Bot verification expired. Please try again.');
+        setStatus('error');
       },
       'error-callback': () => {
         setTurnstileToken('');
-        setFeedbackMessage(
-          'Bot verification failed. Please refresh and try again.',
-        );
+        setFeedbackMessage('Bot verification failed. Please try again.');
         setStatus('error');
       },
     });
 
     turnstileWidgetIdRef.current = widgetId;
 
+    if (!widgetId) {
+      setFeedbackMessage('Bot verification could not initialize.');
+      setStatus('error');
+    }
+
     return () => {
+      const currentWidgetId = turnstileWidgetIdRef.current;
+
       if (
         typeof window !== 'undefined' &&
         window.turnstile &&
-        turnstileWidgetIdRef.current
+        currentWidgetId !== undefined
       ) {
-        window.turnstile.remove(turnstileWidgetIdRef.current);
-        turnstileWidgetIdRef.current = undefined;
+        try {
+          window.turnstile.remove(currentWidgetId);
+        } catch {
+          // Ignore cleanup failures caused by an already-removed widget.
+        }
       }
+
+      turnstileWidgetIdRef.current = undefined;
+      setTurnstileToken('');
     };
   }, [
     isTurnstileEnabled,
     trimmedTurnstileSiteKey,
     turnstileReady,
     turnstileTheme,
+    turnstileSize,
   ]);
 
   React.useEffect(() => {
-    if (status === 'idle') {
+    if (
+      feedbackDurationMs <= 0 ||
+      (status !== 'success' && status !== 'error')
+    ) {
       return undefined;
     }
 
@@ -280,7 +364,7 @@ export function HeroWaitlist({
   }, [feedbackDurationMs, status]);
 
   const handleSubmit = React.useCallback(async (): Promise<void> => {
-    if (!isValidEmail || status === 'sending') {
+    if (!isValidEmail || isSubmittingRef.current) {
       return;
     }
 
@@ -292,15 +376,18 @@ export function HeroWaitlist({
       return;
     }
 
+    isSubmittingRef.current = true;
     setStatus('sending');
     setFeedbackMessage('');
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch(resolvedEndpoint, {
         method: 'POST',
         headers: {
+          Accept: 'application/json',
           'Content-Type': 'application/json',
         },
+        cache: 'no-store',
         body: JSON.stringify({
           email: trimmedEmail,
           turnstileToken: isTurnstileEnabled ? turnstileToken : undefined,
@@ -310,9 +397,7 @@ export function HeroWaitlist({
       const body = await readJsonResponse(response);
 
       if (!isSuccessfulWaitlistResponse(response, body)) {
-        throw new Error(
-          getResponseMessage(body, 'Unable to join the waitlist right now.'),
-        );
+        throw new Error(getResponseMessage(body, errorMessage));
       }
 
       setEmail('');
@@ -320,18 +405,18 @@ export function HeroWaitlist({
       setStatus('success');
       resetTurnstile();
     } catch (error) {
-      setFeedbackMessage(
-        error instanceof Error ? error.message : 'Unknown error occurred',
-      );
+      setFeedbackMessage(error instanceof Error ? error.message : errorMessage);
       setStatus('error');
       resetTurnstile();
+    } finally {
+      isSubmittingRef.current = false;
     }
   }, [
-    endpoint,
+    errorMessage,
     isTurnstileEnabled,
     isValidEmail,
     resetTurnstile,
-    status,
+    resolvedEndpoint,
     successMessage,
     trimmedEmail,
     turnstileToken,
@@ -341,13 +426,17 @@ export function HeroWaitlist({
     <Box
       component="section"
       data-testid="waitlist-section"
+      aria-labelledby={`${formId}-title`}
+      aria-describedby={description ? descriptionId : undefined}
       sx={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        mt: 4,
         gap: 2,
         width: '100%',
+        maxWidth: 720,
+        mx: 'auto',
+        mt: 0,
       }}
     >
       {isTurnstileEnabled ? (
@@ -360,25 +449,60 @@ export function HeroWaitlist({
           onLoad={() => {
             setTurnstileReady(true);
           }}
+          onReady={() => {
+            setTurnstileReady(true);
+          }}
+          onError={() => {
+            setTurnstileReady(false);
+            setTurnstileToken('');
+            setFeedbackMessage(
+              'Bot verification could not load. Please refresh and try again.',
+            );
+            setStatus('error');
+          }}
         />
       ) : null}
 
-      <Typography
-        variant="h2"
-        sx={{
-          color: 'rgba(255, 255, 255, 0.9)',
-          textAlign: 'center',
-          fontSize: { xs: '1.5rem', sm: '2rem' },
-          fontWeight: 700,
-        }}
-      >
-        {title}
-      </Typography>
+      <Box sx={{ textAlign: 'center' }}>
+        <Typography
+          id={`${formId}-title`}
+          component="h2"
+          sx={{
+            color: 'rgba(255, 255, 255, 0.94)',
+            fontSize: { xs: '1.5rem', sm: '1.9rem', md: '2.15rem' },
+            fontWeight: 800,
+            lineHeight: 1.1,
+            letterSpacing: '-0.03em',
+          }}
+        >
+          {title}
+        </Typography>
+
+        {description ? (
+          <Typography
+            id={descriptionId}
+            component="p"
+            sx={{
+              maxWidth: 560,
+              mx: 'auto',
+              mt: 1,
+              color: 'rgba(255, 255, 255, 0.68)',
+              fontSize: { xs: '0.95rem', sm: '1rem' },
+              lineHeight: 1.65,
+            }}
+          >
+            {description}
+          </Typography>
+        ) : null}
+      </Box>
 
       <Box
+        id={feedbackId}
         aria-live="polite"
+        aria-atomic="true"
         sx={{
           width: '100%',
+          minHeight: status === 'success' || status === 'error' ? 'auto' : 0,
           display: 'flex',
           justifyContent: 'center',
         }}
@@ -387,7 +511,16 @@ export function HeroWaitlist({
           <Alert
             severity="success"
             data-testid="waitlist-success"
-            sx={{ mt: 2, width: { xs: '100%', sm: 'auto' } }}
+            sx={{
+              width: '100%',
+              borderRadius: 2,
+              bgcolor: 'rgba(46, 125, 50, 0.14)',
+              color: 'rgba(255, 255, 255, 0.92)',
+              border: '1px solid rgba(129, 199, 132, 0.35)',
+              '& .MuiAlert-icon': {
+                color: 'success.light',
+              },
+            }}
           >
             {feedbackMessage || successMessage}
           </Alert>
@@ -397,9 +530,18 @@ export function HeroWaitlist({
           <Alert
             severity="error"
             data-testid="waitlist-error"
-            sx={{ mt: 2, width: { xs: '100%', sm: 'auto' } }}
+            sx={{
+              width: '100%',
+              borderRadius: 2,
+              bgcolor: 'rgba(211, 47, 47, 0.14)',
+              color: 'rgba(255, 255, 255, 0.92)',
+              border: '1px solid rgba(239, 154, 154, 0.35)',
+              '& .MuiAlert-icon': {
+                color: 'error.light',
+              },
+            }}
           >
-            Error: {feedbackMessage}
+            {feedbackMessage || errorMessage}
           </Alert>
         ) : null}
       </Box>
@@ -408,73 +550,87 @@ export function HeroWaitlist({
         component="form"
         data-testid="waitlist-form"
         noValidate
-        autoComplete="off"
+        autoComplete="on"
         onSubmit={(event) => {
           event.preventDefault();
           void handleSubmit();
         }}
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-          alignItems: 'center',
-          justifyContent: 'center',
           width: '100%',
-          maxWidth: 600,
+          p: { xs: 1.5, sm: 2 },
+          borderRadius: 3,
+          background:
+            'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035))',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow:
+            '0 18px 55px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
         }}
       >
         <Box
           sx={{
             display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
-            gap: 2,
+            gap: 1.5,
             alignItems: { xs: 'stretch', sm: 'flex-start' },
-            justifyContent: 'center',
             width: '100%',
           }}
         >
           <TextField
             fullWidth
+            required
+            id={`${formId}-email`}
             label={emailLabel}
+            placeholder={emailPlaceholder}
             type="email"
             variant="filled"
             value={email}
             onChange={(event) => {
               setEmail(event.target.value);
             }}
-            error={email.length > 0 && !isValidEmail}
-            helperText={
-              email.length > 0 && !isValidEmail
-                ? 'Please enter a valid email.'
-                : undefined
-            }
-            disabled={status === 'sending'}
+            error={showEmailError}
+            helperText={emailHelperText}
+            disabled={isSending}
             slotProps={{
               htmlInput: {
+                'aria-describedby': isTurnstileEnabled
+                  ? turnstileHintId
+                  : feedbackId,
                 'data-testid': 'waitlist-email-input',
                 autoCapitalize: 'none',
+                autoComplete: 'email',
                 autoCorrect: 'off',
                 inputMode: 'email',
+                name: 'email',
+                spellCheck: false,
               },
             }}
             sx={{
               bgcolor: 'rgba(255, 255, 255, 0.08)',
-              borderRadius: 1.5,
+              borderRadius: 2,
               minHeight: 56,
 
               '& .MuiFilledInput-root': {
                 color: '#fff',
                 bgcolor: 'rgba(255, 255, 255, 0.08)',
-                borderRadius: 1.5,
+                borderRadius: 2,
                 minHeight: 56,
                 overflow: 'hidden',
+                transition:
+                  'background-color 180ms ease, box-shadow 180ms ease',
 
                 '&:hover': {
                   bgcolor: 'rgba(255, 255, 255, 0.12)',
                 },
 
                 '&.Mui-focused': {
-                  bgcolor: 'rgba(255, 255, 255, 0.12)',
+                  bgcolor: 'rgba(255, 255, 255, 0.13)',
+                  boxShadow: '0 0 0 3px rgba(246, 6, 111, 0.18)',
+                },
+
+                '&.Mui-disabled': {
+                  bgcolor: 'rgba(255, 255, 255, 0.055)',
                 },
               },
 
@@ -487,11 +643,11 @@ export function HeroWaitlist({
               },
 
               '& .MuiFilledInput-underline:before': {
-                borderBottomColor: 'rgba(255, 255, 255, 0.3)',
+                borderBottomColor: 'rgba(255, 255, 255, 0.28)',
               },
 
               '& .MuiFilledInput-underline:hover:before': {
-                borderBottomColor: '#fff',
+                borderBottomColor: 'rgba(255, 255, 255, 0.76)',
               },
 
               '& .MuiFilledInput-underline:after': {
@@ -499,12 +655,17 @@ export function HeroWaitlist({
               },
 
               '& .MuiInputLabel-root': {
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: 'rgba(255, 255, 255, 0.72)',
                 top: '-2px',
               },
 
               '& .MuiInputLabel-root.Mui-focused': {
                 color: '#fff',
+              },
+
+              '& .MuiInputBase-input::placeholder': {
+                color: 'rgba(255, 255, 255, 0.42)',
+                opacity: 1,
               },
 
               '& .MuiFormHelperText-root': {
@@ -520,22 +681,37 @@ export function HeroWaitlist({
             variant="contained"
             disabled={!canSubmit}
             data-testid="waitlist-submit"
+            aria-busy={isSending}
             sx={{
-              background:
-                'linear-gradient(135deg, #f6066f 0%, #7c3aed 55%, #022371 100%)',
+              position: 'relative',
+              overflow: 'hidden',
               color: '#fff',
               px: 4,
               py: 0,
-              minWidth: { xs: '100%', sm: '180px' },
+              minWidth: { xs: '100%', sm: '190px' },
               minHeight: 56,
               height: 56,
               border: '1px solid rgba(255, 255, 255, 0.28)',
-              borderRadius: 1.5,
-              fontWeight: 800,
+              borderRadius: 2,
+              fontWeight: 900,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
+              background:
+                'linear-gradient(135deg, #f6066f 0%, #7c3aed 55%, #022371 100%)',
               boxShadow:
                 '0 0 18px rgba(246, 6, 111, 0.45), 0 10px 28px rgba(2, 35, 113, 0.45)',
+              transition:
+                'transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease',
+
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                inset: 0,
+                background:
+                  'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent)',
+                transform: 'translateX(-120%)',
+                transition: 'transform 500ms ease',
+              },
 
               '&:hover': {
                 background:
@@ -543,6 +719,10 @@ export function HeroWaitlist({
                 boxShadow:
                   '0 0 26px rgba(246, 6, 111, 0.65), 0 14px 34px rgba(2, 35, 113, 0.55)',
                 transform: 'translateY(-1px)',
+
+                '&::before': {
+                  transform: 'translateX(120%)',
+                },
               },
 
               '&:active': {
@@ -550,29 +730,69 @@ export function HeroWaitlist({
               },
 
               '&.Mui-disabled': {
-                color: 'rgba(255, 255, 255, 0.72)',
+                color: 'rgba(255, 255, 255, 0.68)',
                 background:
-                  'linear-gradient(135deg, rgba(246, 6, 111, 0.45) 0%, rgba(2, 35, 113, 0.7) 100%)',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
-                boxShadow: '0 0 14px rgba(246, 6, 111, 0.22)',
+                  'linear-gradient(135deg, rgba(246, 6, 111, 0.4) 0%, rgba(2, 35, 113, 0.62) 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.16)',
+                boxShadow: '0 0 14px rgba(246, 6, 111, 0.2)',
               },
             }}
           >
-            {status === 'sending' ? sendingLabel : submitLabel}
+            {isSending ? (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                }}
+              >
+                <CircularProgress size={18} color="inherit" />
+                {sendingLabel}
+              </Box>
+            ) : (
+              submitLabel
+            )}
           </Button>
         </Box>
 
         {isTurnstileEnabled ? (
           <Box
-            ref={turnstileContainerRef}
-            data-testid="waitlist-turnstile"
+            id={turnstileHintId}
             sx={{
+              mt: 2,
               display: 'flex',
-              justifyContent: 'center',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1,
               width: '100%',
-              minHeight: 65,
             }}
-          />
+          >
+            <Box
+              ref={turnstileContainerRef}
+              data-testid="waitlist-turnstile"
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                width: '100%',
+                minHeight: 65,
+              }}
+            />
+
+            {!turnstileToken ? (
+              <Typography
+                component="p"
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.52)',
+                  fontSize: '0.78rem',
+                  textAlign: 'center',
+                }}
+              >
+                Complete verification to enable waitlist submission.
+              </Typography>
+            ) : null}
+          </Box>
         ) : null}
       </Box>
     </Box>
@@ -590,27 +810,64 @@ export function HeroSection({
     <Box
       component="section"
       sx={{
+        position: 'relative',
+        isolation: 'isolate',
+        overflow: 'hidden',
         px: { xs: '1.25rem', sm: '2rem', md: '4rem' },
-        py: { xs: '2.5rem', sm: '3.5rem', md: '5rem' },
+        py: { xs: '2.75rem', sm: '3.75rem', md: '5.25rem' },
         mx: { xs: '1rem', md: '2rem' },
-        borderRadius: '1.25rem',
+        borderRadius: { xs: '1.25rem', md: '1.75rem' },
         background:
-          'linear-gradient(135deg, rgba(10, 10, 16, 0.52), rgba(26, 16, 42, 0.34))',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
+          'linear-gradient(135deg, rgba(10, 10, 16, 0.62), rgba(26, 16, 42, 0.38))',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
         boxShadow:
-          '0 24px 80px rgba(0, 0, 0, 0.34), inset 0 0 48px rgba(246, 6, 111, 0.04)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+          '0 24px 80px rgba(0, 0, 0, 0.34), inset 0 0 48px rgba(246, 6, 111, 0.05)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          zIndex: -1,
+          width: { xs: 260, md: 420 },
+          height: { xs: 260, md: 420 },
+          right: { xs: '-120px', md: '-160px' },
+          top: { xs: '-120px', md: '-160px' },
+          borderRadius: '999px',
+          background:
+            'radial-gradient(circle, rgba(246, 6, 111, 0.22), transparent 68%)',
+          filter: 'blur(4px)',
+        },
+
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          zIndex: -1,
+          width: { xs: 240, md: 380 },
+          height: { xs: 240, md: 380 },
+          left: { xs: '-120px', md: '-140px' },
+          bottom: { xs: '-140px', md: '-170px' },
+          borderRadius: '999px',
+          background:
+            'radial-gradient(circle, rgba(2, 35, 113, 0.34), transparent 68%)',
+          filter: 'blur(4px)',
+        },
       }}
     >
       <Grid container spacing={{ xs: 4, md: 6 }} alignItems="center">
-        <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: 'center' }}>
+        <Grid
+          size={{ xs: 12, md: 6 }}
+          sx={{
+            textAlign: 'center',
+            order: { xs: 2, md: 1 },
+          }}
+        >
           <Box
             sx={{
               position: 'relative',
               width: '100%',
               maxWidth: {
-                xs: 400,
+                xs: 420,
                 sm: 580,
                 md: 740,
                 lg: 860,
@@ -637,7 +894,7 @@ export function HeroSection({
                 borderRadius: 'inherit',
                 background:
                   'linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 28%, transparent 72%, rgba(246, 6, 111, 0.12))',
-                opacity: 0.7,
+                opacity: 0.74,
               },
 
               '&:hover': {
@@ -661,20 +918,27 @@ export function HeroSection({
           </Box>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid
+          size={{ xs: 12, md: 6 }}
+          sx={{
+            order: { xs: 1, md: 2 },
+          }}
+        >
           <Typography
             component="h1"
             sx={{
               fontWeight: 700,
               color: '#F6066F',
               fontSize: {
-                xs: '1.75rem',
-                sm: '2.25rem',
-                md: '3rem',
-                lg: '4rem',
+                xs: '2.35rem',
+                sm: '3rem',
+                md: '3.65rem',
+                lg: '4.45rem',
               },
+              lineHeight: 0.95,
               fontFamily: '"Pinyon Script", cursive, sans-serif',
-              textAlign: 'center',
+              textAlign: { xs: 'center', md: 'left' },
+              textShadow: '0 0 24px rgba(246, 6, 111, 0.2)',
             }}
             gutterBottom
           >
@@ -684,12 +948,15 @@ export function HeroSection({
           <Typography
             component="p"
             sx={{
-              color: '#6a8db0',
+              maxWidth: 620,
+              mx: { xs: 'auto', md: 0 },
+              color: '#8fb0d0',
               fontSize: {
                 xs: '1rem',
                 sm: '1.125rem',
                 md: '1.25rem',
               },
+              lineHeight: 1.75,
               textAlign: { xs: 'center', md: 'left' },
             }}
           >
@@ -697,7 +964,14 @@ export function HeroSection({
           </Typography>
         </Grid>
 
-        <Grid size={12} sx={{ textAlign: 'center', mt: 4 }}>
+        <Grid
+          size={12}
+          sx={{
+            order: { xs: 3, md: 3 },
+            textAlign: 'center',
+            mt: { xs: 0, md: 1 },
+          }}
+        >
           <HeroWaitlist {...waitlist} />
         </Grid>
       </Grid>

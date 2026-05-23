@@ -37,7 +37,17 @@
       "syncGenerators": ["@nx/js:typescript-sync"],
       "parallelism": true,
       "configurations": {},
-      "dependsOn": ["@helix-ai/db:build", "auth:serve", "user-service:serve"]
+      "dependsOn": ["@helix-ai/db:build", "dev-services"]
+    },
+    "dev-services": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "node apps/frontend/scripts/dev-services.mjs"
+      },
+      "parallelism": true,
+      "configurations": {}
     },
     "start": {
       "executor": "nx:run-commands",

@@ -20,3 +20,5 @@ export * from './components';
 // Utilities
 // -----------------------------------------------------------------------------
 export * from './utils';
+
+export type * from './types';

@@ -4,5 +4,6 @@
     },
     "files.watcherExclude": {
         "**/.github/workflows/*": true
-    }
+    },
+    "editor.wordWrap": "on",
 }

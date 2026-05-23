@@ -52,6 +52,8 @@
   "dependencies": {
     "@helix-ai/config": "workspace:*",
     "@helix-ai/flags": "workspace:*",
+    "@mui/system": "^9.0.1",
+    "next-cloudinary": "^6.17.5",
     "server-only": "^0.0.1"
   },
   "devDependencies": {

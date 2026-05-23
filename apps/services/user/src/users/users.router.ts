@@ -15,6 +15,9 @@ import {
 } from './controllers';
 
 export type UsersRouterEnv = {
+  Bindings: {
+    AUTH_SERVICE?: Fetcher;
+  };
   Variables: UserContextVariables;
 };
 
@@ -25,14 +28,35 @@ export const usersRouter = new Hono<UsersRouterEnv>();
  *
  * Keep /health before /:username so "health" is not treated as a username.
  */
-usersRouter.get('/health', (context) =>
-  context.json({
+usersRouter.get('/health', async (context) => {
+  const authService = context.env?.AUTH_SERVICE;
+  const auth = {
+    binding: 'AUTH_SERVICE',
+    connected: false,
+    status: 'missing',
+  };
+
+  if (authService) {
+    try {
+      const response = await authService.fetch('http://auth.local/health');
+
+      auth.connected = response.ok;
+      auth.status = response.ok ? 'healthy' : 'unhealthy';
+    } catch {
+      auth.status = 'unreachable';
+    }
+  }
+
+  return context.json({
     ok: true,
     service: 'helix-user-service',
-    status: 'healthy',
+    status: auth.connected ? 'healthy' : 'degraded',
+    dependencies: {
+      auth,
+    },
     timestamp: new Date().toISOString(),
-  }),
-);
+  });
+});
 
 usersRouter.get('/', listUsersController);
 

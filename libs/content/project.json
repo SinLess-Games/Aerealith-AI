@@ -1,0 +1,26 @@
+{
+  "name": "content",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/content/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:content", "platform:helix"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/content",
+        "main": "libs/content/src/index.ts",
+        "tsConfig": "libs/content/tsconfig.lib.json",
+        "assets": ["libs/content/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "coverage/libs/content"
+      }
+    }
+  }
+}

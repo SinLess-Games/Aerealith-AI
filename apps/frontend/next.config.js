@@ -34,7 +34,7 @@ const nextConfig = {
   // Do NOT include @helix-ai/db here.
   // The DB package contains MikroORM decorators and should be consumed from
   // its compiled output during the frontend build.
-  transpilePackages: ['@helix-ai/ui', '@helix-ai/config', '@helix-ai/flags'],
+  transpilePackages: ['@helix-ai/ui', '@helix-ai/config', '@helix-ai/flags', '@helix-ai/content'],
 
   images: {
     remotePatterns: [],

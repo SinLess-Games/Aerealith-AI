@@ -20,6 +20,8 @@ vi.mock('./controllers', () => {
     getUserSettingsController: controller('getUserSettingsController'),
     listUsersController: controller('listUsersController'),
     updateUserController: controller('updateUserController'),
+    updateUserProfileController: controller('updateUserProfileController'),
+    updateUserSettingsController: controller('updateUserSettingsController'),
   };
 });
 
@@ -28,7 +30,14 @@ import { usersRouter } from './users.router';
 interface HealthResponseBody {
   ok: true;
   service: string;
-  status: 'healthy';
+  status: 'healthy' | 'degraded';
+  dependencies: {
+    auth: {
+      binding: 'AUTH_SERVICE';
+      connected: boolean;
+      status: string;
+    };
+  };
   timestamp: string;
 }
 
@@ -52,10 +61,42 @@ describe('usersRouter', () => {
     expect(body).toEqual({
       ok: true,
       service: 'helix-user-service',
-      status: 'healthy',
+      status: 'degraded',
+      dependencies: {
+        auth: {
+          binding: 'AUTH_SERVICE',
+          connected: false,
+          status: 'missing',
+        },
+      },
       timestamp: expect.any(String),
     });
     expect(Number.isNaN(Date.parse(body.timestamp))).toBe(false);
+  });
+
+  it('reports auth as connected when the service binding responds', async () => {
+    const app = new Hono();
+
+    app.route('/users', usersRouter);
+
+    const response = await app.request(
+      '/users/health',
+      {},
+      {
+        AUTH_SERVICE: {
+          fetch: vi.fn(async () => new Response('{}', { status: 200 })),
+        },
+      },
+    );
+    const body = (await response.json()) as HealthResponseBody;
+
+    expect(response.status).toBe(200);
+    expect(body.status).toBe('healthy');
+    expect(body.dependencies.auth).toEqual({
+      binding: 'AUTH_SERVICE',
+      connected: true,
+      status: 'healthy',
+    });
   });
 
   it('routes GET /users to listUsersController', async () => {

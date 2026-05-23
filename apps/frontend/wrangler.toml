@@ -52,6 +52,9 @@ NEXTJS_ENV = "development"
 NEXT_PUBLIC_APP_NAME = "Helix AI"
 NEXT_PUBLIC_APP_ENV = "development"
 
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = "helix-ai"
+NEXT_PUBLIC_CLOUDINARY_API_KEY = "__SET_CLOUDINARY_API_KEY__"
+
 DATABASE_PROVIDER = "postgresql"
 DATABASE_SSL_ENABLED = "true"
 DATABASE_SSL_MODE = "verify-full"
@@ -110,12 +113,20 @@ enabled = true
 # =============================================================================
 # Secrets
 # -----------------------------------------------------------------------------
-# Do not place DATABASE_URL or POSTGRES_URL directly in this file.
+# Do not place DATABASE_URL, POSTGRES_URL, POSTGRES_PASSWORD, or
+# CLOUDINARY_API_SECRET directly in this file.
+#
+# NEXT_PUBLIC_* values are browser-visible public config.
 #
 # Set secrets with:
-#   pnpm exec wrangler secret put POSTGRES_URL
-#   pnpm exec wrangler secret put POSTGRES_URL --env preview
-#   pnpm exec wrangler secret put POSTGRES_URL --env production
+#   pnpm exec wrangler secret put POSTGRES_URL --name helix-ai-frontend
+#   pnpm exec wrangler secret put POSTGRES_PASSWORD --name helix-ai-frontend
+#   pnpm exec wrangler secret put CLOUDINARY_API_SECRET --name helix-ai-frontend
+#
+# Environment-specific secrets:
+#   pnpm exec wrangler secret put POSTGRES_URL --name helix-ai-frontend --env preview
+#   pnpm exec wrangler secret put POSTGRES_URL --name helix-ai-frontend --env production
+#   pnpm exec wrangler secret put CLOUDINARY_API_SECRET --name helix-ai-frontend --env production
 # =============================================================================
 
 # =============================================================================
@@ -143,6 +154,9 @@ service = "helix-user-service-preview"
 NEXTJS_ENV = "preview"
 NEXT_PUBLIC_APP_NAME = "Helix AI"
 NEXT_PUBLIC_APP_ENV = "preview"
+
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = "helix-ai"
+NEXT_PUBLIC_CLOUDINARY_API_KEY = "__SET_CLOUDINARY_API_KEY__"
 
 DATABASE_PROVIDER = "postgresql"
 DATABASE_SSL_ENABLED = "true"
@@ -224,6 +238,9 @@ service = "helix-user-service"
 NEXTJS_ENV = "production"
 NEXT_PUBLIC_APP_NAME = "Helix AI"
 NEXT_PUBLIC_APP_ENV = "production"
+
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = "helix-ai"
+NEXT_PUBLIC_CLOUDINARY_API_KEY = "__SET_CLOUDINARY_API_KEY__"
 
 DATABASE_PROVIDER = "postgresql"
 DATABASE_SSL_ENABLED = "true"

@@ -1,16 +1,13 @@
+// apps/frontend/src/app/page.tsx
+
 'use client';
 
-import { Header, HeroSection } from '@helix-ai/ui';
+import { Box, Stack } from '@mui/material';
+import { Footer, Header, HeroSection } from '@helix-ai/ui';
 
-import { headerProps } from '../content/header';
-
-const HERO_DATA = {
-  title: 'Helix AI — Your Digital Life, Intelligently Connected',
-  subtitle:
-    'Helix AI is a secure virtual assistant designed to bring your digital life into one intelligent command center. It goes beyond basic voice commands by connecting your apps, organizing your data, automating repetitive tasks, monitoring important systems, and turning scattered information into clear, actionable insight. Built for work, home, creators, developers, and infrastructure operators, Helix helps you ask better questions, manage complex workflows, track what matters, and stay in control across the tools and platforms you rely on every day.',
-  imageUrl: '/images/hero.png',
-  imageAlt: 'Helix AI futuristic hero artwork',
-} as const;
+import { footerProps } from '@helix-ai/content/en/footer';
+import { headerProps } from '@helix-ai/content/en/header';
+import { HERO_DATA, SECTIONS_DATA } from '@helix-ai/content/en/home/content';
 
 export default function IndexPage() {
   return (
@@ -21,13 +18,40 @@ export default function IndexPage() {
         id="main-content"
         className="flex-grow px-4 pb-16 pt-6 md:px-8 md:pb-24"
       >
-        <HeroSection
-          title={HERO_DATA.title}
-          subtitle={HERO_DATA.subtitle}
-          imageUrl={HERO_DATA.imageUrl}
-          imageAlt={HERO_DATA.imageAlt}
-        />
+        <Box
+          id="hero"
+          component="section"
+          aria-label="Hero"
+          sx={{
+            mx: 'auto',
+            width: '100%',
+            maxWidth: 1900,
+          }}
+        >
+          <HeroSection
+            title={HERO_DATA.title}
+            subtitle={HERO_DATA.subtitle}
+            imageUrl={HERO_DATA.imageUrl}
+            imageAlt={HERO_DATA.imageAlt}
+          />
+        </Box>
+
+        <Stack
+          component="section"
+          aria-label={SECTIONS_DATA.pageTitle}
+          spacing={{ xs: 5, md: 7 }}
+          sx={{
+            mx: 'auto',
+            mt: { xs: 5, md: 7 },
+            width: '100%',
+            maxWidth: 1900,
+          }}
+        >
+          {SECTIONS_DATA.sections}
+        </Stack>
       </main>
+
+      <Footer {...footerProps} />
     </div>
   );
 }

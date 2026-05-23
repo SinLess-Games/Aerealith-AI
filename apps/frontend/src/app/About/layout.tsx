@@ -3,48 +3,82 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
-  title: 'About Helix AI | Helix AI — Your Intelligent Digital Companion',
+  metadataBase: new URL('https://helixaibot.com'),
+
+  title: 'About Helix AI | Adaptive AI Companion Platform',
+
   description:
-    'Learn about Helix AI: the intelligent digital companion built to unify your tools, simplify workflows, and empower decisions with real-time insights and adaptive AI. Discover our mission, story, and the team behind the innovation.',
+    'Learn about Helix AI, an adaptive AI companion platform built to connect tools, automate workflows, support memory, and deliver real-time analytics for individuals, creators, developers, and organizations.',
+
   keywords: [
     'Helix AI',
     'About Helix AI',
-    'AI assistant',
+    'adaptive AI companion',
+    'AI assistant platform',
     'intelligent digital companion',
-    'machine learning',
-    'deep neural networks',
-    'real-time insights',
-    'adaptive AI',
-    'productivity AI',
-    'Helix AI team',
+    'AI automation',
+    'workflow automation',
+    'AI memory',
+    'real-time analytics',
+    'AI productivity',
+    'connected digital ecosystem',
+    'personal AI assistant',
+    'business AI assistant',
+    'developer AI tools',
+    'SinLess Games LLC',
   ],
+
   authors: [
     {
       name: 'SinLess Games LLC',
       url: 'https://sinlessgames.com',
     },
   ],
+
+  creator: 'SinLess Games LLC',
+  publisher: 'SinLess Games LLC',
+  category: 'technology',
+
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
   },
+
   alternates: {
-    canonical: 'https://helixaibot.com/About',
+    canonical: '/About',
   },
+
   openGraph: {
-    title: 'About Helix AI | Helix AI — Your Intelligent Digital Companion',
+    title: 'About Helix AI | Adaptive AI Companion Platform',
     description:
-      'Learn about Helix AI: the intelligent digital companion built to unify your tools, simplify workflows, and empower decisions with real-time insights and adaptive AI. Discover our mission, story, and the team behind the innovation.',
-    url: 'https://helixaibot.com/About',
+      'Discover the mission behind Helix AI: an adaptive AI companion platform designed to unify tools, automate workflows, support memory, and provide real-time insight across your digital ecosystem.',
+    url: '/About',
     siteName: 'Helix AI',
     locale: 'en_US',
     type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'About Helix AI adaptive AI companion platform',
+      },
+    ],
   },
+
   twitter: {
     card: 'summary_large_image',
-    title: 'About Helix AI | Helix AI — Your Intelligent Digital Companion',
+    title: 'About Helix AI | Adaptive AI Companion Platform',
     description:
-      'Learn about Helix AI: the intelligent digital companion built to unify your tools, simplify workflows, and empower decisions with real-time insights and adaptive AI.',
+      'Learn about Helix AI, an adaptive AI companion platform for automation, memory, analytics, and connected digital ecosystems.',
+    images: ['/og-image.png'],
   },
 };
 
