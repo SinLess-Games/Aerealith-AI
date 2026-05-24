@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EntityManager } from '@mikro-orm/core';
-import type { User, UserProfile, UserSettings } from '@helix-ai/db';
-import { User as UserEntity } from '@helix-ai/db';
-import { UserProfile as UserProfileEntity } from '@helix-ai/db';
-import { UserSettings as UserSettingsEntity } from '@helix-ai/db';
+import type { User, UserProfile, UserSettings } from '@aerealith-ai/db';
+import { User as UserEntity } from '@aerealith-ai/db';
+import { UserProfile as UserProfileEntity } from '@aerealith-ai/db';
+import { UserSettings as UserSettingsEntity } from '@aerealith-ai/db';
 
 import { createUserRepository } from './user.repository';
 

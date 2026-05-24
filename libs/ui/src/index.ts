@@ -1,5 +1,5 @@
 // libs/ui/src/index.ts
-// Public export surface for @helix-ai/ui.
+// Public export surface for @aerealith-ai/ui.
 
 // -----------------------------------------------------------------------------
 // Theme utilities

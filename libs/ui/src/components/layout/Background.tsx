@@ -1,3 +1,5 @@
+// libs/ui/src/components/layout/Background.tsx
+
 'use client';
 
 import * as React from 'react';
@@ -5,7 +7,6 @@ import type { CSSProperties } from 'react';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
-
 import Image from 'next/image';
 
 import type {
@@ -33,13 +34,17 @@ const DEFAULT_LOCAL_STORAGE_KEYS = [
 ] as const;
 
 function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+
   return Math.min(max, Math.max(min, value));
 }
 
 function normalizePreference(
   value: BackgroundPreference | string | null | undefined,
 ): BackgroundPreference | undefined {
-  const normalized = value?.trim().toLowerCase();
+  const normalized = value?.trim().replace(/^['"]|['"]$/g, '').toLowerCase();
 
   if (
     normalized === 'light' ||
@@ -106,6 +111,22 @@ function readStoredPreference(
   return undefined;
 }
 
+function readDocumentPreference(): BackgroundPreference | undefined {
+  if (typeof document === 'undefined') {
+    return undefined;
+  }
+
+  const root = document.documentElement;
+
+  return (
+    normalizePreference(root.dataset.theme) ??
+    normalizePreference(root.getAttribute('data-theme')) ??
+    normalizePreference(root.getAttribute('data-mui-color-scheme')) ??
+    (root.classList.contains('light') ? 'light' : undefined) ??
+    (root.classList.contains('dark') ? 'dark' : undefined)
+  );
+}
+
 function getSystemColorSchemeSnapshot(): BackgroundMode {
   if (typeof window === 'undefined') {
     return 'dark';
@@ -127,10 +148,18 @@ function subscribeToColorScheme(onStoreChange: () => void): () => void {
 
   const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
 
-  mediaQuery.addEventListener('change', onStoreChange);
+  if (typeof mediaQuery.addEventListener === 'function') {
+    mediaQuery.addEventListener('change', onStoreChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', onStoreChange);
+    };
+  }
+
+  mediaQuery.addListener(onStoreChange);
 
   return () => {
-    mediaQuery.removeEventListener('change', onStoreChange);
+    mediaQuery.removeListener(onStoreChange);
   };
 }
 
@@ -140,10 +169,43 @@ function subscribeToLocalStorage(onStoreChange: () => void): () => void {
   }
 
   window.addEventListener('storage', onStoreChange);
+  window.addEventListener('helix-theme-change', onStoreChange);
 
   return () => {
     window.removeEventListener('storage', onStoreChange);
+    window.removeEventListener('helix-theme-change', onStoreChange);
   };
+}
+
+function subscribeToDocumentPreference(onStoreChange: () => void): () => void {
+  if (
+    typeof document === 'undefined' ||
+    typeof MutationObserver === 'undefined'
+  ) {
+    return () => undefined;
+  }
+
+  const observer = new MutationObserver(onStoreChange);
+
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class', 'data-theme', 'data-mui-color-scheme'],
+  });
+
+  return () => {
+    observer.disconnect();
+  };
+}
+
+function resolveBackgroundMode(
+  preference: BackgroundPreference | undefined,
+  systemMode: BackgroundMode,
+): BackgroundMode {
+  if (preference === 'light' || preference === 'dark') {
+    return preference;
+  }
+
+  return systemMode;
 }
 
 export function BackgroundImage({
@@ -186,8 +248,14 @@ export function BackgroundImage({
 
   const storedPreference = React.useSyncExternalStore(
     subscribeToLocalStorage,
-    () => readStoredPreference(localStorageKeys) ?? 'system',
-    () => 'system',
+    (): BackgroundPreference => readStoredPreference(localStorageKeys) ?? 'system',
+    (): BackgroundPreference => 'system',
+  );
+
+  const documentPreference = React.useSyncExternalStore(
+    subscribeToDocumentPreference,
+    (): BackgroundPreference => readDocumentPreference() ?? 'system',
+    (): BackgroundPreference => 'system',
   );
 
   const viewerIsLoggedIn = isLoggedIn ?? Boolean(userSettings);
@@ -197,17 +265,17 @@ export function BackgroundImage({
       ? readUserPreference(userSettings)
       : undefined;
 
-  const resolvedPreference =
-    explicitPreference && explicitPreference !== 'system'
-      ? explicitPreference
-      : userPreference && userPreference !== 'system'
-        ? userPreference
-        : storedPreference && storedPreference !== 'system'
-          ? storedPreference
-          : systemMode ?? muiTheme.palette.mode;
+  const muiPreference = normalizePreference(muiTheme.palette.mode);
 
-  const resolvedMode: BackgroundMode =
-    resolvedPreference === 'light' ? 'light' : 'dark';
+  const resolvedPreference: BackgroundPreference =
+    explicitPreference ??
+    userPreference ??
+    documentPreference ??
+    storedPreference ??
+    muiPreference ??
+    'dark';
+
+  const resolvedMode = resolveBackgroundMode(resolvedPreference, systemMode);
 
   const selectedImageUrl = resolveImageUrl({
     mode: resolvedMode,
@@ -222,20 +290,26 @@ export function BackgroundImage({
       : darkOverlayOpacity ?? overlayOpacity;
 
   const safeOverlayOpacity = clamp(selectedOverlayOpacity, 0, 1);
-  const safeBlur = Math.max(0, blur);
-  const safeScale = Math.max(1, scaleOnBlur);
+  const safeBlur = Math.max(0, Number.isFinite(blur) ? blur : 0);
+  const safeScale = Math.max(
+    1,
+    Number.isFinite(scaleOnBlur) ? scaleOnBlur : 1,
+  );
 
-  const backgroundColor = resolvedMode === 'light' ? '#ffffff' : '#050716';
+  const backgroundColor =
+    resolvedMode === 'light'
+      ? muiTheme.palette.background.default || '#F7F4FF'
+      : muiTheme.palette.background.default || '#050716';
 
   const overlayColor =
     resolvedMode === 'light'
-      ? alpha('#ffffff', safeOverlayOpacity)
+      ? alpha('#FFFFFF', safeOverlayOpacity)
       : alpha('#000000', safeOverlayOpacity);
 
   const foregroundSx = {
     position: 'relative',
     zIndex: 2,
-    minHeight: '100vh',
+    minHeight: '100dvh',
   };
 
   const rootStyle = {
@@ -251,7 +325,7 @@ export function BackgroundImage({
       sx={mergeSx(
         {
           position: 'relative',
-          minHeight: '100vh',
+          minHeight: '100dvh',
           isolation: 'isolate',
           overflowX: 'clip',
           backgroundColor,
@@ -267,13 +341,14 @@ export function BackgroundImage({
             inset: 0,
             zIndex: 0,
             width: '100vw',
-            height: '100vh',
+            height: '100dvh',
             overflow: 'hidden',
             pointerEvents: 'none',
             backgroundColor,
             filter: safeBlur > 0 ? `blur(${safeBlur}px)` : undefined,
             transform: safeBlur > 0 ? `scale(${safeScale})` : undefined,
             transformOrigin: 'center',
+            willChange: safeBlur > 0 ? 'filter, transform' : undefined,
           },
           backgroundSx,
         )}
@@ -290,6 +365,7 @@ export function BackgroundImage({
           style={{
             objectFit,
             objectPosition,
+            userSelect: 'none',
           }}
         />
       </Box>

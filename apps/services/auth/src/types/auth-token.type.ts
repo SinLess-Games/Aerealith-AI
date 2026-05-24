@@ -2,7 +2,7 @@ import type {
   AuthSessionId,
   AuthUserId,
   AuthUsername,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 
 export const AUTH_TOKEN_TYPE = {
   ACCESS: 'access',

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EntityManager } from '@mikro-orm/core';
-import type { User, UserAccount } from '@helix-ai/db';
-import { UserAccount as UserAccountEntity } from '@helix-ai/db';
-import { AUTH_ACCOUNT_PROVIDER } from '@helix-ai/contracts';
+import type { User, UserAccount } from '@aerealith-ai/db';
+import { UserAccount as UserAccountEntity } from '@aerealith-ai/db';
+import { AUTH_ACCOUNT_PROVIDER } from '@aerealith-ai/contracts';
 
 import { createAccountRepository } from './account.repository';
 

@@ -196,7 +196,7 @@ flowchart TD
 | Monorepo        | Nx                                                            |
 | Package Manager | pnpm                                                          |
 | Frontend        | Next.js App Router                                            |
-| UI              | React, Tailwind CSS, shadcn/ui, shared `@helix-ai/ui` package |
+| UI              | React, Tailwind CSS, shadcn/ui, shared `@aerealith-ai/ui` package |
 | API Runtime     | Hono / Cloudflare Workers-ready services                      |
 | Auth            | NextAuth-compatible authentication architecture               |
 | ORM             | MikroORM                                                      |

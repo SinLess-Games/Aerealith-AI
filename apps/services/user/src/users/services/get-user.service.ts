@@ -3,8 +3,8 @@ import type { EntityManager } from '@mikro-orm/postgresql';
 import {
   UserErrorCode,
   type PublicUserServiceDto,
-} from '@helix-ai/contracts';
-import { UserRepository } from '@helix-ai/db';
+} from '@aerealith-ai/contracts';
+import { UserRepository } from '@aerealith-ai/db';
 
 import { toPublicUserDto, type UserMapperInput } from '../mappers';
 

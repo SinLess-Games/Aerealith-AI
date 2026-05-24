@@ -1,67 +1,51 @@
 // libs/content/src/en/home/index.ts
 
+/**
+ * Home content barrel exports.
+ *
+ * This file provides a single import surface for Home page content while
+ * avoiding duplicate export-name conflicts between `content.ts` and
+ * `sections.ts`.
+ *
+ * @example
+ * import {
+ *   HOME_RENDERED_PAGE_CONTENT,
+ *   HOME_SECTION_PAGE_CONTENT,
+ *   crowdfundingSection,
+ *   faqSection,
+ * } from '@aerealith-ai/content';
+ *
+ * @public
+ * @module
+ * @decorator barrel
+ */
+
+export * from './crowdfunding';
+export * from './different';
+export * from './faq';
+export * from './pricing';
+
+/**
+ * Home section configuration exports.
+ *
+ * These are content/config objects used for structured Home page composition.
+ *
+ * @public
+ * @decorator exports
+ */
 export {
-  CROWDFUNDING_DESCRIPTION,
-  CROWDFUNDING_MEDIA_ITEMS,
-  CROWDFUNDING_SECTION,
-  CROWDFUNDING_VIDEO_BASE_OPTIONS,
-  CROWDFUNDING_VIDEOS,
-  crowdfundingDescription,
-  crowdfundingMediaItems,
-  crowdfundingSection,
-  crowdfundingVideoBaseOptions,
-  crowdfundingVideos,
-} from './crowdfunding';
-
-export type {
-  CrowdfundingSectionContent,
-  CrowdfundingVideoContent,
-} from './crowdfunding';
-
-export {
-  DIFFERENTIATOR_PAGE_SIZE,
-  DIFFERENTIATOR_TRANSITION_MS,
-  DIFFERENT_SECTION,
-  HELIX_DIFFERENCE_BODY,
-  HELIX_DIFFERENTIATORS,
-  differentSection,
-  helixDifferenceBody,
-  helixDifferentiators,
-} from './different';
-
-export type {
-  DifferentSectionContent,
-  HelixDifferentiatorItem,
-} from './different';
-
-export {
-  PRICING_IMAGE,
-  PRICING_PREVIEW_DESCRIPTION,
-  PRICING_PREVIEW_SECTION,
-  pricingPreviewDescription,
-  pricingPreviewImage,
-  pricingPreviewSection,
-} from './pricing';
-
-export type {
-  PricingPreviewImageContent,
-  PricingPreviewSectionContent,
-} from './pricing';
-
-export {
-  HOME_PAGE_CONTENT,
+  DEFAULT_MEDIA_MAX_SCAN_COUNT as HOME_SECTIONS_DEFAULT_MEDIA_MAX_SCAN_COUNT,
+  DEFAULT_MEDIA_START_INDEX as HOME_SECTIONS_DEFAULT_MEDIA_START_INDEX,
+  DEFAULT_MEDIA_STOP_AFTER_MISSES as HOME_SECTIONS_DEFAULT_MEDIA_STOP_AFTER_MISSES,
+  HOME_PAGE_CONTENT as HOME_SECTION_PAGE_CONTENT,
   INFOGRAPHIC_CAROUSEL_CONFIG,
+  INFOGRAPHICS_PUBLIC_PATH as HOME_SECTIONS_INFOGRAPHICS_PUBLIC_PATH,
   PRODUCT_PREVIEW_CAROUSEL_CONFIG,
-  DEFAULT_MEDIA_MAX_SCAN_COUNT,
-  DEFAULT_MEDIA_START_INDEX,
-  DEFAULT_MEDIA_STOP_AFTER_MISSES,
-  INFOGRAPHICS_PUBLIC_PATH,
-  PRODUCT_PREVIEW_PATH,
+  PRODUCT_PREVIEW_PATH as HOME_SECTIONS_PRODUCT_PREVIEW_PATH,
   homeCrowdfundingSection,
   homeHeroSection,
   homeInfographicsSection,
-  homePageContent,
-  homePageMetadata,
+  homePageContent as homeSectionPageContent,
   homePricingPreviewSection,
   homeSections,
   infographicCarouselProps,
@@ -79,15 +63,28 @@ export type {
   HomeSectionConfig,
 } from './sections';
 
+/**
+ * Rendered Home page content exports.
+ *
+ * These are React-element based exports used when the Home page imports
+ * already-rendered sections.
+ *
+ * @public
+ * @decorator exports
+ */
 export {
+  DEFAULT_MEDIA_MAX_SCAN_COUNT as HOME_CONTENT_DEFAULT_MEDIA_MAX_SCAN_COUNT,
+  DEFAULT_MEDIA_START_INDEX as HOME_CONTENT_DEFAULT_MEDIA_START_INDEX,
+  DEFAULT_MEDIA_STOP_AFTER_MISSES as HOME_CONTENT_DEFAULT_MEDIA_STOP_AFTER_MISSES,
   HERO_DATA,
-  HOME_SECTIONS,
-  INVESTOR_VIDEO,
-  SECTIONS_DATA,
   HOME_PAGE_CONTENT as HOME_RENDERED_PAGE_CONTENT,
+  HOME_PAGE_IMAGE_PATH,
+  HOME_SECTIONS,
+  INFOGRAPHICS_PUBLIC_PATH as HOME_CONTENT_INFOGRAPHICS_PUBLIC_PATH,
+  INVESTOR_VIDEO,
+  PRINCIPLES_PATH,
+  PRODUCT_PREVIEW_PATH as HOME_CONTENT_PRODUCT_PREVIEW_PATH,
+  SECTIONS_DATA,
 } from './content';
 
-export type {
-  SectionPageMetadata,
-  SectionsProps,
-} from './content';
+export type { SectionsProps } from './content';

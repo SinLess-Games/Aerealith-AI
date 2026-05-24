@@ -1,11 +1,46 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Permissions-Policy: accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), display-capture=(), document-domain=(), encrypted-media=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), usb=(), xr-spatial-tracking=(), fullscreen=(self), picture-in-picture=(self), publickey-credentials-get=(self), web-share=(self)
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
 /_next/static/*
-  Cache-Control: public,max-age=31536000,immutable
+  Cache-Control: public, max-age=31536000, immutable
+
+/_next/image*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/images/brand/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=604800
+
+/images/backgrounds/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=604800
+
+/images/marketing/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/images/pages/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/images/og-image.png
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
 
 /images/*
-  Cache-Control: public,max-age=86400
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /icons/*
-  Cache-Control: public,max-age=86400
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=604800
 
 /favicon.ico
-  Cache-Control: public,max-age=86400
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/site.webmanifest
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/site.xml
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/api/*
+  Cache-Control: no-store

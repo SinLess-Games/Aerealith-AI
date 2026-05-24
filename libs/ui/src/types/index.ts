@@ -12,3 +12,5 @@ export type * from './carousel';
 export type * from './feature-grid';
 export type * from './marketing-copy';
 export type * from './marketing-section';
+export type * from './color';
+export type * from './mui';

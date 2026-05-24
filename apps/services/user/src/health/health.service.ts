@@ -1,4 +1,4 @@
-import type { UserServiceHealthDto } from '@helix-ai/contracts';
+import type { UserServiceHealthDto } from '@aerealith-ai/contracts';
 
 export interface HealthServiceOptions {
   serviceName?: string;

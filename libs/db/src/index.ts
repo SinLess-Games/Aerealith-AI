@@ -7,9 +7,9 @@
  * and utilities.
  *
  * Usage:
- * import { getOrm, initOrm, ormConfig, entities, repositories } from '@helix-ai/db';
- * import { User, Profile, Settings, Waitlist } from '@helix-ai/db';
- * import { UserRepository, WaitlistRepository } from '@helix-ai/db';
+ * import { getOrm, initOrm, ormConfig, entities, repositories } from '@aerealith-ai/db';
+ * import { User, Profile, Settings, Waitlist } from '@aerealith-ai/db';
+ * import { UserRepository, WaitlistRepository } from '@aerealith-ai/db';
  */
 
 import { MikroORM } from '@mikro-orm/core';

@@ -1,36 +1,148 @@
 /* apps/frontend/src/app/globals.scss */
 
-/* Brand font */
-@import url('https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap');
+/* Brand fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Lora:wght@400;500;600;700&family=Pinyon+Script&display=swap');
 
 :root {
   color-scheme: dark;
 
-  --helix-color-bg: #050510;
-  --helix-color-bg-soft: #0a0a16;
-  --helix-color-surface: rgba(255, 255, 255, 0.06);
-  --helix-color-surface-strong: rgba(255, 255, 255, 0.1);
+  /* --------------------------------------------------------------------------
+   * Aerealith / Helix Brand Palette
+   * -------------------------------------------------------------------------- */
+  --helix-color-aerealith-pink: #f6066f;
+  --helix-color-ether-cyan: #00dbc9;
+  --helix-color-deep-night: #050a1e;
+  --helix-color-void-navy: #08071b;
+  --helix-color-aurora-violet: #8c52ff;
+  --helix-color-soft-starlight: #f7f4ff;
+  --helix-color-mist-gray: #aeb7c8;
 
-  --helix-color-text: rgba(255, 255, 255, 0.92);
-  --helix-color-text-muted: rgba(205, 222, 241, 0.72);
+  /* --------------------------------------------------------------------------
+   * App Theme Tokens
+   * Keep these aligned with libs/ui/src/theme/constants.ts and cssVars.ts.
+   * -------------------------------------------------------------------------- */
+  --hx-bg: var(--helix-color-deep-night);
+  --hx-bg-transparent: rgba(5, 10, 30, 0.76);
 
-  --helix-color-primary: #f6066f;
+  --hx-surface: rgba(8, 7, 27, 0.86);
+  --hx-surface-transparent: rgba(8, 7, 27, 0.72);
+
+  --hx-border: rgba(174, 183, 200, 0.2);
+
+  --hx-text: rgba(247, 244, 255, 0.94);
+  --hx-text-2: rgba(174, 183, 200, 0.78);
+
+  --hx-primary: var(--helix-color-aerealith-pink);
+  --hx-primary-rgb: 246, 6, 111;
+  --hx-primary-foreground: #ffffff;
+
+  --hx-secondary: var(--helix-color-ether-cyan);
+  --hx-secondary-rgb: 0, 219, 201;
+  --hx-secondary-foreground: #031818;
+
+  --hx-accent: var(--helix-color-aurora-violet);
+  --hx-accent-rgb: 140, 82, 255;
+  --hx-accent-foreground: #ffffff;
+
+  --hx-glass-bg: rgba(8, 7, 27, 0.68);
+  --hx-glass-brd: rgba(174, 183, 200, 0.18);
+  --hx-shadow:
+    0 18px 60px rgba(0, 0, 0, 0.34),
+    0 0 32px rgba(246, 6, 111, 0.16),
+    0 0 42px rgba(0, 219, 201, 0.1);
+
+  /* --------------------------------------------------------------------------
+   * Backwards-compatible Helix aliases
+   * -------------------------------------------------------------------------- */
+  --helix-color-bg: var(--hx-bg);
+  --helix-color-bg-soft: var(--helix-color-void-navy);
+  --helix-color-surface: var(--hx-surface-transparent);
+  --helix-color-surface-strong: rgba(247, 244, 255, 0.1);
+
+  --helix-color-text: var(--hx-text);
+  --helix-color-text-muted: var(--hx-text-2);
+
+  --helix-color-primary: var(--hx-primary);
   --helix-color-primary-soft: rgba(246, 6, 111, 0.24);
-  --helix-color-secondary: #7c3aed;
-  --helix-color-accent: #022371;
+  --helix-color-secondary: var(--hx-accent);
+  --helix-color-accent: var(--hx-secondary);
 
+  /* --------------------------------------------------------------------------
+   * Fonts
+   * -------------------------------------------------------------------------- */
   --helix-font-brand: 'Pinyon Script', cursive;
+  --helix-font-heading: 'Lora', Georgia, serif;
   --helix-font-body:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
     sans-serif;
 
+  /* --------------------------------------------------------------------------
+   * Shape / Effects
+   * -------------------------------------------------------------------------- */
   --helix-radius-sm: 0.75rem;
   --helix-radius-md: 1rem;
   --helix-radius-lg: 1.5rem;
+  --helix-radius-xl: 2rem;
 
   --helix-shadow-glow:
     0 0 28px rgba(246, 6, 111, 0.22),
-    0 18px 64px rgba(2, 35, 113, 0.28);
+    0 18px 64px rgba(0, 219, 201, 0.12),
+    0 20px 80px rgba(5, 10, 30, 0.42);
+
+  --helix-focus-ring: rgba(0, 219, 201, 0.72);
+  --helix-selection-bg: rgba(246, 6, 111, 0.58);
+  --helix-selection-text: #ffffff;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --hx-bg: #f7f4ff;
+  --hx-bg-transparent: rgba(247, 244, 255, 0.78);
+
+  --hx-surface: #ffffff;
+  --hx-surface-transparent: rgba(255, 255, 255, 0.78);
+
+  --hx-border: rgba(80, 90, 116, 0.22);
+
+  --hx-text: #121826;
+  --hx-text-2: #5c6982;
+
+  --hx-primary: var(--helix-color-aerealith-pink);
+  --hx-primary-rgb: 246, 6, 111;
+  --hx-primary-foreground: #ffffff;
+
+  --hx-secondary: var(--helix-color-ether-cyan);
+  --hx-secondary-rgb: 0, 219, 201;
+  --hx-secondary-foreground: #031818;
+
+  --hx-accent: var(--helix-color-aurora-violet);
+  --hx-accent-rgb: 140, 82, 255;
+  --hx-accent-foreground: #ffffff;
+
+  --hx-glass-bg: rgba(255, 255, 255, 0.72);
+  --hx-glass-brd: rgba(80, 90, 116, 0.16);
+  --hx-shadow:
+    0 18px 52px rgba(18, 24, 38, 0.12),
+    0 0 28px rgba(246, 6, 111, 0.12),
+    0 0 34px rgba(0, 219, 201, 0.12);
+
+  --helix-color-bg: var(--hx-bg);
+  --helix-color-bg-soft: #ece8f8;
+  --helix-color-surface: var(--hx-surface-transparent);
+  --helix-color-surface-strong: rgba(18, 24, 38, 0.08);
+
+  --helix-color-text: var(--hx-text);
+  --helix-color-text-muted: var(--hx-text-2);
+
+  --helix-focus-ring: rgba(246, 6, 111, 0.52);
+  --helix-selection-bg: rgba(246, 6, 111, 0.28);
+  --helix-selection-text: #121826;
+}
+
+:root[data-theme='dark'],
+:root.dark {
+  color-scheme: dark;
 }
 
 *,
@@ -43,19 +155,47 @@ html {
   min-height: 100%;
   scroll-behavior: smooth;
   text-size-adjust: 100%;
+  background: var(--hx-bg);
 }
 
 body {
   min-height: 100vh;
   margin: 0;
-  color: var(--helix-color-text);
+  color: var(--hx-text);
   background:
-    radial-gradient(circle at top right, rgba(246, 6, 111, 0.16), transparent 34rem),
-    radial-gradient(circle at bottom left, rgba(2, 35, 113, 0.28), transparent 36rem),
-    linear-gradient(135deg, var(--helix-color-bg), var(--helix-color-bg-soft));
+    radial-gradient(
+      circle at 88% 8%,
+      rgba(var(--hx-primary-rgb), 0.18),
+      transparent 34rem
+    ),
+    radial-gradient(
+      circle at 12% 92%,
+      rgba(var(--hx-secondary-rgb), 0.16),
+      transparent 36rem
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(var(--hx-accent-rgb), 0.12),
+      transparent 42rem
+    ),
+    linear-gradient(135deg, var(--hx-bg), var(--helix-color-bg-soft));
   font-family: var(--helix-font-body);
   font-synthesis-weight: none;
   overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::selection,
+::selection {
+  color: var(--helix-selection-text);
+  background: var(--helix-selection-bg);
+}
+
+#__next,
+[data-nextjs-root] {
+  min-height: 100vh;
 }
 
 img,
@@ -65,6 +205,10 @@ video,
 canvas {
   display: block;
   max-width: 100%;
+}
+
+svg {
+  flex-shrink: 0;
 }
 
 button,
@@ -89,14 +233,49 @@ a {
   text-underline-offset: 0.18em;
 }
 
-::selection {
-  color: #fff;
-  background: rgba(246, 6, 111, 0.55);
+a:hover {
+  text-decoration-color: currentColor;
 }
 
 :focus-visible {
-  outline: 3px solid rgba(246, 6, 111, 0.55);
+  outline: 3px solid var(--helix-focus-ring);
   outline-offset: 3px;
+}
+
+::-webkit-scrollbar {
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(5, 10, 30, 0.72);
+}
+
+::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(var(--hx-primary-rgb), 0.72),
+      rgba(var(--hx-secondary-rgb), 0.62)
+    );
+  border: 3px solid rgba(5, 10, 30, 0.72);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(var(--hx-primary-rgb), 0.9),
+      rgba(var(--hx-secondary-rgb), 0.82)
+    );
+}
+
+@supports (scrollbar-color: auto) {
+  * {
+    scrollbar-color: rgba(var(--hx-primary-rgb), 0.72) rgba(5, 10, 30, 0.72);
+    scrollbar-width: thin;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -119,6 +298,14 @@ a {
     font-family: var(--helix-font-brand);
   }
 
+  .font-heading {
+    font-family: var(--helix-font-heading);
+  }
+
+  .font-body {
+    font-family: var(--helix-font-body);
+  }
+
   .text-balance {
     text-wrap: balance;
   }
@@ -128,13 +315,21 @@ a {
   }
 
   .glass-panel {
-    background: var(--helix-color-surface);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--hx-glass-bg);
+    border: 1px solid var(--hx-glass-brd);
+    box-shadow: var(--hx-shadow);
+    backdrop-filter: saturate(170%) blur(14px);
+    -webkit-backdrop-filter: saturate(170%) blur(14px);
+  }
+
+  .glass-panel-strong {
+    background: rgba(8, 7, 27, 0.78);
+    border: 1px solid rgba(174, 183, 200, 0.24);
     box-shadow:
-      0 18px 55px rgba(0, 0, 0, 0.28),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+      0 20px 70px rgba(0, 0, 0, 0.36),
+      inset 0 1px 0 rgba(247, 244, 255, 0.08);
+    backdrop-filter: saturate(185%) blur(18px);
+    -webkit-backdrop-filter: saturate(185%) blur(18px);
   }
 
   .helix-glow {
@@ -143,12 +338,55 @@ a {
 
   .helix-gradient-text {
     color: transparent;
-    background: linear-gradient(
-      135deg,
-      var(--helix-color-primary),
-      var(--helix-color-secondary)
-    );
+    background:
+      linear-gradient(
+        135deg,
+        var(--hx-primary),
+        var(--hx-secondary) 52%,
+        var(--hx-accent)
+      );
     background-clip: text;
     -webkit-background-clip: text;
+  }
+
+  .helix-border-gradient {
+    position: relative;
+  }
+
+  .helix-border-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(var(--hx-primary-rgb), 0.7),
+        rgba(var(--hx-secondary-rgb), 0.55),
+        rgba(var(--hx-accent-rgb), 0.55)
+      );
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+  }
+
+  .star-field {
+    background-image:
+      radial-gradient(circle at 12% 20%, rgba(247, 244, 255, 0.34) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 72% 18%, rgba(0, 219, 201, 0.24) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 42% 72%, rgba(246, 6, 111, 0.22) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 88% 78%, rgba(247, 244, 255, 0.26) 0 1px, transparent 1.5px);
+    background-size:
+      220px 220px,
+      280px 280px,
+      340px 340px,
+      420px 420px;
   }
 }

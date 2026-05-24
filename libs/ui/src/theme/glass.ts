@@ -3,20 +3,13 @@
 import { alpha } from '@mui/material/styles';
 import type { SxProps, Theme } from '@mui/material/styles';
 
-export type GlassOptions = {
-  opacity?: number;
-  blurPx?: number;
-  saturatePercent?: number;
-  borderRadius?: number | string;
-  borderColor?: string;
-  shadow?: string;
-};
+import type { GlassOptions } from '../types/card';
 
 const DEFAULT_GLASS_OPTIONS = {
-  opacity: 0.6,
-  blurPx: 12,
-  saturatePercent: 160,
-  borderRadius: 16,
+  opacity: 0.68,
+  blurPx: 18,
+  saturatePercent: 180,
+  borderRadius: 20,
   borderColor: 'var(--hx-glass-brd)',
   shadow: 'var(--hx-shadow)',
 } as const satisfies Required<GlassOptions>;
@@ -40,7 +33,7 @@ function alphaSafe(color: string, opacity: number): string {
 }
 
 export function glass(
-  background: string,
+  background = 'var(--hx-glass-bg)',
   options: GlassOptions = {},
 ): SxProps<Theme> {
   const mergedOptions = {
@@ -49,30 +42,109 @@ export function glass(
   };
 
   return {
+    position: 'relative',
+    overflow: 'hidden',
+
     backdropFilter: `saturate(${mergedOptions.saturatePercent}%) blur(${mergedOptions.blurPx}px)`,
     WebkitBackdropFilter: `saturate(${mergedOptions.saturatePercent}%) blur(${mergedOptions.blurPx}px)`,
+
     background: alphaSafe(background, mergedOptions.opacity),
     border: `1px solid ${mergedOptions.borderColor}`,
     boxShadow: mergedOptions.shadow,
     borderRadius: mergedOptions.borderRadius,
+
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      inset: 0,
+      zIndex: 0,
+      pointerEvents: 'none',
+      borderRadius: 'inherit',
+      background:
+        'linear-gradient(135deg, rgba(247, 244, 255, 0.12), rgba(247, 244, 255, 0.02) 42%, rgba(0, 219, 201, 0.08))',
+    },
+
+    '& > *': {
+      position: 'relative',
+      zIndex: 1,
+    },
   };
 }
 
 export const glassOnPaper: SxProps<Theme> = {
-  backdropFilter: 'saturate(160%) blur(10px)',
-  WebkitBackdropFilter: 'saturate(160%) blur(10px)',
-  background: 'var(--hx-glass-bg)',
-  border: '1px solid var(--hx-glass-brd)',
-  boxShadow: 'var(--hx-shadow)',
-  borderRadius: 16,
+  ...glass('var(--hx-glass-bg)', {
+    opacity: 1,
+    blurPx: 18,
+    saturatePercent: 180,
+    borderRadius: 20,
+    borderColor: 'var(--hx-glass-brd)',
+    shadow: 'var(--hx-shadow)',
+  }),
 };
 
 export const glassPanel: SxProps<Theme> = {
-  ...glassOnPaper,
-  backgroundColor: 'var(--hx-surface-transparent)',
+  ...glass('var(--hx-surface-transparent)', {
+    opacity: 1,
+    blurPx: 20,
+    saturatePercent: 190,
+    borderRadius: 24,
+    borderColor: 'var(--hx-glass-brd)',
+    shadow: 'var(--hx-shadow-soft)',
+  }),
+
+  backgroundImage:
+    'linear-gradient(145deg, rgba(247, 244, 255, 0.08), rgba(0, 219, 201, 0.04), rgba(246, 6, 111, 0.04))',
 };
 
 export const glassCard: SxProps<Theme> = {
-  ...glassOnPaper,
-  borderColor: 'var(--hx-border)',
+  ...glass('var(--hx-surface-transparent)', {
+    opacity: 1,
+    blurPx: 16,
+    saturatePercent: 175,
+    borderRadius: 22,
+    borderColor: 'var(--hx-border)',
+    shadow: 'var(--hx-shadow-soft)',
+  }),
+
+  transition:
+    'transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease',
+
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    borderColor: 'rgba(0, 219, 201, 0.38)',
+    boxShadow: 'var(--hx-glow-secondary), var(--hx-shadow)',
+  },
+};
+
+export const glassPrimary: SxProps<Theme> = {
+  ...glass('var(--hx-surface-transparent)', {
+    opacity: 1,
+    blurPx: 18,
+    saturatePercent: 190,
+    borderRadius: 24,
+    borderColor: 'rgba(246, 6, 111, 0.42)',
+    shadow: 'var(--hx-glow-primary), var(--hx-shadow-soft)',
+  }),
+};
+
+export const glassSecondary: SxProps<Theme> = {
+  ...glass('var(--hx-surface-transparent)', {
+    opacity: 1,
+    blurPx: 18,
+    saturatePercent: 190,
+    borderRadius: 24,
+    borderColor: 'rgba(0, 219, 201, 0.38)',
+    shadow: 'var(--hx-glow-secondary), var(--hx-shadow-soft)',
+  }),
+};
+
+export const glassViolet: SxProps<Theme> = {
+  ...glass('var(--hx-surface-transparent)', {
+    opacity: 1,
+    blurPx: 18,
+    saturatePercent: 190,
+    borderRadius: 24,
+    borderColor: 'rgba(140, 82, 255, 0.38)',
+    shadow: 'var(--hx-glow-violet), var(--hx-shadow-soft)',
+  }),
 };

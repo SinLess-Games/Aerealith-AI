@@ -1,7 +1,16 @@
+// apps/frontend/src/app/global-error.tsx
+
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 
 type ErrorWithOptionalDetails = Error & {
   digest?: string;
@@ -50,6 +59,160 @@ const SHOW_PRIVATE_ERROR_DETAILS =
   process.env.NODE_ENV !== 'production' ||
   process.env.NEXT_PUBLIC_SHOW_ERROR_DETAILS === 'true';
 
+const SECONDARY_BUTTON_BORDER =
+  '1px solid var(--hx-border, rgba(174, 183, 200, 0.2))';
+
+const COPIED_BUTTON_BORDER = '1px solid rgba(34, 197, 94, 0.42)';
+
+const pageShellStyle: CSSProperties = {
+  margin: 0,
+  minHeight: '100vh',
+  color: 'var(--hx-text, rgba(247, 244, 255, 0.94))',
+  background:
+    'radial-gradient(circle at 88% 8%, rgba(var(--hx-primary-rgb, 246, 6, 111), 0.2), transparent 34rem), radial-gradient(circle at 12% 92%, rgba(var(--hx-secondary-rgb, 0, 219, 201), 0.16), transparent 36rem), radial-gradient(circle at 50% 48%, rgba(var(--hx-accent-rgb, 140, 82, 255), 0.14), transparent 42rem), linear-gradient(135deg, var(--hx-bg, #050a1e), var(--helix-color-bg-soft, #08071b))',
+  fontFamily:
+    'var(--helix-font-body, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)',
+  overflowX: 'hidden',
+};
+
+const mainStyle: CSSProperties = {
+  position: 'relative',
+  minHeight: '100vh',
+  display: 'grid',
+  placeItems: 'center',
+  padding: 'clamp(1rem, 4vw, 3rem)',
+  isolation: 'isolate',
+};
+
+const ambientStyle: CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: -2,
+  pointerEvents: 'none',
+  backgroundImage:
+    'radial-gradient(circle at 12% 20%, rgba(247, 244, 255, 0.24) 0 1px, transparent 1.5px), radial-gradient(circle at 72% 18%, rgba(var(--hx-secondary-rgb, 0, 219, 201), 0.22) 0 1px, transparent 1.5px), radial-gradient(circle at 42% 72%, rgba(var(--hx-primary-rgb, 246, 6, 111), 0.2) 0 1px, transparent 1.5px), radial-gradient(circle at 88% 78%, rgba(247, 244, 255, 0.2) 0 1px, transparent 1.5px)',
+  backgroundSize: '220px 220px, 280px 280px, 340px 340px, 420px 420px',
+  opacity: 0.5,
+};
+
+const cardStyle: CSSProperties = {
+  position: 'relative',
+  width: '100%',
+  maxWidth: '64rem',
+  overflow: 'hidden',
+  padding: 'clamp(1.25rem, 4vw, 2.35rem)',
+  borderRadius: 'var(--helix-radius-xl, 2rem)',
+  border: '1px solid var(--hx-glass-brd, rgba(174, 183, 200, 0.18))',
+  color: 'var(--hx-text, rgba(247, 244, 255, 0.94))',
+  background:
+    'radial-gradient(circle at 12% 0%, rgba(var(--hx-secondary-rgb, 0, 219, 201), 0.12), transparent 32%), radial-gradient(circle at 90% 12%, rgba(var(--hx-primary-rgb, 246, 6, 111), 0.16), transparent 34%), linear-gradient(145deg, var(--hx-surface-transparent, rgba(8, 7, 27, 0.78)), rgba(5, 10, 30, 0.92))',
+  boxShadow:
+    'var(--hx-shadow, 0 18px 60px rgba(0, 0, 0, 0.34), 0 0 32px rgba(246, 6, 111, 0.16), 0 0 42px rgba(0, 219, 201, 0.1))',
+  backdropFilter: 'saturate(170%) blur(18px)',
+  WebkitBackdropFilter: 'saturate(170%) blur(18px)',
+};
+
+const eyebrowStyle: CSSProperties = {
+  margin: '0 0 0.75rem',
+  color: 'var(--hx-secondary, #00dbc9)',
+  fontSize: '0.78rem',
+  fontWeight: 900,
+  letterSpacing: '0.14em',
+  lineHeight: 1.35,
+  textTransform: 'uppercase',
+  textAlign: 'center',
+};
+
+const headingStyle: CSSProperties = {
+  margin: '0 auto 1rem',
+  maxWidth: '52rem',
+  color: 'transparent',
+  background:
+    'linear-gradient(135deg, var(--hx-primary, #f6066f), var(--hx-secondary, #00dbc9) 52%, var(--hx-accent, #8c52ff))',
+  backgroundClip: 'text',
+  WebkitBackgroundClip: 'text',
+  fontFamily:
+    'var(--helix-font-heading, Lora, Georgia, "Times New Roman", serif)',
+  fontSize: 'clamp(2.25rem, 7vw, 4.75rem)',
+  fontWeight: 900,
+  letterSpacing: '-0.055em',
+  lineHeight: 0.96,
+  textAlign: 'center',
+};
+
+const descriptionStyle: CSSProperties = {
+  margin: '0 auto 1.35rem',
+  maxWidth: '44rem',
+  color: 'var(--hx-text-2, rgba(174, 183, 200, 0.78))',
+  fontSize: '1rem',
+  lineHeight: 1.75,
+  textAlign: 'center',
+};
+
+const panelStyle: CSSProperties = {
+  margin: '0 auto 1rem',
+  padding: '1rem',
+  borderRadius: '1.25rem',
+  border: '1px solid var(--hx-border, rgba(174, 183, 200, 0.2))',
+  background: 'rgba(255, 255, 255, 0.055)',
+  textAlign: 'left',
+};
+
+const detailsStyle: CSSProperties = {
+  margin: '0 auto 1.5rem',
+  textAlign: 'left',
+  borderRadius: '1.25rem',
+  border: '1px solid var(--hx-border, rgba(174, 183, 200, 0.2))',
+  background: 'rgba(255, 255, 255, 0.045)',
+  overflow: 'hidden',
+};
+
+const summaryStyle: CSSProperties = {
+  cursor: 'pointer',
+  listStyle: 'none',
+  padding: '1rem',
+  color: 'var(--hx-text, rgba(247, 244, 255, 0.94))',
+  fontSize: '0.92rem',
+  fontWeight: 900,
+  letterSpacing: '0.06em',
+  lineHeight: 1.3,
+  textTransform: 'uppercase',
+  borderBottom: '1px solid var(--hx-border, rgba(174, 183, 200, 0.2))',
+};
+
+const actionRowStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  justifyContent: 'center',
+  gap: '0.85rem',
+};
+
+const primaryButtonStyle: CSSProperties = {
+  cursor: 'pointer',
+  border: '1px solid rgba(255, 255, 255, 0.22)',
+  borderRadius: '999px',
+  padding: '0.78rem 1.35rem',
+  color: 'var(--hx-primary-foreground, #ffffff)',
+  fontWeight: 900,
+  lineHeight: 1.2,
+  background:
+    'linear-gradient(135deg, var(--hx-primary, #f6066f), var(--hx-secondary, #00dbc9), var(--hx-accent, #8c52ff))',
+  boxShadow:
+    '0 0 24px rgba(var(--hx-primary-rgb, 246, 6, 111), 0.28), 0 14px 34px rgba(0, 0, 0, 0.24)',
+};
+
+const secondaryButtonStyle: CSSProperties = {
+  cursor: 'pointer',
+  border: SECONDARY_BUTTON_BORDER,
+  borderRadius: '999px',
+  padding: '0.78rem 1.35rem',
+  color: 'var(--hx-text, rgba(247, 244, 255, 0.94))',
+  fontWeight: 900,
+  lineHeight: 1.2,
+  textDecoration: 'none',
+  background: 'rgba(255, 255, 255, 0.08)',
+};
+
 function stringifyUnknown(value: unknown): string | undefined {
   if (value === undefined || value === null) {
     return undefined;
@@ -89,7 +252,9 @@ function stringifyUnknown(value: unknown): string | undefined {
         }
 
         if (typeof nestedValue === 'function') {
-          return `[Function ${(nestedValue as Function).name || 'anonymous'}]`;
+          const namedFunction = nestedValue as { name?: string };
+
+          return `[Function ${namedFunction.name || 'anonymous'}]`;
         }
 
         if (nestedValue instanceof Error) {
@@ -124,7 +289,7 @@ function DetailRow({
 }: {
   label: string;
   value?: string | number | boolean | null;
-}) {
+}): React.ReactElement | null {
   if (value === undefined || value === null || value === '') {
     return null;
   }
@@ -133,19 +298,20 @@ function DetailRow({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '9rem minmax(0, 1fr)',
+        gridTemplateColumns: 'minmax(6.5rem, 9rem) minmax(0, 1fr)',
         gap: '0.75rem',
         alignItems: 'start',
         padding: '0.65rem 0',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid var(--hx-border, rgba(174, 183, 200, 0.14))',
       }}
     >
       <dt
         style={{
-          color: 'rgba(255, 255, 255, 0.58)',
-          fontSize: '0.8rem',
-          fontWeight: 800,
-          letterSpacing: '0.04em',
+          color: 'var(--hx-text-2, rgba(174, 183, 200, 0.78))',
+          fontSize: '0.78rem',
+          fontWeight: 900,
+          letterSpacing: '0.05em',
+          lineHeight: 1.35,
           textTransform: 'uppercase',
         }}
       >
@@ -155,7 +321,7 @@ function DetailRow({
       <dd
         style={{
           margin: 0,
-          color: 'rgba(255, 255, 255, 0.9)',
+          color: 'var(--hx-text, rgba(247, 244, 255, 0.94))',
           fontSize: '0.9rem',
           lineHeight: 1.55,
           overflowWrap: 'anywhere',
@@ -173,7 +339,7 @@ function CodeBlock({
 }: {
   label: string;
   value?: string | null;
-}) {
+}): React.ReactElement | null {
   if (!value) {
     return null;
   }
@@ -183,10 +349,11 @@ function CodeBlock({
       <h3
         style={{
           margin: '0 0 0.6rem',
-          color: 'rgba(255, 255, 255, 0.88)',
-          fontSize: '0.9rem',
+          color: 'var(--hx-text, rgba(247, 244, 255, 0.94))',
+          fontSize: '0.86rem',
           fontWeight: 900,
-          letterSpacing: '0.04em',
+          letterSpacing: '0.06em',
+          lineHeight: 1.3,
           textTransform: 'uppercase',
         }}
       >
@@ -200,9 +367,9 @@ function CodeBlock({
           overflow: 'auto',
           padding: '1rem',
           borderRadius: '1rem',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          background: 'rgba(0, 0, 0, 0.38)',
-          color: 'rgba(255, 255, 255, 0.86)',
+          border: '1px solid var(--hx-border, rgba(174, 183, 200, 0.2))',
+          background: 'rgba(0, 0, 0, 0.34)',
+          color: 'var(--hx-text, rgba(247, 244, 255, 0.9))',
           fontSize: '0.8rem',
           lineHeight: 1.6,
           whiteSpace: 'pre-wrap',
@@ -215,19 +382,20 @@ function CodeBlock({
   );
 }
 
-function SmallPill({ children }: { children: React.ReactNode }) {
+function SmallPill({ children }: { children: ReactNode }): React.ReactElement {
   return (
     <span
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         borderRadius: '999px',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
+        border: '1px solid var(--hx-border, rgba(174, 183, 200, 0.2))',
         background: 'rgba(255, 255, 255, 0.07)',
-        color: 'rgba(255, 255, 255, 0.72)',
+        color: 'var(--hx-text-2, rgba(174, 183, 200, 0.78))',
         fontSize: '0.75rem',
-        fontWeight: 800,
-        padding: '0.35rem 0.65rem',
+        fontWeight: 900,
+        lineHeight: 1.25,
+        padding: '0.38rem 0.7rem',
       }}
     >
       {children}
@@ -239,7 +407,7 @@ export default function GlobalError({
   error,
   reset,
   unstable_retry,
-}: GlobalErrorProps) {
+}: GlobalErrorProps): React.ReactElement {
   const retry = unstable_retry ?? reset;
   const digest = typeof error?.digest === 'string' ? error.digest : undefined;
 
@@ -339,7 +507,7 @@ export default function GlobalError({
     });
   }, [error]);
 
-  const copyReport = async () => {
+  const copyReport = useCallback(async (): Promise<void> => {
     try {
       if (!window.navigator.clipboard?.writeText) {
         throw new Error('Clipboard API is not available.');
@@ -354,75 +522,27 @@ export default function GlobalError({
     } catch {
       setCopied(false);
     }
-  };
+  }, [reportText]);
 
   return (
-    <html lang="en">
-      <body
-        style={{
-          margin: 0,
-          minHeight: '100vh',
-          background: '#050716',
-          color: '#ffffff',
-          fontFamily:
-            'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        }}
-      >
-        <main
-          style={{
-            minHeight: '100vh',
-            display: 'grid',
-            placeItems: 'center',
-            padding: '2rem',
-          }}
-        >
-          <section
-            style={{
-              width: '100%',
-              maxWidth: '58rem',
-              padding: '2rem',
-              borderRadius: '1.5rem',
-              border: '1px solid rgba(246, 6, 111, 0.35)',
-              background:
-                'linear-gradient(135deg, rgba(5, 7, 22, 0.94), rgba(35, 12, 50, 0.76))',
-              boxShadow:
-                '0 24px 70px rgba(0, 0, 0, 0.5), 0 0 42px rgba(246, 6, 111, 0.22)',
-              textAlign: 'center',
-            }}
-          >
-            <p
-              style={{
-                margin: '0 0 0.75rem',
-                color: 'rgba(255, 255, 255, 0.58)',
-                fontSize: '0.8rem',
-                fontWeight: 900,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-              }}
-            >
-              Helix AI Error Boundary
-            </p>
+    <html lang="en" suppressHydrationWarning>
+      <body style={pageShellStyle} suppressHydrationWarning>
+        <main style={mainStyle}>
+          <div aria-hidden="true" style={ambientStyle} />
 
-            <h1
-              style={{
-                margin: '0 0 1rem',
-                color: '#F6066F',
-                fontSize: 'clamp(2rem, 7vw, 4rem)',
-                lineHeight: 1,
-              }}
-            >
+          <section
+            role="alert"
+            aria-labelledby="global-error-title"
+            aria-describedby="global-error-description"
+            style={cardStyle}
+          >
+            <p style={eyebrowStyle}>Helix AI Error Boundary</p>
+
+            <h1 id="global-error-title" style={headingStyle}>
               We&apos;re sorry, but something went wrong
             </h1>
 
-            <p
-              style={{
-                margin: '0 auto 1.25rem',
-                maxWidth: '42rem',
-                color: 'rgba(255, 255, 255, 0.82)',
-                fontSize: '1rem',
-                lineHeight: 1.7,
-              }}
-            >
+            <p id="global-error-description" style={descriptionStyle}>
               Helix AI hit an unexpected application error. You can retry the
               page, return home, or open the technical report below for more
               diagnostic information.
@@ -433,7 +553,7 @@ export default function GlobalError({
                 display: 'flex',
                 flexWrap: 'wrap',
                 justifyContent: 'center',
-                gap: '0.5rem',
+                gap: '0.55rem',
                 marginBottom: '1.25rem',
               }}
             >
@@ -448,17 +568,7 @@ export default function GlobalError({
               </SmallPill>
             </div>
 
-            <section
-              aria-label="Error summary"
-              style={{
-                margin: '0 auto 1rem',
-                padding: '1rem',
-                borderRadius: '1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'rgba(255, 255, 255, 0.055)',
-                textAlign: 'left',
-              }}
-            >
+            <section aria-label="Error summary" style={panelStyle}>
               <dl style={{ margin: 0 }}>
                 <DetailRow label="Name" value={errorSummary.name} />
                 <DetailRow label="Message" value={errorSummary.message} />
@@ -471,38 +581,15 @@ export default function GlobalError({
               </dl>
             </section>
 
-            <details
-              style={{
-                margin: '0 auto 1.5rem',
-                textAlign: 'left',
-                borderRadius: '1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'rgba(255, 255, 255, 0.045)',
-                overflow: 'hidden',
-              }}
-            >
-              <summary
-                style={{
-                  cursor: 'pointer',
-                  listStyle: 'none',
-                  padding: '1rem',
-                  color: 'rgba(255, 255, 255, 0.92)',
-                  fontSize: '0.95rem',
-                  fontWeight: 900,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                }}
-              >
-                Technical error report
-              </summary>
+            <details style={detailsStyle}>
+              <summary style={summaryStyle}>Technical error report</summary>
 
               <div style={{ padding: '1rem' }}>
                 {!SHOW_PRIVATE_ERROR_DETAILS ? (
                   <p
                     style={{
                       margin: '0 0 1rem',
-                      color: 'rgba(255, 255, 255, 0.66)',
+                      color: 'var(--hx-text-2, rgba(174, 183, 200, 0.78))',
                       fontSize: '0.85rem',
                       lineHeight: 1.6,
                     }}
@@ -511,8 +598,9 @@ export default function GlobalError({
                     unless{' '}
                     <code
                       style={{
-                        padding: '0.1rem 0.35rem',
+                        padding: '0.12rem 0.38rem',
                         borderRadius: '0.35rem',
+                        color: 'var(--hx-secondary, #00dbc9)',
                         background: 'rgba(255, 255, 255, 0.1)',
                       }}
                     >
@@ -599,30 +687,9 @@ export default function GlobalError({
               </div>
             </details>
 
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-                gap: '0.85rem',
-              }}
-            >
+            <div style={actionRowStyle}>
               {retry ? (
-                <button
-                  type="button"
-                  onClick={retry}
-                  style={{
-                    cursor: 'pointer',
-                    border: '1px solid rgba(255, 255, 255, 0.22)',
-                    borderRadius: '999px',
-                    padding: '0.75rem 1.25rem',
-                    color: '#ffffff',
-                    fontWeight: 800,
-                    background:
-                      'linear-gradient(135deg, #022371 0%, #7c3aed 48%, #f6066f 100%)',
-                    boxShadow: '0 0 22px rgba(246, 6, 111, 0.34)',
-                  }}
-                >
+                <button type="button" onClick={retry} style={primaryButtonStyle}>
                   Try again
                 </button>
               ) : null}
@@ -631,32 +698,17 @@ export default function GlobalError({
                 type="button"
                 onClick={copyReport}
                 style={{
-                  cursor: 'pointer',
-                  border: '1px solid rgba(255, 255, 255, 0.18)',
-                  borderRadius: '999px',
-                  padding: '0.75rem 1.25rem',
-                  color: '#ffffff',
-                  fontWeight: 800,
+                  ...secondaryButtonStyle,
+                  border: copied ? COPIED_BUTTON_BORDER : SECONDARY_BUTTON_BORDER,
                   background: copied
-                    ? 'rgba(34, 197, 94, 0.22)'
-                    : 'rgba(255, 255, 255, 0.08)',
+                    ? 'rgba(34, 197, 94, 0.2)'
+                    : secondaryButtonStyle.background,
                 }}
               >
                 {copied ? 'Copied report' : 'Copy report'}
               </button>
 
-              <Link
-                href="/"
-                style={{
-                  border: '1px solid rgba(255, 255, 255, 0.18)',
-                  borderRadius: '999px',
-                  padding: '0.75rem 1.25rem',
-                  color: '#ffffff',
-                  fontWeight: 800,
-                  textDecoration: 'none',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                }}
-              >
+              <Link href="/" style={secondaryButtonStyle}>
                 Go home
               </Link>
             </div>

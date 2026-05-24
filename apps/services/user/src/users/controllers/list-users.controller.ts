@@ -1,7 +1,7 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
 import type { Context } from 'hono';
 
-import { getEntityManager } from '@helix-ai/db';
+import { getEntityManager } from '@aerealith-ai/db';
 
 import { ListUsersService } from '../services';
 

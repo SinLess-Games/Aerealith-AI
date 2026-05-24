@@ -1,12 +1,12 @@
 import type { MiddlewareHandler } from 'hono';
 
-import { AuthError } from '@helix-ai/api';
-import type { User, UserSession } from '@helix-ai/db';
+import { AuthError } from '@aerealith-ai/api';
+import type { User, UserSession } from '@aerealith-ai/db';
 import {
   AUTH_USER_STATUS,
   isAuthUserStatus,
   type AuthUserStatus,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 
 import type { SessionRepository } from '../repositories/session.repository';
 import type { UserRepository } from '../repositories/user.repository';

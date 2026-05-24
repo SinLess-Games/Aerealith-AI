@@ -4,8 +4,8 @@ import type { Context } from 'hono';
 import {
   UserErrorCode,
   createUserServiceSchema,
-} from '@helix-ai/contracts';
-import { getEntityManager } from '@helix-ai/db';
+} from '@aerealith-ai/contracts';
+import { getEntityManager } from '@aerealith-ai/db';
 
 import { CreateUserService, CreateUserServiceError } from '../services';
 

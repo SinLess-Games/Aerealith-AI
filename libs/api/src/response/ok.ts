@@ -1,4 +1,4 @@
-import type { ApiResponseMeta, ApiSuccessResponse } from '@helix-ai/contracts';
+import type { ApiResponseMeta, ApiSuccessResponse } from '@aerealith-ai/contracts';
 
 import {
   HeaderName,

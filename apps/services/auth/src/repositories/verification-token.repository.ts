@@ -4,9 +4,9 @@ import type {
   RequiredEntityData,
 } from '@mikro-orm/core';
 
-import type { User } from '@helix-ai/db';
-import { UserVerificationToken } from '@helix-ai/db';
-import { AuthVerificationSchemas } from '@helix-ai/contracts';
+import type { User } from '@aerealith-ai/db';
+import { UserVerificationToken } from '@aerealith-ai/db';
+import { AuthVerificationSchemas } from '@aerealith-ai/contracts';
 
 const { AUTH_VERIFICATION_TOKEN_TYPE } = AuthVerificationSchemas;
 

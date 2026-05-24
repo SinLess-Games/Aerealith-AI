@@ -4,8 +4,8 @@ import type {
   RequiredEntityData,
 } from '@mikro-orm/core';
 
-import type { User } from '@helix-ai/db';
-import { UserSession } from '@helix-ai/db';
+import type { User } from '@aerealith-ai/db';
+import { UserSession } from '@aerealith-ai/db';
 
 export type SessionLookup = {
   id?: string;

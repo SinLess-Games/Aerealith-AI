@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { User, UserVerificationToken } from '@helix-ai/db';
-import { AuthVerificationSchemas } from '@helix-ai/contracts';
+import type { User, UserVerificationToken } from '@aerealith-ai/db';
+import { AuthVerificationSchemas } from '@aerealith-ai/contracts';
 
 import {
   createVerificationTokenService,

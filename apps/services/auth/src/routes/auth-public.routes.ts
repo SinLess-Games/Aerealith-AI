@@ -5,7 +5,7 @@ import {
   AuthLoginSchemas,
   AuthRegisterSchemas,
   AuthSessionSchemas,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 
 import type {
   AuthRegisterResult,

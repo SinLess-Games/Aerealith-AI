@@ -1,5 +1,5 @@
-import { AuthError } from '@helix-ai/api';
-import { AuthPasswordSchemas } from '@helix-ai/contracts';
+import { AuthError } from '@aerealith-ai/api';
+import { AuthPasswordSchemas } from '@aerealith-ai/contracts';
 
 const {
   AUTH_PASSWORD_LIMITS,

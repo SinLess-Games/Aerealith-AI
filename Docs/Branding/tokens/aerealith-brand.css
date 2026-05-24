@@ -1,0 +1,18 @@
+/* Aerealith AI brand tokens */
+:root {
+  --aerealith-pink: #F6066F;
+  --ether-cyan: #00DBC9;
+  --deep-night: #050A1E;
+  --void-navy: #08071B;
+  --aurora-violet: #8C52FF;
+  --soft-starlight: #F7F4FF;
+  --mist-gray: #AEB7C8;
+
+  --brand-gradient-primary: linear-gradient(90deg, #F6066F 0%, #8C52FF 50%, #00DBC9 100%);
+  --brand-gradient-surface: radial-gradient(circle at 20% 20%, rgba(246,6,111,.28), transparent 32%), radial-gradient(circle at 80% 30%, rgba(0,219,201,.22), transparent 36%), #050A1E;
+
+  --font-display: "Orbitron", "Exo 2", system-ui, sans-serif;
+  --font-heading: "Rajdhani", "Sora", system-ui, sans-serif;
+  --font-body: "Inter", "IBM Plex Sans", system-ui, sans-serif;
+  --font-accent: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+}

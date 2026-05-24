@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { User } from '@helix-ai/db';
-import { AUTH_ACCOUNT_PROVIDER, AUTH_USER_STATUS } from '@helix-ai/contracts';
+import type { User } from '@aerealith-ai/db';
+import { AUTH_ACCOUNT_PROVIDER, AUTH_USER_STATUS } from '@aerealith-ai/contracts';
 
 import {
   createAuthService,

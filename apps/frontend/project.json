@@ -8,7 +8,7 @@
   "targets": {
     "build": {
       "executor": "nx:run-commands",
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "generate-site-assets"],
       "cache": true,
       "inputs": [
         "default",
@@ -21,10 +21,30 @@
       "options": {
         "cwd": "apps/frontend",
         "tty": false,
-        "command": "next build  && node ./scripts/ensure-middleware-manifest.mjs"
+        "command": "next build && node ./scripts/ensure-middleware-manifest.mjs"
       },
       "syncGenerators": ["@nx/js:typescript-sync"],
       "parallelism": true,
+      "configurations": {}
+    },
+    "generate-site-assets": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "default",
+        "{workspaceRoot}/Docs/New_Branding/tokens/aerealith-brand-tokens.json",
+        "{workspaceRoot}/libs/ui/src/theme/tokens/aerealith-brand-tokens.json",
+        "{workspaceRoot}/apps/frontend/public/icons/*.png"
+      ],
+      "outputs": [
+        "{workspaceRoot}/apps/frontend/public/site.webmanifest",
+        "{workspaceRoot}/apps/frontend/public/site.xml"
+      ],
+      "options": {
+        "cwd": "apps/frontend",
+        "command": "node ./scripts/generate-site-assets.mjs"
+      },
+      "parallelism": false,
       "configurations": {}
     },
     "dev": {
@@ -37,7 +57,7 @@
       "syncGenerators": ["@nx/js:typescript-sync"],
       "parallelism": true,
       "configurations": {},
-      "dependsOn": ["@helix-ai/db:build", "dev-services"]
+      "dependsOn": ["@aerealith-ai/db:build", "dev-services"]
     },
     "dev-services": {
       "executor": "nx:run-commands",

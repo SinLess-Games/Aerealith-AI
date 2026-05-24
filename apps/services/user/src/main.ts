@@ -1,5 +1,5 @@
 import app from './app';
-import { getOrm } from '@helix-ai/db';
+import { getOrm } from '@aerealith-ai/db';
 import type { UserServiceContextEnv } from './users/types';
 
 export interface UserServiceWorker {

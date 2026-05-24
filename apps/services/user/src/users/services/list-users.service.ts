@@ -1,7 +1,7 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
 
-import type { PublicUserServiceDto } from '@helix-ai/contracts';
-import { UserRepository } from '@helix-ai/db';
+import type { PublicUserServiceDto } from '@aerealith-ai/contracts';
+import { UserRepository } from '@aerealith-ai/db';
 
 import { toPublicUserDtos, type UserMapperInput } from '../mappers';
 

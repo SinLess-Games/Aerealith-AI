@@ -5,7 +5,7 @@ import type {
   AuthUserId,
   AuthUsername,
   AuthenticatedUser,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 import type {
   AuthTokenClaims,
   AuthTokenScope,

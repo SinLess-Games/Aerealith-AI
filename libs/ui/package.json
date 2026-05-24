@@ -1,5 +1,5 @@
 {
-  "name": "@helix-ai/ui",
+  "name": "@aerealith-ai/ui",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -50,8 +50,8 @@
     }
   },
   "dependencies": {
-    "@helix-ai/config": "workspace:*",
-    "@helix-ai/flags": "workspace:*",
+    "@aerealith-ai/config": "workspace:*",
+    "@aerealith-ai/flags": "workspace:*",
     "@mui/system": "^9.0.1",
     "next-cloudinary": "^6.17.5",
     "server-only": "^0.0.1"

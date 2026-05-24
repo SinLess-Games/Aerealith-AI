@@ -1,12 +1,12 @@
-import { AuthError } from '@helix-ai/api';
-import type { User } from '@helix-ai/db';
+import { AuthError } from '@aerealith-ai/api';
+import type { User } from '@aerealith-ai/db';
 import type {
   AuthLoginSchemas,
   AuthPasswordSchemas,
   AuthRegisterSchemas,
   AuthSessionSchemas,
   AuthVerificationSchemas,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 import {
   AUTH_ACCOUNT_PROVIDER,
   AUTH_USER_STATUS,
@@ -14,7 +14,7 @@ import {
   isAuthUserStatus,
   type AuthUserStatus,
   type PublicAuthUser,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 
 import type { AccountRepository } from '../repositories/account.repository';
 import type { UserRepository } from '../repositories/user.repository';

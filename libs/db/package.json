@@ -1,5 +1,5 @@
 {
-  "name": "@helix-ai/db",
+  "name": "@aerealith-ai/db",
   "version": "0.0.1",
   "private": false,
   "type": "module",
@@ -26,7 +26,7 @@
     }
   },
   "dependencies": {
-    "@helix-ai/config": "workspace:*",
+    "@aerealith-ai/config": "workspace:*",
     "@mikro-orm/core": "6.6.14",
     "@mikro-orm/migrations": "6.6.14",
     "@mikro-orm/postgresql": "6.6.14",

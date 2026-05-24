@@ -13,7 +13,7 @@ export interface ToastProviderProps extends PrimitiveToastProviderProps {
   /**
    * App-wide toast provider wrapper.
    *
-   * This exists so apps can import providers from `@helix-ai/ui/providers`
+   * This exists so apps can import providers from `@aerealith-ai/ui/providers`
    * without reaching into component primitives directly.
    */
   children: React.ReactNode;

@@ -6,15 +6,16 @@ import React from 'react';
 
 import { Box, Container, Grid, Stack, Typography } from '@mui/material';
 
-import { Footer, Header, MediaImage } from '@helix-ai/ui';
+import { Footer, Header, MediaImage } from '@aerealith-ai/ui';
 
 import {
   AboutContent,
   AboutDescription,
+  AboutImage,
   AboutHeader,
   footerProps,
   headerProps,
-} from '@helix-ai/content';
+} from '@aerealith-ai/content';
 
 type AboutSection = {
   readonly title: string;
@@ -22,7 +23,6 @@ type AboutSection = {
   readonly paragraphs: React.ReactNode | readonly React.ReactNode[];
 };
 
-const ABOUT_IMAGE_URL = '/images/about-us.png';
 
 const ORDER_MAP: Record<string, number> = {
   'Who We Are': 1,
@@ -199,7 +199,7 @@ export default function AboutPage() {
                 }}
               >
                 <MediaImage
-                  src={ABOUT_IMAGE_URL}
+                  src={AboutImage}
                   alt="Helix AI about artwork"
                   aspectRatio="16 / 9"
                   objectFit="contain"

@@ -1,6 +1,6 @@
 import type { Context, Next } from 'hono';
 
-import { getUsernameParam } from '@helix-ai/api';
+import { getUsernameParam } from '@aerealith-ai/api';
 
 export const USERNAME_CONTEXT_KEY = 'username';
 

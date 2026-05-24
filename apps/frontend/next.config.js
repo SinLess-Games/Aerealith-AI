@@ -31,10 +31,10 @@ const nextConfig = {
 
   // Transpile browser/UI-safe workspace libraries.
   //
-  // Do NOT include @helix-ai/db here.
+  // Do NOT include @aerealith-ai/db here.
   // The DB package contains MikroORM decorators and should be consumed from
   // its compiled output during the frontend build.
-  transpilePackages: ['@helix-ai/ui', '@helix-ai/config', '@helix-ai/flags', '@helix-ai/content'],
+  transpilePackages: ['@aerealith-ai/ui', '@aerealith-ai/config', '@aerealith-ai/flags', '@aerealith-ai/content'],
 
   images: {
     remotePatterns: [],
@@ -58,14 +58,14 @@ const nextConfig = {
       ...(config.resolve.alias ?? {}),
 
       // Source aliases for frontend-safe workspace libraries.
-      '@helix-ai/ui': resolve(repoRoot, 'libs/ui/src/index.ts'),
-      '@helix-ai/config': resolve(repoRoot, 'libs/config/src/index.ts'),
-      '@helix-ai/flags': resolve(repoRoot, 'libs/flags/src/index.ts'),
+      '@aerealith-ai/ui': resolve(repoRoot, 'libs/ui/src/index.ts'),
+      '@aerealith-ai/config': resolve(repoRoot, 'libs/config/src/index.ts'),
+      '@aerealith-ai/flags': resolve(repoRoot, 'libs/flags/src/index.ts'),
 
       // IMPORTANT:
       // Use the compiled DB package when available so Next does not parse
       // raw MikroORM TypeScript decorators from libs/db/src.
-      '@helix-ai/db': resolvedDbEntry,
+      '@aerealith-ai/db': resolvedDbEntry,
 
       // Knex/MikroORM optional dialect packages.
       // The app only uses PostgreSQL.

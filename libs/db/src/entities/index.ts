@@ -7,7 +7,7 @@
  * back here only after the matching entity files are created.
  *
  * Example:
- * import { User, UserProfile, UserSettings } from '@helix-ai/db/entities';
+ * import { User, UserProfile, UserSettings } from '@aerealith-ai/db/entities';
  */
 
 // ---------------------------------------------------------------------

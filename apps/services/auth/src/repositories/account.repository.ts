@@ -4,12 +4,12 @@ import type {
   RequiredEntityData,
 } from '@mikro-orm/core';
 
-import type { User } from '@helix-ai/db';
-import { UserAccount } from '@helix-ai/db';
+import type { User } from '@aerealith-ai/db';
+import { UserAccount } from '@aerealith-ai/db';
 import {
   AUTH_ACCOUNT_PROVIDER,
   type AuthAccountProvider,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 
 export const AUTH_ACCOUNT_STATUS = {
   ACTIVE: 'active',

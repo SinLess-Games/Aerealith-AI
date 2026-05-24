@@ -1,4 +1,4 @@
-import { CommonErrorCode } from '@helix-ai/contracts';
+import { CommonErrorCode } from '@aerealith-ai/contracts';
 
 import {
   HeaderName,

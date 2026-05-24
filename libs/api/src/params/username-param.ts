@@ -5,7 +5,7 @@ import {
   UserErrorCode,
   userServiceUsernameSchema,
   type UserServiceUsername,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 
 export const USERNAME_PARAM_NAME = 'username';
 

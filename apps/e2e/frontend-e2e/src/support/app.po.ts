@@ -1,4 +1,4 @@
-import type { CardProps } from '@helix-ai/ui';
+import type { CardProps } from '@aerealith-ai/ui';
 
 const escapeSelectorValue = (value: string): string =>
   value.replace(/["\\]/g, '\\$&');

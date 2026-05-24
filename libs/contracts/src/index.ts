@@ -169,7 +169,7 @@ export * from './zod-schemas/user.schema';
 //   UserServiceSchemas,
 //   UserServiceTypes,
 //   UserServiceRoutes,
-// } from '@helix-ai/contracts';
+// } from '@aerealith-ai/contracts';
 //
 // AuthSchemas.emailSchema
 // UserServiceSchemas.usernameSchema

@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from 'hono';
 
-import { AuthError } from '@helix-ai/api';
-import { canAccessUsername } from '@helix-ai/contracts';
+import { AuthError } from '@aerealith-ai/api';
+import { canAccessUsername } from '@aerealith-ai/contracts';
 
 import {
   authContextHasEveryScope,

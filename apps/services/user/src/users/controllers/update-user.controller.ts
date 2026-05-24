@@ -1,12 +1,12 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
 import type { Context } from 'hono';
 
-import { getUsernameParam } from '@helix-ai/api';
+import { getUsernameParam } from '@aerealith-ai/api';
 import {
   UserErrorCode,
   updateUserServiceSchema,
-} from '@helix-ai/contracts';
-import { getEntityManager } from '@helix-ai/db';
+} from '@aerealith-ai/contracts';
+import { getEntityManager } from '@aerealith-ai/db';
 
 import { UpdateUserService, UpdateUserServiceError } from '../services';
 

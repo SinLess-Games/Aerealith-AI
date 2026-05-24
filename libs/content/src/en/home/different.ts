@@ -1,7 +1,33 @@
+// libs/content/src/en/home/different.ts
+
+/**
+ * Number of differentiator cards shown per carousel page.
+ *
+ * @public
+ * @constant
+ * @readonly
+ * @decorator config
+ */
 export const DIFFERENTIATOR_PAGE_SIZE = 4;
+
+/**
+ * Differentiator carousel transition duration in milliseconds.
+ *
+ * @public
+ * @constant
+ * @readonly
+ * @decorator config
+ */
 export const DIFFERENTIATOR_TRANSITION_MS = 260;
 
-export type HelixDifferentiatorItem = {
+/**
+ * Aerealith AI differentiator card item.
+ *
+ * @public
+ * @type
+ * @decorator content
+ */
+export type AerealithDifferentiatorItem = {
   id?: string;
   title: string;
   description: string;
@@ -9,6 +35,24 @@ export type HelixDifferentiatorItem = {
   badge?: string;
 };
 
+/**
+ * Backward-compatible type alias.
+ *
+ * Prefer `AerealithDifferentiatorItem` for new imports.
+ *
+ * @public
+ * @type
+ * @decorator alias
+ */
+export type HelixDifferentiatorItem = AerealithDifferentiatorItem;
+
+/**
+ * Home page "different" section content configuration.
+ *
+ * @public
+ * @type
+ * @decorator section
+ */
 export type DifferentSectionContent = {
   component: 'marketing-section';
   id: string;
@@ -35,7 +79,7 @@ export type DifferentSectionContent = {
   gridColumns?: readonly [string, string];
 
   featureLayout?: 'none' | 'grid' | 'carousel';
-  features?: readonly HelixDifferentiatorItem[];
+  features?: readonly AerealithDifferentiatorItem[];
 
   featureGridProps?: {
     columns?:
@@ -91,15 +135,31 @@ export type DifferentSectionContent = {
   };
 };
 
-export const helixDifferenceBody =
-  'Helix AI is being designed as more than a chatbot. It is a secure, extensible assistant platform built around user-owned data, contextual memory, automations, integrations, analytics, and transparent control. The goal is to make your digital systems easier to understand, easier to operate, and easier to trust.';
+/**
+ * Main body copy for the "Built Different" section.
+ *
+ * @public
+ * @constant
+ * @readonly
+ * @decorator content
+ */
+export const aerealithDifferenceBody =
+  'Aerealith AI is being designed as more than a chatbot. It is a secure, extensible assistant platform built around user-owned data, contextual memory, automations, integrations, analytics, and transparent control. The goal is to make your digital systems easier to understand, easier to operate, and easier to trust.';
 
-export const helixDifferentiators = [
+/**
+ * Core Aerealith AI platform differentiators.
+ *
+ * @public
+ * @constant
+ * @readonly
+ * @decorator cards
+ */
+export const aerealithDifferentiators = [
   {
     id: 'user-owned-data',
     title: 'User-Owned Data',
     description:
-      'Helix AI is built around the principle that users own their data. The platform should support export, deletion, transparency, and clear boundaries around how data is used.',
+      'Aerealith AI is built around the principle that users own their data. The platform should support export, deletion, transparency, and clear boundaries around how data is used.',
     icon: '🛡️',
   },
   {
@@ -113,7 +173,7 @@ export const helixDifferentiators = [
     id: 'automation-with-boundaries',
     title: 'Automation With Boundaries',
     description:
-      'Helix can help automate workflows, monitor systems, and assist with actions while preserving approval flows, permissions, and user control.',
+      'Aerealith AI can help automate workflows, monitor systems, and assist with actions while preserving approval flows, permissions, and user control.',
     icon: '⚙️',
   },
   {
@@ -127,14 +187,14 @@ export const helixDifferentiators = [
     id: 'dashboards-and-analytics',
     title: 'Dashboards and Analytics',
     description:
-      'Helix AI is planned with user-fed dashboards, annotations, sharing, and operational insights so users can understand their systems at a glance.',
+      'Aerealith AI is planned with user-fed dashboards, annotations, sharing, and operational insights so users can understand their systems at a glance.',
     icon: '📊',
   },
   {
     id: 'developer-ready-platform',
     title: 'Developer-Ready Platform',
     description:
-      'Helix is being structured with SDKs, APIs, plugin manifests, marketplace support, automation hooks, and extensibility from the beginning.',
+      'Aerealith AI is being structured with SDKs, APIs, plugin manifests, marketplace support, automation hooks, and extensibility from the beginning.',
     icon: '🧑‍💻',
   },
   {
@@ -148,26 +208,42 @@ export const helixDifferentiators = [
     id: 'transparent-ai-behavior',
     title: 'Transparent AI Behavior',
     description:
-      'Helix should explain what it knows, where information came from, when it used a tool, and when a decision requires user approval.',
+      'Aerealith AI should explain what it knows, where information came from, when it used a tool, and when a decision requires user approval.',
     icon: '🔍',
   },
-] as const satisfies readonly HelixDifferentiatorItem[];
+] as const satisfies readonly AerealithDifferentiatorItem[];
 
-export const helixDifferentiatorHighlights = [
-  helixDifferentiators[0],
-  helixDifferentiators[1],
-  helixDifferentiators[2],
-  helixDifferentiators[3],
-] as const satisfies readonly HelixDifferentiatorItem[];
+/**
+ * Highlighted differentiators used by compact layouts.
+ *
+ * @public
+ * @constant
+ * @readonly
+ * @decorator cards
+ */
+export const aerealithDifferentiatorHighlights = [
+  aerealithDifferentiators[0],
+  aerealithDifferentiators[1],
+  aerealithDifferentiators[2],
+  aerealithDifferentiators[3],
+] as const satisfies readonly AerealithDifferentiatorItem[];
 
+/**
+ * Home page "Built Different" marketing section.
+ *
+ * @public
+ * @constant
+ * @readonly
+ * @decorator section
+ */
 export const differentSection = {
   component: 'marketing-section',
-  id: 'why-helix-is-different',
-  eyebrow: 'Why Helix AI',
+  id: 'why-aerealith-ai-is-different',
+  eyebrow: 'Why Aerealith AI',
   title: 'Built Different From the Start',
   description:
-    'Helix AI combines assistant intelligence, user control, integrations, analytics, memory, and automation into one long-term platform vision.',
-  body: helixDifferenceBody,
+    'Aerealith AI combines assistant intelligence, user control, integrations, analytics, memory, and automation into one long-term platform vision.',
+  body: aerealithDifferenceBody,
 
   variant: 'glass',
   spacingY: 'normal',
@@ -186,7 +262,7 @@ export const differentSection = {
   gridColumns: ['minmax(0, 0.92fr)', 'minmax(420px, 1.08fr)'],
 
   featureLayout: 'carousel',
-  features: helixDifferentiators,
+  features: aerealithDifferentiators,
 
   featureGridProps: {
     columns: {
@@ -235,11 +311,37 @@ export const differentSection = {
 } as const satisfies DifferentSectionContent;
 
 /**
+ * Backward-compatible camelCase exports.
+ *
+ * Prefer Aerealith-named exports for new imports.
+ *
+ * @public
+ * @constant
+ * @readonly
+ * @decorator alias
+ */
+export const helixDifferenceBody = aerealithDifferenceBody;
+export const helixDifferentiators = aerealithDifferentiators;
+export const helixDifferentiatorHighlights = aerealithDifferentiatorHighlights;
+
+/**
  * Backwards-compatible uppercase exports.
  *
- * Prefer camelCase exports for new imports.
+ * Prefer camelCase Aerealith exports for new imports.
+ *
+ * @public
+ * @constant
+ * @readonly
+ * @decorator alias
  */
-export const HELIX_DIFFERENCE_BODY = helixDifferenceBody;
-export const HELIX_DIFFERENTIATORS = helixDifferentiators;
-export const HELIX_DIFFERENTIATOR_HIGHLIGHTS = helixDifferentiatorHighlights;
+export const AEREALITH_DIFFERENCE_BODY = aerealithDifferenceBody;
+export const AEREALITH_DIFFERENTIATORS = aerealithDifferentiators;
+export const AEREALITH_DIFFERENTIATOR_HIGHLIGHTS =
+  aerealithDifferentiatorHighlights;
+
+export const HELIX_DIFFERENCE_BODY = aerealithDifferenceBody;
+export const HELIX_DIFFERENTIATORS = aerealithDifferentiators;
+export const HELIX_DIFFERENTIATOR_HIGHLIGHTS =
+  aerealithDifferentiatorHighlights;
+
 export const DIFFERENT_SECTION = differentSection;

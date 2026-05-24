@@ -12,14 +12,14 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      '@helix-ai/api': resolve(workspaceRoot, 'libs/api/src/index.ts'),
-      '@helix-ai/config': resolve(workspaceRoot, 'libs/config/src/index.ts'),
-      '@helix-ai/contracts': resolve(
+      '@aerealith-ai/api': resolve(workspaceRoot, 'libs/api/src/index.ts'),
+      '@aerealith-ai/config': resolve(workspaceRoot, 'libs/config/src/index.ts'),
+      '@aerealith-ai/contracts': resolve(
         workspaceRoot,
         'libs/contracts/src/index.ts',
       ),
-      '@helix-ai/db': resolve(workspaceRoot, 'libs/db/src/index.ts'),
-      '@helix-ai/flags': resolve(workspaceRoot, 'libs/flags/src/index.ts'),
+      '@aerealith-ai/db': resolve(workspaceRoot, 'libs/db/src/index.ts'),
+      '@aerealith-ai/flags': resolve(workspaceRoot, 'libs/flags/src/index.ts'),
     },
   },
 

@@ -4,8 +4,8 @@ import {
   UserErrorCode,
   type CreateUserServiceDto,
   type PublicUserServiceDto,
-} from '@helix-ai/contracts';
-import { UserRepository } from '@helix-ai/db';
+} from '@aerealith-ai/contracts';
+import { UserRepository } from '@aerealith-ai/db';
 
 import { toPublicUserDto } from '../mappers';
 

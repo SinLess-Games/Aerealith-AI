@@ -6,15 +6,16 @@ import React from 'react';
 
 import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 
-import { Footer, Header, MediaImage } from '@helix-ai/ui';
+import { Footer, Header, MediaImage } from '@aerealith-ai/ui';
 
 import {
   CONTACT_OPTIONS,
   ContactDescription,
+  ContactImage,
   ContactHeader,
   footerProps,
   headerProps,
-} from '@helix-ai/content';
+} from '@aerealith-ai/content';
 
 type ContactOption = {
   readonly title: React.ReactNode;
@@ -25,7 +26,6 @@ type ContactOption = {
   readonly buttonText?: string;
 };
 
-const CONTACT_IMAGE_URL = '/images/contact-us.png';
 
 const DEFAULT_CONTACT_HEADER = 'Contact Helix AI';
 
@@ -209,7 +209,7 @@ export default function ContactPage() {
                 }}
               >
                 <MediaImage
-                  src={CONTACT_IMAGE_URL}
+                  src={ContactImage}
                   alt="Helix AI contact artwork"
                   aspectRatio="16 / 9"
                   objectFit="contain"

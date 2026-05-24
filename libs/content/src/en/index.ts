@@ -7,8 +7,7 @@ export * from './header';
 export * from './home';
 export * from './technology';
 
-export * from './constants/oauth';
-export * from './constants/tickets';
+export * from './constants';
 
 // Browser-safe profile content only.
 // Do not export profile-edit-options here because it imports libs/db.

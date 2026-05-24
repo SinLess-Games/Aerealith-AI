@@ -1,13 +1,13 @@
 import { Hono, type Context } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserErrorCode } from '@helix-ai/contracts';
+import { UserErrorCode } from '@aerealith-ai/contracts';
 
 const mocks = vi.hoisted(() => ({
   getUsernameParam: vi.fn(),
 }));
 
-vi.mock('@helix-ai/api', () => ({
+vi.mock('@aerealith-ai/api', () => ({
   getUsernameParam: mocks.getUsernameParam,
 }));
 

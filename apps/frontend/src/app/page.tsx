@@ -3,11 +3,11 @@
 'use client';
 
 import { Box, Stack } from '@mui/material';
-import { Footer, Header, HeroSection } from '@helix-ai/ui';
+import { Footer, Header, HeroSection } from '@aerealith-ai/ui';
 
-import { footerProps } from '@helix-ai/content/en/footer';
-import { headerProps } from '@helix-ai/content/en/header';
-import { HERO_DATA, SECTIONS_DATA } from '@helix-ai/content/en/home/content';
+import { footerProps } from '@aerealith-ai/content/en/footer';
+import { headerProps } from '@aerealith-ai/content/en/header';
+import { HERO_DATA, SECTIONS_DATA } from '@aerealith-ai/content/en/home/content';
 
 export default function IndexPage() {
   return (

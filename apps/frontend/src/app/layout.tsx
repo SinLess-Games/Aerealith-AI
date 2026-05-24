@@ -2,23 +2,35 @@
 
 import * as React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { BackgroundImage, HelixProviders } from '@helix-ai/ui';
+import { BackgroundImage, HelixProviders } from '@aerealith-ai/ui';
+import { Image_Paths } from '@aerealith-ai/content';
+
 import 'next-cloudinary/dist/cld-video-player.css';
 import './globals.scss';
 
+const SITE_URL = 'https://aerealith.ai';
+
+const SITE_NAME = 'Aerealith AI';
+
+const OG_IMAGE = `${Image_Paths.root}/og-image.png`;
+
+const BACKGROUND_DARK_IMAGE = `${Image_Paths.backgrounds}/background-dark.png`;
+const BACKGROUND_LIGHT_IMAGE = `${Image_Paths.backgrounds}/background-light.png`;
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://helixaibot.com'),
+  metadataBase: new URL(SITE_URL),
 
   title: {
-    default: 'Helix AI | Adaptive AI Assistant for Automation, Memory, and Analytics',
-    template: '%s | Helix AI',
+    default:
+      'Aerealith AI | Adaptive AI Assistant for Automation, Memory, and Analytics',
+    template: `%s | ${SITE_NAME}`,
   },
 
   description:
-    'Helix AI is an adaptive AI assistant platform for automation, memory, analytics, workflows, and connected digital ecosystems.',
+    'Aerealith AI is an adaptive AI assistant platform for automation, memory, analytics, workflows, and connected digital ecosystems.',
 
   keywords: [
-    'Helix AI',
+    'Aerealith AI',
     'AI assistant',
     'adaptive AI assistant',
     'AI automation',
@@ -30,10 +42,14 @@ export const metadata: Metadata = {
     'AI productivity',
     'AI memory',
     'digital assistant',
+    'AI command center',
+    'connected apps',
+    'permissioned memory',
+    'transparent automation',
     'SinLess Games LLC',
   ],
 
-  applicationName: 'Helix AI',
+  applicationName: SITE_NAME,
 
   authors: [
     {
@@ -64,29 +80,29 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title: 'Helix AI | Adaptive AI Assistant Platform',
+    title: 'Aerealith AI | Adaptive AI Assistant Platform',
     description:
       'Connect, automate, analyze, and manage your digital ecosystem with an adaptive AI assistant built for individuals, creators, developers, and organizations.',
     url: '/',
-    siteName: 'Helix AI',
+    siteName: SITE_NAME,
     locale: 'en_US',
     type: 'website',
     images: [
       {
-        url: '/images/og-image.png',
+        url: OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: 'Helix AI adaptive AI assistant platform',
+        alt: 'Aerealith AI adaptive AI assistant platform',
       },
     ],
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: 'Helix AI | Adaptive AI Assistant Platform',
+    title: 'Aerealith AI | Adaptive AI Assistant Platform',
     description:
       'An adaptive AI assistant platform for automation, memory, analytics, workflows, and connected digital ecosystems.',
-    images: ['/images/og-image.png'],
+    images: [OG_IMAGE],
   },
 
   icons: {
@@ -110,7 +126,7 @@ export const metadata: Metadata = {
     ],
     apple: [
       {
-        url: '/icons/apple-touch-icon.png',
+        url: '/icons/icon-180.png',
         sizes: '180x180',
         type: 'image/png',
       },
@@ -139,9 +155,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <BackgroundImage
-          imageUrl="/images/background-dark.png"
-          lightImageUrl="/images/background-light.png"
-          darkImageUrl="/images/background-dark.png"
+          imageUrl={BACKGROUND_DARK_IMAGE}
+          lightImageUrl={BACKGROUND_LIGHT_IMAGE}
+          darkImageUrl={BACKGROUND_DARK_IMAGE}
           altText=""
           overlayOpacity={0.18}
           lightOverlayOpacity={0.08}

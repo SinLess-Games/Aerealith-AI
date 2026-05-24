@@ -1,17 +1,17 @@
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { ProfilePage } from '@helix-ai/ui';
+import { ProfilePage } from '@aerealith-ai/ui';
 import type {
   ProfileCardProfile,
   ProfileIdentityScaffold,
   SettingsCardSettings,
   ProfileViewMode,
-} from '@helix-ai/ui';
+} from '@aerealith-ai/ui';
 
 import {
   profileEditOptions,
   profileScaffoldContent,
-} from '../../../content/profile';
+} from '@aerealith-ai/content';
 
 type ProfilePageRouteProps = {
   params: Promise<{

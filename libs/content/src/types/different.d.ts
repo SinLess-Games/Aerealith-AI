@@ -8,7 +8,7 @@ export interface DifferentiatorItem {
    * Keep this content-safe.
    *
    * Use an emoji, icon key, or simple string here.
-   * Do not use ReactNode inside @helix-ai/content.
+   * Do not use ReactNode inside @aerealith-ai/content.
    */
   icon?: string;
 }

@@ -8,7 +8,7 @@ export const footerProps = {
   logoHref: '/',
 
   version: null,
-  versionPrefix: 'v',
+  versionPrefix: 'V',
   releasesUrl: 'https://github.com/SinLess-Games/Helix/releases',
 
   variant: 'minimal',

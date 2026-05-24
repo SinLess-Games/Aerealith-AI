@@ -6,7 +6,7 @@ Cloudflare Worker service for Helix AI user records, public profiles, and user s
 
 | Item | Value |
 | --- | --- |
-| Package | `@helix-ai/user-service` |
+| Package | `@aerealith-ai/user-service` |
 | Nx project | `user-service` |
 | Worker name | `helix-user-service` |
 | Preview Worker | `helix-user-service-preview` |
@@ -233,10 +233,10 @@ service = "helix-user-service"
 
 | Library               | Purpose                                                 |
 | --------------------- | ------------------------------------------------------- |
-| `@helix-ai/api`       | Hono helpers, params, validation, responses, middleware |
-| `@helix-ai/contracts` | DTOs, schemas, route constants, error codes             |
-| `@helix-ai/db`        | MikroORM entities, repositories, ORM helpers            |
-| `@helix-ai/config`    | Runtime config, route registry, service registry        |
+| `@aerealith-ai/api`       | Hono helpers, params, validation, responses, middleware |
+| `@aerealith-ai/contracts` | DTOs, schemas, route constants, error codes             |
+| `@aerealith-ai/db`        | MikroORM entities, repositories, ORM helpers            |
+| `@aerealith-ai/config`    | Runtime config, route registry, service registry        |
 
 ## Data Flow
 
@@ -248,7 +248,7 @@ Request
   -> apps/services/user/src/users/users.router.ts
   -> controller
   -> service
-  -> @helix-ai/db repository
+  -> @aerealith-ai/db repository
   -> MikroORM
   -> Postgres
 ```
@@ -271,6 +271,6 @@ Services should handle business logic:
 * not-found handling
 * lifecycle rules
 
-Repositories should stay in `@helix-ai/db` and handle database access only.
+Repositories should stay in `@aerealith-ai/db` and handle database access only.
 
-Contracts should stay framework-neutral. Do not export Hono handlers, Cloudflare bindings, database entities, or service implementations from `@helix-ai/contracts`.
+Contracts should stay framework-neutral. Do not export Hono handlers, Cloudflare bindings, database entities, or service implementations from `@aerealith-ai/contracts`.

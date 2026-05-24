@@ -1,14 +1,13 @@
 'use client';
 
 // libs/ui/src/components/layout/section.tsx
+
 import * as React from 'react';
 
-import {
-  Box,
-  Container,
-  Stack,
-  Typography,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Container from '@mui/material/Container';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { alpha, type SxProps, type Theme } from '@mui/material/styles';
 
 import type {
@@ -45,59 +44,122 @@ const spacingYMap: Record<SectionSpacing, SxProps<Theme>> = {
 };
 
 function getVariantSx(variant: SectionVariant): SxProps<Theme> {
-  switch (variant) {
-    case 'plain':
-      return {
-        bgcolor: 'transparent',
-      };
+  return (theme) => {
+    const isDark = theme.palette.mode === 'dark';
 
-    case 'surface':
-      return {
-        bgcolor: 'background.paper',
-      };
+    switch (variant) {
+      case 'plain':
+        return {
+          bgcolor: 'transparent',
+          color: theme.palette.text.primary,
+        };
 
-    case 'glass':
-      return {
-        position: 'relative',
-        overflow: 'hidden',
-        bgcolor: alpha('#050716', 0.42),
-        backdropFilter: 'blur(18px)',
-        WebkitBackdropFilter: 'blur(18px)',
+      case 'surface':
+        return {
+          position: 'relative',
+          overflow: 'hidden',
+          color: theme.palette.text.primary,
+          bgcolor: theme.palette.background.paper,
+          borderBlock: `1px solid ${alpha(theme.palette.divider, isDark ? 0.72 : 1)}`,
+          boxShadow: isDark
+            ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.04)}`
+            : theme.shadows[1],
+        };
 
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          background:
-            'radial-gradient(circle at 10% 10%, rgba(0, 219, 255, 0.12), transparent 28%), radial-gradient(circle at 88% 18%, rgba(246, 6, 111, 0.14), transparent 34%)',
-        },
-      };
+      case 'glass':
+        return {
+          position: 'relative',
+          overflow: 'hidden',
+          color: theme.palette.text.primary,
+          bgcolor: alpha(theme.palette.background.paper, isDark ? 0.54 : 0.72),
+          borderBlock: `1px solid ${alpha(theme.palette.divider, isDark ? 0.58 : 0.9)}`,
+          boxShadow: isDark
+            ? `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.06)}, 0 18px 56px ${alpha(theme.palette.common.black, 0.28)}`
+            : `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.78)}, 0 18px 48px ${alpha(theme.palette.common.black, 0.08)}`,
+          backdropFilter: 'saturate(175%) blur(18px)',
+          WebkitBackdropFilter: 'saturate(175%) blur(18px)',
 
-    case 'gradient':
-      return {
-        position: 'relative',
-        overflow: 'hidden',
-        color: '#ffffff',
-        background:
-          'linear-gradient(135deg, rgba(2, 19, 37, 0.92), rgba(17, 15, 48, 0.84), rgba(35, 11, 58, 0.86))',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: [
+              `radial-gradient(circle at 10% 10%, ${alpha(theme.palette.secondary.main, isDark ? 0.16 : 0.1)}, transparent 30%)`,
+              `radial-gradient(circle at 88% 18%, ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.1)}, transparent 34%)`,
+              `linear-gradient(135deg, ${alpha(theme.palette.background.default, isDark ? 0.12 : 0.22)}, transparent 55%)`,
+            ].join(', '),
+          },
 
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          background:
-            'radial-gradient(circle at 8% 12%, rgba(0, 219, 255, 0.16), transparent 32%), radial-gradient(circle at 78% 18%, rgba(246, 6, 111, 0.18), transparent 34%)',
-        },
-      };
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            opacity: isDark ? 0.42 : 0.28,
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)',
+            backgroundSize: '42px 42px',
+            maskImage:
+              'linear-gradient(to bottom, transparent, black 18%, black 78%, transparent)',
+          },
+        };
 
-    case 'default':
-    default:
-      return {
-        bgcolor: 'transparent',
-      };
-  }
+      case 'gradient':
+        return {
+          position: 'relative',
+          overflow: 'hidden',
+          color: theme.palette.common.white,
+          backgroundColor: theme.palette.background.default,
+          backgroundImage: isDark
+            ? [
+                `radial-gradient(circle at 8% 12%, ${alpha(theme.palette.secondary.main, 0.2)}, transparent 34%)`,
+                `radial-gradient(circle at 82% 18%, ${alpha(theme.palette.primary.main, 0.24)}, transparent 36%)`,
+                `linear-gradient(135deg, ${alpha(theme.palette.background.default, 0.96)}, ${alpha(theme.palette.primary.dark ?? theme.palette.primary.main, 0.72)}, ${alpha(theme.palette.secondary.dark ?? theme.palette.secondary.main, 0.42)})`,
+              ].join(', ')
+            : [
+                `radial-gradient(circle at 8% 12%, ${alpha(theme.palette.secondary.main, 0.16)}, transparent 34%)`,
+                `radial-gradient(circle at 82% 18%, ${alpha(theme.palette.primary.main, 0.18)}, transparent 36%)`,
+                `linear-gradient(135deg, ${theme.palette.background.paper}, ${alpha(theme.palette.primary.main, 0.2)}, ${alpha(theme.palette.secondary.main, 0.14)})`,
+              ].join(', '),
+          borderBlock: `1px solid ${alpha(theme.palette.divider, isDark ? 0.5 : 0.9)}`,
+
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: `linear-gradient(90deg, transparent 0%, ${alpha(
+              theme.palette.primary.main,
+              isDark ? 0.16 : 0.08,
+            )} 28%, ${alpha(
+              theme.palette.secondary.main,
+              isDark ? 0.18 : 0.1,
+            )} 72%, transparent 100%)`,
+          },
+
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            opacity: isDark ? 0.38 : 0.18,
+            backgroundImage:
+              'radial-gradient(circle at center, rgba(255,255,255,0.18) 0 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+            maskImage:
+              'linear-gradient(to bottom, transparent, black 20%, black 76%, transparent)',
+          },
+        };
+
+      case 'default':
+      default:
+        return {
+          bgcolor: 'transparent',
+          color: theme.palette.text.primary,
+        };
+    }
+  };
 }
 
 function getJustifyContent(align: SectionAlign): string {
@@ -194,6 +256,30 @@ export function Section({
             : undefined,
           width: '100%',
           minWidth: 0,
+          display: 'flex',
+          alignItems: 'stretch',
+          justifyContent: 'center',
+
+          '& img': {
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            objectFit: 'contain',
+            objectPosition: 'top center',
+          },
+
+          '& video': {
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            objectFit: 'contain',
+            objectPosition: 'top center',
+          },
+
+          '& picture': {
+            width: '100%',
+            display: 'block',
+          },
         },
         slotProps?.media?.sx,
       )}
@@ -243,13 +329,21 @@ export function Section({
               variant="overline"
               {...slotProps?.eyebrow}
               sx={mergeSx(
-                {
+                (theme) => ({
                   width: '100%',
-                  color: variant === 'gradient' ? '#8be9ff' : 'primary.main',
+                  color:
+                    variant === 'gradient'
+                      ? theme.palette.secondary.light ??
+                        theme.palette.secondary.main
+                      : theme.palette.secondary.main,
                   fontWeight: 900,
                   letterSpacing: '0.14em',
                   lineHeight: 1.4,
-                },
+                  textShadow:
+                    variant === 'gradient'
+                      ? `0 0 18px ${alpha(theme.palette.secondary.main, 0.35)}`
+                      : undefined,
+                }),
                 slotProps?.eyebrow?.sx,
               )}
             >
@@ -264,10 +358,13 @@ export function Section({
               variant={titleVariant}
               {...slotProps?.title}
               sx={mergeSx(
-                {
+                (theme) => ({
                   width: '100%',
                   maxWidth: '100%',
-                  color: variant === 'gradient' ? '#ffffff' : 'text.primary',
+                  color:
+                    variant === 'gradient'
+                      ? theme.palette.common.white
+                      : theme.palette.text.primary,
                   fontWeight: 900,
                   lineHeight: 1.05,
                   letterSpacing: '-0.045em',
@@ -278,10 +375,10 @@ export function Section({
                     lg: '4.75rem',
                   },
                   textShadow:
-                    variant === 'gradient'
-                      ? '0 0 26px rgba(246, 6, 111, 0.24)'
+                    variant === 'gradient' || variant === 'glass'
+                      ? `0 0 28px ${alpha(theme.palette.primary.main, 0.26)}`
                       : undefined,
-                },
+                }),
                 slotProps?.title?.sx,
               )}
             >
@@ -295,16 +392,16 @@ export function Section({
               variant="body1"
               {...slotProps?.description}
               sx={mergeSx(
-                {
+                (theme) => ({
                   width: '100%',
                   maxWidth: '100%',
                   color:
                     variant === 'gradient'
-                      ? 'rgba(205, 222, 241, 0.86)'
-                      : 'text.secondary',
+                      ? alpha(theme.palette.common.white, 0.78)
+                      : theme.palette.text.secondary,
                   fontSize: { xs: '1rem', md: '1.125rem' },
                   lineHeight: 1.8,
-                },
+                }),
                 slotProps?.description?.sx,
               )}
             >
@@ -400,6 +497,7 @@ export function Section({
                 : 0,
               alignItems: centerContent ? 'center' : 'start',
               minHeight: fullHeight ? 'inherit' : undefined,
+              width: '100%',
             },
             slotProps?.inner?.sx,
           )}

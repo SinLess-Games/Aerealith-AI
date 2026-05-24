@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EntityManager } from '@mikro-orm/core';
-import type { User, UserSession } from '@helix-ai/db';
-import { UserSession as UserSessionEntity } from '@helix-ai/db';
+import type { User, UserSession } from '@aerealith-ai/db';
+import { UserSession as UserSessionEntity } from '@aerealith-ai/db';
 
 import { createSessionRepository } from './session.repository';
 

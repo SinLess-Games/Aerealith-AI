@@ -7,7 +7,7 @@ import {
   honoErrorMiddleware,
   honoRequestIdMiddleware,
   honoStructuredLoggerMiddleware,
-} from '@helix-ai/api';
+} from '@aerealith-ai/api';
 
 import type { AuthContextMiddlewareOptions } from './middleware/auth-context.middleware';
 import { createAuthRoutes } from './routes';

@@ -2,8 +2,8 @@ import type { EntityManager } from '@mikro-orm/postgresql';
 import type { Context } from 'hono';
 import { z } from 'zod';
 
-import { getUsernameParam } from '@helix-ai/api';
-import { UserErrorCode } from '@helix-ai/contracts';
+import { getUsernameParam } from '@aerealith-ai/api';
+import { UserErrorCode } from '@aerealith-ai/contracts';
 import {
   ContentMaturity,
   Country,
@@ -23,7 +23,7 @@ import {
   TimezoneUtc,
   WeekStartDay,
   getEntityManager,
-} from '@helix-ai/db';
+} from '@aerealith-ai/db';
 
 import {
   UpdateUserProfileService,

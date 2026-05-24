@@ -1,9 +1,9 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
 import type { Context } from 'hono';
 
-import { getUsernameParam } from '@helix-ai/api';
-import { UserErrorCode } from '@helix-ai/contracts';
-import { getEntityManager } from '@helix-ai/db';
+import { getUsernameParam } from '@aerealith-ai/api';
+import { UserErrorCode } from '@aerealith-ai/contracts';
+import { getEntityManager } from '@aerealith-ai/db';
 
 import {
   GetUserSettingsService,

@@ -17,7 +17,7 @@ import {
   TimezoneGreenwich,
   TimezoneUtc,
   WeekStartDay,
-} from '@helix-ai/db';
+} from '@aerealith-ai/db';
 
 import type { ProfileEditOptions, ProfileSelectOption } from '../../types';
 

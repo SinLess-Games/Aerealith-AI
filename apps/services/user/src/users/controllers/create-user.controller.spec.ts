@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserErrorCode } from '@helix-ai/contracts';
+import { UserErrorCode } from '@aerealith-ai/contracts';
 
 const mocks = vi.hoisted(() => ({
   entityManager: {
@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   createUserServiceConstructor: vi.fn(),
 }));
 
-vi.mock('@helix-ai/db', () => ({
+vi.mock('@aerealith-ai/db', () => ({
   getEntityManager: mocks.getEntityManager,
 }));
 

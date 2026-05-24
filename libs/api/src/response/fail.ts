@@ -3,8 +3,8 @@ import type {
   ApiErrorDetails,
   ApiErrorResponse,
   ErrorResponseMeta,
-} from '@helix-ai/contracts';
-import { CommonErrorCode } from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
+import { CommonErrorCode } from '@aerealith-ai/contracts';
 
 import {
   HeaderName,

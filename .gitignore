@@ -24,6 +24,9 @@ test-output/
 # Local runtime data
 null
 
+apps/frontend/public/site.webmanifest
+apps/frontend/public/site.xml
+
 # ─────────────────────────────────────────────
 # Node / pnpm
 # ─────────────────────────────────────────────

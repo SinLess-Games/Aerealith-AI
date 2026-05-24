@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 
-import { AuthError } from '@helix-ai/api';
-import { AuthVerificationSchemas } from '@helix-ai/contracts';
+import { AuthError } from '@aerealith-ai/api';
+import { AuthVerificationSchemas } from '@aerealith-ai/contracts';
 
 import type { AuthService } from '../services/auth.service';
 import { requireUsernameAuthMiddleware } from '../middleware/require-auth.middleware';

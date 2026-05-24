@@ -17,7 +17,7 @@ const appMockState = vi.hoisted(() => {
   };
 });
 
-vi.mock('@helix-ai/api', () => {
+vi.mock('@aerealith-ai/api', () => {
   return {
     honoCorsMiddleware: appMockState.honoCorsMiddleware,
     honoErrorMiddleware: appMockState.honoErrorMiddleware,

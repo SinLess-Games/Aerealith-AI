@@ -1,6 +1,6 @@
 import type { ExecutionContext, Hono } from 'hono';
 
-import { getEntityManager, getOrm } from '@helix-ai/db';
+import { getEntityManager, getOrm } from '@aerealith-ai/db';
 
 import { createAccountRepository } from './repositories/account.repository';
 import { createSessionRepository } from './repositories/session.repository';

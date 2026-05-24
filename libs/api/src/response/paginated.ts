@@ -4,7 +4,7 @@ import type {
   OffsetPaginationMeta,
   OffsetPaginatedResponse,
   PaginatedResponse,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 
 import {
   HeaderName,

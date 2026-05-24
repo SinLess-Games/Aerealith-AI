@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 
-import { AUTH_USER_STATUS } from '@helix-ai/contracts';
+import { AUTH_USER_STATUS } from '@aerealith-ai/contracts';
 
 import {
   requireAnyScopeMiddleware,

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { User, UserSession } from '@helix-ai/db';
+import type { User, UserSession } from '@aerealith-ai/db';
 
 import {
   createSessionService,

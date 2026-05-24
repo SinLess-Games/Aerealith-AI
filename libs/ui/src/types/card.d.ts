@@ -158,6 +158,15 @@ export interface HelixCardProps {
  */
 export type CardProps = HelixCardProps;
 
+export interface GlassOptions {
+  opacity?: number;
+  blurPx?: number;
+  saturatePercent?: number;
+  borderRadius?: number | string;
+  borderColor?: string;
+  shadow?: string;
+}
+
 export type GlassCardTone =
   | 'default'
   | 'primary'
@@ -266,5 +275,3 @@ export interface FeatureCardProps {
   mediaSx?: SxProps<Theme>;
   actionSx?: SxProps<Theme>;
 }
-
-export type FeatureCardVariant = 'glass' | 'surface' | 'outlined' | 'plain';

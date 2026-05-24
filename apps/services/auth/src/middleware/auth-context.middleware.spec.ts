@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 
-import type { User, UserSession } from '@helix-ai/db';
-import { AUTH_USER_STATUS } from '@helix-ai/contracts';
+import type { User, UserSession } from '@aerealith-ai/db';
+import { AUTH_USER_STATUS } from '@aerealith-ai/contracts';
 
 import {
   authContextMiddleware,

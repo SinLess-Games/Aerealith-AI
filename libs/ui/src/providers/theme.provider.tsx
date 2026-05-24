@@ -1,3 +1,5 @@
+// libs/ui/src/providers/theme.provider.tsx
+
 'use client';
 
 import * as React from 'react';
@@ -5,53 +7,109 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 
 import { applyCssVars } from '../theme/cssVars';
-import type { Mode } from '../theme/constants';
 import { getMuiTheme } from '../theme/mui';
+import type {
+  ColorModeContextValue,
+  ThemeMode,
+  ThemeProviderDefaultMode,
+  ThemeProviderProps,
+} from '../types';
 
-export type ThemeProviderDefaultMode = 'system' | Mode;
-
-export type ThemeProviderProps = {
-  defaultMode?: ThemeProviderDefaultMode;
-  children: React.ReactNode;
-};
-
-export type ColorModeContextValue = {
-  mode: Mode;
-  defaultMode: ThemeProviderDefaultMode;
-  setMode: (mode: Mode) => void;
-  toggle: () => void;
-};
+const DEFAULT_MODE: ThemeMode = 'dark';
+const STORAGE_KEY = 'hx-theme-mode';
 
 export const ColorModeContext =
   React.createContext<ColorModeContextValue | null>(null);
 
-function isMode(value: unknown): value is Mode {
+function isThemeMode(value: unknown): value is ThemeMode {
   return value === 'light' || value === 'dark';
 }
 
-function getDocumentMode(): Mode | null {
-  if (typeof document === 'undefined') {
+function canUseDOM(): boolean {
+  return typeof window !== 'undefined' && typeof document !== 'undefined';
+}
+
+function getStoredMode(): ThemeMode | null {
+  if (!canUseDOM()) {
+    return null;
+  }
+
+  try {
+    const storedMode = window.localStorage.getItem(STORAGE_KEY);
+
+    return isThemeMode(storedMode) ? storedMode : null;
+  } catch {
+    return null;
+  }
+}
+
+function setStoredMode(mode: ThemeMode): void {
+  if (!canUseDOM()) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, mode);
+  } catch {
+    // Ignore storage failures, such as private browsing restrictions.
+  }
+}
+
+function getDocumentMode(): ThemeMode | null {
+  if (!canUseDOM()) {
     return null;
   }
 
   const theme = document.documentElement.dataset.theme;
 
-  return isMode(theme) ? theme : null;
+  return isThemeMode(theme) ? theme : null;
 }
 
-function getInitialMode(defaultMode: ThemeProviderDefaultMode): Mode {
-  return defaultMode === 'system' ? getDocumentMode() ?? 'light' : defaultMode;
+function getSystemMode(): ThemeMode {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.matchMedia !== 'function'
+  ) {
+    return DEFAULT_MODE;
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
 }
 
-function applyThemeMode(mode: Mode): void {
-  if (typeof document === 'undefined') {
+function getInitialMode(defaultMode: ThemeProviderDefaultMode): ThemeMode {
+  const storedMode = getStoredMode();
+
+  if (storedMode) {
+    return storedMode;
+  }
+
+  const documentMode = getDocumentMode();
+
+  if (documentMode) {
+    return documentMode;
+  }
+
+  if (defaultMode === 'system') {
+    return getSystemMode();
+  }
+
+  return defaultMode;
+}
+
+function applyThemeMode(mode: ThemeMode): void {
+  if (!canUseDOM()) {
     return;
   }
 
   const root = document.documentElement;
 
   root.classList.toggle('dark', mode === 'dark');
+  root.classList.toggle('light', mode === 'light');
+
   root.dataset.theme = mode;
+  root.style.colorScheme = mode;
 
   applyCssVars(mode);
 }
@@ -60,16 +118,23 @@ export function ThemeProvider({
   defaultMode = 'system',
   children,
 }: ThemeProviderProps) {
-  const [mode, setModeState] = React.useState<Mode>(() =>
+  const [mode, setModeState] = React.useState<ThemeMode>(() =>
     getInitialMode(defaultMode),
   );
 
-  const setMode = React.useCallback((nextMode: Mode): void => {
+  const setMode = React.useCallback((nextMode: ThemeMode): void => {
     setModeState(nextMode);
+    setStoredMode(nextMode);
   }, []);
 
   const toggle = React.useCallback((): void => {
-    setModeState((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'));
+    setModeState((currentMode) => {
+      const nextMode = currentMode === 'dark' ? 'light' : 'dark';
+
+      setStoredMode(nextMode);
+
+      return nextMode;
+    });
   }, []);
 
   React.useEffect(() => {
@@ -77,7 +142,7 @@ export function ThemeProvider({
   }, [mode]);
 
   React.useEffect(() => {
-    if (defaultMode !== 'system') {
+    if (defaultMode !== 'system' || getStoredMode()) {
       return undefined;
     }
 
@@ -133,6 +198,15 @@ export function useHelixColorMode(): ColorModeContextValue {
   }
 
   return context;
+}
+
+/**
+ * Aerealith-facing alias.
+ *
+ * Keep `useHelixColorMode` for backward compatibility while new code migrates.
+ */
+export function useAerealithColorMode(): ColorModeContextValue {
+  return useHelixColorMode();
 }
 
 export default ThemeProvider;

@@ -2,7 +2,7 @@
 
 import { Migrator } from '@mikro-orm/migrations';
 import { defineConfig } from '@mikro-orm/postgresql';
-import { appConfig } from '@helix-ai/config';
+import { appConfig } from '@aerealith-ai/config';
 import { dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

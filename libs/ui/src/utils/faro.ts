@@ -4,12 +4,12 @@ import type { initializeFaro as initializeFaroType } from '@grafana/faro-web-sdk
 
 // This package is the source of truth for Helix config.
 //
-// TS6305 can appear in VS Code before @helix-ai/config has generated
+// TS6305 can appear in VS Code before @aerealith-ai/config has generated
 // dist/libs/config/index.d.ts. The import is still correct; the generated
-// declaration file is produced by building @helix-ai/config.
+// declaration file is produced by building @aerealith-ai/config.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore TS6305: referenced project declarations may not exist before config build.
-import { appConfig } from '@helix-ai/config';
+import { appConfig } from '@aerealith-ai/config';
 
 type FaroInstance = ReturnType<typeof initializeFaroType>;
 

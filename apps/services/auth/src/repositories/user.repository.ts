@@ -4,8 +4,8 @@ import type {
   RequiredEntityData,
 } from '@mikro-orm/core';
 
-import { User, UserProfile, UserSettings } from '@helix-ai/db';
-import { AUTH_USER_STATUS } from '@helix-ai/contracts';
+import { User, UserProfile, UserSettings } from '@aerealith-ai/db';
+import { AUTH_USER_STATUS } from '@aerealith-ai/contracts';
 
 export type UserLookup = {
   id?: string;

@@ -2,7 +2,7 @@ import type {
   UserServiceSettingsDto,
   UserServiceUserId,
   UserServiceUsername,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 
 type DateLike = Date | string | null | undefined;
 

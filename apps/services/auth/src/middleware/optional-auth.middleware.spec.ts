@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 import type { MiddlewareHandler } from 'hono';
 
-import { AuthError } from '@helix-ai/api';
-import { AUTH_USER_STATUS } from '@helix-ai/contracts';
+import { AuthError } from '@aerealith-ai/api';
+import { AUTH_USER_STATUS } from '@aerealith-ai/contracts';
 
 import {
   createAuthenticatedAuthContext,

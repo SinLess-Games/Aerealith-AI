@@ -15,6 +15,18 @@ import { programmingLanguagesCards } from './programming-languages';
 import { securityCards } from './security';
 import { toolsCards } from './tools';
 
+/**
+ * Technology content barrel exports.
+ *
+ * This file provides a single import surface for all technology-page content.
+ *
+ * @example
+ * import { technologyCards, cloudPlatformCards } from '@aerealith-ai/content';
+ *
+ * @public
+ * @module
+ * @decorator barrel
+ */
 export * from './AI';
 export * from './cloud-platforms';
 export * from './data-storage';
@@ -28,6 +40,17 @@ export * from './programming-languages';
 export * from './security';
 export * from './tools';
 
+/**
+ * Combined technology card registry.
+ *
+ * This array aggregates every technology card group into one ordered list.
+ * Use this when rendering the full Technology page.
+ *
+ * @public
+ * @constant
+ * @readonly
+ * @decorator registry
+ */
 export const technologyCards = [
   ...aiToolsCards,
   ...cloudPlatformCards,
@@ -43,6 +66,18 @@ export const technologyCards = [
   ...toolsCards,
 ] as const satisfies ReadonlyCardArray;
 
+/**
+ * Backwards-compatible PascalCase export.
+ *
+ * Prefer `technologyCards` for new imports.
+ *
+ * @public
+ * @constant
+ * @readonly
+ * @decorator alias
+ */
+export const TechnologyCards = technologyCards;
+
 export const technologyCardGroups = {
   ai: aiToolsCards,
   cloudPlatforms: cloudPlatformCards,
@@ -57,27 +92,3 @@ export const technologyCardGroups = {
   security: securityCards,
   tools: toolsCards,
 } as const satisfies Record<string, ReadonlyCardArray>;
-
-/**
- * Backwards-compatible PascalCase exports.
- *
- * Prefer camelCase exports for new imports.
- */
-export { AIToolsCards, aiToolsCards } from './AI';
-export { CloudPlatformCards, cloudPlatformCards } from './cloud-platforms';
-export { DataStorageCards, dataStorageCards } from './data-storage';
-export { DevelopmentCards, developmentCards } from './development';
-export { FrameworksCards, frameworksCards } from './frameworks';
-export { InfrastructureCards, infrastructureCards } from './infrastructure';
-export {
-  MetricsExportersCards,
-  metricsExportersCards,
-} from './metrics-exporters';
-export { NetworkingCards, networkingCards } from './networking';
-export { ObservabilityCards, observabilityCards } from './observability';
-export {
-  ProgrammingLanguagesCards,
-  programmingLanguagesCards,
-} from './programming-languages';
-export { SecurityCards, securityCards } from './security';
-export { ToolsCards, toolsCards } from './tools';

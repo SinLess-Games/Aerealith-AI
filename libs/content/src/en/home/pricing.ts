@@ -1,6 +1,7 @@
 // libs/content/src/en/home/pricing.ts
 
 import type { ContentImageItem } from '../../types';
+import { Image_Paths } from '../constants/images';
 
 export type PricingPreviewImageContent = {
   src: string;
@@ -25,24 +26,39 @@ export type PricingPreviewSectionContent = {
   centerContent?: boolean;
 };
 
+/**
+ * Primary pricing preview image.
+ */
+export const PricingPreviewImageSrc =
+  `${Image_Paths.pages.home.root}/pricing.png` as const;
+
+/**
+ * Pricing preview image content.
+ */
 export const pricingPreviewImage = {
-  id: 'helix-ai-pricing-preview',
+  id: 'aerealith-ai-pricing-preview',
   type: 'image',
-  src: '/images/Pricing.png',
-  alt: 'Helix AI pricing tiers and plan comparison',
-  title: 'Helix AI Pricing Preview',
+  src: PricingPreviewImageSrc,
+  alt: 'Aerealith AI pricing tiers and plan comparison',
+  title: 'Aerealith AI Pricing Preview',
   priority: false,
 } as const satisfies ContentImageItem;
 
+/**
+ * Pricing preview long-form description.
+ */
 export const pricingPreviewDescription =
-  'Helix AI is planned with simple, transparent tiers so users can start free, explore the platform, and upgrade only when they need more capability. The goal is to make the pricing easy to understand while still giving room for different types of users: individuals who want a smarter assistant, creators and communities that need automation and engagement tools, developers who want integrations and extensibility, teams that need collaboration and analytics, and organizations that require stronger governance, self-hosting, or enterprise deployment options. As the MVP ships and real usage data becomes available, pricing will continue to be refined around actual infrastructure costs, AI model usage, support needs, feature limits, and customer feedback. Each tier is intended to grow with the user, offering a clear path from early experimentation to advanced workflows, professional use, business operations, and long-term enterprise readiness.';
+  'Aerealith AI is planned with simple, transparent tiers so users can start free, explore the platform, and upgrade only when they need more capability. The goal is to make pricing easy to understand while still giving room for different types of users: individuals who want a smarter assistant, creators and communities that need automation and engagement tools, developers who want integrations and extensibility, teams that need collaboration and analytics, and organizations that require stronger governance, self-hosting, or enterprise deployment options. As the MVP ships and real usage data becomes available, pricing will continue to be refined around actual infrastructure costs, AI model usage, support needs, feature limits, and customer feedback. Each tier is intended to grow with the user, offering a clear path from early experimentation to advanced workflows, professional use, business operations, and long-term enterprise readiness.';
 
+/**
+ * Pricing preview section content.
+ */
 export const pricingPreviewSection = {
   id: 'pricing-preview',
   eyebrow: 'Plans & Pricing',
   title: 'Pricing Preview',
   description:
-    'Start with the core features you need today, then scale into more advanced capabilities as your workflow grows. Helix AI is designed to meet users where they are, whether they are exploring the platform for the first time, organizing personal tasks, managing a community, building developer workflows, or preparing for team and enterprise use. As your needs expand, you can unlock deeper memory, stronger automation, more integrations, richer analytics, higher usage limits, and more advanced support without having to switch platforms or rebuild your workflow from scratch.',
+    'Start with the core features you need today, then scale into more advanced capabilities as your workflow grows. Aerealith AI is designed to meet users where they are, whether they are exploring the platform for the first time, organizing personal tasks, managing a community, building developer workflows, or preparing for team and enterprise use. As your needs expand, you can unlock deeper memory, stronger automation, more integrations, richer analytics, higher usage limits, and more advanced support without having to switch platforms or rebuild your workflow from scratch.',
   body: pricingPreviewDescription,
 
   maxWidth: 1900,
@@ -50,7 +66,13 @@ export const pricingPreviewSection = {
   descriptionMaxWidth: '80%',
   bodyMaxWidth: '80%',
   mediaMaxWidth: '100%',
-  mediaPosition: 'bottom',
+
+  /**
+   * FIX: use top positioning so image behaves like a full-width hero block
+   * and keeps the top highlight visible (no vertical compression/centering issues)
+   */
+  mediaPosition: 'top',
+
   centerContent: true,
 
   image: {
@@ -61,8 +83,6 @@ export const pricingPreviewSection = {
 
 /**
  * Backwards-compatible uppercase exports.
- *
- * Prefer camelCase exports for new imports.
  */
 export const PRICING_IMAGE = pricingPreviewImage;
 export const PRICING_PREVIEW_DESCRIPTION = pricingPreviewDescription;

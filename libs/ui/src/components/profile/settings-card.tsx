@@ -33,7 +33,7 @@ import type {
   SecurityUserSettings,
   UserSettingsMetadata,
   UserSettingsPatch,
-} from '@helix-ai/db';
+} from '@aerealith-ai/db';
 
 export const settingsSectionKeys = [
   'accessibility',

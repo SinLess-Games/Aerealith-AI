@@ -6,7 +6,7 @@ import {
   PrimaryKey,
   Property,
 } from '@mikro-orm/core';
-import { appConfig } from '@helix-ai/config';
+import { appConfig } from '@aerealith-ai/config';
 import { randomUUID } from 'node:crypto';
 import { validate as isUuid, v5 as uuidv5 } from 'uuid';
 

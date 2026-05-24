@@ -9,7 +9,12 @@ import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import MuiLink from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
-import { useTheme, type SxProps, type Theme } from '@mui/material/styles';
+import {
+  alpha,
+  useTheme,
+  type SxProps,
+  type Theme,
+} from '@mui/material/styles';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
@@ -35,47 +40,82 @@ import type { LoginSignupSuccessPayload } from './login-signup';
 import UserProfileMenu from '../profile/user-profile-menu';
 import type { UserProfileMenuUser } from '../profile/user-profile-menu';
 
-const headerBaseSx: SxProps<Theme> = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  zIndex: 1100,
+const HEADER_HEIGHT = {
+  xs: '4rem',
+  md: '4.5rem',
+} as const;
 
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
+const headerBaseSx: SxProps<Theme> = (theme) => {
+  const isDark = theme.palette.mode === 'dark';
 
-  width: '100%',
-  minHeight: { xs: '4rem', md: '4.5rem' },
-  px: { xs: '1rem', sm: '1rem', md: '2rem' },
-  py: '0.75rem',
+  return {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1100,
 
-  color: '#ffffff',
-  background:
-    'var(--header-gradient, linear-gradient(135deg, rgba(2, 35, 113, 0.92), rgba(98, 0, 238, 0.82)))',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-  boxShadow: 'var(--header-shadow, 0 10px 30px rgba(0, 0, 0, 0.25))',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
 
-  backdropFilter: 'blur(8px)',
-  WebkitBackdropFilter: 'blur(8px)',
+    width: '100%',
+    minHeight: HEADER_HEIGHT,
+    px: { xs: '1rem', sm: '1rem', md: '2rem' },
+    py: '0.75rem',
 
-  transition:
-    'background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease',
+    color: theme.palette.text.primary,
+    backgroundColor: alpha(theme.palette.background.paper, isDark ? 0.96 : 0.98),
+    backgroundImage: isDark
+      ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.26)} 0%, ${alpha(
+          theme.palette.background.paper,
+          0.98,
+        )} 44%, ${alpha(theme.palette.secondary.main, 0.22)} 100%)`
+      : `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(
+          theme.palette.background.paper,
+          0.98,
+        )} 48%, ${alpha(theme.palette.secondary.main, 0.12)} 100%)`,
+    borderBottom: `1px solid ${alpha(theme.palette.divider, isDark ? 0.95 : 1)}`,
+    boxShadow: theme.shadows[isDark ? 10 : 4],
 
-  '@media (max-width: 480px)': {
-    px: '0.75rem',
-  },
+    backdropFilter: 'saturate(170%) blur(18px)',
+    WebkitBackdropFilter: 'saturate(170%) blur(18px)',
 
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
-  },
+    transition:
+      'background-color 220ms ease, background-image 220ms ease, box-shadow 220ms ease, border-color 220ms ease',
+
+    '&::after': {
+      content: '""',
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: 2,
+      pointerEvents: 'none',
+      background: `linear-gradient(90deg, transparent 0%, ${alpha(
+        theme.palette.primary.main,
+        0.88,
+      )} 22%, ${alpha(theme.palette.secondary.main, 0.88)} 78%, transparent 100%)`,
+    },
+
+    '@media (max-width: 480px)': {
+      px: '0.75rem',
+    },
+
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  };
 };
 
-const headerScrolledSx: SxProps<Theme> = {
-  background: 'var(--header-blur-bg, rgba(2, 35, 113, 0.86))',
-  borderBottomColor: 'rgba(255, 255, 255, 0.16)',
-  boxShadow: '0 2px 12px rgba(0, 0, 0, 0.4)',
+const headerScrolledSx: SxProps<Theme> = (theme) => {
+  const isDark = theme.palette.mode === 'dark';
+
+  return {
+    backgroundColor: alpha(theme.palette.background.paper, isDark ? 0.98 : 1),
+    borderBottomColor: alpha(theme.palette.secondary.main, isDark ? 0.5 : 0.35),
+    boxShadow: theme.shadows[isDark ? 14 : 6],
+  };
 };
 
 const headerInnerSx: SxProps<Theme> = {
@@ -129,30 +169,33 @@ const navSectionSx: SxProps<Theme> = {
   gap: 1,
 };
 
-const logoButtonSx: SxProps<Theme> = {
+const logoButtonSx: SxProps<Theme> = (theme) => ({
   p: 0,
   m: 0,
   border: 0,
   background: 'transparent',
   cursor: 'pointer',
+
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
+
   flexShrink: 0,
-  width: { xs: 132, sm: 150, md: 176, lg: 190 },
+  width: { xs: 132, sm: 150, md: 176, lg: 200 },
   height: { xs: 42, sm: 46, md: 50, lg: 52 },
   overflow: 'visible',
+
+  borderRadius: 1,
   transition: 'transform 180ms ease, filter 180ms ease',
 
   '&:hover': {
     transform: 'translateY(-1px)',
-    filter: 'brightness(1.12)',
+    filter: 'brightness(1.08)',
   },
 
   '&:focus-visible': {
-    outline: '2px solid rgba(246, 6, 111, 0.85)',
+    outline: `2px solid ${alpha(theme.palette.secondary.main, 0.9)}`,
     outlineOffset: 3,
-    borderRadius: 1,
   },
 
   '@media (prefers-reduced-motion: reduce)': {
@@ -162,71 +205,79 @@ const logoButtonSx: SxProps<Theme> = {
       transform: 'none',
     },
   },
-};
+});
 
-const versionLinkSx: SxProps<Theme> = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+const versionLinkSx: SxProps<Theme> = (theme) => {
+  const isDark = theme.palette.mode === 'dark';
 
-  alignSelf: 'center',
-  whiteSpace: 'nowrap',
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
 
-  mt: '0.25rem',
-  ml: {
-    xs: '-0.85rem',
-    sm: '-1rem',
-    md: '-1.35rem',
-    lg: '-1.55rem',
-  },
+    alignSelf: 'center',
+    whiteSpace: 'nowrap',
 
-  px: 0.7,
-  py: 0.42,
-  borderRadius: 1,
+    mt: '0.25rem',
+    ml: {
+      xs: '-0.85rem',
+      sm: '-1rem',
+      md: '-1.35rem',
+      lg: '-1.55rem',
+    },
 
-  color: '#8be9ff',
-  fontWeight: 800,
-  fontSize: { xs: '0.75rem', sm: '0.85rem', md: '0.9rem' },
-  letterSpacing: '0.03em',
-  lineHeight: 1,
-  textDecoration: 'none',
+    px: 0.8,
+    py: 0.45,
+    borderRadius: 999,
 
-  backgroundColor: 'rgba(2, 35, 113, 0.38)',
-  border: '1px solid rgba(139, 233, 255, 0.34)',
-  textShadow:
-    '0 0 6px rgba(139, 233, 255, 0.85), 0 0 12px rgba(246, 6, 111, 0.32)',
-  boxShadow:
-    '0 0 12px rgba(139, 233, 255, 0.18), inset 0 0 8px rgba(255, 255, 255, 0.08)',
+    color: isDark ? theme.palette.common.white : theme.palette.primary.main,
+    fontWeight: 900,
+    fontSize: { xs: '0.72rem', sm: '0.8rem', md: '0.84rem' },
+    letterSpacing: '0.055em',
+    lineHeight: 1,
+    textDecoration: 'none',
+    textTransform: 'uppercase',
 
-  transition:
-    'color 0.2s ease-in-out, font-weight 0.2s ease-in-out, text-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out, border-color 0.2s ease-in-out',
+    backgroundColor: isDark
+      ? alpha(theme.palette.background.default, 0.72)
+      : alpha(theme.palette.common.white, 0.88),
+    border: `1px solid ${alpha(theme.palette.secondary.main, isDark ? 0.52 : 0.42)}`,
+    boxShadow: `0 0 0 1px ${alpha(
+      theme.palette.common.black,
+      isDark ? 0.16 : 0.04,
+    )}, 0 0 14px ${alpha(theme.palette.secondary.main, isDark ? 0.18 : 0.12)}`,
 
-  '&:hover': {
-    color: '#ffffff',
-    fontWeight: 800,
-    backgroundColor: 'rgba(246, 6, 111, 0.32)',
-    borderColor: 'rgba(246, 6, 111, 0.55)',
-    textShadow:
-      '0 0 8px rgba(255, 255, 255, 0.9), 0 0 14px rgba(246, 6, 111, 0.6)',
-  },
+    transition:
+      'color 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease',
 
-  '&:focus-visible': {
-    color: '#ffffff',
-    outline: '2px solid rgba(246, 6, 111, 0.75)',
-    outlineOffset: '0.25rem',
-    borderRadius: '0.25rem',
-  },
+    '&:hover': {
+      color: theme.palette.secondary.main,
+      backgroundColor: alpha(theme.palette.background.paper, isDark ? 0.95 : 1),
+      borderColor: alpha(theme.palette.secondary.main, 0.72),
+      boxShadow: `0 0 18px ${alpha(theme.palette.secondary.main, 0.24)}`,
+      transform: 'translateY(-1px)',
+    },
 
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
-  },
+    '&:focus-visible': {
+      outline: `2px solid ${alpha(theme.palette.secondary.main, 0.9)}`,
+      outlineOffset: '0.25rem',
+    },
+
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+
+      '&:hover': {
+        transform: 'none',
+      },
+    },
+  };
 };
 
 const desktopNavListSx: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  gap: { md: '2rem', lg: '2.25rem' },
+  gap: { md: '0.35rem', lg: '0.5rem' },
 
   listStyle: 'none',
   p: 0,
@@ -238,55 +289,104 @@ const desktopNavListSx: SxProps<Theme> = {
   },
 };
 
-const navButtonSx: SxProps<Theme> = {
-  color: '#ffffff',
-  font: 'inherit',
-  fontWeight: 500,
-  lineHeight: 1.2,
-  textDecoration: 'none',
-  textTransform: 'none',
+const navButtonSx: SxProps<Theme> = (theme) => {
+  const isDark = theme.palette.mode === 'dark';
 
-  background: 'transparent',
-  border: 0,
-  borderBottom: '2px solid transparent',
-  borderRadius: 0,
-  cursor: 'pointer',
+  return {
+    position: 'relative',
 
-  whiteSpace: 'nowrap',
-  px: 1,
-  py: 0.5,
-  minWidth: 0,
+    color: theme.palette.text.primary,
+    fontFamily: theme.typography.button.fontFamily,
+    fontWeight: 900,
+    fontSize: { xs: '1rem', md: '0.84rem', lg: '0.9rem' },
+    lineHeight: 1.2,
+    letterSpacing: { xs: '0.02em', md: '0.07em' },
+    textDecoration: 'none',
+    textTransform: { xs: 'none', md: 'uppercase' },
 
-  transition:
-    'color 0.2s ease-in-out, border-color 0.2s ease-in-out, text-shadow 0.2s ease-in-out',
+    background: 'transparent',
+    border: 0,
+    borderRadius: 999,
+    cursor: 'pointer',
 
-  '&:hover': {
-    color: '#f6066f',
-    backgroundColor: 'transparent',
-  },
+    whiteSpace: 'nowrap',
+    px: { xs: 1.5, md: 1.25, lg: 1.45 },
+    py: { xs: 1, md: 0.75 },
+    minWidth: 0,
 
-  '&:focus-visible': {
-    outline: '2px solid rgba(246, 6, 111, 0.75)',
-    outlineOffset: '0.35rem',
-    borderRadius: '0.25rem',
-  },
+    textShadow: isDark
+      ? `0 1px 2px ${alpha(theme.palette.common.black, 0.72)}`
+      : 'none',
 
-  '&[aria-current="page"]': {
-    fontWeight: 700,
-    borderBottomColor: '#f6066f',
-  },
+    transition:
+      'color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease',
 
-  '@media (prefers-reduced-motion: reduce)': {
-    transition: 'none',
-  },
+    '&::after': {
+      content: '""',
+      position: 'absolute',
+      left: '50%',
+      right: '50%',
+      bottom: 4,
+      height: 2,
+      borderRadius: 999,
+      background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+      opacity: 0,
+      transition: 'left 180ms ease, right 180ms ease, opacity 180ms ease',
+    },
+
+    '&:hover': {
+      color: theme.palette.secondary.main,
+      backgroundColor: alpha(theme.palette.secondary.main, isDark ? 0.14 : 0.1),
+      boxShadow: `0 0 18px ${alpha(theme.palette.secondary.main, isDark ? 0.16 : 0.1)}`,
+      transform: 'translateY(-1px)',
+
+      '&::after': {
+        left: 14,
+        right: 14,
+        opacity: 1,
+      },
+    },
+
+    '&:focus-visible': {
+      outline: `2px solid ${alpha(theme.palette.secondary.main, 0.9)}`,
+      outlineOffset: '0.25rem',
+    },
+
+    '&[aria-current="page"]': {
+      color: isDark ? theme.palette.common.white : theme.palette.primary.main,
+      backgroundColor: alpha(theme.palette.primary.main, isDark ? 0.22 : 0.1),
+      boxShadow: `inset 0 0 0 1px ${alpha(
+        theme.palette.primary.main,
+        isDark ? 0.44 : 0.28,
+      )}, 0 0 18px ${alpha(theme.palette.primary.main, isDark ? 0.16 : 0.08)}`,
+
+      '&::after': {
+        left: 14,
+        right: 14,
+        opacity: 1,
+      },
+    },
+
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+
+      '&::after': {
+        transition: 'none',
+      },
+
+      '&:hover': {
+        transform: 'none',
+      },
+    },
+  };
 };
 
-const menuButtonSx: SxProps<Theme> = {
+const menuButtonSx: SxProps<Theme> = (theme) => ({
   display: { xs: 'inline-flex', md: 'none' },
   alignItems: 'center',
   justifyContent: 'center',
 
-  color: '#ffffff',
+  color: theme.palette.text.primary,
   font: 'inherit',
   fontSize: '2rem',
   lineHeight: 1,
@@ -295,15 +395,16 @@ const menuButtonSx: SxProps<Theme> = {
   background: 'none',
   border: 'none',
 
-  transition: 'color 0.2s ease, transform 0.2s ease',
+  transition: 'color 180ms ease, background-color 180ms ease, transform 180ms ease',
 
   '&:hover': {
-    color: '#f6066f',
-    transform: 'scale(1.1)',
+    color: theme.palette.secondary.main,
+    backgroundColor: alpha(theme.palette.secondary.main, 0.12),
+    transform: 'scale(1.08)',
   },
 
   '&:focus-visible': {
-    outline: '2px solid rgba(246, 6, 111, 0.75)',
+    outline: `2px solid ${alpha(theme.palette.secondary.main, 0.9)}`,
     outlineOffset: '0.35rem',
     borderRadius: '0.25rem',
   },
@@ -315,7 +416,7 @@ const menuButtonSx: SxProps<Theme> = {
       transform: 'none',
     },
   },
-};
+});
 
 export function Header({
   logo,
@@ -358,6 +459,149 @@ export function Header({
   const theme = useTheme();
 
   const effectiveAuthLoading = authLoading || internalAuthLoading;
+
+  const logoImageStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain',
+      objectPosition: 'left center',
+      filter: `drop-shadow(0 0 3px ${alpha(
+        theme.palette.common.white,
+        theme.palette.mode === 'dark' ? 0.72 : 0.38,
+      )}) drop-shadow(0 0 8px ${alpha(theme.palette.primary.main, 0.22)})`,
+    }),
+    [theme],
+  );
+
+  const authButtonsSx = React.useMemo<SxProps<Theme>>(
+    () => ({
+      width: 'auto',
+      maxWidth: 'none',
+      mx: 0,
+      p: 0,
+      border: 0,
+      borderRadius: 0,
+      borderColor: 'transparent',
+      bgcolor: 'transparent',
+      backgroundColor: 'transparent',
+      backgroundImage: 'none',
+      boxShadow: 'none',
+      backdropFilter: 'none',
+
+      '&:hover': {
+        bgcolor: 'transparent',
+        backgroundColor: 'transparent',
+        boxShadow: 'none',
+      },
+
+      '& > .MuiStack-root': {
+        gap: 0,
+        alignItems: 'flex-end',
+      },
+
+      '& > .MuiStack-root > .MuiStack-root:first-of-type': {
+        display: 'none',
+      },
+
+      '& > .MuiStack-root > .MuiDivider-root': {
+        display: 'none',
+      },
+
+      '& > .MuiStack-root > .MuiStack-root:last-of-type': {
+        width: 'auto',
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: 1,
+      },
+
+      '& > .MuiStack-root > .MuiStack-root:last-of-type > .MuiButton-root': {
+        minWidth: { md: 84, lg: 96 },
+        px: { md: 1.5, lg: 2 },
+        py: 0.65,
+        borderRadius: 999,
+        fontWeight: 900,
+        lineHeight: 1.2,
+        letterSpacing: '0.04em',
+        textTransform: 'none',
+        whiteSpace: 'nowrap',
+      },
+    }),
+    [],
+  );
+
+  const mobileAuthButtonsSx = React.useMemo<SxProps<Theme>>(
+    () => ({
+      width: '100%',
+      maxWidth: 'none',
+      mx: 0,
+      p: 0,
+      border: 0,
+      borderRadius: 0,
+      bgcolor: 'transparent',
+      backgroundColor: 'transparent',
+      backgroundImage: 'none',
+      boxShadow: 'none',
+      backdropFilter: 'none',
+
+      '& > .MuiStack-root > .MuiStack-root:first-of-type': {
+        display: 'none',
+      },
+
+      '& > .MuiStack-root > .MuiDivider-root': {
+        display: 'none',
+      },
+
+      '& > .MuiStack-root > .MuiStack-root:last-of-type': {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1,
+      },
+
+      '& > .MuiStack-root > .MuiStack-root:last-of-type > .MuiButton-root': {
+        width: '100%',
+        borderRadius: 999,
+        fontWeight: 900,
+        letterSpacing: '0.04em',
+        textTransform: 'none',
+      },
+    }),
+    [],
+  );
+
+  const mobileNavThemeSx = React.useMemo<SxProps<Theme>>(
+    () => ({
+      backgroundColor: alpha(
+        theme.palette.background.paper,
+        theme.palette.mode === 'dark' ? 0.98 : 1,
+      ),
+      backgroundImage: theme.palette.mode === 'dark'
+        ? `linear-gradient(145deg, ${alpha(theme.palette.background.paper, 0.98)}, ${alpha(
+            theme.palette.background.default,
+            0.98,
+          )})`
+        : 'none',
+      border: `1px solid ${theme.palette.divider}`,
+      boxShadow: theme.shadows[theme.palette.mode === 'dark' ? 14 : 6],
+      backdropFilter: 'saturate(170%) blur(18px)',
+      WebkitBackdropFilter: 'saturate(170%) blur(18px)',
+
+      '& .MuiButton-root': {
+        width: '100%',
+        justifyContent: 'flex-start',
+      },
+
+      '& [data-auth-control="true"]': {
+        width: '100%',
+        pt: 1,
+        mt: 1,
+        borderTop: `1px solid ${theme.palette.divider}`,
+      },
+    }),
+    [theme],
+  );
 
   const fetchUserProfile = React.useCallback(
     async (
@@ -524,6 +768,13 @@ export function Header({
   }, []);
 
   React.useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
+      return undefined;
+    }
+
     const mediaQuery = window.matchMedia(
       theme.breakpoints.up('md').replace('@media ', ''),
     );
@@ -538,10 +789,10 @@ export function Header({
 
     closeMenuOnDesktop(mediaQuery);
 
-    mediaQuery.addEventListener('change', closeMenuOnDesktop);
+    mediaQuery.addEventListener?.('change', closeMenuOnDesktop);
 
     return () => {
-      mediaQuery.removeEventListener('change', closeMenuOnDesktop);
+      mediaQuery.removeEventListener?.('change', closeMenuOnDesktop);
     };
   }, [theme]);
 
@@ -651,97 +902,6 @@ export function Header({
     [onLogoutError],
   );
 
-  const authButtonsSx: SxProps<Theme> = {
-    width: 'auto',
-    maxWidth: 'none',
-    mx: 0,
-    p: 0,
-    border: 0,
-    borderRadius: 0,
-    borderColor: 'transparent',
-    bgcolor: 'transparent',
-    backgroundColor: 'transparent',
-    backgroundImage: 'none',
-    boxShadow: 'none',
-    backdropFilter: 'none',
-
-    '&:hover': {
-      bgcolor: 'transparent',
-      backgroundColor: 'transparent',
-      boxShadow: 'none',
-    },
-
-    '& > .MuiStack-root': {
-      gap: 0,
-      alignItems: 'flex-end',
-    },
-
-    '& > .MuiStack-root > .MuiStack-root:first-of-type': {
-      display: 'none',
-    },
-
-    '& > .MuiStack-root > .MuiDivider-root': {
-      display: 'none',
-    },
-
-    '& > .MuiStack-root > .MuiStack-root:last-of-type': {
-      width: 'auto',
-      display: 'flex',
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      alignItems: 'center',
-      gap: 1,
-    },
-
-    '& > .MuiStack-root > .MuiStack-root:last-of-type > .MuiButton-root': {
-      minWidth: { md: 84, lg: 96 },
-      px: { md: 1.5, lg: 2 },
-      py: 0.65,
-      borderRadius: 999,
-      fontWeight: 800,
-      lineHeight: 1.2,
-      letterSpacing: '0.04em',
-      textTransform: 'none',
-      whiteSpace: 'nowrap',
-    },
-  };
-
-  const mobileAuthButtonsSx: SxProps<Theme> = {
-    width: '100%',
-    maxWidth: 'none',
-    mx: 0,
-    p: 0,
-    border: 0,
-    borderRadius: 0,
-    bgcolor: 'transparent',
-    backgroundColor: 'transparent',
-    backgroundImage: 'none',
-    boxShadow: 'none',
-    backdropFilter: 'none',
-
-    '& > .MuiStack-root > .MuiStack-root:first-of-type': {
-      display: 'none',
-    },
-
-    '& > .MuiStack-root > .MuiDivider-root': {
-      display: 'none',
-    },
-
-    '& > .MuiStack-root > .MuiStack-root:last-of-type': {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 1,
-    },
-
-    '& > .MuiStack-root > .MuiStack-root:last-of-type > .MuiButton-root': {
-      width: '100%',
-      borderRadius: 999,
-      fontWeight: 800,
-      letterSpacing: '0.04em',
-      textTransform: 'none',
-    },
-  };
-
   const renderAuthControl = (
     placement: 'desktop' | 'mobile',
   ): React.ReactElement => {
@@ -762,8 +922,11 @@ export function Header({
             size={22}
             thickness={5}
             sx={{
-              color: '#8be9ff',
-              filter: 'drop-shadow(0 0 6px rgba(139, 233, 255, 0.5))',
+              color: theme.palette.secondary.main,
+              filter: `drop-shadow(0 0 6px ${alpha(
+                theme.palette.secondary.main,
+                0.45,
+              )})`,
             }}
           />
         </Box>
@@ -829,18 +992,11 @@ export function Header({
               <Image
                 src={logo}
                 alt={logoAlt}
-                width={500}
-                height={100}
+                width={600}
+                height={200}
                 priority
                 sizes="(max-width: 600px) 132px, (max-width: 900px) 176px, 190px"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  objectPosition: 'left center',
-                  filter:
-                    'drop-shadow(0 0 3px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 8px rgba(246, 6, 111, 0.35))',
-                }}
+                style={logoImageStyle}
               />
             </Box>
 
@@ -909,7 +1065,7 @@ export function Header({
               id="helix-mobile-navigation"
               component="ul"
               aria-label="Mobile navigation"
-              sx={getMobileNavListSx(menuOpen, theme)}
+              sx={mergeSx(getMobileNavListSx(menuOpen, theme), mobileNavThemeSx)}
             >
               {pages.map((page) => {
                 const active = isActivePath(activePathname, page.url);
@@ -939,7 +1095,7 @@ export function Header({
       <Box
         aria-hidden
         sx={{
-          height: { xs: '4rem', md: '4.5rem' },
+          height: HEADER_HEIGHT,
         }}
       />
     </>

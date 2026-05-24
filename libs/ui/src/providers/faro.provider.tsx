@@ -10,14 +10,14 @@ export type FaroProviderProps = {
   /**
    * Allows Faro to be explicitly disabled from the app layer.
    *
-   * Defaults to true and still respects @helix-ai/config.
+   * Defaults to true and still respects @aerealith-ai/config.
    */
   enabled?: boolean;
 
   /**
    * Optional runtime overrides for Faro config.
    *
-   * Values here override @helix-ai/config and NEXT_PUBLIC_* env values.
+   * Values here override @aerealith-ai/config and NEXT_PUBLIC_* env values.
    */
   config?: Partial<FaroClientConfig>;
 };

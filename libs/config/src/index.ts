@@ -1,5 +1,5 @@
 /* =============================================================================
- * @helix-ai/config
+ * @aerealith-ai/config
  * -----------------------------------------------------------------------------
  * Public barrel exports for the platform-neutral Helix AI config library.
  *

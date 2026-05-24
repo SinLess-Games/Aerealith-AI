@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   toPublicUserDtos: vi.fn(),
 }));
 
-vi.mock('@helix-ai/db', () => ({
+vi.mock('@aerealith-ai/db', () => ({
   UserRepository: vi.fn(function UserRepository() {
     return mocks.userRepository;
   }),

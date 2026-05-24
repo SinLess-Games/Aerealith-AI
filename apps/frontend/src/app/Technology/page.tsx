@@ -8,14 +8,15 @@ import Script from 'next/script';
 import { Box, Button, Container, Stack, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid';
 
-import { Footer, Header, MediaImage } from '@helix-ai/ui';
-import type { ReadonlyCardArray } from '@helix-ai/content';
+import { Footer, Header, MediaImage } from '@aerealith-ai/ui';
+import type { ReadonlyCardArray } from '@aerealith-ai/content';
 
 import {
   footerProps,
   headerProps,
   technologyCardGroups,
-} from '@helix-ai/content';
+  Image_Paths,
+} from '@aerealith-ai/content';
 
 declare global {
   interface Window {
@@ -48,7 +49,7 @@ type TechnologyGroup = {
   readonly items: readonly TechnologyItemCard[];
 };
 
-const TECHNOLOGY_IMAGE_URL = '/images/technology.png';
+const TECHNOLOGY_IMAGE_URL = `${Image_Paths.pages.technology}/Technology.png`;
 
 const TECHNOLOGY_GROUP_LABELS: Record<string, string> = {
   ai: 'AI & Intelligence',

@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from 'hono';
 
-import { AuthError } from '@helix-ai/api';
+import { AuthError } from '@aerealith-ai/api';
 
 import {
   authContextMiddleware,

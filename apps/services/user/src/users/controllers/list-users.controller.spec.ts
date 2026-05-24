@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   listUsersServiceExecute: vi.fn(),
 }));
 
-vi.mock('@helix-ai/db', () => ({
+vi.mock('@aerealith-ai/db', () => ({
   getEntityManager: mocks.getEntityManager,
 }));
 

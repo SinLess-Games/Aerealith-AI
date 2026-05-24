@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserErrorCode } from '@helix-ai/contracts';
+import { UserErrorCode } from '@aerealith-ai/contracts';
 
 import { CreateUserService, CreateUserServiceError } from './create-user.service';
 
@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   })),
 }));
 
-vi.mock('@helix-ai/db', () => ({
+vi.mock('@aerealith-ai/db', () => ({
   UserRepository: vi.fn(function UserRepository() {
     return mocks.userRepository;
   }),

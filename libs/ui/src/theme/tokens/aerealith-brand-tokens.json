@@ -1,0 +1,28 @@
+{
+  "brand": "Aerealith AI",
+  "assistantNickname": "Aerie",
+  "pronunciation": "Air-ee-uh-lith",
+  "taglines": [
+    "A companion for a more connected world.",
+    "Your central command center for your online presence."
+  ],
+  "colors": {
+    "aerealithPink": "#F6066F",
+    "etherCyan": "#00DBC9",
+    "deepNight": "#050A1E",
+    "voidNavy": "#08071B",
+    "auroraViolet": "#8C52FF",
+    "softStarlight": "#F7F4FF",
+    "mistGray": "#AEB7C8"
+  },
+  "typography": {
+    "display": "Orbitron or Exo 2",
+    "headings": "Rajdhani or Sora",
+    "body": "Inter or IBM Plex Sans",
+    "accent": "Cormorant Garamond or Playfair Display Italic, used sparingly"
+  },
+  "logo": {
+    "symbol": "Stylized A integrated with an infinity form",
+    "personality": "new age, calm, sharp, celestial, companion-like"
+  }
+}

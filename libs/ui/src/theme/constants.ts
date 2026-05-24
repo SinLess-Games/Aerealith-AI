@@ -1,27 +1,6 @@
 // libs/ui/src/theme/constants.ts
 
-export type ColorFormats = {
-  hex: string;
-  rgb: string;
-  rgba: string;
-};
-
-export type ThemePalette = {
-  primary: ColorFormats;
-  primaryForeground: ColorFormats;
-  background: ColorFormats;
-  backgroundTransparent: ColorFormats;
-  surface: ColorFormats;
-  surfaceTransparent: ColorFormats;
-  border: ColorFormats;
-  text: ColorFormats;
-  textSecondary: ColorFormats;
-  accent: ColorFormats;
-  accentForeground: ColorFormats;
-};
-
-export type ThemeMode = 'light' | 'dark';
-export type Mode = ThemeMode;
+import type { ColorFormats, ThemeMode, ThemePalette } from '../types';
 
 const HEX_COLOR_PATTERN = /^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/;
 
@@ -75,32 +54,52 @@ const createColor = (hex: string, alpha = 1): ColorFormats => {
   };
 };
 
+export const AEREALITH_PALETTE = {
+  pink: '#F6066F',
+  etherCyan: '#00DBC9',
+  deepNight: '#050A1E',
+  voidNavy: '#08071B',
+  auroraViolet: '#8C52FF',
+  softStarlight: '#F7F4FF',
+  mistGray: '#AEB7C8',
+} as const;
+
 export const lightTheme: ThemePalette = {
-  primary: createColor('#6200EE'),
-  primaryForeground: createColor('#FFFFFF'),
-  background: createColor('#F5F7FC'),
-  backgroundTransparent: createColor('#F5F7FC', 0.72),
+  primary: createColor(AEREALITH_PALETTE.pink),
+  primaryForeground: createColor(AEREALITH_PALETTE.softStarlight),
+
+  background: createColor(AEREALITH_PALETTE.softStarlight),
+  backgroundTransparent: createColor(AEREALITH_PALETTE.softStarlight, 0.76),
+
   surface: createColor('#FFFFFF'),
-  surfaceTransparent: createColor('#FFFFFF', 0.78),
-  border: createColor('#D6DBE6'),
-  text: createColor('#121826'),
-  textSecondary: createColor('#5C6982'),
-  accent: createColor('#00BCD4'),
-  accentForeground: createColor('#082B38'),
+  surfaceTransparent: createColor('#FFFFFF', 0.82),
+
+  border: createColor(AEREALITH_PALETTE.mistGray, 0.56),
+
+  text: createColor(AEREALITH_PALETTE.deepNight),
+  textSecondary: createColor('#4D566B'),
+
+  accent: createColor(AEREALITH_PALETTE.etherCyan),
+  accentForeground: createColor(AEREALITH_PALETTE.deepNight),
 };
 
 export const darkTheme: ThemePalette = {
-  primary: createColor('#8C52FF'),
-  primaryForeground: createColor('#130D29'),
-  background: createColor('#070A11'),
-  backgroundTransparent: createColor('#070A11', 0.72),
-  surface: createColor('#181A22'),
-  surfaceTransparent: createColor('#181A22', 0.7),
-  border: createColor('#383D4F'),
-  text: createColor('#E5E8F0'),
-  textSecondary: createColor('#A4AABE'),
-  accent: createColor('#00BFA6'),
-  accentForeground: createColor('#052421'),
+  primary: createColor(AEREALITH_PALETTE.pink),
+  primaryForeground: createColor(AEREALITH_PALETTE.softStarlight),
+
+  background: createColor(AEREALITH_PALETTE.deepNight),
+  backgroundTransparent: createColor(AEREALITH_PALETTE.deepNight, 0.78),
+
+  surface: createColor(AEREALITH_PALETTE.voidNavy),
+  surfaceTransparent: createColor(AEREALITH_PALETTE.voidNavy, 0.74),
+
+  border: createColor(AEREALITH_PALETTE.mistGray, 0.22),
+
+  text: createColor(AEREALITH_PALETTE.softStarlight),
+  textSecondary: createColor(AEREALITH_PALETTE.mistGray),
+
+  accent: createColor(AEREALITH_PALETTE.etherCyan),
+  accentForeground: createColor(AEREALITH_PALETTE.deepNight),
 };
 
 export const themes = {
@@ -108,27 +107,63 @@ export const themes = {
   dark: darkTheme,
 } as const satisfies Record<ThemeMode, ThemePalette>;
 
-export const HELIX_COLORS = {
+export const AEREALITH_COLORS = {
+  palette: AEREALITH_PALETTE,
+
   light: {
     primary: lightTheme.primary.hex,
     secondary: lightTheme.accent.hex,
     background: lightTheme.background.hex,
     surface: lightTheme.surface.hex,
+    border: lightTheme.border.hex,
     textPrimary: lightTheme.text.hex,
     textSecondary: lightTheme.textSecondary.hex,
+
+    signature: AEREALITH_PALETTE.pink,
+    intelligence: AEREALITH_PALETTE.etherCyan,
+    creativity: AEREALITH_PALETTE.auroraViolet,
+    depth: AEREALITH_PALETTE.deepNight,
+    neutral: AEREALITH_PALETTE.mistGray,
   },
+
   dark: {
     primary: darkTheme.primary.hex,
     secondary: darkTheme.accent.hex,
     background: darkTheme.background.hex,
     surface: darkTheme.surface.hex,
+    border: darkTheme.border.hex,
     textPrimary: darkTheme.text.hex,
     textSecondary: darkTheme.textSecondary.hex,
+
+    signature: AEREALITH_PALETTE.pink,
+    intelligence: AEREALITH_PALETTE.etherCyan,
+    creativity: AEREALITH_PALETTE.auroraViolet,
+    depth: AEREALITH_PALETTE.deepNight,
+    neutral: AEREALITH_PALETTE.mistGray,
   },
 } as const;
 
-export const HelixFonts = {
+/**
+ * Backward-compatible export.
+ *
+ * Keep this alias until the app has fully migrated away from Helix naming.
+ */
+export const HELIX_COLORS = AEREALITH_COLORS;
+
+export const AerealithFonts = {
+  DISPLAY:
+    'var(--font-orbitron, var(--font-space-grotesk, "Orbitron", "Space Grotesk", sans-serif))',
+  BODY: 'var(--font-inter, "Inter", sans-serif)',
+  MONO: 'var(--font-jetbrains-mono, "JetBrains Mono", "Fira Code", monospace)',
+
   LORA: 'var(--font-lora, "Lora", serif)',
   PINYON: 'var(--font-pinyon, "Pinyon Script", cursive)',
   INTER: 'var(--font-inter, "Inter", sans-serif)',
 } as const;
+
+/**
+ * Backward-compatible export.
+ *
+ * Keep this alias until existing imports are renamed.
+ */
+export const HelixFonts = AerealithFonts;

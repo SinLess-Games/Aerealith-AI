@@ -3,8 +3,8 @@ import type {
   ApiErrorDetails,
   ErrorResponseMeta,
   FieldValidationError,
-} from '@helix-ai/contracts';
-import { CommonErrorCode } from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
+import { CommonErrorCode } from '@aerealith-ai/contracts';
 
 import { fail, type FailOptions, type FailResult } from '../response/fail';
 import {

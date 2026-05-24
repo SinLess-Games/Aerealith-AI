@@ -2,8 +2,8 @@ import type {
   ApiErrorCode,
   ErrorResponseMeta,
   FieldValidationError,
-} from '@helix-ai/contracts';
-import { CommonErrorCode } from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
+import { CommonErrorCode } from '@aerealith-ai/contracts';
 import { ZodError, type ZodIssue } from 'zod';
 
 import {

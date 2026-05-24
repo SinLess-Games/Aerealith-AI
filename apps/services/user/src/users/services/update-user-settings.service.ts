@@ -3,12 +3,12 @@ import type { EntityManager } from '@mikro-orm/postgresql';
 import {
   UserErrorCode,
   type UserServiceSettingsDto,
-} from '@helix-ai/contracts';
+} from '@aerealith-ai/contracts';
 import {
   type UpdateSettingsInput,
   SettingsRepository,
   UserRepository,
-} from '@helix-ai/db';
+} from '@aerealith-ai/db';
 
 import { toUserSettingsDto, type UserSettingsMapperInput } from '../mappers';
 
