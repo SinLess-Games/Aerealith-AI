@@ -1,0 +1,17 @@
+{
+  "name": "@aerealith-ai/observability",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "@grafana/faro-web-sdk": "^2.5.0",
+    "@grafana/faro-web-tracing": "^2.5.0",
+    "@pyroscope/nodejs": "^0.4.11",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@grafana/faro-webpack-plugin": "^0.11.1"
+  }
+}
