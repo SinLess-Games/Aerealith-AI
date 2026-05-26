@@ -9,7 +9,8 @@
     "@grafana/faro-web-sdk": "^2.5.0",
     "@grafana/faro-web-tracing": "^2.5.0",
     "@pyroscope/nodejs": "^0.4.11",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@grafana/faro-webpack-plugin": "^0.11.1"

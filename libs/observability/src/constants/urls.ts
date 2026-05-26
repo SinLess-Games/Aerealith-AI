@@ -17,6 +17,7 @@ export const PrometheusCloud = {
 export const LokiCloud = {
     name: 'grafanacloud-aerealith-logs',
     url: 'https://logs-prod-021.grafana.net',
+    pushURL: 'https://logs-prod-021.grafana.net/loki/api/v1/push',
     user: '1622753'
 }
 
