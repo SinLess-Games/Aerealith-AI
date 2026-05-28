@@ -4,31 +4,32 @@
     "rootDir": "src",
     "outDir": "../../dist/libs/db",
     "tsBuildInfoFile": "../../dist/libs/db/tsconfig.lib.tsbuildinfo",
-
     /* Module & resolution */
     "module": "es2022",
-
     /* Decorators / metadata (MikroORM) */
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": false,
-
     /* Emissions */
     "declaration": true,
     "declarationMap": true,
     "composite": true,
-
     /* Quality-of-life */
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-
     /* Types */
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["../ui/src/**/*"],
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "../ui/src/**/*"
+  ],
   "references": [
     {
       "path": "../config/tsconfig.lib.json"

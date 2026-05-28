@@ -8,10 +8,14 @@
     "declaration": true,
     "composite": true,
     "tsBuildInfoFile": "../../dist/libs/content/tsconfig.lib.tsbuildinfo",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "disableSourceOfProjectReferenceRedirect": true
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/**/*.ts"
+  ],
   "references": [
     {
       "path": "../db/tsconfig.lib.json"

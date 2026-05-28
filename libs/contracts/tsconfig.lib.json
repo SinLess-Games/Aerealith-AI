@@ -8,7 +8,11 @@
     "emitDeclarationOnly": false,
     "composite": true,
     "tsBuildInfoFile": "../../dist/libs/contracts/tsconfig.lib.tsbuildinfo",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }
