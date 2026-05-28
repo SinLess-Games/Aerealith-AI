@@ -43,13 +43,6 @@ export const metricsExportersCards = [
         detailedDescription:
           'Grafana Cloud integrations provide guided setup paths for collecting telemetry from applications, infrastructure, services, and supported environments. Aerealith AI can use Grafana Cloud integrations instead of maintaining a broad list of standalone exporters directly, keeping metrics collection aligned with Grafana-supported setup flows, dashboards, alerts, and managed observability workflows.',
       },
-      {
-        text: 'Grafana Alloy',
-        href: 'https://grafana.com/docs/alloy/latest/',
-        role: 'Telemetry Collector',
-        detailedDescription:
-          'Grafana Alloy is Grafana Labs’ supported telemetry collector for collecting, processing, and exporting observability data. It can be used with Grafana Cloud to collect metrics and other telemetry signals through Grafana-supported pipelines. Aerealith AI can use Alloy as the primary collector layer for Grafana Cloud-connected metrics collection instead of managing many separate exporter tools individually.',
-      },
     ],
     image: MetricsExportersImage,
     link: '/technology/metrics-exporters',

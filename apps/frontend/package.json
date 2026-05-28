@@ -26,6 +26,7 @@
     "lint": "eslint --max-warnings=0 \"src/**/*.{js,jsx,ts,tsx}\" \"scripts/**/*.{js,mjs,cjs,ts,tsx}\" \"*.{js,mjs,cjs,ts,tsx}\""
   },
   "dependencies": {
+    "@aerealith-ai/observability": "workspace:*",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@aerealith-ai/config": "workspace:*",

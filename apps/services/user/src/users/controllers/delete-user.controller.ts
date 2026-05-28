@@ -7,6 +7,7 @@ import { getEntityManager } from '@aerealith-ai/db';
 import { getUsernameParam } from '@aerealith-ai/api';
 
 import { DeleteUserService, DeleteUserServiceError } from '../services';
+import { mapValidationIssues } from './logger';
 
 export const deleteUserController = async (
   context: Context,
@@ -20,11 +21,7 @@ export const deleteUserController = async (
         error: {
           code: usernameParam.code,
           message: usernameParam.message,
-          issues: usernameParam.issues.map((issue) => ({
-            path: issue.path.map(String).join('.'),
-            code: issue.code,
-            message: issue.message,
-          })),
+          issues: mapValidationIssues(usernameParam.issues),
         },
       },
       400,
@@ -67,6 +64,9 @@ function getStatusCodeForDeleteUserError(
       return 404;
 
     case UserErrorCode.USER_DELETE_FAILED:
+      return 500;
+
+    default:
       return 500;
   }
 }

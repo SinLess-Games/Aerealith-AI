@@ -328,6 +328,9 @@ importers:
       '@aerealith-ai/flags':
         specifier: workspace:*
         version: link:../../libs/flags
+      '@aerealith-ai/observability':
+        specifier: workspace:*
+        version: link:../../libs/observability
       '@aerealith-ai/ui':
         specifier: workspace:*
         version: link:../../libs/ui
@@ -392,6 +395,9 @@ importers:
       '@aerealith-ai/db':
         specifier: workspace:*
         version: link:../../../libs/db
+      '@aerealith-ai/observability':
+        specifier: workspace:*
+        version: link:../../../libs/observability
       '@mikro-orm/core':
         specifier: 6.6.14
         version: 6.6.14
@@ -413,6 +419,9 @@ importers:
       '@aerealith-ai/db':
         specifier: workspace:*
         version: link:../../../libs/db
+      '@aerealith-ai/observability':
+        specifier: workspace:*
+        version: link:../../../libs/observability
       '@hono/zod-validator':
         specifier: ^0.7.4
         version: 0.7.6(hono@4.12.18)(zod@4.4.3)
@@ -480,6 +489,12 @@ importers:
 
   libs/content:
     dependencies:
+      '@aerealith-ai/db':
+        specifier: workspace:*
+        version: link:../db
+      '@aerealith-ai/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@mui/material':
         specifier: ^9.0.1
         version: 9.0.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.6))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -519,9 +534,25 @@ importers:
       '@aerealith-ai/config':
         specifier: workspace:*
         version: link:../config
+      '@cloudflare/flagship':
+        specifier: ^0.3.1
+        version: 0.3.1(@openfeature/server-sdk@1.21.0(@openfeature/core@1.10.0))(@openfeature/web-sdk@1.8.0(@openfeature/core@1.10.0))
+      hono:
+        specifier: ^4.12.18
+        version: 4.12.18
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+    devDependencies:
+      '@openfeature/server-sdk':
+        specifier: ^1.21.0
+        version: 1.21.0(@openfeature/core@1.10.0)
+      '@openfeature/web-sdk':
+        specifier: ^1.8.0
+        version: 1.8.0(@openfeature/core@1.10.0)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
   libs/observability:
     dependencies:
@@ -531,6 +562,21 @@ importers:
       '@grafana/faro-web-tracing':
         specifier: ^2.5.0
         version: 2.5.0
+      '@opentelemetry/api':
+        specifier: ^1.9.1
+        version: 1.9.1
+      '@opentelemetry/exporter-trace-otlp-http':
+        specifier: ^0.216.0
+        version: 0.216.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources':
+        specifier: ^2.7.1
+        version: 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-trace-base':
+        specifier: ^2.7.1
+        version: 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/semantic-conventions':
+        specifier: ^1.32.0
+        version: 1.40.0
       '@pyroscope/nodejs':
         specifier: ^0.4.11
         version: 0.4.11(express@5.2.1)
@@ -544,6 +590,9 @@ importers:
       '@grafana/faro-webpack-plugin':
         specifier: ^0.11.1
         version: 0.11.1(@swc/core@1.15.33(@swc/helpers@0.5.21))(esbuild@0.28.0)(postcss@8.5.14)(webpack-cli@7.0.2(webpack-dev-server@5.2.3)(webpack@5.106.2))
+      '@types/node':
+        specifier: 24.10.1
+        version: 24.10.1
 
   libs/ui:
     dependencies:
@@ -553,6 +602,9 @@ importers:
       '@aerealith-ai/flags':
         specifier: workspace:*
         version: link:../flags
+      '@aerealith-ai/observability':
+        specifier: workspace:*
+        version: link:../observability
       '@emotion/react':
         specifier: 11.x
         version: 11.14.0(@types/react@19.2.14)(react@19.2.6)
@@ -1557,6 +1609,17 @@ packages:
 
   '@bufbuild/protobuf@2.12.0':
     resolution: {integrity: sha512-B/XlCaFIP8LOwzo+bz5uFzATYokcwCKQcghqnlfwSmM5eX/qTkvDBnDPs+gXtX/RyjxJ4DRikECcPJbyALA8FA==}
+
+  '@cloudflare/flagship@0.3.1':
+    resolution: {integrity: sha512-bBZUCkkxfMvtulCsgDXt6JPU1CCuoqLPyM5TZ3B970NuND06VMRek2iL4B6oB+Xq8dbp4ZgQSTOTe9aJTkLN/g==}
+    peerDependencies:
+      '@openfeature/server-sdk': ^1.20.2
+      '@openfeature/web-sdk': ^1.7.3
+    peerDependenciesMeta:
+      '@openfeature/server-sdk':
+        optional: true
+      '@openfeature/web-sdk':
+        optional: true
 
   '@cloudflare/kv-asset-handler@0.5.0':
     resolution: {integrity: sha512-jxQYkj8dSIzc0cD6cMMNdOc1UVjqSqu8BZdor5s8cGjW2I8BjODt/kWPVdY+u9zj3ms75Q5qaZgnxUad83+eAg==}
@@ -3828,6 +3891,20 @@ packages:
 
   '@octokit/types@16.0.0':
     resolution: {integrity: sha512-sKq+9r1Mm4efXW1FCk7hFSeJo4QKreL/tTbR0rz/qx/r1Oa2VV83LTA/H/MuCOX7uCIJmQVRKBcbmWoySjAnSg==}
+
+  '@openfeature/core@1.10.0':
+    resolution: {integrity: sha512-C3ynxtPYhe5qVJgQIqCNxZXeRXo4t1Eo86uiROr8+sD6F2OjEJGIp6VOGxz+r6jkad2s8Br9BnUJOvskhai/3A==}
+
+  '@openfeature/server-sdk@1.21.0':
+    resolution: {integrity: sha512-ZBVAiyMeN+dxurcXGJlvuOpYg9X7V923MVCI5dq/kE/5o8ys7MCOPhW44e4PS+XABHzSRTw44hcgWez93xwifw==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@openfeature/core': ^1.10.0
+
+  '@openfeature/web-sdk@1.8.0':
+    resolution: {integrity: sha512-B7NTG/mm9blV1Z7YjjcWhuoOHcDzyrHKwMRMcku9i9vvQGAE6ilVJPS3C/SsdvnOn2tDqm2lAg9SxvaJTRgp+Q==}
+    peerDependencies:
+      '@openfeature/core': ^1.10.0
 
   '@opennextjs/aws@4.0.1':
     resolution: {integrity: sha512-k+wV8xyl2koaQRp84EY++3tO1J/M0b2KK4zR0LrPSwDgPqcR9EaKYiUu1mugc79A0KVgo839KR+opgk3wpSsXw==}
@@ -13216,6 +13293,11 @@ snapshots:
 
   '@bufbuild/protobuf@2.12.0': {}
 
+  '@cloudflare/flagship@0.3.1(@openfeature/server-sdk@1.21.0(@openfeature/core@1.10.0))(@openfeature/web-sdk@1.8.0(@openfeature/core@1.10.0))':
+    optionalDependencies:
+      '@openfeature/server-sdk': 1.21.0(@openfeature/core@1.10.0)
+      '@openfeature/web-sdk': 1.8.0(@openfeature/core@1.10.0)
+
   '@cloudflare/kv-asset-handler@0.5.0': {}
 
   '@cloudflare/unenv-preset@2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260507.1)':
@@ -13244,7 +13326,7 @@ snapshots:
       cjs-module-lexer: 1.4.3
       esbuild: 0.27.3
       miniflare: 4.20260507.1
-      vitest: 4.1.5(@opentelemetry/api@1.9.1)(@types/node@24.10.1)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(vite@8.0.11(@types/node@24.10.1)(esbuild@0.28.0)(jiti@2.7.0)(less@4.5.1)(sass-embedded@1.99.0)(sass@1.99.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+      vitest: 4.1.5(@opentelemetry/api@1.9.1)(@types/node@24.10.1)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(vite@7.3.3(@types/node@24.10.1)(jiti@2.7.0)(less@4.5.1)(lightningcss@1.32.0)(sass-embedded@1.99.0)(sass@1.99.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
       wrangler: 4.90.0(@cloudflare/workers-types@4.20260509.1)
       zod: 3.25.76
     transitivePeerDependencies:
@@ -16036,6 +16118,16 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 27.0.0
 
+  '@openfeature/core@1.10.0': {}
+
+  '@openfeature/server-sdk@1.21.0(@openfeature/core@1.10.0)':
+    dependencies:
+      '@openfeature/core': 1.10.0
+
+  '@openfeature/web-sdk@1.8.0(@openfeature/core@1.10.0)':
+    dependencies:
+      '@openfeature/core': 1.10.0
+
   '@opennextjs/aws@4.0.1(next@15.5.16(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-macros@3.1.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(sass@1.99.0))':
     dependencies:
       '@ast-grep/napi': 0.40.5
@@ -17723,7 +17815,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.5(@opentelemetry/api@1.9.1)(@types/node@24.10.1)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(vite@8.0.11(@types/node@24.10.1)(esbuild@0.28.0)(jiti@2.7.0)(less@4.5.1)(sass-embedded@1.99.0)(sass@1.99.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+      vitest: 4.1.5(@opentelemetry/api@1.9.1)(@types/node@24.10.1)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(vite@7.3.3(@types/node@24.10.1)(jiti@2.7.0)(less@4.5.1)(lightningcss@1.32.0)(sass-embedded@1.99.0)(sass@1.99.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
 
   '@vitest/expect@4.1.5':
     dependencies:
@@ -17777,7 +17869,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.16
       tinyrainbow: 3.1.0
-      vitest: 4.1.5(@opentelemetry/api@1.9.1)(@types/node@24.10.1)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(vite@8.0.11(@types/node@24.10.1)(esbuild@0.28.0)(jiti@2.7.0)(less@4.5.1)(sass-embedded@1.99.0)(sass@1.99.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+      vitest: 4.1.5(@opentelemetry/api@1.9.1)(@types/node@24.10.1)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(vite@7.3.3(@types/node@24.10.1)(jiti@2.7.0)(less@4.5.1)(lightningcss@1.32.0)(sass-embedded@1.99.0)(sass@1.99.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
 
   '@vitest/utils@4.1.5':
     dependencies:

@@ -2,6 +2,8 @@ import type { Context, Next } from 'hono';
 
 import { getUsernameParam } from '@aerealith-ai/api';
 
+import { mapValidationIssues } from '../controllers/logger';
+
 export const USERNAME_CONTEXT_KEY = 'username';
 
 export type UsernameGuardVariables = {
@@ -21,11 +23,7 @@ export const usernameGuard = async (
         error: {
           code: usernameParam.code,
           message: usernameParam.message,
-          issues: usernameParam.issues.map((issue) => ({
-            path: issue.path.map(String).join('.'),
-            code: issue.code,
-            message: issue.message,
-          })),
+          issues: mapValidationIssues(usernameParam.issues),
         },
       },
       400,

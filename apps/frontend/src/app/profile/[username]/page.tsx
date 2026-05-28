@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { ProfilePage } from '@aerealith-ai/ui';
+import { profileScaffoldContent } from '@aerealith-ai/content';
 import type {
   ProfileCardProfile,
   ProfileIdentityScaffold,
@@ -8,10 +9,7 @@ import type {
   ProfileViewMode,
 } from '@aerealith-ai/ui';
 
-import {
-  profileEditOptions,
-  profileScaffoldContent,
-} from '@aerealith-ai/content';
+import { getFrontendFeatureFlags } from '../../../lib/feature-flags';
 
 type ProfilePageRouteProps = {
   params: Promise<{
@@ -174,6 +172,12 @@ export default async function UserProfilePage({
   const { username } = await params;
   const decodedUsername = decodeUsername(username);
   const mode = await getProfileViewMode();
+  const featureFlags = await getFrontendFeatureFlags();
+
+  if (!featureFlags.dashboard) {
+    notFound();
+  }
+
   const profile = await getUserProfile(decodedUsername);
   const settings =
     mode === 'private' ? await getUserSettings(decodedUsername) : undefined;
@@ -181,7 +185,6 @@ export default async function UserProfilePage({
   return (
     <ProfilePage
       content={profileScaffoldContent}
-      editOptions={profileEditOptions}
       identity={createIdentity(profile)}
       profile={profile}
       settings={settings}

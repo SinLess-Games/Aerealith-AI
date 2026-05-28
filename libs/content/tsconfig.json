@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "esnext",
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "importHelpers": true,
@@ -9,7 +9,24 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": true,
-    "composite": true
+    "composite": true,
+    "paths": {
+      "@aerealith-ai/db": [
+        "../../dist/libs/db/index.d.ts"
+      ],
+      "@aerealith-ai/db/*": [
+        "../../dist/libs/db/*"
+      ],
+      "@aerealith-ai/db/enums": [
+        "../../dist/libs/db/enums/index.d.ts"
+      ],
+      "@aerealith-ai/ui": [
+        "../../dist/libs/ui/index.d.ts"
+      ],
+      "@aerealith-ai/ui/*": [
+        "../../dist/libs/ui/*"
+      ]
+    }
   },
   "files": [],
   "include": [],

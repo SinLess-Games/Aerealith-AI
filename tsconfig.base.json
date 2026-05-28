@@ -3,7 +3,9 @@
     "baseUrl": ".",
     "importHelpers": true,
     "isolatedModules": true,
-    "lib": ["es2022"],
+    "lib": [
+      "es2022"
+    ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmitOnError": true,
@@ -18,22 +20,61 @@
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": false,
     "ignoreDeprecations": "5.0",
-    "customConditions": ["Helix"],
+    "customConditions": [
+      "Helix"
+    ],
     "paths": {
-      "@aerealith-ai/api": ["./libs/api/src/index.ts"],
-      "@aerealith-ai/api/*": ["./libs/api/src/*"],
-      "@aerealith-ai/config": ["./libs/config/src/index.ts"],
-      "@aerealith-ai/config/*": ["./libs/config/src/*"],
-      "@aerealith-ai/content": ["./libs/content/src/index.ts"],
-      "@aerealith-ai/content/*": ["./libs/content/src/*"],
-      "@aerealith-ai/contracts": ["./libs/contracts/src/index.ts"],
-      "@aerealith-ai/db": ["./libs/db/src/index.ts"],
-      "@aerealith-ai/db/*": ["./libs/db/src/*"],
-      "@aerealith-ai/flags": ["./libs/flags/src/index.ts"],
-      "@aerealith-ai/flags/*": ["./libs/flags/src/*"],
-      "@aerealith-ai/ui": ["./libs/ui/src/index.ts"],
-      "@aerealith-ai/ui/*": ["./libs/ui/src/*"],
-      "@aerealith-ai/observability": ["./libs/observability/src/index.ts"]
+      "@aerealith-ai/api": [
+        "./libs/api/src/index.ts"
+      ],
+      "@aerealith-ai/api/*": [
+        "./libs/api/src/*"
+      ],
+      "@aerealith-ai/config": [
+        "./libs/config/src/index.ts"
+      ],
+      "@aerealith-ai/config/*": [
+        "./libs/config/src/*"
+      ],
+      "@aerealith-ai/content": [
+        "./libs/content/src/index.ts"
+      ],
+      "@aerealith-ai/content/*": [
+        "./libs/content/src/*"
+      ],
+      "@aerealith-ai/contracts": [
+        "./libs/contracts/src/index.ts"
+      ],
+      "@aerealith-ai/db": [
+        "./libs/db/src/index.ts"
+      ],
+      "@aerealith-ai/db/enums": [
+        "./libs/db/src/enums/index.ts"
+      ],
+      "@aerealith-ai/db/*": [
+        "./libs/db/src/*"
+      ],
+      "@aerealith-ai/flags": [
+        "./libs/flags/src/index.ts"
+      ],
+      "@aerealith-ai/flags/*": [
+        "./libs/flags/src/*"
+      ],
+      "@aerealith-ai/ui": [
+        "./libs/ui/src/index.ts"
+      ],
+      "@aerealith-ai/ui/*": [
+        "./libs/ui/src/*"
+      ],
+      "@aerealith-ai/observability": [
+        "./dist/libs/observability/src/index.d.ts"
+      ],
+      "@aerealith-ai/observability/browser": [
+        "./libs/observability/src/browser.ts"
+      ],
+      "@aerealith-ai/observability/profiler": [
+        "./libs/observability/src/profiler/index.ts"
+      ]
     }
   }
 }

@@ -1,5 +1,11 @@
 import { Hono } from 'hono';
 
+import { flagBoolean, honoFlagMiddleware } from '@aerealith-ai/flags';
+import {
+  createHonoTraceMiddleware,
+  createLogger,
+} from '@aerealith-ai/observability';
+
 import { v1Router, type V1RouterEnv } from './routes';
 import type { UserServiceContextEnv } from './users/types';
 
@@ -8,12 +14,22 @@ export type UserServiceAppEnv = {
   Variables: V1RouterEnv['Variables'];
 };
 
+const getLoggerEnv = (env: UserServiceContextEnv) => ({
+  NODE_ENV: env.NODE_ENV,
+  SERVICE_NAME: env.SERVICE_NAME,
+  LOKI_API_TOKEN: env.LOKI_API_TOKEN,
+  TEMPO_API_TOKEN: env.TEMPO_API_TOKEN,
+});
+
 export const app = new Hono<UserServiceAppEnv>();
+
+app.use('*', honoFlagMiddleware({ failOpen: true }));
+app.use('*', createHonoTraceMiddleware({ service: 'aerealith-user-service' }));
 
 app.get('/', (context) =>
   context.json({
     ok: true,
-    service: context.env?.SERVICE_NAME ?? 'helix-user-service',
+    service: context.env?.SERVICE_NAME ?? 'aerealith-user-service',
     status: 'running',
     routes: {
       health: '/api/V1/users/health',
@@ -22,6 +38,49 @@ app.get('/', (context) =>
     timestamp: new Date().toISOString(),
   }),
 );
+
+app.use('*', async (context, next) => {
+  const maintenanceMode = await flagBoolean(
+    context,
+    'maintenance-mode',
+    false,
+  );
+
+  if (maintenanceMode && context.req.path !== '/health') {
+    return context.json(
+      {
+        ok: false,
+        error: {
+          code: 'MAINTENANCE_MODE',
+          message: 'The user service is temporarily unavailable.',
+        },
+      },
+      503,
+    );
+  }
+
+  const logger = createLogger({
+    service: context.env?.SERVICE_NAME ?? 'aerealith-user-service',
+    env: getLoggerEnv(context.env),
+  });
+  const startedAt = Date.now();
+
+  try {
+    await next();
+  } finally {
+    logger.info('User request completed', {
+      success: context.res.ok,
+      failed: !context.res.ok,
+      tags: [context.res.ok ? 'success' : 'failed'],
+      metadata: {
+        method: context.req.method,
+        path: context.req.path,
+        status: context.res.status,
+        durationMs: Date.now() - startedAt,
+      },
+    });
+  }
+});
 
 /**
  * Canonical user service route mount.
@@ -52,7 +111,17 @@ app.notFound((context) =>
 );
 
 app.onError((error, context) => {
-  console.error(error);
+  createLogger({
+    service: context.env?.SERVICE_NAME ?? 'aerealith-user-service',
+    env: getLoggerEnv(context.env),
+  }).error('User request failed', {
+    error,
+    tags: ['failed'],
+    metadata: {
+      method: context.req.method,
+      path: context.req.path,
+    },
+  });
 
   return context.json(
     {

@@ -9,9 +9,19 @@ import { footerProps } from '@aerealith-ai/content/en/footer';
 import { headerProps } from '@aerealith-ai/content/en/header';
 import { HERO_DATA, SECTIONS_DATA } from '@aerealith-ai/content/en/home/content';
 
+import { useFeatureFlags } from '../components/feature-flags-provider';
+
 export default function IndexPage() {
+  const featureFlags = useFeatureFlags();
+
   return (
     <div className="flex min-h-screen flex-col text-white">
+      {featureFlags.pricing ? (
+        <div className="border-b border-white/10 bg-black/20 px-4 py-2 text-center text-xs uppercase tracking-[0.24em] text-cyan-200 md:px-8">
+          Pricing and billing experiences are enabled.
+        </div>
+      ) : null}
+
       <Header {...headerProps} pages={[...(headerProps.pages ?? [])]} />
 
       <main

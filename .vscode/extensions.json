@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "ms-vscode.vscode-chat-customizations-evaluations",
+    "BlueGlassBlock.better-json5",
+    "tamasfe.even-better-toml",
+    "mrmlnc.vscode-json5",
+    "christian-kohler.npm-intellisense",
+    "nrwl.angular-console",
+    "vscode-icons-team.vscode-icons",
+    "DavidAnson.vscode-markdownlint",
+    "firefox-devtools.vscode-firefox-debug",
+    "dbaeumer.vscode-eslint",
+    "DotJoshJohnson.xml"
+  ]
+}

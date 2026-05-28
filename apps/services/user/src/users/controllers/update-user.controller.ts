@@ -9,6 +9,7 @@ import {
 import { getEntityManager } from '@aerealith-ai/db';
 
 import { UpdateUserService, UpdateUserServiceError } from '../services';
+import { mapValidationIssues } from './logger';
 
 export const updateUserController = async (
   context: Context,
@@ -22,11 +23,7 @@ export const updateUserController = async (
         error: {
           code: usernameParam.code,
           message: usernameParam.message,
-          issues: usernameParam.issues.map((issue) => ({
-            path: issue.path.map(String).join('.'),
-            code: issue.code,
-            message: issue.message,
-          })),
+          issues: mapValidationIssues(usernameParam.issues),
         },
       },
       400,
@@ -45,11 +42,7 @@ export const updateUserController = async (
           message:
             parsedBody.error.issues[0]?.message ??
             'Invalid update user payload.',
-          issues: parsedBody.error.issues.map((issue) => ({
-            path: issue.path.map(String).join('.'),
-            code: issue.code,
-            message: issue.message,
-          })),
+          issues: mapValidationIssues(parsedBody.error.issues),
         },
       },
       400,
@@ -100,6 +93,9 @@ function getStatusCodeForUpdateUserError(
       return 404;
 
     case UserErrorCode.USER_UPDATE_FAILED:
+      return 500;
+
+    default:
       return 500;
   }
 }

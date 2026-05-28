@@ -257,9 +257,8 @@ function TechnologyItemCardView({
         display: 'flex',
         width: '100%',
         maxWidth: 540,
-        height: { xs: 350, sm: 360, md: 380 },
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflow: 'visible',
         borderRadius: { xs: '1rem', md: '1.25rem' },
         border: '1px solid rgba(255, 255, 255, 0.1)',
         background:
@@ -302,8 +301,7 @@ function TechnologyItemCardView({
         sx={{
           position: 'relative',
           zIndex: 1,
-          height: '100%',
-          minHeight: 0,
+          height: 'auto',
         }}
       >
         <Stack
@@ -428,32 +426,13 @@ function TechnologyItemCardView({
 
         <Box
           sx={{
-            flex: '1 1 auto',
-            minHeight: 0,
+            flex: '0 1 auto',
             borderRadius: '0.9rem',
             border: '1px solid rgba(255, 255, 255, 0.085)',
             bgcolor: 'rgba(255, 255, 255, 0.035)',
             px: 1.45,
             py: 1.25,
-            overflowX: 'hidden',
-            overflowY: 'auto',
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(246, 6, 111, 0.7) rgba(255, 255, 255, 0.06)',
-
-            '&::-webkit-scrollbar': {
-              width: 8,
-            },
-
-            '&::-webkit-scrollbar-track': {
-              borderRadius: 999,
-              backgroundColor: 'rgba(255, 255, 255, 0.06)',
-            },
-
-            '&::-webkit-scrollbar-thumb': {
-              borderRadius: 999,
-              background:
-                'linear-gradient(180deg, rgba(246, 6, 111, 0.85), rgba(0, 219, 201, 0.65))',
-            },
+            overflow: 'visible',
           }}
         >
           <Typography
@@ -883,7 +862,6 @@ export default function TechnologyPage() {
                 sx={{
                   position: 'relative',
                   overflow: 'visible',
-                  minHeight: { lg: 'calc(100dvh - 96px)' },
                   scrollMarginTop: { xs: 96, lg: 128 },
                   borderRadius: { xs: '1.35rem', md: '1.85rem' },
                   border: '1px solid rgba(255, 255, 255, 0.08)',

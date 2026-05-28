@@ -22,6 +22,7 @@ type ContactOption = {
   readonly description: React.ReactNode;
   readonly icon?: React.ReactNode;
   readonly image?: string;
+  readonly href?: string;
   readonly link?: string;
   readonly buttonText?: string;
 };
@@ -292,7 +293,8 @@ export default function ContactPage() {
             >
               {contactOptions.map((option, index) => {
                 const optionTitle = getOptionTitle(option, index);
-                const buttonHref = option.link || FALLBACK_CONTACT_ANCHOR;
+                const buttonHref =
+                  option.href || option.link || FALLBACK_CONTACT_ANCHOR;
                 const buttonText = option.buttonText || `Open ${optionTitle}`;
                 const isLastOddCard =
                   contactOptions.length % 2 === 1 &&

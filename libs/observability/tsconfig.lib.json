@@ -1,8 +1,13 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/out-tsc",
+    "rootDir": "src",
+    "outDir": "../../dist/libs/observability",
     "declaration": true,
+    "composite": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "tsBuildInfoFile": "../../dist/libs/observability/tsconfig.lib.tsbuildinfo",
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],

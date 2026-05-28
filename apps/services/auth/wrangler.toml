@@ -1,5 +1,5 @@
 # =============================================================================
-# Helix Auth Service — Cloudflare Worker
+# Aerealith Auth Service — Cloudflare Worker
 # -----------------------------------------------------------------------------
 # Deploy:
 #   pnpm exec wrangler deploy --config apps/services/auth/wrangler.toml
@@ -26,7 +26,7 @@
 
 "$schema" = "../../../node_modules/wrangler/config-schema.json"
 
-name = "helix-auth-service"
+name = "aerealith-auth-service"
 main = "src/main.ts"
 
 compatibility_date = "2026-05-09"
@@ -63,15 +63,28 @@ keep_names = true
 
 [vars]
 NODE_ENV = "development"
-SERVICE_NAME = "helix-auth-service"
-SERVICE_DISPLAY_NAME = "Helix Auth Service"
+AEREALITH_ENVIRONMENT = "development"
+SERVICE_NAME = "aerealith-auth-service"
+OTEL_SERVICE_NAME = "aerealith-auth-service"
+PYROSCOPE_APPLICATION_NAME = "aerealith-auth-service"
+SERVICE_DISPLAY_NAME = "Aerealith Auth Service"
 API_VERSION = "v1"
 API_BASE_PATH = "/api/V1/auth"
 LOG_LEVEL = "debug"
 
 # Frontend origin used for CORS decisions inside the auth service.
-FRONTEND_SERVICE_NAME = "helix-ai-frontend"
+FRONTEND_SERVICE_NAME = "aerealith-ai-frontend"
+FLAGS_PROVIDER_NAME = "aerealith-flagship"
 FRONTEND_ORIGIN = "https://helixaibot.com"
+
+# Feature flags (Flagship)
+CLOUDFLARE_FLAGSHIP_APP_ID = "2a1ca9ba-b446-4cb8-b8eb-ab0f3985679f"
+CLOUDFLARE_FLAGSHIP_AUTH_TOKEN = "__SET_FLAGSHIP_AUTH_TOKEN__"
+
+# Pyroscope profiling (optional)
+PYROSCOPE_SERVER_ADDRESS = ""
+PYROSCOPE_BASIC_AUTH_USER = ""
+PYROSCOPE_BASIC_AUTH_PASSWORD = ""
 
 # -----------------------------------------------------------------------------
 # Observability
@@ -103,18 +116,22 @@ local_protocol = "http"
 # =============================================================================
 
 [env.preview]
-name = "helix-auth-service-preview"
+name = "aerealith-auth-service-preview"
 workers_dev = true
 preview_urls = true
 
 [env.preview.vars]
 NODE_ENV = "preview"
-SERVICE_NAME = "helix-auth-service-preview"
-SERVICE_DISPLAY_NAME = "Helix Auth Service Preview"
+AEREALITH_ENVIRONMENT = "preview"
+SERVICE_NAME = "aerealith-auth-service-preview"
+OTEL_SERVICE_NAME = "aerealith-auth-service-preview"
+PYROSCOPE_APPLICATION_NAME = "aerealith-auth-service-preview"
+SERVICE_DISPLAY_NAME = "Aerealith Auth Service Preview"
 API_VERSION = "v1"
 API_BASE_PATH = "/api/V1/auth"
 LOG_LEVEL = "debug"
-FRONTEND_SERVICE_NAME = "helix-ai-frontend"
+FRONTEND_SERVICE_NAME = "aerealith-ai-frontend"
+FLAGS_PROVIDER_NAME = "aerealith-flagship"
 FRONTEND_ORIGIN = "https://helixaibot.com"
 
 [env.preview.observability]
@@ -130,7 +147,7 @@ head_sampling_rate = 1.0
 # =============================================================================
 
 [env.production]
-name = "helix-auth-service"
+name = "aerealith-auth-service"
 workers_dev = false
 preview_urls = false
 
@@ -143,12 +160,16 @@ preview_urls = false
 
 [env.production.vars]
 NODE_ENV = "production"
-SERVICE_NAME = "helix-auth-service"
-SERVICE_DISPLAY_NAME = "Helix Auth Service"
+AEREALITH_ENVIRONMENT = "production"
+SERVICE_NAME = "aerealith-auth-service"
+OTEL_SERVICE_NAME = "aerealith-auth-service"
+PYROSCOPE_APPLICATION_NAME = "aerealith-auth-service"
+SERVICE_DISPLAY_NAME = "Aerealith Auth Service"
 API_VERSION = "v1"
 API_BASE_PATH = "/api/V1/auth"
 LOG_LEVEL = "info"
-FRONTEND_SERVICE_NAME = "helix-ai-frontend"
+FRONTEND_SERVICE_NAME = "aerealith-ai-frontend"
+FLAGS_PROVIDER_NAME = "aerealith-flagship"
 FRONTEND_ORIGIN = "https://helixaibot.com"
 
 [env.production.observability]

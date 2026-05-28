@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 
+import { flagBoolean } from '@aerealith-ai/flags';
 import type { UserContextVariables } from './types';
 
 import {
@@ -20,6 +21,14 @@ export type UsersRouterEnv = {
   };
   Variables: UserContextVariables;
 };
+
+const disabledResponse = (message: string) => ({
+  ok: false,
+  error: {
+    code: 'FEATURE_DISABLED',
+    message,
+  },
+});
 
 export const usersRouter = new Hono<UsersRouterEnv>();
 
@@ -49,7 +58,7 @@ usersRouter.get('/health', async (context) => {
 
   return context.json({
     ok: true,
-    service: 'helix-user-service',
+    service: 'aerealith-user-service',
     status: auth.connected ? 'healthy' : 'degraded',
     dependencies: {
       auth,
@@ -58,20 +67,76 @@ usersRouter.get('/health', async (context) => {
   });
 });
 
-usersRouter.get('/', listUsersController);
+usersRouter.get('/', async (context, next) => {
+  if (!(await flagBoolean(context, 'dashboard', false))) {
+    return context.json(disabledResponse('Dashboard access is disabled.'), 404);
+  }
 
-usersRouter.post('/', createUserController);
+  await next();
+}, listUsersController);
 
-usersRouter.get('/:username', getUserController);
+usersRouter.post('/', async (context, next) => {
+  if (!(await flagBoolean(context, 'onboarding', false))) {
+    return context.json(disabledResponse('Onboarding is disabled.'), 404);
+  }
 
-usersRouter.patch('/:username', updateUserController);
+  await next();
+}, createUserController);
 
-usersRouter.delete('/:username', deleteUserController);
+usersRouter.get('/:username', async (context, next) => {
+  if (!(await flagBoolean(context, 'dashboard', false))) {
+    return context.json(disabledResponse('Dashboard access is disabled.'), 404);
+  }
 
-usersRouter.get('/:username/profile', getUserProfileController);
-usersRouter.patch('/:username/profile', updateUserProfileController);
+  await next();
+}, getUserController);
 
-usersRouter.get('/:username/settings', getUserSettingsController);
-usersRouter.patch('/:username/settings', updateUserSettingsController);
+usersRouter.patch('/:username', async (context, next) => {
+  if (!(await flagBoolean(context, 'onboarding', false))) {
+    return context.json(disabledResponse('Onboarding updates are disabled.'), 404);
+  }
+
+  await next();
+}, updateUserController);
+
+usersRouter.delete('/:username', async (context, next) => {
+  if (!(await flagBoolean(context, 'billing', false))) {
+    return context.json(disabledResponse('Billing-related account actions are disabled.'), 404);
+  }
+
+  await next();
+}, deleteUserController);
+
+usersRouter.get('/:username/profile', async (context, next) => {
+  if (!(await flagBoolean(context, 'dashboard', false))) {
+    return context.json(disabledResponse('Dashboard access is disabled.'), 404);
+  }
+
+  await next();
+}, getUserProfileController);
+
+usersRouter.patch('/:username/profile', async (context, next) => {
+  if (!(await flagBoolean(context, 'onboarding', false))) {
+    return context.json(disabledResponse('Onboarding updates are disabled.'), 404);
+  }
+
+  await next();
+}, updateUserProfileController);
+
+usersRouter.get('/:username/settings', async (context, next) => {
+  if (!(await flagBoolean(context, 'billing', false))) {
+    return context.json(disabledResponse('Billing settings are disabled.'), 404);
+  }
+
+  await next();
+}, getUserSettingsController);
+
+usersRouter.patch('/:username/settings', async (context, next) => {
+  if (!(await flagBoolean(context, 'billing', false))) {
+    return context.json(disabledResponse('Billing settings are disabled.'), 404);
+  }
+
+  await next();
+}, updateUserSettingsController);
 
 export default usersRouter;

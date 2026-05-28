@@ -1,0 +1,47 @@
+export {
+  buildAnonymousTargetingKey,
+  buildContextFromRequest,
+  buildFlagEvaluationContext,
+  buildRequiredFlagEvaluationContext,
+  buildUserTargetingKey,
+  getContextAttribute,
+  getFlagContextFromHeaders,
+  hasFlagTargetingKey,
+  isFlagEvaluationContext,
+  joinTargetingKeyParts,
+  mergeFlagEvaluationContexts,
+  normalizeContextAttributeKey,
+  normalizeContextValue,
+  normalizeEnvironment,
+  normalizeTargetingKey,
+  removeContextAttribute,
+  requireFlagTargetingKey,
+  sanitizeFlagEvaluationContext,
+  setContextAttribute,
+} from './evaluation-context';
+
+export {
+  buildAnonymousUserFlagEvaluationContext,
+  buildAuthenticatedUserFlagEvaluationContext,
+  buildOrganizationContext,
+  buildRequiredUserFlagEvaluationContext,
+  buildUserFlagEvaluationContext,
+  buildWorkspaceContext,
+  getPrimaryRole,
+  getUserId,
+  getUserTargetingKey,
+  isAnonymousFlagUser,
+  isAuthenticatedFlagUser,
+  mergeUserFlagContext,
+  requireUserTargetingKey,
+} from './user-context';
+
+export type {
+  BuildUserFlagContextOptions,
+  FlagOrganizationInput,
+  FlagUserId,
+  FlagUserInput,
+  FlagUserPlan,
+  FlagUserRole,
+  FlagWorkspaceInput,
+} from './user-context';

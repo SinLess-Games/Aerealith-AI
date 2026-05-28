@@ -1,9 +1,15 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "../../dist/libs/content",
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
     "declaration": true,
+    "composite": true,
+    "tsBuildInfoFile": "../../dist/libs/content/tsconfig.lib.tsbuildinfo",
     "types": ["node"],
-    "composite": true
+    "disableSourceOfProjectReferenceRedirect": true
   },
   "include": ["src/**/*.ts"],
   "references": [

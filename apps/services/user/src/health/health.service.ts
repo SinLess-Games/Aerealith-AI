@@ -10,7 +10,7 @@ export class HealthService {
   private readonly serviceVersion: string;
 
   constructor(options: HealthServiceOptions = {}) {
-    this.serviceName = options.serviceName ?? 'helix-user-service';
+    this.serviceName = options.serviceName ?? 'aerealith-user-service';
     this.serviceVersion = options.serviceVersion ?? '0.1.0';
   }
 

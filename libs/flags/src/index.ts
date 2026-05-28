@@ -1,35 +1,129 @@
-export type FeatureFlagValue = boolean | string | number | null;
+export {
+  FLAGS_ANONYMOUS_TARGETING_PREFIX,
+  FLAGS_BOOLEAN_VARIATIONS,
+  FLAGS_CLIENT_NAME,
+  FLAGS_COMMON_KEYS,
+  FLAGS_CONTEXT_ATTRIBUTE_KEY_PATTERN,
+  FLAGS_CONTEXT_KEYS,
+  FLAGS_COOKIE_KEYS,
+  FLAGS_DEFAULT_ENVIRONMENT,
+  FLAGS_DEFAULT_VALUES,
+  FLAGS_ENV_KEYS,
+  FLAGS_ERROR_CODES,
+  FLAGS_FLAGSHIP_APP_ID,
+  FLAGS_FLAG_KEY_PATTERN,
+  FLAGS_HEADER_KEYS,
+  FLAGS_KNOWN_RUNTIME_NAMES,
+  FLAGS_LOG_MESSAGES,
+  FLAGS_OPENFEATURE_DOMAINS,
+  FLAGS_ORGANIZATION_TARGETING_PREFIX,
+  FLAGS_PACKAGE_NAME,
+  FLAGS_PREFETCH_DEFAULTS,
+  FLAGS_PROVIDER_NAME,
+  FLAGS_REASON_NAMES,
+  FLAGS_SECURITY_LIMITS,
+  FLAGS_SUPPORTED_VALUE_KINDS,
+  FLAGS_TARGETING_SEPARATOR,
+  FLAGS_TELEMETRY_EVENT_NAMES,
+  FLAGS_USER_TARGETING_PREFIX,
+  FLAGS_WORKER_BINDING_KEYS,
+  FLAGS_WORKSPACE_TARGETING_PREFIX,
+} from './constants';
 
-export type FeatureFlagContext = {
-  environment?: string;
-  tenantId?: string;
-  organizationId?: string;
-  userId?: string;
-  plan?: string;
-  role?: string;
-};
+export {
+  buildAnonymousTargetingKey,
+  buildAnonymousUserFlagEvaluationContext,
+  buildAuthenticatedUserFlagEvaluationContext,
+  buildContextFromRequest,
+  buildFlagEvaluationContext,
+  buildOrganizationContext,
+  buildRequiredFlagEvaluationContext,
+  buildRequiredUserFlagEvaluationContext,
+  buildUserFlagEvaluationContext,
+  buildUserTargetingKey,
+  buildWorkspaceContext,
+  getContextAttribute,
+  getFlagContextFromHeaders,
+  getPrimaryRole,
+  getUserId,
+  getUserTargetingKey,
+  hasFlagTargetingKey,
+  isAnonymousFlagUser,
+  isAuthenticatedFlagUser,
+  isFlagEvaluationContext,
+  joinTargetingKeyParts,
+  mergeFlagEvaluationContexts,
+  mergeUserFlagContext,
+  normalizeContextAttributeKey,
+  normalizeContextValue,
+  normalizeEnvironment,
+  normalizeTargetingKey,
+  removeContextAttribute,
+  requireFlagTargetingKey,
+  requireUserTargetingKey,
+  sanitizeFlagEvaluationContext,
+  setContextAttribute,
+  type BuildUserFlagContextOptions,
+  type FlagOrganizationInput,
+  type FlagUserId,
+  type FlagUserInput,
+  type FlagUserPlan,
+  type FlagUserRole,
+  type FlagWorkspaceInput,
+} from './context';
 
-export type FeatureFlagSnapshot = {
-  version: number;
-  environment: string;
-  updatedAt?: string;
-  flags: Record<string, FeatureFlagValue>;
-};
+export {
+  flagBoolean,
+  honoFlagMiddleware,
+} from './hono';
 
-export function getFlagValue<T extends FeatureFlagValue>(
-  snapshot: FeatureFlagSnapshot | null | undefined,
-  key: string,
-  fallback: T,
-): T {
-  const value = snapshot?.flags?.[key];
-
-  return value === undefined ? fallback : (value as T);
-}
-
-export function isFlagEnabled(
-  snapshot: FeatureFlagSnapshot | null | undefined,
-  key: string,
-  fallback = false,
-): boolean {
-  return getFlagValue(snapshot, key, fallback) === true;
-}
+export type {
+  AnyFlagClient,
+  AnyFlagDefinition,
+  AsyncFlagClient,
+  BooleanFlagDefinition,
+  BuildFlagContextOptions,
+  ClientFlagEvaluator,
+  CloudflareFlagshipBinding,
+  FlagBootstrapPayload,
+  FlagClientBase,
+  FlagClientMode,
+  FlagContextInput,
+  FlagDefaultValues,
+  FlagDefinition,
+  FlagEnvironment,
+  FlagEvaluationContext,
+  FlagEvaluationError,
+  FlagEvaluationOptions,
+  FlagEvaluationResult,
+  FlagHookOptions,
+  FlagJsonValue,
+  FlagKey,
+  FlagLogger,
+  FlagPrefetchConfig,
+  FlagPrimitive,
+  FlagProviderRuntime,
+  FlagRegistry,
+  FlagshipBindingCredentials,
+  FlagshipClientProviderOptions,
+  FlagshipProviderOptions,
+  FlagshipRemoteCredentials,
+  FlagshipServerCredentials,
+  FlagshipServerProviderOptions,
+  FlagTargetingKey,
+  FlagTelemetryEvent,
+  FlagTelemetryReporter,
+  FlagValue,
+  FlagValueKind,
+  HonoFlagContextFactoryInput,
+  HonoFlagMiddlewareOptions,
+  HonoFlagVariables,
+  MockFlagProviderOptions,
+  MockFlagValues,
+  NumberFlagDefinition,
+  ObjectFlagDefinition,
+  RequiredFlagEvaluationContext,
+  ServerFlagEvaluator,
+  StringFlagDefinition,
+  SyncFlagClient,
+} from './types';

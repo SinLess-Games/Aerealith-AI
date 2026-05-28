@@ -34,7 +34,7 @@ const nextConfig = {
   // Do NOT include @aerealith-ai/db here.
   // The DB package contains MikroORM decorators and should be consumed from
   // its compiled output during the frontend build.
-  transpilePackages: ['@aerealith-ai/ui', '@aerealith-ai/config', '@aerealith-ai/flags', '@aerealith-ai/content'],
+  transpilePackages: ['@aerealith-ai/ui', '@aerealith-ai/config', '@aerealith-ai/flags', '@aerealith-ai/content', '@aerealith-ai/observability'],
 
   images: {
     remotePatterns: [],
@@ -61,6 +61,9 @@ const nextConfig = {
       '@aerealith-ai/ui': resolve(repoRoot, 'libs/ui/src/index.ts'),
       '@aerealith-ai/config': resolve(repoRoot, 'libs/config/src/index.ts'),
       '@aerealith-ai/flags': resolve(repoRoot, 'libs/flags/src/index.ts'),
+      '@aerealith-ai/observability': resolve(repoRoot, 'libs/observability/src/index.ts'),
+      '@aerealith-ai/observability/browser': resolve(repoRoot, 'libs/observability/src/browser.ts'),
+      '@aerealith-ai/observability/profiler': resolve(repoRoot, 'libs/observability/src/profiler/index.ts'),
 
       // IMPORTANT:
       // Use the compiled DB package when available so Next does not parse

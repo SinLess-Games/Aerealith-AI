@@ -2,40 +2,40 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "node",
+      "type": "node-terminal",
       "request": "launch",
       "name": "Debug auth with Nx",
-      "runtimeExecutable": "pnpm exec",
-      "runtimeArgs": ["nx", "serve", "auth"],
+      "command": "pnpm exec nx serve auth",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
       "env": {
-        "NODE_OPTIONS": "--inspect=9229"
-      },
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
-      "sourceMaps": true,
-      "outFiles": [
-        "${workspaceFolder}/apps/services/auth/dist/**/*.(m|c|)js",
-        "!**/node_modules/**"
-      ]
+        "NODE_ENV": "development",
+        "NODE_OPTIONS": "--inspect=9229 --enable-source-maps",
+        "FORCE_COLOR": "1"
+      }
     },
     {
-      "type": "node",
+      "type": "node-terminal",
       "request": "launch",
       "name": "Debug user with Nx",
-      "runtimeExecutable": "pnpm exec",
-      "runtimeArgs": ["nx", "serve", "user"],
+      "command": "pnpm exec nx serve user",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
       "env": {
-        "NODE_OPTIONS": "--inspect=9230"
-      },
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
-      "sourceMaps": true,
-      "outFiles": [
-        "${workspaceFolder}/apps/services/user/dist/**/*.(m|c|)js",
-        "!**/node_modules/**"
-      ]
+        "NODE_ENV": "development",
+        "NODE_OPTIONS": "--inspect=9230 --enable-source-maps",
+        "FORCE_COLOR": "1"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug auth + user with Nx",
+      "configurations": [
+        "Debug auth with Nx",
+        "Debug user with Nx"
+      ],
+      "stopAll": true
     }
   ]
 }

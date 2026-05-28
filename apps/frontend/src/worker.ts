@@ -1,5 +1,26 @@
 import type { ExecutionContext, Fetcher } from '@cloudflare/workers-types';
 
+import {
+  buildContextFromRequest,
+  createFlagshipServerEvaluator,
+  initializeFlagshipServerProvider,
+} from '@aerealith-ai/flags';
+import {
+  FRONTEND_FEATURE_FLAGS_HEADER,
+  FRONTEND_SAFE_FLAG_KEYS,
+  createDefaultFrontendFeatureFlags,
+} from './lib/feature-flags';
+
+import {
+  createLogger,
+  createRequestContextFromRequest,
+  createTraceSessionFromRequest,
+  initServerTelemetry,
+  runWithLogContext,
+  runWithTraceSession,
+  withTraceSpan,
+} from '@aerealith-ai/observability';
+
 import { applyCloudflareMiddlewares } from './middlewares/cloudflare-chain';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -8,6 +29,18 @@ import nextWorker from '../.open-next/worker.js';
 
 export interface CloudflareEnv {
   ASSETS: Fetcher;
+  AEREALITH_ENVIRONMENT?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_FLAGSHIP_APP_ID?: string;
+  CLOUDFLARE_FLAGSHIP_AUTH_TOKEN?: string;
+  AEREALITH_FLAGS_PROVIDER_NAME?: string;
+  LOKI_API_TOKEN?: string;
+  TEMPO_API_TOKEN?: string;
+  FLAGS?: unknown;
+  PYROSCOPE_APPLICATION_NAME?: string;
+  PYROSCOPE_SERVER_ADDRESS?: string;
+  PYROSCOPE_BASIC_AUTH_USER?: string;
+  PYROSCOPE_BASIC_AUTH_PASSWORD?: string;
   NEXTJS_ENV: string;
   NEXT_PUBLIC_APP_NAME: string;
   NEXT_PUBLIC_APP_ENV: string;
@@ -20,12 +53,149 @@ export default {
     env: CloudflareEnv,
     ctx: ExecutionContext,
   ): Promise<Response> {
-    const result = await applyCloudflareMiddlewares(request, env, ctx);
+    const telemetry = initServerTelemetry({
+      service: env.NEXT_PUBLIC_APP_NAME ?? env.NEXTJS_ENV ?? 'aerealith-ai-frontend',
+      env: {
+        NODE_ENV: env.NEXTJS_ENV,
+        TEMPO_API_TOKEN: env.TEMPO_API_TOKEN,
+      },
+      server: {
+        token: env.TEMPO_API_TOKEN,
+      },
+    });
+    const logger = createLogger({
+      service: env.NEXT_PUBLIC_APP_NAME ?? env.NEXTJS_ENV ?? 'aerealith-ai-frontend',
+      env: {
+        NODE_ENV: env.NEXTJS_ENV,
+        LOKI_API_TOKEN: env.LOKI_API_TOKEN,
+        TEMPO_API_TOKEN: env.TEMPO_API_TOKEN,
+      },
+    });
+    const requestContext = createRequestContextFromRequest(request, {
+      service: env.NEXT_PUBLIC_APP_NAME ?? env.NEXTJS_ENV ?? 'aerealith-ai-frontend',
+    });
+    const traceSession = createTraceSessionFromRequest(request, {
+      service: env.NEXT_PUBLIC_APP_NAME ?? env.NEXTJS_ENV ?? 'aerealith-ai-frontend',
+    });
 
-    if (result.response) {
-      return result.response;
+    const bootstrapFlags = createDefaultFrontendFeatureFlags();
+
+    if (
+      env.CLOUDFLARE_FLAGSHIP_APP_ID &&
+      env.CLOUDFLARE_ACCOUNT_ID &&
+      env.CLOUDFLARE_FLAGSHIP_AUTH_TOKEN
+    ) {
+      try {
+        await initializeFlagshipServerProvider({
+          appId: env.CLOUDFLARE_FLAGSHIP_APP_ID,
+          accountId: env.CLOUDFLARE_ACCOUNT_ID,
+          authToken: env.CLOUDFLARE_FLAGSHIP_AUTH_TOKEN,
+          providerName: env.AEREALITH_FLAGS_PROVIDER_NAME,
+          domain: 'server',
+        });
+
+        const evaluator = createFlagshipServerEvaluator({
+          domain: 'server',
+          context: buildContextFromRequest(request, {
+            environment: env.AEREALITH_ENVIRONMENT ?? env.NEXTJS_ENV,
+          }),
+        });
+
+        const evaluatedFlags = await Promise.all(
+          FRONTEND_SAFE_FLAG_KEYS.map(async (key) => {
+            return [key, await evaluator.boolean(key, false)] as const;
+          }),
+        );
+
+        for (const [key, value] of evaluatedFlags) {
+          bootstrapFlags[key] = value;
+        }
+      } catch (error) {
+        logger.warn('Frontend feature flag bootstrap failed.', {
+          error,
+          metadata: {
+            path: new URL(request.url).pathname,
+            runtime: env.NEXTJS_ENV,
+          },
+        });
+      }
     }
 
-    return nextWorker.fetch(result.request, env, ctx);
+    const bootstrapHeaderValue = JSON.stringify({
+      values: bootstrapFlags,
+    });
+    const requestWithBootstrap = new Request(request, {
+      headers: new Headers(request.headers),
+    });
+
+    requestWithBootstrap.headers.set(
+      FRONTEND_FEATURE_FLAGS_HEADER,
+      bootstrapHeaderValue,
+    );
+
+    for (const key of FRONTEND_SAFE_FLAG_KEYS) {
+      requestWithBootstrap.headers.set(`x-aerealith-flag-${key}`, String(bootstrapFlags[key]));
+    }
+
+    return runWithTraceSession(traceSession, async () =>
+      runWithLogContext(requestContext, async () => {
+        const result = await withTraceSpan(
+          'frontend.request',
+          {
+            metadata: {
+              method: request.method,
+              path: new URL(request.url).pathname,
+            },
+            tags: ['frontend'],
+          },
+          async () => applyCloudflareMiddlewares(requestWithBootstrap, env, ctx),
+        );
+
+        if (result.response) {
+          logger.info('Frontend request completed', {
+            success: result.response.ok,
+            failed: !result.response.ok,
+            tags: [result.response.ok ? 'success' : 'failed'],
+            metadata: {
+              method: request.method,
+              path: new URL(request.url).pathname,
+              status: result.response.status,
+            },
+          });
+
+          ctx.waitUntil(telemetry?.flush() ?? Promise.resolve());
+
+          return result.response;
+        }
+
+        const response = await nextWorker.fetch(result.request, env, ctx);
+
+        logger.info('Frontend request completed', {
+          success: response.ok,
+          failed: !response.ok,
+          tags: [response.ok ? 'success' : 'failed'],
+          metadata: {
+            method: request.method,
+            path: new URL(request.url).pathname,
+            status: response.status,
+          },
+        });
+
+        ctx.waitUntil(telemetry?.flush() ?? Promise.resolve());
+
+        return response;
+      }),
+    ).catch((error) => {
+      logger.error('Frontend request failed', {
+        error,
+        tags: ['failed'],
+        metadata: {
+          method: request.method,
+          path: new URL(request.url).pathname,
+        },
+      });
+
+      throw error;
+    });
   },
 };

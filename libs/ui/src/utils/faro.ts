@@ -2,6 +2,8 @@
 
 import type { initializeFaro as initializeFaroType } from '@grafana/faro-web-sdk';
 
+import { initBrowserTelemetry } from '@aerealith-ai/observability/browser';
+
 // This package is the source of truth for Helix config.
 //
 // TS6305 can appear in VS Code before @aerealith-ai/config has generated
@@ -19,6 +21,7 @@ export type FaroClientConfig = {
   appName: string;
   appVersion: string;
   environment: string;
+  sampleRate: number;
 };
 
 type FaroSourceConfig = Partial<{
@@ -274,6 +277,12 @@ function buildConfig(
       getEnv('NEXT_PUBLIC_APP_ENV') ??
       getEnv('NODE_ENV') ??
       'development',
+    sampleRate:
+      readNumber(['observability', 'faro', 'samplingRate']) ??
+      readNumber(['grafanaCloud', 'addons', 'faro', 'samplingRate']) ??
+      readNumber(['grafanaCloud', 'faro', 'samplingRate']) ??
+      readNumber(['addons', 'faro', 'samplingRate']) ??
+      (getEnv('NODE_ENV') === 'production' ? 0.15 : 0),
   };
 }
 
@@ -320,51 +329,18 @@ export async function initFaro(
     return null;
   }
 
-  try {
-    if (isDevelopment()) {
-      console.info('[Faro] initializing', {
-        app: {
-          name: config.appName,
-          version: config.appVersion,
-          environment: config.environment,
-        },
-      });
-    }
+  const faro = await initBrowserTelemetry({
+    enabled: config.enabled,
+    url: config.url,
+    appName: config.appName,
+    appVersion: config.appVersion,
+    environment: config.environment,
+    sampleRate: config.sampleRate,
+  });
 
-    const [
-      { getWebInstrumentations, initializeFaro },
-      { TracingInstrumentation },
-    ] = await Promise.all([
-      import('@grafana/faro-web-sdk'),
-      import('@grafana/faro-web-tracing'),
-    ]);
+  setStoredFaro(faro as FaroInstance | null);
 
-    const faro = initializeFaro({
-      url: config.url,
-      app: {
-        name: config.appName,
-        version: config.appVersion,
-        environment: config.environment,
-      },
-      instrumentations: [
-        ...getWebInstrumentations(),
-        new TracingInstrumentation(),
-      ],
-    });
-
-    setStoredFaro(faro);
-
-    return faro;
-  } catch (error) {
-    console.error(
-      '[Faro] failed to initialize:',
-      error instanceof Error ? error.message : error,
-    );
-
-    setStoredFaro(null);
-
-    return null;
-  }
+  return faro as FaroInstance | null;
 }
 
 export function getFaroInstance(): FaroInstance | null {

@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 /**
  * API metadata endpoint.
  *
- * This route describes the public V1 API surface for Helix AI.
+ * This route describes the public V1 API surface for Aerealith AI.
  * It should stay lightweight, uncached, and safe to expose publicly.
  */
 export const dynamic = 'force-dynamic';
@@ -13,11 +13,11 @@ export const revalidate = 0;
 export const runtime = 'nodejs';
 
 const API_VERSION = 'v1';
-const SERVICE_NAME = process.env.SERVICE_NAME || 'helix-web-api';
-const SERVICE_DISPLAY_NAME = process.env.SERVICE_DISPLAY_NAME || 'Helix AI Web API';
+const SERVICE_NAME = process.env.SERVICE_NAME || 'aerealith-web-api';
+const SERVICE_DISPLAY_NAME = process.env.SERVICE_DISPLAY_NAME || 'Aerealith AI Web API';
 const SERVICE_DESCRIPTION =
   process.env.SERVICE_DESCRIPTION ||
-  'Public API gateway for Helix AI web application services.';
+  'Public API gateway for Aerealith AI web application services.';
 
 type ApiEndpoint = {
   path: string;

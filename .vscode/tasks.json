@@ -1,0 +1,233 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build-frontend",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-ui-fix",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-content-fix",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "check-content-tsc",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"exec",
+				"tsc",
+				"-p",
+				"libs/content/tsconfig.lib.json",
+				"--pretty",
+				"false"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "test"
+		},
+		{
+			"label": "build-frontend-final",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-nxignore",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-content-deps",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-content-module",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-content-paths",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-relative-imports",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-path-depth-fix",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-db-enums-subpath",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-buildlibsfromsource",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-after-direct-content-import",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-frontend-with-tracing",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"nx",
+				"build",
+				"frontend"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		}
+	]
+}

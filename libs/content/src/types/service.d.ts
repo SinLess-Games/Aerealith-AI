@@ -1,1 +1,0 @@
-export type ServiceKey = keyof typeof serviceStatusUrls;

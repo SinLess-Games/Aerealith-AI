@@ -1,5 +1,7 @@
 import type { Context } from 'hono';
 
+import type { HonoFlagVariables } from '@aerealith-ai/flags';
+
 import type {
   AuthSessionId,
   AuthUserId,
@@ -65,7 +67,7 @@ export type AuthContextVariables = {
 };
 
 export type AuthHonoEnv = {
-  Variables: AuthContextVariables;
+  Variables: AuthContextVariables & HonoFlagVariables;
 };
 
 export type AuthContextHonoContext = Context<AuthHonoEnv>;

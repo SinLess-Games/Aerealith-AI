@@ -1,12 +1,15 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../../dist/out-tsc",
     "module": "es2022",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "esModuleInterop": true,
     "target": "es2022",
-    "lib": ["es2022"],
+    "lib": [
+      "es2022"
+    ],
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "allowJs": true,
@@ -18,7 +21,9 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/**/*.ts"
+  ],
   "exclude": [
     "vite.config.ts",
     "vite.config.mts",
@@ -35,16 +40,22 @@
   ],
   "references": [
     {
-      "path": "../../../libs/api/tsconfig.lib.json"
+      "path": "../../../libs/flags/tsconfig.lib.json"
     },
     {
-      "path": "../../../libs/config/tsconfig.lib.json"
+      "path": "../../../libs/db/tsconfig.lib.json"
     },
     {
       "path": "../../../libs/contracts/tsconfig.lib.json"
     },
     {
-      "path": "../../../libs/db/tsconfig.lib.json"
+      "path": "../../../libs/config/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/observability/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../libs/api/tsconfig.lib.json"
     }
   ]
 }

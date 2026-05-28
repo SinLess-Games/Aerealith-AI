@@ -4,6 +4,7 @@ import type { AuthService } from '../services/auth.service';
 import { optionalAuthMiddleware } from '../middleware/optional-auth.middleware';
 import type { AuthContextMiddlewareOptions } from '../middleware/auth-context.middleware';
 import type { AuthHonoEnv } from '../types/auth-context.type';
+import type { ObservabilityLogger } from '@aerealith-ai/observability';
 
 import {
   createAuthEmailVerificationRoutes,
@@ -26,12 +27,14 @@ export type AuthRoutesOptions = {
   authService: AuthService;
   authContext: Omit<AuthContextMiddlewareOptions, 'requireSession'>;
   emailVerificationMailer?: AuthRoutesEmailVerificationMailer;
+  logger?: ObservabilityLogger;
 };
 
 export const createAuthRoutes = ({
   authService,
   authContext,
   emailVerificationMailer,
+  logger,
 }: AuthRoutesOptions): Hono<AuthHonoEnv> => {
   const routes = new Hono<AuthHonoEnv>();
 
@@ -50,6 +53,7 @@ export const createAuthRoutes = ({
     '/',
     createAuthPublicRoutes({
       authService,
+      logger,
       ...emailVerificationMailerOptions,
     }),
   );

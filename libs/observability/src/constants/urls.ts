@@ -23,6 +23,18 @@ export const LokiCloud = {
 
 /**
  * @constant
+ * @description Environment variable that stores the Grafana Loki API token.
+ */
+export const LOKI_API_TOKEN_ENV = 'LOKI_API_TOKEN' as const
+
+/**
+ * @constant
+ * @description Environment variable that stores the Grafana Tempo API token.
+ */
+export const TEMPO_API_TOKEN_ENV = 'TEMPO_API_TOKEN' as const
+
+/**
+ * @constant
  * @see https://grafana.com/orgs/sinlessgames/stacks/1664966/otlp-info
  */
 export const OpentelemetryCloud = {
@@ -37,6 +49,7 @@ export const OpentelemetryCloud = {
 export const TempoCloud = {
     name: 'grafanacloud-aerealith-traces',
     url: 'https://tempo-prod-15-prod-us-west-0.grafana.net/tempo',
+    otlpURL: 'https://otlp-gateway-prod-us-west-0.grafana.net/otlp',
     user: '1617054'
 }
 

@@ -8,10 +8,19 @@ import {
 import { getEntityManager } from '@aerealith-ai/db';
 
 import { CreateUserService, CreateUserServiceError } from '../services';
+import {
+  logUserControllerError,
+  logUserControllerStart,
+  mapValidationIssues,
+} from './logger';
 
 export const createUserController = async (
   context: Context,
 ): Promise<Response> => {
+  logUserControllerStart(context, 'Create user request received', {
+    tags: ['user', 'create'],
+  });
+
   const body = await readJsonBody(context);
   const parsedBody = createUserServiceSchema.safeParse(body);
 
@@ -24,11 +33,7 @@ export const createUserController = async (
           message:
             parsedBody.error.issues[0]?.message ??
             'Invalid create user payload.',
-          issues: parsedBody.error.issues.map((issue) => ({
-            path: issue.path.map(String).join('.'),
-            code: issue.code,
-            message: issue.message,
-          })),
+          issues: mapValidationIssues(parsedBody.error.issues),
         },
       },
       400,
@@ -50,6 +55,10 @@ export const createUserController = async (
     );
   } catch (error) {
     if (error instanceof CreateUserServiceError) {
+      logUserControllerError(context, 'Create user request failed', error, {
+        tags: ['user', 'create', 'failed'],
+      });
+
       return context.json(
         {
           ok: false,
@@ -77,6 +86,8 @@ async function readJsonBody(context: Context): Promise<unknown> {
 function getStatusCodeForCreateUserError(error: CreateUserServiceError): 409 {
   switch (error.code) {
     case UserErrorCode.USER_ALREADY_EXISTS:
+      return 409;
+    default:
       return 409;
   }
 }

@@ -1,7 +1,11 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
 
+import type { HonoFlagVariables } from '@aerealith-ai/flags';
+
 export interface UserServiceBindings {
   AUTH_SERVICE?: Fetcher;
+  LOKI_API_TOKEN?: string;
+  TEMPO_API_TOKEN?: string;
 }
 
 export interface UserServiceEnv {
@@ -58,3 +62,5 @@ export type UserContextVariables = {
   userContext?: UserRouteContext;
   authUser?: AuthenticatedUserContext;
 };
+
+export type UserServiceHonoVariables = UserContextVariables & HonoFlagVariables;

@@ -258,7 +258,7 @@ function logEvent(
     JSON.stringify({
       level,
       event,
-      service: 'helix-ai-frontend',
+      service: 'aerealith-ai-frontend',
       timestamp: new Date().toISOString(),
       ...data,
     }),

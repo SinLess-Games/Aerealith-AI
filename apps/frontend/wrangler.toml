@@ -1,6 +1,6 @@
 "$schema" = "../../node_modules/wrangler/config-schema.json"
 
-name = "helix-ai-frontend"
+name = "aerealith-ai-frontend"
 main = "./src/worker.ts"
 compatibility_date = "2026-05-09"
 workers_dev = true
@@ -33,15 +33,15 @@ binding = "ASSETS"
 
 [[services]]
 binding = "WORKER_SELF_REFERENCE"
-service = "helix-ai-frontend"
+service = "aerealith-ai-frontend"
 
 [[services]]
 binding = "AUTH_SERVICE"
-service = "helix-auth-service"
+service = "aerealith-auth-service"
 
 [[services]]
 binding = "USER_SERVICE"
-service = "helix-user-service"
+service = "aerealith-user-service"
 
 # =============================================================================
 # Default/local vars
@@ -49,8 +49,12 @@ service = "helix-user-service"
 
 [vars]
 NEXTJS_ENV = "development"
-NEXT_PUBLIC_APP_NAME = "Helix AI"
+NEXT_PUBLIC_APP_NAME = "Aerealith AI"
 NEXT_PUBLIC_APP_ENV = "development"
+AEREALITH_ENVIRONMENT = "development"
+SERVICE_NAME = "aerealith-ai-frontend"
+OTEL_SERVICE_NAME = "aerealith-ai-frontend"
+PYROSCOPE_APPLICATION_NAME = "aerealith-ai-frontend"
 
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = "helix-ai"
 NEXT_PUBLIC_CLOUDINARY_API_KEY = "__SET_CLOUDINARY_API_KEY__"
@@ -65,7 +69,7 @@ DATABASE_APPLICATION_NAME = "helix-frontend-dev"
 
 MIKRO_ORM_DEBUG = "false"
 
-AUTH_SERVICE_NAME = "helix-auth-service"
+AUTH_SERVICE_NAME = "aerealith-auth-service"
 AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
 
 AUTH_SERVICE_URL = "http://localhost:8787"
@@ -82,7 +86,7 @@ AUTH_SERVICE_USERNAME_PATH_PREFIX = "/auth"
 AUTH_SERVICE_SIGNUP_URL = "http://localhost:8787/auth/signup"
 AUTH_SERVICE_LOGIN_URL = "http://localhost:8787/auth/login"
 
-USER_SERVICE_NAME = "helix-user-service"
+USER_SERVICE_NAME = "aerealith-user-service"
 USER_SERVICE_BASE_PATH = "/api/V1/users"
 
 USER_SERVICE_URL = "http://localhost:8788"
@@ -96,6 +100,16 @@ USER_SERVICE_CONSENT_PATH_PREFIX = "/users"
 AUTH_PUBLIC_URL = "http://localhost:8787"
 FRONTEND_PUBLIC_URL = "http://localhost:3000"
 AUTH_VERIFY_EMAIL_PATH = "/api/V1/auth/verify-email"
+
+# Feature flags (Flagship)
+CLOUDFLARE_FLAGSHIP_APP_ID = "2a1ca9ba-b446-4cb8-b8eb-ab0f3985679f"
+CLOUDFLARE_FLAGSHIP_AUTH_TOKEN = "__SET_FLAGSHIP_AUTH_TOKEN__"
+AEREALITH_FLAGS_PROVIDER_NAME = "aerealith-flagship"
+
+# Pyroscope profiling (optional)
+PYROSCOPE_SERVER_ADDRESS = ""
+PYROSCOPE_BASIC_AUTH_USER = ""
+PYROSCOPE_BASIC_AUTH_PASSWORD = ""
 
 # =============================================================================
 # Observability
@@ -134,26 +148,30 @@ enabled = true
 # =============================================================================
 
 [env.preview]
-name = "helix-ai-frontend-preview"
+name = "aerealith-ai-frontend-preview"
 workers_dev = true
 preview_urls = true
 
 [[env.preview.services]]
 binding = "WORKER_SELF_REFERENCE"
-service = "helix-ai-frontend-preview"
+service = "aerealith-ai-frontend-preview"
 
 [[env.preview.services]]
 binding = "AUTH_SERVICE"
-service = "helix-auth-service-preview"
+service = "aerealith-auth-service-preview"
 
 [[env.preview.services]]
 binding = "USER_SERVICE"
-service = "helix-user-service-preview"
+service = "aerealith-user-service-preview"
 
 [env.preview.vars]
 NEXTJS_ENV = "preview"
-NEXT_PUBLIC_APP_NAME = "Helix AI"
+NEXT_PUBLIC_APP_NAME = "Aerealith AI"
 NEXT_PUBLIC_APP_ENV = "preview"
+AEREALITH_ENVIRONMENT = "preview"
+SERVICE_NAME = "aerealith-ai-frontend-preview"
+OTEL_SERVICE_NAME = "aerealith-ai-frontend-preview"
+PYROSCOPE_APPLICATION_NAME = "aerealith-ai-frontend-preview"
 
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = "helix-ai"
 NEXT_PUBLIC_CLOUDINARY_API_KEY = "__SET_CLOUDINARY_API_KEY__"
@@ -168,7 +186,7 @@ DATABASE_APPLICATION_NAME = "helix-frontend-preview"
 
 MIKRO_ORM_DEBUG = "false"
 
-AUTH_SERVICE_NAME = "helix-auth-service-preview"
+AUTH_SERVICE_NAME = "aerealith-auth-service-preview"
 AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
 
 AUTH_SERVICE_URL = "https://helixaibot.com/api/V1/auth"
@@ -185,7 +203,7 @@ AUTH_SERVICE_USERNAME_PATH_PREFIX = ""
 AUTH_SERVICE_SIGNUP_URL = "https://helixaibot.com/api/V1/auth/signup"
 AUTH_SERVICE_LOGIN_URL = "https://helixaibot.com/api/V1/auth/login"
 
-USER_SERVICE_NAME = "helix-user-service-preview"
+USER_SERVICE_NAME = "aerealith-user-service-preview"
 USER_SERVICE_BASE_PATH = "/api/V1/users"
 
 USER_SERVICE_URL = "https://helixaibot.com/api/V1/users"
@@ -214,7 +232,7 @@ enabled = true
 # =============================================================================
 
 [env.production]
-name = "helix-ai-frontend"
+name = "aerealith-ai-frontend"
 workers_dev = false
 preview_urls = false
 
@@ -224,20 +242,24 @@ custom_domain = true
 
 [[env.production.services]]
 binding = "WORKER_SELF_REFERENCE"
-service = "helix-ai-frontend"
+service = "aerealith-ai-frontend"
 
 [[env.production.services]]
 binding = "AUTH_SERVICE"
-service = "helix-auth-service"
+service = "aerealith-auth-service"
 
 [[env.production.services]]
 binding = "USER_SERVICE"
-service = "helix-user-service"
+service = "aerealith-user-service"
 
 [env.production.vars]
 NEXTJS_ENV = "production"
-NEXT_PUBLIC_APP_NAME = "Helix AI"
+NEXT_PUBLIC_APP_NAME = "Aerealith AI"
 NEXT_PUBLIC_APP_ENV = "production"
+AEREALITH_ENVIRONMENT = "production"
+SERVICE_NAME = "aerealith-ai-frontend"
+OTEL_SERVICE_NAME = "aerealith-ai-frontend"
+PYROSCOPE_APPLICATION_NAME = "aerealith-ai-frontend"
 
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = "helix-ai"
 NEXT_PUBLIC_CLOUDINARY_API_KEY = "__SET_CLOUDINARY_API_KEY__"
@@ -252,7 +274,7 @@ DATABASE_APPLICATION_NAME = "helix-frontend-production"
 
 MIKRO_ORM_DEBUG = "false"
 
-AUTH_SERVICE_NAME = "helix-auth-service"
+AUTH_SERVICE_NAME = "aerealith-auth-service"
 AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
 
 AUTH_SERVICE_URL = "https://helixaibot.com/api/V1/auth"
@@ -269,7 +291,7 @@ AUTH_SERVICE_USERNAME_PATH_PREFIX = ""
 AUTH_SERVICE_SIGNUP_URL = "https://helixaibot.com/api/V1/auth/signup"
 AUTH_SERVICE_LOGIN_URL = "https://helixaibot.com/api/V1/auth/login"
 
-USER_SERVICE_NAME = "helix-user-service"
+USER_SERVICE_NAME = "aerealith-user-service"
 USER_SERVICE_BASE_PATH = "/api/V1/users"
 
 USER_SERVICE_URL = "https://helixaibot.com/api/V1/users"

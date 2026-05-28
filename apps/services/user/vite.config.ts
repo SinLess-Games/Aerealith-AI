@@ -20,6 +20,10 @@ export default defineConfig({
       ),
       '@aerealith-ai/db': resolve(workspaceRoot, 'libs/db/src/index.ts'),
       '@aerealith-ai/flags': resolve(workspaceRoot, 'libs/flags/src/index.ts'),
+      '@aerealith-ai/observability/profiler': resolve(
+        workspaceRoot,
+        'libs/observability/src/profiler/index.ts',
+      ),
     },
   },
 

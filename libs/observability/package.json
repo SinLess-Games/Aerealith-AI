@@ -3,16 +3,40 @@
   "version": "0.0.1",
   "private": true,
   "type": "commonjs",
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "dependencies": {
     "@grafana/faro-web-sdk": "^2.5.0",
     "@grafana/faro-web-tracing": "^2.5.0",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.216.0",
+    "@opentelemetry/resources": "^2.7.1",
+    "@opentelemetry/sdk-trace-base": "^2.7.1",
+    "@opentelemetry/semantic-conventions": "^1.32.0",
+    "hono": "^4.8.3",
     "@pyroscope/nodejs": "^0.4.11",
-    "tslib": "^2.3.0",
-    "winston": "^3.19.0"
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@grafana/faro-webpack-plugin": "^0.11.1"
+    "@grafana/faro-webpack-plugin": "^0.11.1",
+    "@types/node": "24.10.1"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js",
+      "default": "./dist/browser.js"
+    },
+    "./profiler": {
+      "types": "./dist/profiler/index.d.ts",
+      "import": "./dist/profiler/index.js",
+      "default": "./dist/profiler/index.js"
+    },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
   }
 }

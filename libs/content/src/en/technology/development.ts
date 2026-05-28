@@ -29,6 +29,7 @@ export const DevelopmentImage =
  * - Docker
  * - GitHub
  * - GitHub Actions
+ * - Cloudflare Flagship
  *
  * @public
  * @constant
@@ -75,6 +76,13 @@ export const developmentCards = [
         role: 'CI/CD Automation',
         detailedDescription:
           'GitHub Actions is GitHub’s workflow automation and CI/CD platform for building, testing, scanning, packaging, and deploying software directly from a repository. Aerealith AI can use GitHub Actions for automated checks, test pipelines, build workflows, release automation, documentation publishing, security validation, dependency workflows, and deployment handoffs.',
+      },
+      {
+        text: 'Cloudflare Flagship',
+        href: 'https://developers.cloudflare.com/flagship/',
+        role: 'Feature Flag Platform',
+        detailedDescription:
+          'Cloudflare Flagship provides feature flag management through OpenFeature-compatible workflows for progressive delivery, controlled rollouts, environment-specific behavior, and operational toggles. Aerealith AI can use Flagship to manage frontend, API, dashboard, registration, pricing, maintenance, and observability flags without hard-coding release state into application code.',
       },
     ],
     image: DevelopmentImage,

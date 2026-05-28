@@ -1,6 +1,10 @@
 import { Hono } from 'hono';
 
 import {
+  flagBoolean,
+  honoFlagMiddleware,
+} from '@aerealith-ai/flags';
+import {
   ERROR_RESPONSE_HEADER,
   createErrorResponseBody,
   honoCorsMiddleware,
@@ -8,6 +12,8 @@ import {
   honoRequestIdMiddleware,
   honoStructuredLoggerMiddleware,
 } from '@aerealith-ai/api';
+import { createLogger, type ObservabilityLogger } from '@aerealith-ai/observability';
+import { createHonoTraceMiddleware } from '@aerealith-ai/observability';
 
 import type { AuthContextMiddlewareOptions } from './middleware/auth-context.middleware';
 import { createAuthRoutes } from './routes';
@@ -19,6 +25,7 @@ export type AuthAppOptions = {
   authService: AuthService;
   authContext: Omit<AuthContextMiddlewareOptions, 'requireSession'>;
   emailVerificationMailer?: AuthRoutesEmailVerificationMailer;
+  logger?: ObservabilityLogger;
   serviceName?: string;
   version?: string;
 };
@@ -42,7 +49,7 @@ export type ReadinessResponse = {
   };
 };
 
-const DEFAULT_SERVICE_NAME = 'helix-auth-service';
+const DEFAULT_SERVICE_NAME = 'aerealith-auth-service';
 const DEFAULT_VERSION = '0.0.1';
 
 const HTTP_STATUS = {
@@ -61,20 +68,71 @@ export const createAuthApp = ({
   authService,
   authContext,
   emailVerificationMailer,
+  logger = createLogger({ service: DEFAULT_SERVICE_NAME }),
   serviceName = DEFAULT_SERVICE_NAME,
   version = DEFAULT_VERSION,
 }: AuthAppOptions): Hono<AuthHonoEnv> => {
   const app = new Hono<AuthHonoEnv>();
+
+  app.use('*', honoFlagMiddleware({ failOpen: true }));
 
   const emailVerificationMailerOptions =
     emailVerificationMailer === undefined ? {} : { emailVerificationMailer };
 
   app.use('*', honoRequestIdMiddleware());
   app.use('*', honoErrorMiddleware());
+  app.use('*', createHonoTraceMiddleware({ service: serviceName }));
   app.use('*', honoStructuredLoggerMiddleware());
   app.use('*', honoCorsMiddleware());
+  app.use('*', async (context, next) => {
+    const maintenanceMode = await flagBoolean(
+      context,
+      'maintenance-mode',
+      false,
+    );
+
+    if (maintenanceMode && !['/', '/health', '/ready'].includes(context.req.path)) {
+      return context.json(
+        {
+          success: false,
+          error: {
+            code: 'MAINTENANCE_MODE',
+            message: 'The auth service is temporarily unavailable.',
+          },
+        },
+        503,
+      );
+    }
+
+    const startedAt = Date.now();
+
+    try {
+      await next();
+    } finally {
+      logger.info('Auth request completed', {
+        success: context.res.ok,
+        failed: !context.res.ok,
+        metadata: {
+          method: context.req.method,
+          path: context.req.path,
+          status: context.res.status,
+          durationMs: Date.now() - startedAt,
+        },
+        tags: [context.res.ok ? 'success' : 'failed'],
+      });
+    }
+  });
 
   app.onError((error, c) => {
+    logger.error('Auth request failed', {
+      error,
+      metadata: {
+        method: c.req.method,
+        path: c.req.path,
+      },
+      tags: ['failed'],
+    });
+
     const body = createErrorResponseBody(c, error);
     const status =
       typeof error.status === 'number' &&

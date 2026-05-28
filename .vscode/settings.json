@@ -1,9 +1,87 @@
 {
-    "github.copilot.enable": {
-        "markdown": true
-    },
-    "files.watcherExclude": {
-        "**/.github/workflows/*": true
-    },
-    "editor.wordWrap": "on",
+  "github.copilot.enable": {
+    "*": true,
+    "markdown": true,
+    "plaintext": false,
+    "scminput": true
+  },
+  "editor.wordWrap": "on",
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": false,
+  "editor.detectIndentation": true,
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.rulers": [
+    100,
+    120
+  ],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "json",
+    "jsonc"
+  ],
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ],
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "js/ts.preferences.includePackageJsonAutoImports": "on",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.eol": "\n",
+  "files.associations": {
+    "*.json5": "jsonc",
+    "*.jsonc": "jsonc",
+    "*.toml": "toml",
+    "*.mdx": "markdown"
+  },
+  "files.watcherExclude": {
+    "**/.git/**": true,
+    "**/.nx/**": true,
+    "**/.turbo/**": true,
+    "**/.next/**": true,
+    "**/node_modules/**": true,
+    "**/.pnpm-store/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/coverage/**": true,
+    "**/.cache/**": true,
+    "**/tmp/**": true,
+    "**/temp/**": true
+  },
+  "search.exclude": {
+    "**/.git": true,
+    "**/.nx": true,
+    "**/.turbo": true,
+    "**/.next": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/coverage": true,
+    "**/.cache": true,
+    "**/pnpm-lock.yaml": false
+  },
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "package.json": "pnpm-lock.yaml, pnpm-workspace.yaml, nx.json, tsconfig.base.json, eslint.config.js, eslint.config.mjs, prettier.config.js, prettier.config.mjs",
+    "project.json": "tsconfig.json, tsconfig.lib.json, tsconfig.spec.json",
+    "*.ts": "${capture}.test.ts, ${capture}.spec.ts, ${capture}.d.ts",
+    "*.tsx": "${capture}.test.tsx, ${capture}.spec.tsx, ${capture}.d.ts"
+  },
+  "markdown.validate.enabled": true,
+  "markdownlint.config": {
+    "MD013": false,
+    "MD033": false
+  },
+  "json.schemaDownload.enable": true,
+  "terminal.integrated.defaultProfile.linux": "zsh"
 }

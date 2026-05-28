@@ -1,5 +1,5 @@
 # =============================================================================
-# Helix User Service — Cloudflare Worker
+# Aerealith User Service — Cloudflare Worker
 # -----------------------------------------------------------------------------
 # Deploy:
 #   pnpm exec wrangler deploy --config apps/services/user/wrangler.toml
@@ -27,7 +27,7 @@
 
 "$schema" = "../../../node_modules/wrangler/config-schema.json"
 
-name = "helix-user-service"
+name = "aerealith-user-service"
 main = "src/main.ts"
 
 compatibility_date = "2026-05-09"
@@ -75,17 +75,30 @@ service = "helix-auth-service"
 
 [vars]
 NODE_ENV = "development"
-SERVICE_NAME = "helix-user-service"
-SERVICE_DISPLAY_NAME = "Helix User Service"
+AEREALITH_ENVIRONMENT = "development"
+SERVICE_NAME = "aerealith-user-service"
+OTEL_SERVICE_NAME = "aerealith-user-service"
+PYROSCOPE_APPLICATION_NAME = "aerealith-user-service"
+SERVICE_DISPLAY_NAME = "Aerealith User Service"
 API_VERSION = "v1"
 API_BASE_PATH = "/api/V1/users"
 LOG_LEVEL = "debug"
 
-AUTH_SERVICE_NAME = "helix-auth-service"
+AUTH_SERVICE_NAME = "aerealith-auth-service"
 AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
 
-FRONTEND_SERVICE_NAME = "helix-ai-frontend"
+FRONTEND_SERVICE_NAME = "aerealith-ai-frontend"
+FLAGS_PROVIDER_NAME = "aerealith-flagship"
 FRONTEND_ORIGIN = "https://helixaibot.com"
+
+# Feature flags (Flagship)
+CLOUDFLARE_FLAGSHIP_APP_ID = "2a1ca9ba-b446-4cb8-b8eb-ab0f3985679f"
+CLOUDFLARE_FLAGSHIP_AUTH_TOKEN = "__SET_FLAGSHIP_AUTH_TOKEN__"
+
+# Pyroscope profiling (optional)
+PYROSCOPE_SERVER_ADDRESS = ""
+PYROSCOPE_BASIC_AUTH_USER = ""
+PYROSCOPE_BASIC_AUTH_PASSWORD = ""
 
 DATABASE_PROVIDER = "postgresql"
 DATABASE_SSL_ENABLED = "true"
@@ -123,7 +136,7 @@ local_protocol = "http"
 # =============================================================================
 
 [env.preview]
-name = "helix-user-service-preview"
+name = "aerealith-user-service-preview"
 workers_dev = true
 preview_urls = true
 
@@ -133,16 +146,20 @@ service = "helix-auth-service-preview"
 
 [env.preview.vars]
 NODE_ENV = "preview"
-SERVICE_NAME = "helix-user-service-preview"
-SERVICE_DISPLAY_NAME = "Helix User Service Preview"
+AEREALITH_ENVIRONMENT = "preview"
+SERVICE_NAME = "aerealith-user-service-preview"
+OTEL_SERVICE_NAME = "aerealith-user-service-preview"
+PYROSCOPE_APPLICATION_NAME = "aerealith-user-service-preview"
+SERVICE_DISPLAY_NAME = "Aerealith User Service Preview"
 API_VERSION = "v1"
 API_BASE_PATH = "/api/V1/users"
 LOG_LEVEL = "debug"
 
-AUTH_SERVICE_NAME = "helix-auth-service-preview"
+AUTH_SERVICE_NAME = "aerealith-auth-service-preview"
 AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
 
-FRONTEND_SERVICE_NAME = "helix-ai-frontend-preview"
+FRONTEND_SERVICE_NAME = "aerealith-ai-frontend-preview"
+FLAGS_PROVIDER_NAME = "aerealith-flagship"
 FRONTEND_ORIGIN = "https://helixaibot.com"
 
 DATABASE_PROVIDER = "postgresql"
@@ -168,7 +185,7 @@ head_sampling_rate = 1.0
 # =============================================================================
 
 [env.production]
-name = "helix-user-service"
+name = "aerealith-user-service"
 workers_dev = false
 preview_urls = false
 
@@ -185,16 +202,20 @@ service = "helix-auth-service"
 
 [env.production.vars]
 NODE_ENV = "production"
-SERVICE_NAME = "helix-user-service"
-SERVICE_DISPLAY_NAME = "Helix User Service"
+AEREALITH_ENVIRONMENT = "production"
+SERVICE_NAME = "aerealith-user-service"
+OTEL_SERVICE_NAME = "aerealith-user-service"
+PYROSCOPE_APPLICATION_NAME = "aerealith-user-service"
+SERVICE_DISPLAY_NAME = "Aerealith User Service"
 API_VERSION = "v1"
 API_BASE_PATH = "/api/V1/users"
 LOG_LEVEL = "info"
 
-AUTH_SERVICE_NAME = "helix-auth-service"
+AUTH_SERVICE_NAME = "aerealith-auth-service"
 AUTH_SERVICE_BASE_PATH = "/api/V1/auth"
 
-FRONTEND_SERVICE_NAME = "helix-ai-frontend"
+FRONTEND_SERVICE_NAME = "aerealith-ai-frontend"
+FLAGS_PROVIDER_NAME = "aerealith-flagship"
 FRONTEND_ORIGIN = "https://helixaibot.com"
 
 DATABASE_PROVIDER = "postgresql"

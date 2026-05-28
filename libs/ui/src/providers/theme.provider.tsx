@@ -15,6 +15,8 @@ import type {
   ThemeProviderProps,
 } from '../types';
 
+export type { ThemeProviderDefaultMode } from '../types';
+
 const DEFAULT_MODE: ThemeMode = 'dark';
 const STORAGE_KEY = 'hx-theme-mode';
 

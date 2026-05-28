@@ -1,5 +1,5 @@
 {
-  "name": "content",
+  "name": "@aerealith-ai/content",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/content/src",
   "projectType": "library",
@@ -12,6 +12,7 @@
         "outputPath": "dist/libs/content",
         "main": "libs/content/src/index.ts",
         "tsConfig": "libs/content/tsconfig.lib.json",
+        "buildLibsFromSource": false,
         "assets": ["libs/content/*.md"]
       }
     },

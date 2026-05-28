@@ -11,6 +11,7 @@ export * from './constants';
 
 // Browser-safe profile content only.
 // Do not export profile-edit-options here because it imports libs/db.
+export { profileScaffoldContent } from './profile';
 export { profileConnectionCategories } from './profile/connection-categories';
 export { profileTabs } from './profile/profile-tabs';
 export { profileSidebar } from './profile/sidebar';

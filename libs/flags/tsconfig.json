@@ -3,7 +3,9 @@
   "files": [],
   "include": [],
   "compilerOptions": {
-    "composite": true
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true
   },
   "references": [
     {

@@ -1,6 +1,6 @@
 {
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "name": "flags",
+  "name": "@aerealith-ai/flags",
   "projectType": "library",
   "sourceRoot": "libs/flags/src",
   "targets": {
@@ -14,16 +14,34 @@
         "command": "tsc -p libs/flags/tsconfig.lib.json"
       }
     },
+
+    "build.watch": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "command": "tsc -p libs/flags/tsconfig.lib.json --watch"
+      }
+    },
+
     "typecheck": {
       "executor": "nx:run-commands",
       "cache": true,
       "options": {
         "command": "tsc -p libs/flags/tsconfig.lib.json --noEmit"
       }
+    },
+
+    "lint": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "options": {
+        "command": "eslint libs/flags --ext .ts"
+      }
     }
   },
   "tags": [
     "scope:shared",
-    "type:feature-flags"
+    "type:feature-flags",
+    "runtime:isomorphic"
   ]
 }

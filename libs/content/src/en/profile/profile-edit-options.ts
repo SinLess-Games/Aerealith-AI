@@ -17,7 +17,7 @@ import {
   TimezoneGreenwich,
   TimezoneUtc,
   WeekStartDay,
-} from '@aerealith-ai/db';
+} from '@aerealith-ai/db/enums';
 
 import type { ProfileEditOptions, ProfileSelectOption } from '../../types';
 

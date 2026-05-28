@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+import { FRONTEND_FEATURE_FLAGS_HEADER, parseFrontendFeatureFlags } from '../../../../../lib/feature-flags';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -158,6 +161,23 @@ function createProxyErrorResponse(error: unknown): NextResponse {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const featureFlags = parseFrontendFeatureFlags(
+    request.headers.get(FRONTEND_FEATURE_FLAGS_HEADER),
+  );
+
+  if (featureFlags.registration === false) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'FEATURE_DISABLED',
+          message: 'Registration is currently disabled.',
+        },
+      },
+      { status: 503 },
+    );
+  }
+
   try {
     const authResponse = await fetch(getAuthSignupUrl(), {
       method: 'POST',

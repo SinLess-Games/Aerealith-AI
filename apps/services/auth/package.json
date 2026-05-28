@@ -5,6 +5,7 @@
   "main": "src/main.ts",
   "dependencies": {
     "@aerealith-ai/api": "workspace:*",
+    "@aerealith-ai/observability": "workspace:*",
     "@aerealith-ai/config": "workspace:*",
     "@aerealith-ai/contracts": "workspace:*",
     "@aerealith-ai/db": "workspace:*",

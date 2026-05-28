@@ -6,6 +6,8 @@ import {
   AuthRegisterSchemas,
   AuthSessionSchemas,
 } from '@aerealith-ai/contracts';
+import { flagBoolean } from '@aerealith-ai/flags';
+import { createLogger, type ObservabilityLogger } from '@aerealith-ai/observability';
 
 import type {
   AuthRegisterResult,
@@ -32,6 +34,7 @@ export type AuthEmailVerificationMailer = {
 export type AuthPublicRoutesOptions = {
   authService: AuthService;
   emailVerificationMailer?: AuthEmailVerificationMailer;
+  logger?: ObservabilityLogger;
 };
 
 export type ApiSuccessResponse<TData> = {
@@ -548,10 +551,31 @@ function createJsonResponse<TData>(
 export const createAuthPublicRoutes = ({
   authService,
   emailVerificationMailer,
+  logger = createLogger({ service: 'helix-auth-service' }),
 }: AuthPublicRoutesOptions): Hono<AuthHonoEnv> => {
   const routes = new Hono<AuthHonoEnv>();
 
   const handleRegister: Handler<AuthHonoEnv> = async (c) => {
+    const registrationEnabled = await flagBoolean(c, 'registration', false);
+
+    if (!registrationEnabled) {
+      return createJsonResponse(
+        {
+          success: false,
+          error: {
+            code: 'FEATURE_DISABLED',
+            message: 'Registration is currently disabled.',
+          },
+        },
+        503,
+      );
+    }
+
+    logger.info('Auth register request received', {
+      metadata: { path: c.req.path },
+      tags: ['auth', 'register'],
+    });
+
     const body = await readJsonBody(c);
 
     if (body === undefined) {
@@ -589,12 +613,24 @@ export const createAuthPublicRoutes = ({
 
         emailSent = true;
       } catch (error) {
+        logger.error('Auth verification email delivery failed', {
+          error,
+          metadata: { operation: 'register', username: result.user.username },
+          tags: ['auth', 'email', 'failed'],
+        });
+
         logEmailVerificationDeliveryFailure(error, {
           operation: 'register',
           username: result.user.username,
         });
       }
     }
+
+    logger.info('Auth register request completed', {
+      success: true,
+      metadata: { path: c.req.path, username: result.user.username },
+      tags: ['auth', 'register', 'success'],
+    });
 
     return createJsonResponse(
       successResponse(createRegisterPublicResponse(result, emailSent)),
@@ -606,6 +642,11 @@ export const createAuthPublicRoutes = ({
   routes.post('/signup', handleRegister);
 
   routes.post('/login', async (c) => {
+    logger.info('Auth login request received', {
+      metadata: { path: c.req.path },
+      tags: ['auth', 'login'],
+    });
+
     const body = await readJsonBody(c);
 
     if (body === undefined) {
@@ -628,6 +669,12 @@ export const createAuthPublicRoutes = ({
 
     const result = await authService.login(parsed.data, getRequestMetadata(c));
 
+    logger.info('Auth login request completed', {
+      success: true,
+      metadata: { path: c.req.path, username: parsed.data.username },
+      tags: ['auth', 'login', 'success'],
+    });
+
     return createJsonResponse(
       successResponse(result),
       HTTP_STATUS.OK,
@@ -636,6 +683,11 @@ export const createAuthPublicRoutes = ({
   });
 
   routes.post('/refresh', async (c) => {
+    logger.info('Auth refresh request received', {
+      metadata: { path: c.req.path },
+      tags: ['auth', 'refresh'],
+    });
+
     const body = await readJsonBody(c);
 
     if (body === undefined) {
@@ -661,6 +713,12 @@ export const createAuthPublicRoutes = ({
       getRequestMetadata(c),
     );
 
+    logger.info('Auth refresh request completed', {
+      success: true,
+      metadata: { path: c.req.path },
+      tags: ['auth', 'refresh', 'success'],
+    });
+
     return createJsonResponse(
       successResponse(result),
       HTTP_STATUS.OK,
@@ -669,6 +727,11 @@ export const createAuthPublicRoutes = ({
   });
 
   routes.post('/logout', async (c) => {
+    logger.info('Auth logout request received', {
+      metadata: { path: c.req.path },
+      tags: ['auth', 'logout'],
+    });
+
     const clearCookieHeaders = createClearAuthCookieHeaders(c.env);
     const body = await readJsonBody(c);
 
@@ -696,6 +759,12 @@ export const createAuthPublicRoutes = ({
     }
 
     const result = await authService.logout(parsed.data);
+
+    logger.info('Auth logout request completed', {
+      success: true,
+      metadata: { path: c.req.path },
+      tags: ['auth', 'logout', 'success'],
+    });
 
     return createJsonResponse(
       successResponse(result),

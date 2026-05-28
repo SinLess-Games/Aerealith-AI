@@ -2,8 +2,16 @@
 
 import * as React from 'react';
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import { BackgroundImage, HelixProviders } from '@aerealith-ai/ui';
 import { Image_Paths } from '@aerealith-ai/content';
+
+import { FeatureFlagsProvider } from '../components/feature-flags-provider';
+import {
+  createDefaultFrontendFeatureFlags,
+  parseFrontendFeatureFlags,
+  FRONTEND_FEATURE_FLAGS_HEADER,
+} from '../lib/feature-flags';
 
 import 'next-cloudinary/dist/cld-video-player.css';
 import './globals.scss';
@@ -150,7 +158,15 @@ type RootLayoutProps = {
   children: React.ReactNode;
 };
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({ children }: RootLayoutProps) {
+  const requestHeaders = await headers();
+  const featureFlags = {
+    ...createDefaultFrontendFeatureFlags(),
+    ...parseFrontendFeatureFlags(
+      requestHeaders.get(FRONTEND_FEATURE_FLAGS_HEADER),
+    ),
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
@@ -164,7 +180,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
           darkOverlayOpacity={0.28}
           priority
         >
-          <HelixProviders defaultMode="system">{children}</HelixProviders>
+          <HelixProviders defaultMode="system">
+            <FeatureFlagsProvider initialFlags={featureFlags}>
+              {children}
+            </FeatureFlagsProvider>
+          </HelixProviders>
         </BackgroundImage>
       </body>
     </html>
