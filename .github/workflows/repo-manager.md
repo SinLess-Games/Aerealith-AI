@@ -162,7 +162,9 @@ Use this exact island and replace existing content between markers:
 
 ```markdown
 <!-- repo-manager:relationships:start -->
+
 ## Related Work
+
 - Related Issues: #123
 - Related PRs: #456
 - Reason: Explicit linkage or strong scoped correlation.
