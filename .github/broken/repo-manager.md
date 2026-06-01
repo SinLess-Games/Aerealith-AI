@@ -1,191 +1,4 @@
----
-description: "Repo manager agent for Helix AI. Intelligently triages issues and pull requests, applies labels, assigns milestones, links related issues and PRs, and audits GitHub repository-management automation while preserving deterministic scripts as the source of truth."
 
-engine:
-  id: copilot
-  model: gpt-4o-mini
-
-on:
-  workflow_dispatch:
-
-  issues:
-    types:
-      - opened
-      - edited
-      - labeled
-      - reopened
-
-  pull_request_target:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - edited
-      - labeled
-
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/assignees.yaml"
-      - ".github/labeler.yaml"
-      - ".github/labels.yaml"
-      - ".github/milestones.yaml"
-      - ".github/projects/**"
-      - ".github/scripts/**"
-      - ".github/workflows/assign.yaml"
-      - ".github/workflows/labeler.yaml"
-      - ".github/workflows/sync-labels.yaml"
-      - ".github/workflows/sync-milestones.yaml"
-      - ".github/workflows/project-sync.yaml"
-      - ".github/workflows/project-backlog-automation.yaml"
-      - ".github/workflows/project-backfill.yaml"
-      - ".github/workflows/repo-manager.md"
-
-  schedule: "weekly on monday"
-
-  roles:
-    - admin
-    - maintainer
-    - write
-
-  bots:
-    - "github-actions[bot]"
-    - "dependabot[bot]"
-    - "renovate[bot]"
-
-permissions:
-  contents: read
-  issues: read
-  pull-requests: read
-
-safe-outputs:
-  add-comment:
-    target: "*"
-    max: 5
-    hide-older-comments: true
-
-  add-labels:
-    target: "*"
-    max: 12
-    blocked:
-      - "~*"
-      - "*[bot]"
-      - "security-reviewed"
-      - "approved"
-      - "merged"
-      - "do-not-merge"
-    allowed:
-      - "area:frontend"
-      - "area:e2e"
-      - "area:integrations"
-      - "area:services"
-      - "area:ui"
-      - "area:config"
-      - "area:db"
-      - "area:flags"
-      - "area:libs"
-      - "area:github-actions"
-      - "area:cloudflare"
-      - "area:docs"
-      - "area:kubernetes"
-      - "area:ansible"
-      - "area:terraform"
-      - "area:security"
-      - "area:observability"
-      - "area:ci"
-      - "kind:bug"
-      - "kind:feature"
-      - "kind:chore"
-      - "kind:refactor"
-      - "kind:security"
-      - "kind:documentation"
-      - "kind:test"
-      - "kind:release"
-      - "priority:critical"
-      - "priority:high"
-      - "priority:medium"
-      - "priority:low"
-      - "status:blocked"
-      - "status:needs-info"
-      - "status:ready"
-      - "status:backlog"
-      - "status:in-progress"
-      - "automation"
-      - "agentic-workflow"
-      - "repo-management"
-      - "report"
-      - "cloudflare"
-      - "deployment"
-      - "release"
-      - "dependencies"
-
-  remove-labels:
-    target: "*"
-    max: 6
-    allowed:
-      - "status:needs-info"
-      - "status:ready"
-      - "status:backlog"
-      - "status:blocked"
-      - "status:in-progress"
-      - "priority:low"
-      - "priority:medium"
-      - "priority:high"
-      - "priority:critical"
-
-  assign-milestone:
-    max: 5
-    allowed:
-      - Backlog
-      - MVP
-      - Frontend
-      - Cloudflare Setup
-      - Infrastructure
-      - Security
-      - Observability
-      - Agentic Workflows
-      - Documentation
-      - Release
-      - CI/CD
-
-  update-issue:
-    footer: true
-    target: "*"
-
-  update-pull-request:
-    footer: true
-    target: "*"
-
-  create-issue:
-    title-prefix: "[repo-manager] "
-    labels:
-      - report
-      - automation
-      - repo-management
-    max: 3
-
-tools:
-  github:
-  bash:
-    - "git status --short"
-    - "git diff -- .github"
-    - "find .github -maxdepth 4 -type f | sort"
-    - "test -f .github/assignees.yaml && sed -n '1,220p' .github/assignees.yaml || true"
-    - "test -f .github/labeler.yaml && sed -n '1,260p' .github/labeler.yaml || true"
-    - "test -f .github/labels.yaml && sed -n '1,260p' .github/labels.yaml || true"
-    - "test -f .github/milestones.yaml && sed -n '1,260p' .github/milestones.yaml || true"
-    - "find .github/projects -maxdepth 3 -type f -print -exec sed -n '1,220p' {} \\; 2>/dev/null || true"
-    - "find .github/scripts -maxdepth 4 -type f | sort"
-    - "gh issue list --state open --limit 100 --json number,title,body,labels,milestone,assignees,updatedAt,url"
-    - "gh pr list --state open --limit 100 --json number,title,body,labels,milestone,assignees,isDraft,mergeStateStatus,reviewDecision,updatedAt,url,headRefName,baseRefName"
-    - "gh label list --limit 300 --json name,color,description"
-    - "gh api repos/$GITHUB_REPOSITORY/milestones?state=all --paginate"
-    - "gh api repos/$GITHUB_REPOSITORY/issues?state=open\\&per_page=100 --paginate"
-    - "gh api repos/$GITHUB_REPOSITORY/pulls?state=open\\&per_page=100 --paginate"
-
-timeout-minutes: 30
----
 
 # Helix AI Repo Manager
 
@@ -228,28 +41,27 @@ Known app layout:
 
 - `apps`
 - `apps/e2e`
-- `apps/e2e/frontend-e2e`
-- `apps/e2e/.gitkeep`
 - `apps/frontend`
 - `apps/integrations`
-- `apps/integrations/.gitkeep`
 - `apps/services`
-- `apps/services/.gitkeep`
+- `apps/connectors`
+- `apps/engines`
+
 
 Important frontend deployment direction:
 
 - Frontend app lives at `apps/frontend`.
 - Frontend deploy target is Cloudflare Workers through OpenNext.
-- The public app domain is `helixaibot.com`.
+- The public app domain is `aerealith.com`.
 - Do not recommend Vercel for deployment.
-- Do not move the app to `app.helixaibot.com`.
+- Do not move the app to `app.aerealith.com`.
 - Prefer Nx targets over direct ad-hoc commands when targets exist.
 
 Important package direction:
 
-- Use `@helix-ai/config` for config.
-- Use `@helix-ai/flags` for flags.
-- Do not reintroduce stale `@helix-ai/hypertune` or `libs/hypertune` references.
+- Use `@aerealith-ai/config` for config.
+- Use `@aerealith-ai/flags` for flags.
+- Do not reintroduce stale `@aerealith-ai/hypertune` or `libs/hypertune` references.
 - Use pnpm.
 - Node runtime should be Node 24 where workflows need Node.
 - Keep Cloudflare local state and env files ignored:
@@ -359,6 +171,8 @@ Agent responsibilities for this workflow:
   - `apps/e2e/**`
   - `apps/integrations/**`
   - `apps/services/**`
+  - `apps/connectors/**`
+  - `apps/engines/**`
   - `libs/ui/**`
   - `libs/config/**`
   - `libs/db/**`
@@ -366,9 +180,6 @@ Agent responsibilities for this workflow:
   - `libs/**`
   - `.github/**`
   - `docs/**`
-  - `kubernetes/**`
-  - `ansible/**`
-  - `terraform/**`
 
 ### Label Sync Workflow
 
@@ -412,6 +223,8 @@ Suggested label families:
 - `area:e2e`
 - `area:integrations`
 - `area:services`
+- `area:connectors`
+- `area:engines`
 - `area:ui`
 - `area:config`
 - `area:db`
@@ -420,14 +233,6 @@ Suggested label families:
 - `area:cloudflare`
 - `area:docs`
 - `area:libs`
-- `kind:bug`
-- `kind:feature`
-- `kind:chore`
-- `kind:refactor`
-- `kind:security`
-- `kind:documentation`
-- `kind:test`
-- `kind:release`
 - `priority:critical`
 - `priority:high`
 - `priority:medium`
@@ -740,7 +545,7 @@ Use these mappings:
 
 - Cloudflare, OpenNext, Wrangler, Worker deploy, route/domain setup → `Cloudflare Setup`
 - Frontend app, pages, layout, UI integration, app router → `Frontend`
-- Shared UI components, MUI theme, components exported from `@helix-ai/ui` → `Frontend`
+- Shared UI components, MUI theme, components exported from `@aerealith-ai/ui` → `Frontend`
 - Auth, tokens, secrets, CodeQL, dependency audit, permissions → `Security`
 - Grafana, Faro, OpenTelemetry, traces, logs, metrics, dashboards → `Observability`
 - Agentic workflows, gh-aw, repo-manager, package-manager → `Agentic Workflows`
