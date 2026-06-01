@@ -39,13 +39,16 @@ on:
       - ".github/scripts/**"
       - ".github/workflows/**"
 
+  # Agentic workflow schedule syntax.
   schedule: "weekly on monday"
 
+  # Allowed actor roles for this workflow.
   roles:
     - admin
     - maintainer
     - write
 
+  # Bot accounts considered by workflow triage logic.
   bots:
     - "github-actions[bot]"
     - "dependabot[bot]"
