@@ -155,7 +155,7 @@ For each issue or PR in scope:
    - direct issue/PR URLs in body/comments
    - clear title/body/scope correlation when confidence is high
 6. Add or update a relationship section in issue/PR bodies for strong matches.
-7. After making any state changes (labels, milestone, assignees, reviewers, relationship updates), always add one concise comment that summarizes exactly what changed.
+7. After making any state changes (labels, milestone, assignees, reviewers, relationship updates), add one concise summary comment per run that lists exactly what changed.
 8. If automation gaps are found (missing labels, missing milestone definitions, missing assignment rules, unsafe workflow behavior), open a `[repo-manager]` report issue with actionable details.
 
 ## Relationship section format
