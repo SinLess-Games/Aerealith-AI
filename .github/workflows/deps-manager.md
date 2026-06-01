@@ -3,7 +3,7 @@ description: "Dependency manager for Helix AI. Reviews dependency issues and pul
 
 engine:
   id: copilot
-  model: claude-haiku-4.5
+  model: gpt-4o-mini
 
 on:
   workflow_dispatch:

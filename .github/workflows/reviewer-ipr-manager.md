@@ -3,7 +3,7 @@ description: "Reviewer IPR manager for Helix AI. Reviews open issues and pull re
 
 engine:
   id: copilot
-  model: claude-haiku-4.5
+  model: gpt-4o-mini
 
 on:
   workflow_dispatch:
