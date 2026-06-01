@@ -39,7 +39,7 @@ on:
       - ".github/scripts/**"
       - ".github/workflows/**"
 
-  # Agentic workflow schedule syntax.
+  # Agentic workflow schedule syntax (natural language for gh-aw, not GitHub Actions cron).
   schedule: "weekly on monday"
 
   # Allowed actor roles for this workflow.
