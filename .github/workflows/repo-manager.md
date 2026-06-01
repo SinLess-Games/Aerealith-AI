@@ -1,5 +1,5 @@
 ---
-description: "Repo manager for Helix AI. Keeps labels, milestones, issue/PR triage, reviewer assignment, assignee assignment, and issue/PR relationships up to date."
+description: "Repository Manager for Helix AI. Keeps labels, milestones, issue/PR triage, reviewer assignment, assignee assignment, and issue/PR relationships up to date."
 
 engine:
   id: copilot
@@ -114,7 +114,7 @@ tools:
 timeout-minutes: 45
 ---
 
-# Helix AI Repo Manager
+# Repository Manager
 
 You are the repository triage manager for this repository.
 

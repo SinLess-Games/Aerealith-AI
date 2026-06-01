@@ -22,7 +22,7 @@
 #
 # For more information: https://github.github.com/gh-aw/introduction/overview/
 #
-# Repo manager for Helix AI. Keeps labels, milestones, issue/PR triage, reviewer assignment, assignee assignment, and issue/PR relationships up to date.
+# Repository Manager for Helix AI. Keeps labels, milestones, issue/PR triage, reviewer assignment, assignee assignment, and issue/PR relationships up to date.
 #
 # Secrets used:
 #   - COPILOT_GITHUB_TOKEN
@@ -44,7 +44,7 @@
 #   - ghcr.io/github/github-mcp-server:v0.32.0
 #   - node:lts-alpine
 
-name: "Helix AI Repo Manager"
+name: "Repository Manager"
 "on":
   # bots: # Bots processed as bot check in pre-activation job
   # - github-actions[bot] # Bots processed as bot check in pre-activation job
@@ -98,7 +98,7 @@ concurrency:
   group: "gh-aw-${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}"
   cancel-in-progress: true
 
-run-name: "Helix AI Repo Manager"
+run-name: "Repository Manager"
 
 jobs:
   activation:
@@ -126,10 +126,11 @@ jobs:
           repository: github/gh-aw
           sparse-checkout: |
             actions
+          path: gh-aw
           persist-credentials: false
       - name: Setup Scripts
         id: setup
-        uses: ./actions/setup
+        uses: ./gh-aw/actions/setup
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
@@ -142,7 +143,7 @@ jobs:
           GH_AW_INFO_MODEL: "gpt-5.3-codex"
           GH_AW_INFO_VERSION: "1.0.21"
           GH_AW_INFO_AGENT_VERSION: "1.0.21"
-          GH_AW_INFO_WORKFLOW_NAME: "Helix AI Repo Manager"
+          GH_AW_INFO_WORKFLOW_NAME: "Repository Manager"
           GH_AW_INFO_EXPERIMENTAL: "false"
           GH_AW_INFO_SUPPORTS_TOOLS_ALLOWLIST: "true"
           GH_AW_INFO_STAGED: "false"
@@ -359,10 +360,11 @@ jobs:
           repository: github/gh-aw
           sparse-checkout: |
             actions
+          path: gh-aw
           persist-credentials: false
       - name: Setup Scripts
         id: setup
-        uses: ./actions/setup
+        uses: ./gh-aw/actions/setup
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
@@ -1123,10 +1125,11 @@ jobs:
           repository: github/gh-aw
           sparse-checkout: |
             actions
+          path: gh-aw
           persist-credentials: false
       - name: Setup Scripts
         id: setup
-        uses: ./actions/setup
+        uses: ./gh-aw/actions/setup
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
@@ -1151,7 +1154,7 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
           GH_AW_NOOP_MAX: "1"
-          GH_AW_WORKFLOW_NAME: "Helix AI Repo Manager"
+          GH_AW_WORKFLOW_NAME: "Repository Manager"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_AGENT_CONCLUSION: ${{ needs.agent.result }}
           GH_AW_NOOP_REPORT_AS_ISSUE: "true"
@@ -1167,7 +1170,7 @@ jobs:
         uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Helix AI Repo Manager"
+          GH_AW_WORKFLOW_NAME: "Repository Manager"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_DETECTION_CONCLUSION: ${{ needs.detection.outputs.detection_conclusion }}
           GH_AW_DETECTION_REASON: ${{ needs.detection.outputs.detection_reason }}
@@ -1184,7 +1187,7 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
           GH_AW_MISSING_TOOL_CREATE_ISSUE: "true"
-          GH_AW_WORKFLOW_NAME: "Helix AI Repo Manager"
+          GH_AW_WORKFLOW_NAME: "Repository Manager"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1198,7 +1201,7 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
           GH_AW_REPORT_INCOMPLETE_CREATE_ISSUE: "true"
-          GH_AW_WORKFLOW_NAME: "Helix AI Repo Manager"
+          GH_AW_WORKFLOW_NAME: "Repository Manager"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1212,7 +1215,7 @@ jobs:
         uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Helix AI Repo Manager"
+          GH_AW_WORKFLOW_NAME: "Repository Manager"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_AGENT_CONCLUSION: ${{ needs.agent.result }}
           GH_AW_WORKFLOW_ID: "repo-manager"
@@ -1256,10 +1259,11 @@ jobs:
           repository: github/gh-aw
           sparse-checkout: |
             actions
+          path: gh-aw
           persist-credentials: false
       - name: Setup Scripts
         id: setup
-        uses: ./actions/setup
+        uses: ./gh-aw/actions/setup
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
@@ -1328,8 +1332,8 @@ jobs:
         if: always() && steps.detection_guard.outputs.run_detection == 'true'
         uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
         env:
-          WORKFLOW_NAME: "Helix AI Repo Manager"
-          WORKFLOW_DESCRIPTION: "Repo manager for Helix AI. Keeps labels, milestones, issue/PR triage, reviewer assignment, assignee assignment, and issue/PR relationships up to date."
+          WORKFLOW_NAME: "Repository Manager"
+          WORKFLOW_DESCRIPTION: "Repository Manager for Helix AI. Keeps labels, milestones, issue/PR triage, reviewer assignment, assignee assignment, and issue/PR relationships up to date."
           HAS_PATCH: ${{ needs.agent.outputs.has_patch }}
         with:
           script: |
@@ -1415,10 +1419,11 @@ jobs:
           repository: github/gh-aw
           sparse-checkout: |
             actions
+          path: gh-aw
           persist-credentials: false
       - name: Setup Scripts
         id: setup
-        uses: ./actions/setup
+        uses: ./gh-aw/actions/setup
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
@@ -1457,7 +1462,7 @@ jobs:
       GH_AW_ENGINE_ID: "copilot"
       GH_AW_ENGINE_MODEL: "gpt-5.3-codex"
       GH_AW_WORKFLOW_ID: "repo-manager"
-      GH_AW_WORKFLOW_NAME: "Helix AI Repo Manager"
+      GH_AW_WORKFLOW_NAME: "Repository Manager"
     outputs:
       add_reviewer_reviewers_added: ${{ steps.process_safe_outputs.outputs.reviewers_added }}
       assign_milestone_milestone_assigned: ${{ steps.process_safe_outputs.outputs.milestone_assigned }}
@@ -1479,10 +1484,11 @@ jobs:
           repository: github/gh-aw
           sparse-checkout: |
             actions
+          path: gh-aw
           persist-credentials: false
       - name: Setup Scripts
         id: setup
-        uses: ./actions/setup
+        uses: ./gh-aw/actions/setup
         with:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
