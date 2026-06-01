@@ -146,6 +146,7 @@ Always prefer these files over guesswork.
 For each issue or PR in scope:
 
 1. Determine missing and conflicting labels, then add/remove labels.
+   - Prefer these label families: `status:*`, `area:*`, and `severity:*`.
 2. Determine whether a milestone from `.github/milestones.yaml` should be assigned.
 3. Determine assignees from `.github/assignees.yaml` and assign only configured users.
 4. For PRs, determine reviewers from `.github/assignees.yaml` and assign only configured users.
@@ -154,7 +155,8 @@ For each issue or PR in scope:
    - direct issue/PR URLs in body/comments
    - clear title/body/scope correlation when confidence is high
 6. Add or update a relationship section in issue/PR bodies for strong matches.
-7. If automation gaps are found (missing labels, missing milestone definitions, missing assignment rules, unsafe workflow behavior), open a `[repo-manager]` report issue with actionable details.
+7. After making any state changes (labels, milestone, assignees, reviewers, relationship updates), always add one concise comment that summarizes exactly what changed.
+8. If automation gaps are found (missing labels, missing milestone definitions, missing assignment rules, unsafe workflow behavior), open a `[repo-manager]` report issue with actionable details.
 
 ## Relationship section format
 
@@ -175,7 +177,7 @@ Use this exact island and replace existing content between markers:
 - Do not assign milestone when confidence is low.
 - Do not assign users not present in `.github/assignees.yaml`.
 - Do not remove labels unless they conflict with current triage state.
-- Prefer low-noise actions: only comment when context is helpful.
+- Use a concise summary comment after each run that performs any change.
 
 ## Safety rules
 

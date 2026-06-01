@@ -59,6 +59,18 @@ area:services:
           - any-glob-to-any-file:
               - "apps/services/**"
 
+area:connectors:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "apps/connectors/**"
+
+area:engines:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - "apps/engines/**"
+
 # -----------------------------------------------------------------------------
 # Libraries
 # -----------------------------------------------------------------------------
