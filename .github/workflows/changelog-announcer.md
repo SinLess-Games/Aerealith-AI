@@ -3,7 +3,7 @@ description: "Changelog announcer for Helix AI. Builds a polished changelog from
 
 engine:
   id: copilot
-  model: gpt-4o-mini
+  model: gpt-4-turbo
 
 on:
   workflow_dispatch:
