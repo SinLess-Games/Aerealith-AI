@@ -136,14 +136,14 @@ export const createAuthApp = ({
     const body = createErrorResponseBody(c, error);
     const status =
       typeof error.status === 'number' &&
-      Number.isInteger(error.status) &&
-      error.status >= 400 &&
-      error.status <= 599
+        Number.isInteger(error.status) &&
+        error.status >= 400 &&
+        error.status <= 599
         ? error.status
         : typeof error.statusCode === 'number' &&
-            Number.isInteger(error.statusCode) &&
-            error.statusCode >= 400 &&
-            error.statusCode <= 599
+          Number.isInteger(error.statusCode) &&
+          error.statusCode >= 400 &&
+          error.statusCode <= 599
           ? error.statusCode
           : 500;
 

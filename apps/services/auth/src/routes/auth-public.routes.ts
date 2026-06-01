@@ -1,5 +1,5 @@
-import { Hono } from 'hono';
 import type { Context, Handler } from 'hono';
+import { Hono } from 'hono';
 
 import {
   AuthLoginSchemas,
@@ -208,12 +208,12 @@ const logEmailVerificationDeliveryFailure = (
   const errorPayload =
     error instanceof Error
       ? {
-          name: error.name,
-          message: error.message,
-        }
+        name: error.name,
+        message: error.message,
+      }
       : {
-          message: String(error),
-        };
+        message: String(error),
+      };
 
   console.error(
     JSON.stringify({
@@ -556,7 +556,7 @@ export const createAuthPublicRoutes = ({
   const routes = new Hono<AuthHonoEnv>();
 
   const handleRegister: Handler<AuthHonoEnv> = async (c) => {
-    const registrationEnabled = await flagBoolean(c, 'registration', false);
+    const registrationEnabled = await flagBoolean(c, 'registration', true);
 
     if (!registrationEnabled) {
       return createJsonResponse(
@@ -604,26 +604,27 @@ export const createAuthPublicRoutes = ({
     let emailSent = false;
 
     if (emailVerificationMailer !== undefined) {
-      try {
-        await emailVerificationMailer.sendEmailVerification({
+      void emailVerificationMailer
+        .sendEmailVerification({
           user: result.user,
           emailVerificationToken: result.emailVerificationToken,
           request: createEmailVerificationMailRequest(c),
-        });
+        })
+        .then(() => {
+          emailSent = true;
+        })
+        .catch((error) => {
+          logger.error('Auth verification email delivery failed', {
+            error,
+            metadata: { operation: 'register', username: result.user.username },
+            tags: ['auth', 'email', 'failed'],
+          });
 
-        emailSent = true;
-      } catch (error) {
-        logger.error('Auth verification email delivery failed', {
-          error,
-          metadata: { operation: 'register', username: result.user.username },
-          tags: ['auth', 'email', 'failed'],
+          logEmailVerificationDeliveryFailure(error, {
+            operation: 'register',
+            username: result.user.username,
+          });
         });
-
-        logEmailVerificationDeliveryFailure(error, {
-          operation: 'register',
-          username: result.user.username,
-        });
-      }
     }
 
     logger.info('Auth register request completed', {

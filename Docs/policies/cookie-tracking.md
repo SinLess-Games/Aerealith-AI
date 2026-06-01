@@ -1,6 +1,6 @@
 ---
 title: Cookie and Tracking Policy
-description: Explains how Helix AI uses cookies, pixels, local storage, analytics, device identifiers, and similar tracking technologies.
+description: Explains how Aerealith AI uses cookies, pixels, local storage, analytics, device identifiers, and similar tracking technologies.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,9 +11,9 @@ status: draft
 
 ## 1. Purpose
 
-This Cookie and Tracking Policy explains how Helix AI uses cookies, pixels, local storage, software development kits, analytics tags, device identifiers, log data, and similar tracking technologies.
+This Cookie and Tracking Policy explains how Aerealith AI uses cookies, pixels, local storage, software development kits, analytics tags, device identifiers, log data, and similar tracking technologies.
 
-Helix AI is operated by SinLess Games LLC.
+Aerealith AI is operated by SinLess Games LLC.
 
 This policy explains:
 
@@ -28,7 +28,7 @@ This policy should be read together with our [Privacy Policy](./privacy-policy.m
 
 ## 2. Scope
 
-This policy applies to Helix AI services, including:
+This policy applies to Aerealith AI services, including:
 
 - Websites
 - Documentation sites
@@ -45,7 +45,7 @@ This policy applies to Helix AI services, including:
 - Analytics dashboards
 - Community or marketing pages operated by SinLess Games LLC
 
-This policy applies to visitors, users, developers, organization members, workspace administrators, customers, and anyone who interacts with Helix AI services.
+This policy applies to visitors, users, developers, organization members, workspace administrators, customers, and anyone who interacts with Aerealith AI services.
 
 Some self-hosted, hybrid, private, or air-gapped deployments may use different cookie, analytics, or tracking configurations controlled by the deploying organization.
 
@@ -67,11 +67,11 @@ Cookies may help a service:
 - Provide analytics
 - Support marketing or attribution, where enabled
 
-Cookies may be set by Helix AI directly or by third-party providers that help operate Helix AI.
+Cookies may be set by Aerealith AI directly or by third-party providers that help operate Aerealith AI.
 
 ## 4. Similar Tracking Technologies
 
-In addition to cookies, Helix AI may use similar technologies, including:
+In addition to cookies, Aerealith AI may use similar technologies, including:
 
 - Local storage
 - Session storage
@@ -95,21 +95,21 @@ In this policy, “cookies” may refer to cookies and similar tracking technolo
 
 ## 5. First-Party and Third-Party Cookies
 
-Helix AI may use both first-party and third-party cookies.
+Aerealith AI may use both first-party and third-party cookies.
 
-**First-party cookies** are set by Helix AI or domains controlled by SinLess Games LLC.
+**First-party cookies** are set by Aerealith AI or domains controlled by SinLess Games LLC.
 
-**Third-party cookies** are set by service providers or third-party platforms used by Helix AI, such as hosting, analytics, authentication, payments, support, monitoring, marketing, or embedded content providers.
+**Third-party cookies** are set by service providers or third-party platforms used by Aerealith AI, such as hosting, analytics, authentication, payments, support, monitoring, marketing, or embedded content providers.
 
 Third-party providers may process data according to their own terms, privacy policies, and cookie policies.
 
 ## 6. Cookie Categories
 
-Helix AI may use the following categories of cookies and tracking technologies.
+Aerealith AI may use the following categories of cookies and tracking technologies.
 
 ### 6.1 Strictly Necessary Cookies
 
-Strictly necessary cookies are required for Helix AI to function.
+Strictly necessary cookies are required for Aerealith AI to function.
 
 These may be used for:
 
@@ -127,13 +127,13 @@ These may be used for:
 - Organization access controls
 - Service reliability
 
-These cookies cannot usually be disabled through Helix AI cookie settings because the service may not work properly without them.
+These cookies cannot usually be disabled through Aerealith AI cookie settings because the service may not work properly without them.
 
 Users may block these cookies through browser settings, but some features may stop working.
 
 ### 6.2 Security Cookies
 
-Security cookies and related technologies help protect users, organizations, and Helix AI.
+Security cookies and related technologies help protect users, organizations, and Aerealith AI.
 
 These may be used for:
 
@@ -170,7 +170,7 @@ Preference cookies may improve user experience but are not always required for b
 
 ### 6.4 Analytics and Performance Cookies
 
-Analytics and performance cookies help us understand how Helix AI is used and how the service performs.
+Analytics and performance cookies help us understand how Aerealith AI is used and how the service performs.
 
 These may be used to measure:
 
@@ -211,7 +211,7 @@ Disabling functional cookies may reduce product quality or disable some features
 
 ### 6.6 Personalization Cookies
 
-Personalization cookies and related technologies may help customize the Helix AI experience.
+Personalization cookies and related technologies may help customize the Aerealith AI experience.
 
 These may be used for:
 
@@ -230,7 +230,7 @@ Memory behavior is governed by the [Privacy Policy](./privacy-policy.md), [Data 
 
 ### 6.7 Advertising and Marketing Cookies
 
-Helix AI may use advertising or marketing cookies where enabled.
+Aerealith AI may use advertising or marketing cookies where enabled.
 
 These may be used for:
 
@@ -257,7 +257,7 @@ Payment cookies may be required to complete checkout, detect fraud, process tran
 
 ### 6.9 Embedded Content Cookies
 
-Helix AI pages may include embedded content from third-party providers.
+Aerealith AI pages may include embedded content from third-party providers.
 
 Embedded content may include:
 
@@ -277,7 +277,7 @@ Third-party embedded content may set cookies or collect information when users i
 
 ## 7. Why We Use Cookies and Tracking Technologies
 
-Helix AI may use cookies and tracking technologies to:
+Aerealith AI may use cookies and tracking technologies to:
 
 - Provide the service
 - Authenticate users
@@ -303,7 +303,7 @@ Helix AI may use cookies and tracking technologies to:
 
 ## 8. Consent
 
-Where required by law, Helix AI will ask for consent before using non-essential cookies.
+Where required by law, Aerealith AI will ask for consent before using non-essential cookies.
 
 Non-essential cookies may include:
 
@@ -320,7 +320,7 @@ Strictly necessary cookies may be used without consent when they are required to
 
 ## 9. Cookie Preference Tool
 
-Where available, users may manage cookie preferences through the Helix AI cookie banner, cookie settings page, privacy settings, account settings, or another consent management tool.
+Where available, users may manage cookie preferences through the Aerealith AI cookie banner, cookie settings page, privacy settings, account settings, or another consent management tool.
 
 Users may be able to:
 
@@ -337,11 +337,11 @@ Withdrawing consent does not affect processing that occurred before consent was 
 
 ## 10. No Dark Patterns
 
-Helix AI should not use deceptive or manipulative cookie consent designs.
+Aerealith AI should not use deceptive or manipulative cookie consent designs.
 
 Cookie choice interfaces should be designed to be clear, fair, and understandable.
 
-Where practical, Helix AI should avoid:
+Where practical, Aerealith AI should avoid:
 
 - Hiding rejection options
 - Making rejection unnecessarily difficult
@@ -368,13 +368,13 @@ Browser controls may allow users to:
 - Use private browsing
 - Control site permissions
 
-Blocking or deleting cookies may affect Helix AI functionality.
+Blocking or deleting cookies may affect Aerealith AI functionality.
 
 For example, users may be signed out, preferences may be lost, checkout may fail, or some app features may not work correctly.
 
 ## 12. Global Privacy Control and Similar Signals
 
-Helix AI may recognize legally required browser-based opt-out signals, such as Global Privacy Control, where applicable.
+Aerealith AI may recognize legally required browser-based opt-out signals, such as Global Privacy Control, where applicable.
 
 Where required by law, a valid opt-out signal may be treated as a request to opt out of sale, sharing, targeted advertising, or similar processing.
 
@@ -396,9 +396,9 @@ Some browsers may send “Do Not Track” signals.
 
 There is no single universal standard for how all websites must respond to Do Not Track signals.
 
-Helix AI may not respond to Do Not Track signals unless required by applicable law or configured to do so.
+Aerealith AI may not respond to Do Not Track signals unless required by applicable law or configured to do so.
 
-Where legally required, Helix AI may instead recognize Global Privacy Control or other legally recognized opt-out preference signals.
+Where legally required, Aerealith AI may instead recognize Global Privacy Control or other legally recognized opt-out preference signals.
 
 ## 14. Sale, Sharing, and Targeted Advertising
 
@@ -412,13 +412,13 @@ Where required, users may have the right to opt out of:
 - Cross-context behavioral advertising
 - Certain profiling activities
 
-Helix AI should provide opt-out controls where required.
+Aerealith AI should provide opt-out controls where required.
 
 Users may contact us using the information in this policy to request additional help with privacy choices.
 
 ## 15. Cookie Table
 
-Helix AI should maintain a current cookie table before this policy is published.
+Aerealith AI should maintain a current cookie table before this policy is published.
 
 The cookie table should include:
 
@@ -438,10 +438,10 @@ Example table structure:
 
 | Cookie / Technology | Provider | Category | Purpose | Duration | First-Party or Third-Party |
 |---|---|---|---|---|---|
-| `session` | Helix AI | Strictly Necessary | Maintains authenticated sessions | Session or limited duration | First-party |
-| `csrf` | Helix AI | Security | Helps prevent cross-site request forgery | Session or limited duration | First-party |
-| `cookie_consent` | Helix AI | Strictly Necessary | Stores cookie preference choices | Limited duration | First-party |
-| `theme` | Helix AI | Preference | Remembers light or dark mode | Limited duration | First-party |
+| `session` | Aerealith AI | Strictly Necessary | Maintains authenticated sessions | Session or limited duration | First-party |
+| `csrf` | Aerealith AI | Security | Helps prevent cross-site request forgery | Session or limited duration | First-party |
+| `cookie_consent` | Aerealith AI | Strictly Necessary | Stores cookie preference choices | Limited duration | First-party |
+| `theme` | Aerealith AI | Preference | Remembers light or dark mode | Limited duration | First-party |
 | `analytics_id` | Analytics provider | Analytics | Measures usage and performance | Limited duration | Third-party or first-party |
 | `payment_session` | Payment processor | Payment | Supports checkout and fraud prevention | Session or limited duration | Third-party |
 
@@ -449,7 +449,7 @@ Before publishing, replace this example table with the actual cookies used in pr
 
 ## 16. Potential Service Providers
 
-Depending on configuration, Helix AI may use service providers that set cookies or similar technologies.
+Depending on configuration, Aerealith AI may use service providers that set cookies or similar technologies.
 
 These may include providers for:
 
@@ -488,14 +488,14 @@ Before publishing, confirm the actual providers and ensure they match the [Subpr
 
 ## 17. Analytics
 
-Helix AI may use analytics to understand service usage, improve product quality, and monitor performance.
+Aerealith AI may use analytics to understand service usage, improve product quality, and monitor performance.
 
 Analytics may include:
 
 - Page visits
 - Clicks
 - Feature usage
-- Search terms within Helix AI documentation or apps
+- Search terms within Aerealith AI documentation or apps
 - Signup and onboarding progress
 - Subscription conversion
 - Error rates
@@ -511,7 +511,7 @@ Where required, analytics cookies will only be used after consent.
 
 ## 18. Product Telemetry
 
-Helix AI may collect product telemetry to improve reliability, security, and user experience.
+Aerealith AI may collect product telemetry to improve reliability, security, and user experience.
 
 Product telemetry may include:
 
@@ -527,13 +527,13 @@ Product telemetry may include:
 - Documentation search behavior
 - Subscription entitlement checks
 
-Product telemetry may be necessary for operating, securing, debugging, and improving Helix AI.
+Product telemetry may be necessary for operating, securing, debugging, and improving Aerealith AI.
 
 When telemetry is not strictly necessary, users or organizations may be provided controls where required or where supported by the product.
 
 ## 19. Error Reporting and Observability
 
-Helix AI may use error reporting and observability tools to detect, diagnose, and resolve technical issues.
+Aerealith AI may use error reporting and observability tools to detect, diagnose, and resolve technical issues.
 
 These tools may collect:
 
@@ -550,11 +550,11 @@ These tools may collect:
 - User or organization identifiers, where needed
 - Logs related to service reliability
 
-Helix AI should avoid collecting sensitive prompt content, secrets, credentials, private keys, payment details, or unnecessary personal data in error reporting tools where practical.
+Aerealith AI should avoid collecting sensitive prompt content, secrets, credentials, private keys, payment details, or unnecessary personal data in error reporting tools where practical.
 
 ## 20. Authentication and Session Tracking
 
-Helix AI may use cookies and similar technologies to manage authentication and sessions.
+Aerealith AI may use cookies and similar technologies to manage authentication and sessions.
 
 These may support:
 
@@ -575,11 +575,11 @@ Authentication cookies are typically required for account-based services.
 
 ## 21. AI Memory and Cookie Tracking
 
-Cookies are not the same as Helix AI memory.
+Cookies are not the same as Aerealith AI memory.
 
 Cookies may remember browser-level or device-level settings.
 
-Helix AI memory may remember user-controlled preferences, project context, assistant settings, or other information according to user or organization settings.
+Aerealith AI memory may remember user-controlled preferences, project context, assistant settings, or other information according to user or organization settings.
 
 Memory behavior is governed by:
 
@@ -590,13 +590,13 @@ Memory behavior is governed by:
 - Organization settings
 - Applicable deployment configuration
 
-Users should not rely on deleting cookies as the only way to delete Helix AI memory.
+Users should not rely on deleting cookies as the only way to delete Aerealith AI memory.
 
-To manage memory, use Helix AI memory controls or follow the procedures in the Privacy Policy and Data Policy.
+To manage memory, use Aerealith AI memory controls or follow the procedures in the Privacy Policy and Data Policy.
 
 ## 22. Local Storage and Device Storage
 
-Helix AI may use browser or device storage to support app functionality.
+Aerealith AI may use browser or device storage to support app functionality.
 
 This may include:
 
@@ -614,7 +614,7 @@ Clearing local storage may remove saved settings, sign users out, or affect app 
 
 ## 23. Mobile and Desktop Applications
 
-If Helix AI offers mobile or desktop applications, those apps may use technologies similar to cookies.
+If Aerealith AI offers mobile or desktop applications, those apps may use technologies similar to cookies.
 
 These may include:
 
@@ -634,7 +634,7 @@ Some app features may not work if required permissions or identifiers are disabl
 
 ## 24. Browser Extensions
 
-If Helix AI offers browser extensions, the extension may use local storage, extension storage, permissions, and browser APIs.
+If Aerealith AI offers browser extensions, the extension may use local storage, extension storage, permissions, and browser APIs.
 
 Browser extension data use should be disclosed in the extension listing, privacy documentation, and permission prompts.
 
@@ -644,7 +644,7 @@ Users may disable or remove extensions through browser settings.
 
 ## 25. Developer APIs and SDKs
 
-Helix AI APIs, SDKs, and developer tools may collect technical information needed to operate and secure developer services.
+Aerealith AI APIs, SDKs, and developer tools may collect technical information needed to operate and secure developer services.
 
 This may include:
 
@@ -658,11 +658,11 @@ This may include:
 - Marketplace usage
 - Abuse prevention signals
 
-Developers are responsible for providing any required notices to their own users when they integrate Helix AI into their applications, websites, workflows, plugins, or services.
+Developers are responsible for providing any required notices to their own users when they integrate Aerealith AI into their applications, websites, workflows, plugins, or services.
 
 ## 26. Marketplace Tracking
 
-Helix AI marketplace features may use cookies and tracking technologies to support:
+Aerealith AI marketplace features may use cookies and tracking technologies to support:
 
 - Publisher accounts
 - Plugin installation
@@ -684,7 +684,7 @@ Marketplace behavior is also governed by applicable marketplace, developer, and 
 
 ## 27. Email Tracking
 
-Helix AI may send emails related to accounts, billing, security, support, product updates, documentation, or marketing.
+Aerealith AI may send emails related to accounts, billing, security, support, product updates, documentation, or marketing.
 
 Some emails may include tracking technologies to understand:
 
@@ -701,7 +701,7 @@ Transactional, account, security, billing, legal, and service-related emails may
 
 ## 28. Advertising and Marketing Partners
 
-Helix AI may use advertising or marketing partners where enabled.
+Aerealith AI may use advertising or marketing partners where enabled.
 
 These partners may help with:
 
@@ -742,7 +742,7 @@ Analytics data should be retained only as long as reasonably needed for product,
 
 ## 30. Data Minimization
 
-Helix AI should minimize cookie and tracking data where practical.
+Aerealith AI should minimize cookie and tracking data where practical.
 
 This may include:
 
@@ -758,7 +758,7 @@ This may include:
 
 ## 31. Children and Minors
 
-Helix AI is not intended to use cookies or tracking technologies to knowingly target children with behavioral advertising.
+Aerealith AI is not intended to use cookies or tracking technologies to knowingly target children with behavioral advertising.
 
 Use by minors is governed by the [Underage Policy](./underage-policy.md).
 
@@ -766,7 +766,7 @@ If we learn that tracking data has been collected from a child in violation of a
 
 ## 32. Sensitive Data
 
-Helix AI should not intentionally collect sensitive data through cookies unless necessary, disclosed, lawful, and appropriately protected.
+Aerealith AI should not intentionally collect sensitive data through cookies unless necessary, disclosed, lawful, and appropriately protected.
 
 Sensitive data may include:
 
@@ -798,11 +798,11 @@ Approximate location may be used for:
 - Content localization
 - Service availability
 
-Helix AI should not collect precise location information unless a feature requires it and appropriate notice or consent is provided.
+Aerealith AI should not collect precise location information unless a feature requires it and appropriate notice or consent is provided.
 
 ## 34. Cross-Device Tracking
 
-Helix AI may associate activity across devices when a user signs in to the same account.
+Aerealith AI may associate activity across devices when a user signs in to the same account.
 
 This may help:
 
@@ -814,7 +814,7 @@ This may help:
 - Detect suspicious access
 - Improve product experience
 
-Helix AI should not use cross-device tracking for advertising without appropriate consent or legal basis where required.
+Aerealith AI should not use cross-device tracking for advertising without appropriate consent or legal basis where required.
 
 ## 35. Organization and Enterprise Controls
 
@@ -833,7 +833,7 @@ Organization controls may include:
 - Disabling marketing trackers in organization workspaces
 - Using private or air-gapped deployments
 
-Organization administrators are responsible for configuring Helix AI according to their legal, security, and compliance requirements.
+Organization administrators are responsible for configuring Aerealith AI according to their legal, security, and compliance requirements.
 
 ## 36. Self-Hosted, Hybrid, and Air-Gapped Deployments
 
@@ -856,7 +856,7 @@ The operator of a self-hosted or air-gapped deployment is responsible for config
 
 Cookie and tracking laws vary by location.
 
-Depending on where users are located, Helix AI may provide different consent notices, settings, opt-outs, or disclosures.
+Depending on where users are located, Aerealith AI may provide different consent notices, settings, opt-outs, or disclosures.
 
 Where applicable law gives users rights that cannot be waived, this policy does not limit those rights.
 
@@ -886,17 +886,17 @@ Privacy rights are explained in more detail in the [Privacy Policy](./privacy-po
 Where supported, users can manage cookie choices by:
 
 1. Opening the cookie settings link in the website footer.
-2. Opening privacy settings in the Helix AI account.
+2. Opening privacy settings in the Aerealith AI account.
 3. Adjusting browser cookie settings.
 4. Clearing cookies and site data in the browser.
 5. Using supported browser privacy signals.
 6. Contacting us using the contact information in this policy.
 
-Before publishing this policy, update this section with the exact location of Helix AI cookie settings.
+Before publishing this policy, update this section with the exact location of Aerealith AI cookie settings.
 
 ## 40. Impact of Disabling Cookies
 
-Disabling cookies may affect Helix AI.
+Disabling cookies may affect Aerealith AI.
 
 Possible effects include:
 
@@ -916,7 +916,7 @@ Strictly necessary cookies are required for core service functionality.
 
 ## 41. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy-policy.md)
@@ -947,7 +947,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, cookie banner, account settings, email, release notes, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 44. Legal Review Notice
 

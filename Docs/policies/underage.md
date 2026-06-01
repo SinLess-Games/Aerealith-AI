@@ -1,6 +1,6 @@
 ---
 title: Underage Policy
-description: Explains how Helix AI handles minors, age-restricted content, parental controls, guardian consent, child safety, age assurance, and underage account protections.
+description: Explains how Aerealith AI handles minors, age-restricted content, parental controls, guardian consent, child safety, age assurance, and underage account protections.
 effective_date: 2026-05-19
 last_updated: 2026-05-19
 owner: SinLess Games LLC
@@ -11,15 +11,15 @@ status: draft
 
 ## 1. Purpose
 
-This Underage Policy explains how SinLess Games LLC handles minors, age-restricted content, parental controls, guardian consent, child safety, and underage account protections for Helix AI.
+This Underage Policy explains how SinLess Games LLC handles minors, age-restricted content, parental controls, guardian consent, child safety, and underage account protections for Aerealith AI.
 
-Helix AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because some Helix AI features may involve AI conversations, memory, files, integrations, automations, marketplace items, user-generated content, analytics, and connected services, minors require additional protections.
+Aerealith AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because some Aerealith AI features may involve AI conversations, memory, files, integrations, automations, marketplace items, user-generated content, analytics, and connected services, minors require additional protections.
 
 SinLess Games LLC will use lawful and verifiable means to help protect age-restricted content and will provide parental or guardian controls for minors where supported and legally required.
 
 ## 2. Scope
 
-This policy applies to Helix AI services, including:
+This policy applies to Aerealith AI services, including:
 
 - Websites
 - Web applications
@@ -57,11 +57,11 @@ This policy applies to:
 - Marketplace publishers
 - API users
 - Enterprise customers
-- Anyone who accesses or uses Helix AI through an account, workspace, integration, automation, shared agent, plugin, API key, or connected service
+- Anyone who accesses or uses Aerealith AI through an account, workspace, integration, automation, shared agent, plugin, API key, or connected service
 
 ## 3. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy.md)
@@ -103,7 +103,7 @@ For this policy:
 
 ## 5. Core Commitments
 
-SinLess Games LLC intends to follow these underage safety commitments for Helix AI:
+SinLess Games LLC intends to follow these underage safety commitments for Aerealith AI:
 
 1. Protect minors from inappropriate and age-restricted content.
 2. Use lawful and verifiable age-assurance methods where required or appropriate.
@@ -120,21 +120,21 @@ SinLess Games LLC intends to follow these underage safety commitments for Helix 
 
 ## 6. Minimum Age
 
-Helix AI may require users to meet a minimum age before creating an account or using certain features.
+Aerealith AI may require users to meet a minimum age before creating an account or using certain features.
 
-Before publishing this policy, SinLess Games LLC should confirm the official minimum age for Helix AI.
+Before publishing this policy, SinLess Games LLC should confirm the official minimum age for Aerealith AI.
 
 Recommended default:
 
-- Users under 13 may not create or use personal Helix AI accounts unless a legally valid parent, guardian, school, or organization arrangement is in place.
-- Users ages 13 to 17 may use Helix AI only with age-appropriate restrictions and any required parent, guardian, school, or organization consent.
+- Users under 13 may not create or use personal Aerealith AI accounts unless a legally valid parent, guardian, school, or organization arrangement is in place.
+- Users ages 13 to 17 may use Aerealith AI only with age-appropriate restrictions and any required parent, guardian, school, or organization consent.
 - Users must be at least 18, or the age of majority in their jurisdiction, to access age-restricted content, mature content, unrestricted marketplace purchases, payment features, or other adult-only features.
 
 Local law may require different age thresholds.
 
 ## 7. Age-Restricted Content
 
-Helix AI may restrict access to content or features that are not appropriate for minors.
+Aerealith AI may restrict access to content or features that are not appropriate for minors.
 
 Age-restricted content or features may include:
 
@@ -207,7 +207,7 @@ If a third-party age-assurance provider is used, that provider should be reviewe
 
 ## 10. Parental and Guardian Controls
 
-Helix AI may provide parental or guardian controls where supported.
+Aerealith AI may provide parental or guardian controls where supported.
 
 Parental controls may allow a parent or guardian to:
 
@@ -241,7 +241,7 @@ Parental controls may vary by product, plan, platform, deployment, jurisdiction,
 
 ## 11. Guardian-Managed Accounts
 
-Helix AI may support guardian-managed accounts for minors.
+Aerealith AI may support guardian-managed accounts for minors.
 
 A guardian-managed account may include:
 
@@ -264,7 +264,7 @@ The parent or guardian is responsible for supervising the minor’s use and ensu
 
 ## 12. School and Education Use
 
-Helix AI may support school, education, or youth-organization use only under appropriate controls.
+Aerealith AI may support school, education, or youth-organization use only under appropriate controls.
 
 School or education use may require:
 
@@ -314,7 +314,7 @@ Safer defaults may include:
 
 ## 14. AI Features for Minors
 
-Helix AI may restrict AI features for minors.
+Aerealith AI may restrict AI features for minors.
 
 Restricted AI behavior for minors may include:
 
@@ -336,13 +336,13 @@ Restricted AI behavior for minors may include:
 - Destructive infrastructure actions
 - Unsuitable synthetic media generation
 
-Helix AI may provide age-appropriate educational, creative, productivity, accessibility, and safety-oriented assistance for minors where allowed.
+Aerealith AI may provide age-appropriate educational, creative, productivity, accessibility, and safety-oriented assistance for minors where allowed.
 
 ## 15. AI Memory for Minors
 
 AI memory involving minors requires stronger safeguards.
 
-For minor accounts, Helix AI may:
+For minor accounts, Aerealith AI may:
 
 - Disable memory by default
 - Require parent, guardian, school, or organization approval for memory
@@ -360,9 +360,9 @@ Memory involving minors should not be used to manipulate, exploit, profile, or t
 
 ## 16. Advertising and Tracking for Minors
 
-Helix AI should not knowingly use minors’ private data, prompts, files, memory, organization data, or workspace data for third-party targeted advertising.
+Aerealith AI should not knowingly use minors’ private data, prompts, files, memory, organization data, or workspace data for third-party targeted advertising.
 
-For minors, Helix AI should avoid:
+For minors, Aerealith AI should avoid:
 
 - Behavioral advertising based on private content
 - Profiling for unrelated advertising
@@ -377,7 +377,7 @@ Cookie and tracking behavior is governed by the [Cookie and Tracking Policy](./c
 
 ## 17. Purchases and Billing by Minors
 
-Minors may not purchase paid plans, add-ons, marketplace items, usage packages, professional services, or other paid Helix AI services unless permitted by law and authorized by a parent, guardian, school, organization, or account administrator.
+Minors may not purchase paid plans, add-ons, marketplace items, usage packages, professional services, or other paid Aerealith AI services unless permitted by law and authorized by a parent, guardian, school, organization, or account administrator.
 
 SinLess Games LLC may restrict minors from:
 
@@ -454,7 +454,7 @@ Exceptions may be allowed for supervised education, school, organization, or gua
 
 ## 21. Child Safety Prohibitions
 
-Users may not use Helix AI to exploit, sexualize, groom, manipulate, endanger, abuse, harass, threaten, or harm minors.
+Users may not use Aerealith AI to exploit, sexualize, groom, manipulate, endanger, abuse, harass, threaten, or harm minors.
 
 Prohibited activity includes:
 
@@ -480,11 +480,11 @@ SinLess Games LLC may report apparent child exploitation or imminent harm to app
 
 ## 22. Self-Harm and Crisis Safety for Minors
 
-Helix AI is not an emergency service.
+Aerealith AI is not an emergency service.
 
 If a minor appears to be at immediate risk of self-harm, suicide, abuse, exploitation, or danger, users should contact emergency services, a trusted adult, local authorities, or an appropriate crisis support service.
 
-Helix AI may provide supportive, safety-oriented information, but it does not replace professional help, emergency response, parental supervision, or qualified care.
+Aerealith AI may provide supportive, safety-oriented information, but it does not replace professional help, emergency response, parental supervision, or qualified care.
 
 ## 23. Parent and Guardian Requests
 
@@ -537,7 +537,7 @@ SinLess Games LLC may deny requests where it cannot reasonably verify authority 
 
 ## 25. Data Collection From Minors
 
-Helix AI should minimize data collection from minors.
+Aerealith AI should minimize data collection from minors.
 
 Data collected from minors may include:
 
@@ -553,7 +553,7 @@ Data collected from minors may include:
 - Billing records, where applicable
 - School or organization metadata, where applicable
 
-SinLess Games LLC should collect only the information reasonably needed to provide, secure, support, and improve age-appropriate Helix AI services.
+SinLess Games LLC should collect only the information reasonably needed to provide, secure, support, and improve age-appropriate Aerealith AI services.
 
 ## 26. Data Use for Minors
 
@@ -630,7 +630,7 @@ Some data may be retained where required or permitted for:
 
 ## 29. Age Misrepresentation
 
-Users may not misrepresent their age or another person’s age to access Helix AI or age-restricted features.
+Users may not misrepresent their age or another person’s age to access Aerealith AI or age-restricted features.
 
 Users may not:
 
@@ -715,7 +715,7 @@ Organization controls may include:
 - Guardian-access workflows
 - Custom safety rules
 
-Organization administrators are responsible for configuring Helix AI according to their legal, security, privacy, compliance, and child-safety requirements.
+Organization administrators are responsible for configuring Aerealith AI according to their legal, security, privacy, compliance, and child-safety requirements.
 
 ## 33. Self-Hosted, Hybrid, and Air-Gapped Deployments
 
@@ -771,7 +771,7 @@ SinLess Games LLC may remove, suspend, disable, delist, or ban marketplace items
 
 ## 35. Content Labeling
 
-Helix AI may require content, plugins, marketplace items, personalities, workflows, templates, dashboards, and public materials to be labeled by age suitability.
+Aerealith AI may require content, plugins, marketplace items, personalities, workflows, templates, dashboards, and public materials to be labeled by age suitability.
 
 Labels may include:
 
@@ -846,7 +846,7 @@ SinLess Games LLC will use reasonable measures to protect minors and restrict ag
 
 Users, parents, guardians, schools, and organizations remain responsible for supervising minors and configuring accounts appropriately.
 
-Helix AI is not a substitute for parental supervision, professional care, emergency services, school supervision, or legal compliance programs.
+Aerealith AI is not a substitute for parental supervision, professional care, emergency services, school supervision, or legal compliance programs.
 
 ## 40. Contact
 
@@ -866,7 +866,7 @@ Before publishing this policy, confirm these email aliases exist and are monitor
 Before publishing this policy, complete the following:
 
 - Confirm official company name: `SinLess Games LLC`
-- Confirm official product name: `Helix AI`
+- Confirm official product name: `Aerealith AI`
 - Confirm minimum account age
 - Confirm age thresholds by jurisdiction
 - Confirm whether users under 13 are allowed under any conditions
@@ -900,7 +900,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, support portal, email, release notes, legal notices page, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 43. Legal Review Notice
 

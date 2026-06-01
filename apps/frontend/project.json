@@ -3,27 +3,38 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "apps/frontend/src",
-  "tags": ["npm:private"],
+  "tags": [
+    "npm:private"
+  ],
   "implicitDependencies": [],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
-      "dependsOn": ["^build", "generate-site-assets"],
+      "dependsOn": [
+        "^build",
+        "generate-site-assets"
+      ],
       "cache": true,
       "inputs": [
         "default",
         "^default",
         {
-          "externalDependencies": ["next"]
+          "externalDependencies": [
+            "next"
+          ]
         }
       ],
-      "outputs": ["{workspaceRoot}/dist/apps/frontend"],
+      "outputs": [
+        "{workspaceRoot}/dist/apps/frontend"
+      ],
       "options": {
         "cwd": "apps/frontend",
         "tty": false,
         "command": "next build && node ./scripts/ensure-middleware-manifest.mjs"
       },
-      "syncGenerators": ["@nx/js:typescript-sync"],
+      "syncGenerators": [
+        "@nx/js:typescript-sync"
+      ],
       "parallelism": true,
       "configurations": {}
     },
@@ -54,10 +65,16 @@
         "cwd": "apps/frontend",
         "command": "next dev"
       },
-      "syncGenerators": ["@nx/js:typescript-sync"],
+      "syncGenerators": [
+        "@nx/js:typescript-sync"
+      ],
       "parallelism": true,
       "configurations": {},
-      "dependsOn": ["@aerealith-ai/db:build", "dev-services"]
+      "dependsOn": [
+        "@aerealith-ai/db:build",
+        "@aerealith-ai/observability:sync-dist",
+        "dev-services"
+      ]
     },
     "dev-services": {
       "executor": "nx:run-commands",
@@ -72,7 +89,9 @@
     "start": {
       "executor": "nx:run-commands",
       "continuous": true,
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "options": {
         "cwd": "apps/frontend",
         "command": "next start"
@@ -83,7 +102,9 @@
     "serve-static": {
       "executor": "nx:run-commands",
       "continuous": true,
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "options": {
         "cwd": "apps/frontend",
         "command": "next start"
@@ -93,7 +114,9 @@
     },
     "build-deps": {
       "executor": "nx:noop",
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "options": {},
       "configurations": {},
       "parallelism": true
@@ -101,7 +124,9 @@
     "watch-deps": {
       "executor": "nx:run-commands",
       "continuous": true,
-      "dependsOn": ["build-deps"],
+      "dependsOn": [
+        "build-deps"
+      ],
       "options": {
         "command": "pnpm exec nx watch --projects frontend --includeDependentProjects -- pnpm exec nx build-deps frontend"
       },
@@ -118,16 +143,22 @@
         "{workspaceRoot}/apps/frontend/eslint.config.mjs",
         "{workspaceRoot}/tools/eslint-rules/**/*",
         {
-          "externalDependencies": ["eslint"]
+          "externalDependencies": [
+            "eslint"
+          ]
         }
       ],
-      "outputs": ["{options.outputFile}"],
+      "outputs": [
+        "{options.outputFile}"
+      ],
       "options": {
         "cwd": "apps/frontend",
         "command": "eslint --max-warnings=0 \"src/**/*.{js,jsx,ts,tsx}\" \"scripts/**/*.{js,mjs,cjs,ts,tsx}\" \"*.{js,mjs,cjs,ts,tsx}\""
       },
       "metadata": {
-        "technologies": ["eslint"],
+        "technologies": [
+          "eslint"
+        ],
         "description": "Runs ESLint on project",
         "help": {
           "command": "pnpm exec eslint --help",
@@ -138,7 +169,9 @@
           }
         }
       },
-      "syncGenerators": ["@nx/js:typescript-sync"],
+      "syncGenerators": [
+        "@nx/js:typescript-sync"
+      ],
       "configurations": {},
       "parallelism": true
     },
@@ -231,7 +264,9 @@
           ]
         }
       ],
-      "outputs": ["{workspaceRoot}/libs/db/src/migrations"],
+      "outputs": [
+        "{workspaceRoot}/libs/db/src/migrations"
+      ],
       "options": {
         "cwd": "apps/frontend",
         "command": "pnpm run db:migration:create"
@@ -314,8 +349,12 @@
     "cf:typegen": {
       "executor": "nx:run-commands",
       "cache": true,
-      "inputs": ["cloudflare"],
-      "outputs": ["{projectRoot}/cloudflare-env.d.ts"],
+      "inputs": [
+        "cloudflare"
+      ],
+      "outputs": [
+        "{projectRoot}/cloudflare-env.d.ts"
+      ],
       "options": {
         "cwd": "apps/frontend",
         "command": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
@@ -325,37 +364,52 @@
     },
     "cf:build": {
       "executor": "nx:run-commands",
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "cache": true,
       "inputs": [
         "production",
         "^production",
         "cloudflare",
         {
-          "externalDependencies": ["next", "@opennextjs/cloudflare", "wrangler"]
+          "externalDependencies": [
+            "next",
+            "@opennextjs/cloudflare",
+            "wrangler"
+          ]
         }
       ],
-      "outputs": ["{projectRoot}/.open-next"],
+      "outputs": [
+        "{projectRoot}/.open-next"
+      ],
       "options": {
         "cwd": "apps/frontend",
         "tty": false,
         "command": "NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build"
       },
-      "syncGenerators": ["@nx/js:typescript-sync"],
+      "syncGenerators": [
+        "@nx/js:typescript-sync"
+      ],
       "configurations": {},
       "parallelism": true
     },
     "cf:preview": {
       "executor": "nx:run-commands",
       "continuous": true,
-      "dependsOn": ["cf:build"],
+      "dependsOn": [
+        "cf:build"
+      ],
       "cache": false,
       "inputs": [
         "production",
         "^production",
         "cloudflare",
         {
-          "externalDependencies": ["@opennextjs/cloudflare", "wrangler"]
+          "externalDependencies": [
+            "@opennextjs/cloudflare",
+            "wrangler"
+          ]
         }
       ],
       "options": {
@@ -367,14 +421,19 @@
     },
     "cf:deploy": {
       "executor": "nx:run-commands",
-      "dependsOn": ["cf:build"],
+      "dependsOn": [
+        "cf:build"
+      ],
       "cache": false,
       "inputs": [
         "production",
         "^production",
         "cloudflare",
         {
-          "externalDependencies": ["@opennextjs/cloudflare", "wrangler"]
+          "externalDependencies": [
+            "@opennextjs/cloudflare",
+            "wrangler"
+          ]
         }
       ],
       "options": {
@@ -387,14 +446,19 @@
     },
     "cf:upload": {
       "executor": "nx:run-commands",
-      "dependsOn": ["cf:build"],
+      "dependsOn": [
+        "cf:build"
+      ],
       "cache": false,
       "inputs": [
         "production",
         "^production",
         "cloudflare",
         {
-          "externalDependencies": ["@opennextjs/cloudflare", "wrangler"]
+          "externalDependencies": [
+            "@opennextjs/cloudflare",
+            "wrangler"
+          ]
         }
       ],
       "options": {

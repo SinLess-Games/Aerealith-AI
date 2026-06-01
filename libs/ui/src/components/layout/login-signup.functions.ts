@@ -72,7 +72,8 @@ export const loginSignupDefaultLabels = {
   loginSwitchButton: 'Signup',
   signupSwitchButton: 'Login',
 
-  usernameHelperText: 'Use 3-32 letters, numbers, dots, underscores, or hyphens.',
+  usernameHelperText:
+    'Use 3-32 letters, numbers, dots, underscores, or hyphens.',
   signupSuccessFallback:
     'Account created. Check your email to verify your account.',
 } satisfies Required<LoginSignupLabels>;
@@ -209,9 +210,7 @@ export function getModalDescription(
   mode: LoginSignupMode | null,
   labels: Required<LoginSignupLabels>,
 ): string {
-  return mode === 'signup'
-    ? labels.signupDescription
-    : labels.loginDescription;
+  return mode === 'signup' ? labels.signupDescription : labels.loginDescription;
 }
 
 export function getStatusAlertSx(
@@ -287,7 +286,9 @@ export function unwrapApiResponse(value: unknown): unknown {
   return value;
 }
 
-export function extractUsernameFromResponse(value: unknown): string | undefined {
+export function extractUsernameFromResponse(
+  value: unknown,
+): string | undefined {
   const data = unwrapApiResponse(value);
 
   return readNestedString(data, USERNAME_RESPONSE_PATHS);
@@ -708,17 +709,32 @@ export async function postJson(
   body: unknown,
   options: PostJsonOptions = {},
 ): Promise<unknown> {
-  const response = await fetch(endpoint, {
-    method: options.method ?? 'POST',
-    credentials: 'include',
-    ...options,
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+
+  try {
+    response = await fetch(endpoint, {
+      method: options.method ?? 'POST',
+      credentials: 'include',
+      ...options,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      body: JSON.stringify(body),
+      signal: options.signal ?? controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('The request timed out. Please try again.');
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 
   const data = await readApiResponse(response);
 

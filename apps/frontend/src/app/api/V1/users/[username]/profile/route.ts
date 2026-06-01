@@ -6,6 +6,7 @@ const SESSION_COOKIE_NAMES = [
   'helix_refresh_token',
   'helix_access_token',
 ] as const;
+const USERNAME_COOKIE_NAME = 'helix_username';
 
 const DEFAULT_USER_SERVICE_URL = 'http://localhost:8788';
 const DEFAULT_USER_SERVICE_PROFILE_PATH_PREFIX = '/api/V1/users';
@@ -20,6 +21,10 @@ function hasSession(request: NextRequest): boolean {
   );
 }
 
+function getSessionUsername(request: NextRequest): string | undefined {
+  return request.cookies.get(USERNAME_COOKIE_NAME)?.value?.trim() || undefined;
+}
+
 function getUserProfileUrl(username: string): string {
   const baseUrl =
     process.env.USER_SERVICE_INTERNAL_URL ??
@@ -30,7 +35,27 @@ function getUserProfileUrl(username: string): string {
     process.env.USER_SERVICE_BASE_PATH ??
     DEFAULT_USER_SERVICE_PROFILE_PATH_PREFIX;
 
-  return `${normalizedBaseUrl}${pathPrefix}/${encodeURIComponent(username)}/profile`;
+  return normalizeLoopbackUrl(
+    `${normalizedBaseUrl}${pathPrefix}/${encodeURIComponent(username)}/profile`,
+  );
+}
+
+function normalizeLoopbackUrl(value: string): string {
+  if (process.env.NODE_ENV !== 'development') {
+    return value;
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (url.hostname === 'localhost') {
+      url.hostname = '127.0.0.1';
+    }
+
+    return url.toString();
+  } catch {
+    return value;
+  }
 }
 
 export async function PATCH(
@@ -45,11 +70,28 @@ export async function PATCH(
   }
 
   const { username } = await context.params;
+  const sessionUsername = getSessionUsername(request);
+
+  if (sessionUsername?.toLowerCase() !== username.toLowerCase()) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You can only edit your own profile.',
+        },
+      },
+      { status: 403 },
+    );
+  }
+
   const response = await fetch(getUserProfileUrl(username), {
     method: 'PATCH',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      'x-aerealith-auth-username': sessionUsername,
+      'x-helix-username': sessionUsername,
     },
     body: await request.text(),
     cache: 'no-store',

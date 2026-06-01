@@ -37,6 +37,38 @@ export type {
 // Keep auth emailSchema as the canonical flat export.
 export { emailSchema } from './zod-schemas/auth.schema';
 export { emailSchema as userEmailSchema } from './zod-schemas/user.schema';
+export {
+  displayNameSchema,
+  localeSchema,
+  timezoneSchema,
+  usernameSchema,
+} from './zod-schemas/auth.schema';
+export {
+  displayNameSchema as userDisplayNameSchema,
+  localeSchema as userLocaleSchema,
+  timezoneSchema as userTimezoneSchema,
+  usernameSchema as userUsernameSchema,
+} from './zod-schemas/user.schema';
+
+// Legacy DTO/schema conflict resolution.
+export type {
+  LogoutRequestDto,
+  ResetPasswordRequestDto,
+} from './DTOs/auth.dto';
+export type {
+  LogoutRequestDto as AuthSchemaLogoutRequestDto,
+  ResetPasswordRequestDto as AuthSchemaResetPasswordRequestDto,
+} from './zod-schemas/auth.schema';
+
+// Common response/schema conflict resolution.
+export type { ApiErrorCode } from './response-types/api.response';
+export type {
+  ApiErrorCode as CommonSchemaApiErrorCode,
+} from './zod-schemas/common.schema';
+export type { PaginationCursor } from './response-types/paginated.response';
+export type {
+  PaginationCursor as CommonSchemaPaginationCursor,
+} from './zod-schemas/common.schema';
 
 // Auth type conflicts:
 // DTO files already export AuthEmail, AuthSessionId, AuthUserId, and
@@ -113,9 +145,26 @@ export type {
   PublicUserDto as PublicUserServiceDto,
   UpdateUserDto as UpdateUserServiceDto,
   UserHealthDto as UserServiceHealthDto,
+  PrivateUserProfileDashboardDto as PrivateUserProfileDashboardServiceDto,
+  PublicUserProfileDto as PublicUserProfileServiceDto,
   UserProfileDto as UserServiceProfileDto,
   UserSettingsDto as UserServiceSettingsDto,
 } from './DTOs/user';
+
+export type {
+  PrivateUserProfileDashboardDto,
+  ProfileModuleStatusDto,
+  ProfileResourceVisibilityDto,
+  PublicUserProfileDto,
+  UserAchievementDto,
+  UserActivityEventDto,
+  UserAppConnectionDto,
+  UserFileReferenceDto,
+  UserIntegrationDto,
+  UserProfileStatsDto,
+  UserReportDto,
+  UserReportTypeDto,
+} from './DTOs/user/profile-dashboard.dto';
 
 // -----------------------------------------------------------------------------
 // DTOs

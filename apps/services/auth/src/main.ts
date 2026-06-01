@@ -35,6 +35,7 @@ export type AuthWorkerBindings = {
   AUTH_REFRESH_TOKEN_TTL_SECONDS?: string;
   AUTH_EMAIL_VERIFICATION_TOKEN_TTL_SECONDS?: string;
   AUTH_PASSWORD_RESET_TOKEN_TTL_SECONDS?: string;
+  AUTH_EMAIL_ENABLED?: string;
 
   AUTH_SESSION_TTL_SECONDS?: string;
   AUTH_REFRESH_TOKEN_ROTATION_ENABLED?: string;
@@ -55,6 +56,31 @@ export interface AuthWorkerExecutionContext {
 }
 
 let cachedAppPromise: Promise<Hono<AuthHonoEnv>> | undefined;
+let cachedAppSignature: string | undefined;
+
+const getAppSignature = (env: AuthWorkerBindings): string => {
+  return JSON.stringify({
+    AUTH_EMAIL_ENABLED: env.AUTH_EMAIL_ENABLED,
+    AUTH_EMAIL_PROVIDER: env.AUTH_EMAIL_PROVIDER,
+    AUTH_EMAIL_FROM: env.AUTH_EMAIL_FROM,
+    AUTH_TOKEN_SECRET: env.AUTH_TOKEN_SECRET,
+    AUTH_TOKEN_ISSUER: env.AUTH_TOKEN_ISSUER,
+    AUTH_TOKEN_AUDIENCE: env.AUTH_TOKEN_AUDIENCE,
+    AUTH_ACCESS_TOKEN_TTL_SECONDS: env.AUTH_ACCESS_TOKEN_TTL_SECONDS,
+    AUTH_REFRESH_TOKEN_TTL_SECONDS: env.AUTH_REFRESH_TOKEN_TTL_SECONDS,
+    AUTH_EMAIL_VERIFICATION_TOKEN_TTL_SECONDS:
+      env.AUTH_EMAIL_VERIFICATION_TOKEN_TTL_SECONDS,
+    AUTH_PASSWORD_RESET_TOKEN_TTL_SECONDS:
+      env.AUTH_PASSWORD_RESET_TOKEN_TTL_SECONDS,
+    AUTH_SESSION_TTL_SECONDS: env.AUTH_SESSION_TTL_SECONDS,
+    AUTH_REFRESH_TOKEN_ROTATION_ENABLED:
+      env.AUTH_REFRESH_TOKEN_ROTATION_ENABLED,
+    AUTH_REVOKE_EXISTING_VERIFICATION_TOKENS_ON_CREATE:
+      env.AUTH_REVOKE_EXISTING_VERIFICATION_TOKENS_ON_CREATE,
+    SERVICE_NAME: env.SERVICE_NAME,
+    SERVICE_VERSION: env.SERVICE_VERSION,
+  });
+};
 
 const startupOrmPromise = getOrm();
 
@@ -63,7 +89,12 @@ startupOrmPromise.catch(() => {
 });
 
 const getApp = async (env: AuthWorkerBindings): Promise<Hono<AuthHonoEnv>> => {
-  cachedAppPromise ??= createConfiguredAuthApp(env);
+  const signature = getAppSignature(env);
+
+  if (cachedAppPromise === undefined || cachedAppSignature !== signature) {
+    cachedAppSignature = signature;
+    cachedAppPromise = createConfiguredAuthApp(env);
+  }
 
   return cachedAppPromise;
 };
@@ -135,7 +166,39 @@ export default {
           );
         }
 
-        const app = await getApp(env);
+        const appPromise = getApp(env);
+
+        // Timebox app initialization to avoid Cloudflare Worker "hung" requests.
+        // If the auth app is still initializing (for example, waiting on DB),
+        // return a 503 quickly so the runtime doesn't cancel the request.
+        let app: Hono<AuthHonoEnv> | undefined;
+        try {
+          app = (await Promise.race([
+            appPromise,
+            new Promise<Hono<AuthHonoEnv> | undefined>((resolve) =>
+              setTimeout(() => resolve(undefined), 1000),
+            ),
+          ])) as unknown as Hono<AuthHonoEnv> | undefined;
+        } catch (e) {
+          app = undefined;
+        }
+
+        if (!app) {
+          const resp = Response.json(
+            { success: false, error: { code: 'SERVICE_UNAVAILABLE', message: 'Auth service initializing. Try again shortly.' } },
+            503,
+          );
+
+          logger.warn('Auth app not ready, returning 503', {
+            metadata: { method: request.method, path: url.pathname },
+            tags: ['auth', 'startup'],
+          });
+
+          ctx.waitUntil(telemetry?.flush() ?? Promise.resolve());
+
+          return resp;
+        }
+
         const response = await withTraceSpan(
           'auth.request',
           {

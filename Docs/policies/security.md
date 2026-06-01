@@ -1,6 +1,6 @@
 ---
 title: Security Policy
-description: Explains how Helix AI protects users, organizations, data, accounts, infrastructure, integrations, automations, APIs, plugins, and marketplace items.
+description: Explains how Aerealith AI protects users, organizations, data, accounts, infrastructure, integrations, automations, APIs, plugins, and marketplace items.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,9 +11,9 @@ status: draft
 
 ## 1. Purpose
 
-This Security Policy explains how SinLess Games LLC approaches security for Helix AI.
+This Security Policy explains how SinLess Games LLC approaches security for Aerealith AI.
 
-Helix AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because Helix AI may process prompts, files, memory, integrations, automations, plugins, analytics, dashboards, APIs, organization workspaces, infrastructure workflows, and marketplace items, security is a core requirement of the platform.
+Aerealith AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because Aerealith AI may process prompts, files, memory, integrations, automations, plugins, analytics, dashboards, APIs, organization workspaces, infrastructure workflows, and marketplace items, security is a core requirement of the platform.
 
 This policy explains:
 
@@ -33,7 +33,7 @@ This policy explains:
 
 ## 2. Scope
 
-This policy applies to Helix AI services, including:
+This policy applies to Aerealith AI services, including:
 
 - Websites
 - Web applications
@@ -69,11 +69,11 @@ This policy applies to:
 - Vendors
 - Subprocessors
 - SinLess Games LLC employees and authorized operators
-- Anyone who accesses, manages, integrates with, or operates Helix AI
+- Anyone who accesses, manages, integrates with, or operates Aerealith AI
 
 ## 3. Core Security Commitments
 
-SinLess Games LLC intends to operate Helix AI according to the following security commitments:
+SinLess Games LLC intends to operate Aerealith AI according to the following security commitments:
 
 1. Protect user data, organization data, and system integrity.
 2. Use reasonable technical and organizational safeguards.
@@ -90,7 +90,7 @@ SinLess Games LLC intends to operate Helix AI according to the following securit
 
 ## 4. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy.md)
@@ -116,7 +116,7 @@ If there is a conflict between this policy and a written agreement signed by Sin
 
 Security is a shared responsibility between SinLess Games LLC, users, organizations, developers, marketplace publishers, and deployment operators.
 
-SinLess Games LLC is responsible for reasonable security controls for Helix AI systems operated by SinLess Games LLC.
+SinLess Games LLC is responsible for reasonable security controls for Aerealith AI systems operated by SinLess Games LLC.
 
 Users are responsible for securing their accounts, devices, credentials, integrations, automations, API keys, uploaded data, and connected systems.
 
@@ -128,7 +128,7 @@ Self-hosted, hybrid, and air-gapped deployment operators are responsible for sec
 
 ## 6. User Security Responsibilities
 
-Users must take reasonable steps to protect their Helix AI accounts and connected systems.
+Users must take reasonable steps to protect their Aerealith AI accounts and connected systems.
 
 Users are responsible for:
 
@@ -150,7 +150,7 @@ Users are responsible for:
 
 ## 7. Organization Security Responsibilities
 
-Organizations are responsible for configuring Helix AI according to their risk profile.
+Organizations are responsible for configuring Aerealith AI according to their risk profile.
 
 Organization administrators are responsible for:
 
@@ -177,7 +177,7 @@ Organization administrators are responsible for:
 
 ## 8. Account Security
 
-Helix AI may support account security features such as:
+Aerealith AI may support account security features such as:
 
 - Password authentication
 - Passkeys
@@ -246,7 +246,7 @@ Users and organizations should only grant the permissions needed for the intende
 
 ## 11. Data Protection
 
-Helix AI should protect data using reasonable technical and organizational safeguards.
+Aerealith AI should protect data using reasonable technical and organizational safeguards.
 
 Data protection controls may include:
 
@@ -271,7 +271,7 @@ Data handling is further described in the [Data Policy](./data.md) and [Privacy 
 
 ## 12. Encryption
 
-Helix AI should use encryption where appropriate to protect data.
+Aerealith AI should use encryption where appropriate to protect data.
 
 Encryption controls may include:
 
@@ -328,7 +328,7 @@ If secrets are detected in unsafe locations, SinLess Games LLC may redact, restr
 
 ## 14. Infrastructure Security
 
-Helix AI infrastructure should be managed using reasonable security practices.
+Aerealith AI infrastructure should be managed using reasonable security practices.
 
 Infrastructure security controls may include:
 
@@ -355,7 +355,7 @@ Infrastructure controls may vary between cloud-hosted, self-hosted, hybrid, and 
 
 ## 15. Network Security
 
-Helix AI may use network security controls to reduce unauthorized access and service abuse.
+Aerealith AI may use network security controls to reduce unauthorized access and service abuse.
 
 Network security controls may include:
 
@@ -378,7 +378,7 @@ Organizations operating self-hosted deployments are responsible for their own ne
 
 ## 16. Application Security
 
-Helix AI should be developed using secure application development practices.
+Aerealith AI should be developed using secure application development practices.
 
 Application security practices may include:
 
@@ -408,7 +408,7 @@ Application security controls should be reviewed and improved over time.
 
 ## 17. Secure Development Lifecycle
 
-Helix AI should follow a secure development lifecycle appropriate to the risk of the feature.
+Aerealith AI should follow a secure development lifecycle appropriate to the risk of the feature.
 
 Secure development practices may include:
 
@@ -434,7 +434,7 @@ Higher-risk features should receive stronger review and testing.
 
 ## 18. Supply Chain Security
 
-Helix AI may depend on third-party code, libraries, services, containers, APIs, plugins, models, and infrastructure.
+Aerealith AI may depend on third-party code, libraries, services, containers, APIs, plugins, models, and infrastructure.
 
 Supply chain security controls may include:
 
@@ -459,7 +459,7 @@ Developers and marketplace publishers are responsible for the security of their 
 
 ## 19. API Security
 
-Helix AI APIs should be protected by appropriate controls.
+Aerealith AI APIs should be protected by appropriate controls.
 
 API security controls may include:
 
@@ -488,7 +488,7 @@ API keys should not be embedded in public client-side code, public repositories,
 
 ## 20. Webhook Security
 
-Helix AI may use webhooks for integrations, billing, marketplace events, automations, and developer workflows.
+Aerealith AI may use webhooks for integrations, billing, marketplace events, automations, and developer workflows.
 
 Webhook security controls may include:
 
@@ -510,7 +510,7 @@ Developers should verify webhook signatures before trusting webhook payloads.
 
 ## 21. AI Security
 
-Helix AI AI-powered features should be designed to reduce AI-specific security risks.
+Aerealith AI AI-powered features should be designed to reduce AI-specific security risks.
 
 AI security risks may include:
 
@@ -572,7 +572,7 @@ Untrusted content may include:
 - Retrieved documents
 - User-generated content
 
-Helix AI should reduce prompt injection risk through reasonable controls, including:
+Aerealith AI should reduce prompt injection risk through reasonable controls, including:
 
 - Treating external content as untrusted
 - Separating user instructions from retrieved content
@@ -583,11 +583,11 @@ Helix AI should reduce prompt injection risk through reasonable controls, includ
 - Warning users when content may be untrusted
 - Testing high-risk workflows for prompt injection
 
-Users should be careful when asking Helix AI to process untrusted content.
+Users should be careful when asking Aerealith AI to process untrusted content.
 
 ## 23. Automation Security
 
-Helix AI automations should be designed and configured with appropriate safeguards.
+Aerealith AI automations should be designed and configured with appropriate safeguards.
 
 Automation security controls may include:
 
@@ -614,7 +614,7 @@ High-risk, destructive, irreversible, externally visible, or security-sensitive 
 
 ## 24. Tool and Integration Security
 
-Helix AI may connect to third-party tools and services.
+Aerealith AI may connect to third-party tools and services.
 
 Tool and integration security controls may include:
 
@@ -637,7 +637,7 @@ Users and organizations should only connect tools they trust and should regularl
 
 ## 25. Plugin and Marketplace Security
 
-Helix AI may support plugins, workflows, dashboards, templates, connectors, personalities, and marketplace items.
+Aerealith AI may support plugins, workflows, dashboards, templates, connectors, personalities, and marketplace items.
 
 Plugin and marketplace security controls may include:
 
@@ -678,7 +678,7 @@ Marketplace security is also governed by the [Marketplace Policy](./marketplace.
 
 ## 26. Logging and Monitoring
 
-Helix AI may collect logs and monitoring data to support security, reliability, debugging, billing, abuse prevention, and incident response.
+Aerealith AI may collect logs and monitoring data to support security, reliability, debugging, billing, abuse prevention, and incident response.
 
 Logs may include:
 
@@ -708,7 +708,7 @@ Logs may be retained according to applicable retention rules, security needs, le
 
 ## 27. Audit Logs
 
-Helix AI may provide audit logs for organization and enterprise customers where supported.
+Aerealith AI may provide audit logs for organization and enterprise customers where supported.
 
 Audit logs may include:
 
@@ -732,7 +732,7 @@ Audit log availability, retention, export, and detail level may depend on plan, 
 
 ## 28. Vulnerability Management
 
-SinLess Games LLC should maintain a vulnerability management process for Helix AI systems it operates.
+SinLess Games LLC should maintain a vulnerability management process for Aerealith AI systems it operates.
 
 Vulnerability management may include:
 
@@ -754,7 +754,7 @@ Vulnerability severity may be assessed based on exploitability, impact, exposure
 
 ## 29. Security Testing
 
-Helix AI may use security testing to identify and reduce risk.
+Aerealith AI may use security testing to identify and reduce risk.
 
 Security testing may include:
 
@@ -811,7 +811,7 @@ Good-faith security research is welcome when it is lawful, safe, and responsible
 Authorized research must follow these rules:
 
 - Do not access, modify, delete, or exfiltrate data that is not yours.
-- Do not disrupt Helix AI services.
+- Do not disrupt Aerealith AI services.
 - Do not perform denial-of-service testing.
 - Do not perform social engineering.
 - Do not perform phishing.
@@ -895,7 +895,7 @@ Incident handling and user notifications are further described in the [Incident 
 
 ## 35. Data Breach Response
 
-If SinLess Games LLC becomes aware of a suspected or confirmed data breach affecting Helix AI, it will evaluate the incident and take appropriate action.
+If SinLess Games LLC becomes aware of a suspected or confirmed data breach affecting Aerealith AI, it will evaluate the incident and take appropriate action.
 
 Actions may include:
 
@@ -915,7 +915,7 @@ Notification timing and content may depend on law, contract, incident severity, 
 
 ## 36. Backup and Recovery
 
-Helix AI may maintain backups to support reliability, disaster recovery, business continuity, and incident response.
+Aerealith AI may maintain backups to support reliability, disaster recovery, business continuity, and incident response.
 
 Backup and recovery controls may include:
 
@@ -936,7 +936,7 @@ Backup behavior is also described in the [Data Policy](./data.md) and [Privacy P
 
 ## 37. Business Continuity and Disaster Recovery
 
-SinLess Games LLC should maintain reasonable business continuity and disaster recovery planning for Helix AI systems it operates.
+SinLess Games LLC should maintain reasonable business continuity and disaster recovery planning for Aerealith AI systems it operates.
 
 Continuity planning may include:
 
@@ -956,7 +956,7 @@ Specific uptime commitments, if any, are governed by the applicable [Support Pol
 
 ## 38. Security of AI Memory
 
-Helix AI memory may contain user preferences, project context, organization context, technical environment details, or other user-controlled information.
+Aerealith AI memory may contain user preferences, project context, organization context, technical environment details, or other user-controlled information.
 
 Memory security controls may include:
 
@@ -977,7 +977,7 @@ Users should not store passwords, API keys, private keys, access tokens, or othe
 
 ## 39. Security of Generated Code and Configurations
 
-Helix AI may generate code, scripts, commands, infrastructure configuration, deployment manifests, database queries, firewall rules, CI/CD workflows, and other technical outputs.
+Aerealith AI may generate code, scripts, commands, infrastructure configuration, deployment manifests, database queries, firewall rules, CI/CD workflows, and other technical outputs.
 
 Users are responsible for reviewing and testing generated outputs before use.
 
@@ -998,7 +998,7 @@ Generated technical outputs should be checked for:
 - Compliance impact
 - Rollback requirements
 
-Helix AI outputs should not be blindly executed in production.
+Aerealith AI outputs should not be blindly executed in production.
 
 ## 40. Security of Uploaded Files
 
@@ -1022,7 +1022,7 @@ Users are responsible for ensuring that uploaded files do not contain malware, u
 
 ## 41. Security of Public Sharing
 
-Some Helix AI features may allow sharing of chats, files, dashboards, reports, plugins, marketplace items, workflows, templates, or generated content.
+Some Aerealith AI features may allow sharing of chats, files, dashboards, reports, plugins, marketplace items, workflows, templates, or generated content.
 
 Users are responsible for reviewing shared content before publishing.
 
@@ -1046,7 +1046,7 @@ Public content may be indexed, copied, downloaded, cached, retained, or shared b
 
 ## 42. Payment Security
 
-Helix AI may use third-party payment processors to process subscriptions, invoices, add-ons, marketplace purchases, refunds, taxes, and payouts.
+Aerealith AI may use third-party payment processors to process subscriptions, invoices, add-ons, marketplace purchases, refunds, taxes, and payouts.
 
 Payment security controls may include:
 
@@ -1067,7 +1067,7 @@ Payment behavior is further described in the [Billing, Refund, and Cancellation 
 
 ## 43. Vendor and Subprocessor Security
 
-SinLess Games LLC may use vendors and subprocessors to operate Helix AI.
+SinLess Games LLC may use vendors and subprocessors to operate Aerealith AI.
 
 Vendor security controls may include:
 
@@ -1105,7 +1105,7 @@ Private user content should only be accessed when needed for legitimate service 
 
 ## 45. Security Training
 
-SinLess Games LLC should provide appropriate security guidance or training for employees, contractors, and operators with access to Helix AI systems.
+SinLess Games LLC should provide appropriate security guidance or training for employees, contractors, and operators with access to Aerealith AI systems.
 
 Training may include:
 
@@ -1126,7 +1126,7 @@ Training should be updated as product, security, and operational risks evolve.
 
 ## 46. Compliance and Framework Alignment
 
-Helix AI may align security practices with recognized security, privacy, and risk-management frameworks where appropriate.
+Aerealith AI may align security practices with recognized security, privacy, and risk-management frameworks where appropriate.
 
 Potential alignment areas may include:
 
@@ -1213,7 +1213,7 @@ Air-gapped deployments may not receive real-time updates, telemetry, marketplace
 
 ## 49. Security Restrictions
 
-Users may not use Helix AI to attack, disrupt, compromise, exploit, or gain unauthorized access to any system, account, service, device, application, model, plugin, or dataset.
+Users may not use Aerealith AI to attack, disrupt, compromise, exploit, or gain unauthorized access to any system, account, service, device, application, model, plugin, or dataset.
 
 Prohibited security activity includes:
 
@@ -1317,13 +1317,13 @@ Depending on the severity, risk, and context, SinLess Games LLC may:
 - Notify law enforcement where appropriate
 - Refuse future service
 
-SinLess Games LLC may act immediately and without prior notice when necessary to protect users, systems, data, Helix AI, SinLess Games LLC, third parties, or the public.
+SinLess Games LLC may act immediately and without prior notice when necessary to protect users, systems, data, Aerealith AI, SinLess Games LLC, third parties, or the public.
 
 ## 53. Limitations
 
 No system can be guaranteed to be completely secure.
 
-Helix AI may experience vulnerabilities, outages, misconfigurations, bugs, data incidents, third-party incidents, or other security events despite reasonable safeguards.
+Aerealith AI may experience vulnerabilities, outages, misconfigurations, bugs, data incidents, third-party incidents, or other security events despite reasonable safeguards.
 
 This policy does not create a warranty, guarantee, insurance obligation, or absolute security commitment.
 
@@ -1334,7 +1334,7 @@ Specific service commitments, if any, are governed by the applicable [Support Po
 Before publishing this policy, complete the following:
 
 - Confirm official company name: `SinLess Games LLC`
-- Confirm official product name: `Helix AI`
+- Confirm official product name: `Aerealith AI`
 - Confirm monitored security email
 - Confirm monitored privacy email
 - Confirm monitored abuse email
@@ -1369,7 +1369,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, email, release notes, legal notices page, security advisory, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 56. Contact
 

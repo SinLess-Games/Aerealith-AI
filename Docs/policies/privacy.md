@@ -1,6 +1,6 @@
 ---
 title: Privacy Policy
-description: Explains how Helix AI collects, uses, shares, protects, retains, and processes personal information.
+description: Explains how Aerealith AI collects, uses, shares, protects, retains, and processes personal information.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,9 +11,9 @@ status: draft
 
 ## 1. Purpose
 
-This Privacy Policy explains how SinLess Games LLC collects, uses, shares, protects, retains, and processes personal information through Helix AI.
+This Privacy Policy explains how SinLess Games LLC collects, uses, shares, protects, retains, and processes personal information through Aerealith AI.
 
-Helix AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because Helix AI may process user prompts, files, integrations, memory, analytics, automations, plugins, and workspace data, privacy must be clear, user-controlled, and transparent.
+Aerealith AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because Aerealith AI may process user prompts, files, integrations, memory, analytics, automations, plugins, and workspace data, privacy must be clear, user-controlled, and transparent.
 
 This policy explains:
 
@@ -23,17 +23,17 @@ This policy explains:
 - How we share personal information
 - How long we retain personal information
 - How users can access, correct, export, or delete personal information
-- How Helix AI handles AI memory, files, tools, integrations, and research use
+- How Aerealith AI handles AI memory, files, tools, integrations, and research use
 - How privacy works for organizations, developers, marketplace publishers, and enterprise customers
 - How users can contact us about privacy questions or requests
 
 The core privacy commitments are:
 
-**Users own their data. Helix AI does not sell user data. Helix AI does not use user data outside legitimate service business logic and approved research purposes.**
+**Users own their data. Aerealith AI does not sell user data. Aerealith AI does not use user data outside legitimate service business logic and approved research purposes.**
 
 ## 2. Scope
 
-This Privacy Policy applies to Helix AI services, including:
+This Privacy Policy applies to Aerealith AI services, including:
 
 - Websites
 - Web applications
@@ -69,13 +69,13 @@ This policy applies to:
 - Marketplace publishers
 - API users
 - Enterprise customers
-- Anyone who interacts with Helix AI through an account, workspace, integration, automation, shared agent, plugin, or connected service
+- Anyone who interacts with Aerealith AI through an account, workspace, integration, automation, shared agent, plugin, or connected service
 
 Some enterprise, self-hosted, hybrid, private, or air-gapped deployments may have additional privacy terms in a written agreement.
 
 ## 3. Relationship to Other Policies
 
-This Privacy Policy works together with other Helix AI policies, including:
+This Privacy Policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Data Policy](./data.md)
@@ -108,17 +108,17 @@ Before publishing this policy, SinLess Games LLC should have it reviewed by qual
 
 For this policy:
 
-**“Helix AI,” “we,” “us,” and “our”** mean SinLess Games LLC and the Helix AI services.
+**“Aerealith AI,” “we,” “us,” and “our”** mean SinLess Games LLC and the Aerealith AI services.
 
-**“User,” “you,” and “your”** mean anyone who uses or interacts with Helix AI.
+**“User,” “you,” and “your”** mean anyone who uses or interacts with Aerealith AI.
 
 **“Personal information”** means information that identifies, relates to, describes, can reasonably be associated with, or could reasonably be linked to an individual or household.
 
-**“Customer Data”** means data that users or organizations submit, upload, import, connect, generate, or process through Helix AI.
+**“Customer Data”** means data that users or organizations submit, upload, import, connect, generate, or process through Aerealith AI.
 
 **“Account Data”** means information used to create, secure, administer, and support an account.
 
-**“Service Data”** means operational data created by Helix AI while providing the service.
+**“Service Data”** means operational data created by Aerealith AI while providing the service.
 
 **“Sensitive data”** means personal information or confidential information that requires stronger protection because of its nature, legal status, or risk.
 
@@ -130,13 +130,13 @@ As between you and SinLess Games LLC, you retain ownership of your data.
 
 SinLess Games LLC does not claim ownership of user prompts, messages, uploaded files, workspace content, organization content, memory entries, dashboards, analytics inputs, API inputs, integrations, plugin content, or other Customer Data.
 
-By using Helix AI, you grant SinLess Games LLC a limited right to process your data only as needed to provide, secure, maintain, troubleshoot, improve, support, and research Helix AI according to this policy, the [Data Policy](./data.md), the [Terms of Use](./terms-of-use.md), and applicable agreements.
+By using Aerealith AI, you grant SinLess Games LLC a limited right to process your data only as needed to provide, secure, maintain, troubleshoot, improve, support, and research Aerealith AI according to this policy, the [Data Policy](./data.md), the [Terms of Use](./terms-of-use.md), and applicable agreements.
 
 ## 7. Personal Information We Collect
 
-Helix AI may collect personal information in the categories below.
+Aerealith AI may collect personal information in the categories below.
 
-The exact information collected depends on how you use Helix AI, your account settings, organization settings, deployment type, subscription, integrations, and enabled features.
+The exact information collected depends on how you use Aerealith AI, your account settings, organization settings, deployment type, subscription, integrations, and enabled features.
 
 ### 7.1 Account Information
 
@@ -184,7 +184,7 @@ SinLess Games LLC generally does not directly store full payment card numbers. P
 
 ### 7.3 User Content and Customer Data
 
-We may process content you provide or connect to Helix AI, including:
+We may process content you provide or connect to Aerealith AI, including:
 
 - Prompts
 - Messages
@@ -214,7 +214,7 @@ We may process content you provide or connect to Helix AI, including:
 
 ### 7.4 AI Memory and Personalization Data
 
-If memory or personalization features are enabled, Helix AI may process:
+If memory or personalization features are enabled, Aerealith AI may process:
 
 - User preferences
 - Communication style
@@ -235,7 +235,7 @@ Users and organizations may have controls to view, edit, delete, export, pause, 
 
 ### 7.5 Integration Data
 
-If you connect Helix AI to third-party services, we may process data from those services according to your permissions.
+If you connect Aerealith AI to third-party services, we may process data from those services according to your permissions.
 
 Integration data may include information from:
 
@@ -255,11 +255,11 @@ Integration data may include information from:
 - IoT systems
 - Marketplace systems
 
-Helix AI only accesses connected services according to granted permissions, technical configuration, user instructions, organization policies, and applicable agreements.
+Aerealith AI only accesses connected services according to granted permissions, technical configuration, user instructions, organization policies, and applicable agreements.
 
 ### 7.6 Automation and Tool Data
 
-When Helix AI uses tools, automations, workflows, agents, plugins, or integrations, we may process:
+When Aerealith AI uses tools, automations, workflows, agents, plugins, or integrations, we may process:
 
 - Trigger events
 - User instructions
@@ -344,7 +344,7 @@ If you use developer or marketplace features, we may collect:
 
 ### 7.10 Security and Abuse Prevention Data
 
-We may collect data to protect users, organizations, Helix AI, and third parties.
+We may collect data to protect users, organizations, Aerealith AI, and third parties.
 
 Security and abuse prevention data may include:
 
@@ -367,7 +367,7 @@ Security and abuse prevention data may include:
 
 ## 8. Sensitive Data
 
-Helix AI may process sensitive data if users or organizations provide it or connect systems containing it.
+Aerealith AI may process sensitive data if users or organizations provide it or connect systems containing it.
 
 Sensitive data may include:
 
@@ -419,11 +419,11 @@ We may collect personal information from:
 
 ## 10. How We Use Personal Information
 
-Helix AI uses personal information only for legitimate service business logic and approved research purposes.
+Aerealith AI uses personal information only for legitimate service business logic and approved research purposes.
 
 We may use personal information to:
 
-- Provide Helix AI services
+- Provide Aerealith AI services
 - Create and manage accounts
 - Authenticate users
 - Authorize access
@@ -464,7 +464,7 @@ We may use personal information to:
 
 ## 11. Business Logic Use
 
-“Business logic” means data processing reasonably needed to operate, secure, support, and improve Helix AI.
+“Business logic” means data processing reasonably needed to operate, secure, support, and improve Aerealith AI.
 
 Business logic includes:
 
@@ -497,11 +497,11 @@ Business logic includes:
 - Product improvement
 - Service reliability
 
-Helix AI does not use user data for unrelated purposes.
+Aerealith AI does not use user data for unrelated purposes.
 
 ## 12. Approved Research Use
 
-Helix AI may use data for approved research that supports the Helix AI product, platform, safety, reliability, security, quality, accessibility, user experience, and responsible AI goals.
+Aerealith AI may use data for approved research that supports the Aerealith AI product, platform, safety, reliability, security, quality, accessibility, user experience, and responsible AI goals.
 
 Approved research may include:
 
@@ -538,7 +538,7 @@ Research use should follow these principles:
 
 ## 13. Model Training and Fine-Tuning
 
-Helix AI distinguishes between:
+Aerealith AI distinguishes between:
 
 - Processing data to provide a requested response
 - Processing data to operate the service
@@ -546,7 +546,7 @@ Helix AI distinguishes between:
 - Processing data for approved research and evaluation
 - Training or fine-tuning models
 
-Unless clearly disclosed, enabled by user or organization settings, or permitted by a written agreement, Helix AI should not use private Customer Data to train public or general-purpose models.
+Unless clearly disclosed, enabled by user or organization settings, or permitted by a written agreement, Aerealith AI should not use private Customer Data to train public or general-purpose models.
 
 If optional training, fine-tuning, or learning features are offered, they should provide clear notice, controls, and documentation.
 
@@ -554,7 +554,7 @@ Enterprise and organization customers may have additional controls over whether 
 
 ## 14. AI Providers and Model Routing
 
-Helix AI may route requests to different models, services, providers, local systems, or organization-controlled systems depending on:
+Aerealith AI may route requests to different models, services, providers, local systems, or organization-controlled systems depending on:
 
 - User settings
 - Organization settings
@@ -578,13 +578,13 @@ Data sent to AI providers may include relevant portions of:
 - Instructions
 - Memory, when enabled and relevant
 
-Helix AI should limit data sent to AI providers to what is reasonably needed for the requested function.
+Aerealith AI should limit data sent to AI providers to what is reasonably needed for the requested function.
 
 Relevant providers should be listed in the [Subprocessor Vendor List](./subprocessor-vendor-list.md), where applicable.
 
 ## 15. Cookies and Tracking
 
-Helix AI may use cookies, local storage, pixels, analytics tags, device identifiers, log data, and similar technologies.
+Aerealith AI may use cookies, local storage, pixels, analytics tags, device identifiers, log data, and similar technologies.
 
 These may be used for:
 
@@ -606,7 +606,7 @@ Cookie and tracking behavior is described in the [Cookie and Tracking Policy](./
 
 ## 16. Analytics and Telemetry
 
-Helix AI may process analytics and telemetry to operate and improve the service.
+Aerealith AI may process analytics and telemetry to operate and improve the service.
 
 Analytics and telemetry may include:
 
@@ -656,7 +656,7 @@ Users may have rights to withdraw consent, object to processing, or request more
 
 Where permitted by law, legitimate interests may include:
 
-- Providing Helix AI
+- Providing Aerealith AI
 - Securing accounts
 - Preventing fraud
 - Preventing abuse
@@ -674,7 +674,7 @@ We balance legitimate interests against user privacy rights where required.
 
 ## 19. How We Share Personal Information
 
-Helix AI may share personal information only as needed for legitimate business logic, approved research, legal obligations, user direction, or organization configuration.
+Aerealith AI may share personal information only as needed for legitimate business logic, approved research, legal obligations, user direction, or organization configuration.
 
 We may share personal information with:
 
@@ -703,7 +703,7 @@ We do not sell user data.
 
 ## 20. Service Providers and Subprocessors
 
-SinLess Games LLC may use service providers and subprocessors to operate Helix AI.
+SinLess Games LLC may use service providers and subprocessors to operate Aerealith AI.
 
 Subprocessors may support:
 
@@ -734,7 +734,7 @@ SinLess Games LLC should require subprocessors to protect personal information u
 
 SinLess Games LLC does not sell user data or personal information.
 
-Helix AI does not sell:
+Aerealith AI does not sell:
 
 - User prompts
 - User messages
@@ -751,21 +751,21 @@ Helix AI does not sell:
 - Analytics inputs
 - Dashboard data
 
-Use of subprocessors to operate Helix AI is not a sale of personal information when they process data only on behalf of SinLess Games LLC or the customer according to applicable agreements and policies.
+Use of subprocessors to operate Aerealith AI is not a sale of personal information when they process data only on behalf of SinLess Games LLC or the customer according to applicable agreements and policies.
 
 ## 22. Targeted Advertising and Sharing
 
-Helix AI does not use private user content, prompts, files, memory, organization data, or workspace data for third-party targeted advertising.
+Aerealith AI does not use private user content, prompts, files, memory, organization data, or workspace data for third-party targeted advertising.
 
 Public marketing pages may use limited marketing attribution, analytics, or advertising cookies where enabled, disclosed, and permitted.
 
-Where applicable law defines certain activity as “sharing” or “targeted advertising,” Helix AI should provide required opt-out controls.
+Where applicable law defines certain activity as “sharing” or “targeted advertising,” Aerealith AI should provide required opt-out controls.
 
 Cookie and advertising choices are described in the [Cookie and Tracking Policy](./cookie-tracking.md).
 
 ## 23. Organization Administrator Access
 
-If you use Helix AI through an organization workspace, organization administrators may access, manage, export, restrict, or delete data associated with that organization.
+If you use Aerealith AI through an organization workspace, organization administrators may access, manage, export, restrict, or delete data associated with that organization.
 
 Organization administrators may have access to:
 
@@ -788,7 +788,7 @@ Users should not use organization workspaces for personal data unless permitted 
 
 ## 24. Public Content
 
-Some Helix AI features may allow users to publish or share content publicly.
+Some Aerealith AI features may allow users to publish or share content publicly.
 
 Public content may include:
 
@@ -931,7 +931,7 @@ Exports may be provided in formats such as JSON, CSV, Markdown, PDF, ZIP archive
 
 ## 30. Consent and Withdrawal
 
-Where Helix AI relies on consent, users may withdraw consent where required or supported.
+Where Aerealith AI relies on consent, users may withdraw consent where required or supported.
 
 Consent may apply to:
 
@@ -950,7 +950,7 @@ Some features may not work if consent is withdrawn.
 
 ## 31. Marketing Communications
 
-Helix AI may send marketing communications where permitted.
+Aerealith AI may send marketing communications where permitted.
 
 Users may unsubscribe from marketing emails by using the unsubscribe link or contacting support.
 
@@ -967,7 +967,7 @@ Even if you unsubscribe from marketing communications, we may still send:
 
 ## 32. Children and Minors
 
-Helix AI is not intended for children unless expressly permitted by applicable law, account settings, organization configuration, and written agreements.
+Aerealith AI is not intended for children unless expressly permitted by applicable law, account settings, organization configuration, and written agreements.
 
 Use by minors is governed by the [Underage Policy](./underage-policy.md).
 
@@ -981,7 +981,7 @@ Parents, guardians, or authorized school or organization administrators may cont
 
 ## 33. Student, Education, and School Use
 
-If Helix AI is used by schools, educational institutions, students, or minors, additional terms may apply.
+If Aerealith AI is used by schools, educational institutions, students, or minors, additional terms may apply.
 
 Educational use may require:
 
@@ -999,19 +999,19 @@ Before enabling school or student use, SinLess Games LLC should confirm applicab
 
 ## 34. Healthcare, Financial, Legal, and Regulated Data
 
-Helix AI is not intended to process regulated healthcare, financial, legal, education, employment, biometric, criminal justice, or other regulated data unless the account, deployment, subscription, controls, and written agreements are appropriate for that use.
+Aerealith AI is not intended to process regulated healthcare, financial, legal, education, employment, biometric, criminal justice, or other regulated data unless the account, deployment, subscription, controls, and written agreements are appropriate for that use.
 
 For example:
 
-- Helix AI should not be used for protected health information unless a proper business associate agreement or equivalent arrangement is in place where required.
-- Helix AI should not be used for payment card processing outside approved payment processor workflows.
-- Helix AI should not be used as the sole decision-maker for legal, medical, financial, employment, housing, credit, insurance, education, or essential service decisions.
+- Aerealith AI should not be used for protected health information unless a proper business associate agreement or equivalent arrangement is in place where required.
+- Aerealith AI should not be used for payment card processing outside approved payment processor workflows.
+- Aerealith AI should not be used as the sole decision-maker for legal, medical, financial, employment, housing, credit, insurance, education, or essential service decisions.
 
 Users and organizations are responsible for ensuring their use complies with applicable regulated-data requirements.
 
 ## 35. Data Retention
 
-Helix AI retains personal information only as long as reasonably needed for the purposes described in this policy unless a longer retention period is required or permitted by law, contract, security, compliance, backup, audit, billing, dispute resolution, or legitimate business needs.
+Aerealith AI retains personal information only as long as reasonably needed for the purposes described in this policy unless a longer retention period is required or permitted by law, contract, security, compliance, backup, audit, billing, dispute resolution, or legitimate business needs.
 
 Retention may vary by data type.
 
@@ -1029,7 +1029,7 @@ Examples:
 
 ## 36. Backups
 
-Helix AI may maintain backups for reliability, disaster recovery, security, and business continuity.
+Aerealith AI may maintain backups for reliability, disaster recovery, security, and business continuity.
 
 Backups may contain copies of personal information for a limited period.
 
@@ -1041,7 +1041,7 @@ Backup data should not be used for ordinary business purposes except restoration
 
 ## 37. Security
 
-Helix AI should use reasonable technical and organizational safeguards to protect personal information.
+Aerealith AI should use reasonable technical and organizational safeguards to protect personal information.
 
 Safeguards may include:
 
@@ -1069,7 +1069,7 @@ Security commitments are described further in the [Security Policy](./security-p
 
 ## 38. Data Incidents
 
-If SinLess Games LLC becomes aware of a data incident affecting Helix AI, it will evaluate the incident and take appropriate action.
+If SinLess Games LLC becomes aware of a data incident affecting Aerealith AI, it will evaluate the incident and take appropriate action.
 
 Actions may include:
 
@@ -1125,9 +1125,9 @@ Depending on applicability, these rights may include:
 
 SinLess Games LLC does not sell user data.
 
-Helix AI does not use private user content, prompts, files, memory, organization data, or workspace data for third-party targeted advertising.
+Aerealith AI does not use private user content, prompts, files, memory, organization data, or workspace data for third-party targeted advertising.
 
-Where applicable law requires opt-out controls for sharing, targeted advertising, or sensitive personal information, Helix AI should provide those controls.
+Where applicable law requires opt-out controls for sharing, targeted advertising, or sensitive personal information, Aerealith AI should provide those controls.
 
 Requests may be sent to:
 
@@ -1135,7 +1135,7 @@ Requests may be sent to:
 
 ## 41. California Notice at Collection
 
-The categories of personal information Helix AI may collect are described in this policy.
+The categories of personal information Aerealith AI may collect are described in this policy.
 
 The purposes for collection and use are described in:
 
@@ -1154,7 +1154,7 @@ Retention is described in:
 
 ## 42. Global Privacy Control and Opt-Out Signals
 
-Helix AI may recognize legally required browser-based opt-out signals, such as Global Privacy Control, where applicable.
+Aerealith AI may recognize legally required browser-based opt-out signals, such as Global Privacy Control, where applicable.
 
 Where required by law, a valid opt-out signal may be treated as a request to opt out of sale, sharing, targeted advertising, or similar processing.
 
@@ -1267,7 +1267,7 @@ Developers and marketplace publishers may not:
 - Retain data longer than disclosed or permitted
 - Misrepresent privacy behavior
 - Share data with unauthorized third parties
-- Bypass Helix AI permission controls
+- Bypass Aerealith AI permission controls
 - Bypass organization controls
 - Use user data outside approved marketplace functionality
 - Use user data for unrelated products or services
@@ -1370,7 +1370,7 @@ Before publishing this policy, confirm these email aliases exist and are monitor
 Before publishing this policy, complete the following:
 
 - Confirm official company name: `SinLess Games LLC`
-- Confirm official product name: `Helix AI`
+- Confirm official product name: `Aerealith AI`
 - Confirm physical business address, if required
 - Confirm monitored privacy contact email
 - Confirm monitored security contact email
@@ -1402,7 +1402,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, email, release notes, legal notices page, cookie banner, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 56. Legal Review Notice
 

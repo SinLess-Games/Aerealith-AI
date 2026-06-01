@@ -3,12 +3,10 @@
     "github-agentic-workflows": {
       "type": "stdio",
       "command": "gh",
-      "args": ["aw", "mcp-server"]
-    },
-    "nx-mcp": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["nx", "mcp"]
+      "args": [
+        "aw",
+        "mcp-server"
+      ]
     },
     "com.stripe/mcp": {
       "type": "http",

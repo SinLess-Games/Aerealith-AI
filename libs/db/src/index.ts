@@ -12,13 +12,13 @@
  * import { UserRepository, WaitlistRepository } from '@aerealith-ai/db';
  */
 
-import { MikroORM } from '@mikro-orm/core';
 import type {
   EntityManager,
   EntityName,
   Opt,
   RequiredEntityData,
 } from '@mikro-orm/core';
+import { MikroORM } from '@mikro-orm/core';
 import type { PostgreSqlDriver } from '@mikro-orm/postgresql';
 
 import ormConfig, {
@@ -27,14 +27,14 @@ import ormConfig, {
 
 export { ormConfig };
 
-export * as entities from './entities/index.js';
 export * from './entities/index.js';
+export * as entities from './entities/index.js';
 
-export * as repositories from './repositories/index.js';
 export * from './repositories/index.js';
+export * as repositories from './repositories/index.js';
 
-export * from './enums/index.js';
 export * from './entity.base.js';
+export * from './enums/index.js';
 export type {
   AccessibilityUserSettings,
   AccountUserSettings,
@@ -50,7 +50,7 @@ export type {
   PrivacyUserSettings,
   SecurityUserSettings,
   UserSettingsMetadata,
-  UserSettingsPatch,
+  UserSettingsPatch
 } from './types/user-settings/index.js';
 
 export type {
@@ -58,7 +58,7 @@ export type {
   EntityName,
   Opt,
   PostgreSqlDriver,
-  RequiredEntityData,
+  RequiredEntityData
 };
 
 type HelixGlobal = typeof globalThis & {
@@ -205,7 +205,6 @@ export function forkEntityManager(
  */
 export async function getEntityManager(): Promise<EntityManager<PostgreSqlDriver>> {
   const orm = await getOrm();
-  await orm.reconnect();
 
   return forkEntityManager(orm);
 }

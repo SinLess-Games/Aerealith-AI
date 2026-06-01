@@ -1,6 +1,6 @@
 ---
 title: Payment Processor Compliance Policy
-description: Explains Helix AI payment processor compliance, prohibited transactions, restricted activity, billing integrity, fraud prevention, chargebacks, sanctions, and marketplace payment rules.
+description: Explains Aerealith AI payment processor compliance, prohibited transactions, restricted activity, billing integrity, fraud prevention, chargebacks, sanctions, and marketplace payment rules.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,11 +11,11 @@ status: draft
 
 ## 1. Purpose
 
-This Payment Processor Compliance Policy explains how SinLess Games LLC manages payment processor, card network, billing, fraud-prevention, marketplace, subscription, and transaction-compliance requirements for Helix AI.
+This Payment Processor Compliance Policy explains how SinLess Games LLC manages payment processor, card network, billing, fraud-prevention, marketplace, subscription, and transaction-compliance requirements for Aerealith AI.
 
-Helix AI may use third-party payment processors, including Stripe, PayPal, or other providers, to process payments, subscriptions, invoices, marketplace purchases, add-ons, usage charges, refunds, disputes, taxes, and related billing activity.
+Aerealith AI may use third-party payment processors, including Stripe, PayPal, or other providers, to process payments, subscriptions, invoices, marketplace purchases, add-ons, usage charges, refunds, disputes, taxes, and related billing activity.
 
-This policy is intended to help ensure that Helix AI, its users, organizations, developers, marketplace publishers, and customers comply with applicable payment processor rules, card network rules, financial regulations, anti-fraud requirements, sanctions restrictions, and Helix AI policies.
+This policy is intended to help ensure that Aerealith AI, its users, organizations, developers, marketplace publishers, and customers comply with applicable payment processor rules, card network rules, financial regulations, anti-fraud requirements, sanctions restrictions, and Aerealith AI policies.
 
 ## 2. Scope
 
@@ -40,7 +40,7 @@ This policy applies to:
 - Taxes
 - Payment method handling
 - Self-hosted, hybrid, and air-gapped licensing, where applicable
-- Any payment, billing, checkout, subscription, marketplace, or payout workflow connected to Helix AI
+- Any payment, billing, checkout, subscription, marketplace, or payout workflow connected to Aerealith AI
 
 This policy applies to:
 
@@ -53,11 +53,11 @@ This policy applies to:
 - Marketplace publishers
 - API users
 - Enterprise customers
-- Anyone who purchases, sells, subscribes to, or receives payment through Helix AI
+- Anyone who purchases, sells, subscribes to, or receives payment through Aerealith AI
 
 ## 3. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy-policy.md)
@@ -86,7 +86,7 @@ Users, organizations, developers, and marketplace publishers are responsible for
 
 ## 5. Supported Payment Processors
 
-Helix AI may use one or more payment processors or billing providers.
+Aerealith AI may use one or more payment processors or billing providers.
 
 Potential providers may include:
 
@@ -100,21 +100,21 @@ Potential providers may include:
 - Fraud-prevention providers
 - Invoice and accounting providers
 
-The specific providers used by Helix AI may change over time.
+The specific providers used by Aerealith AI may change over time.
 
 Before publishing this policy, confirm the actual payment processors and vendors in use and ensure they are listed in the [Subprocessor Vendor List](./subprocessor-vendor-list.md), where applicable.
 
 ## 6. Processor Terms Apply
 
-When using Helix AI billing, checkout, marketplace, or payout features, users may also be subject to the terms, policies, acceptable use rules, restricted business rules, risk controls, dispute rules, and privacy policies of the applicable payment processors.
+When using Aerealith AI billing, checkout, marketplace, or payout features, users may also be subject to the terms, policies, acceptable use rules, restricted business rules, risk controls, dispute rules, and privacy policies of the applicable payment processors.
 
-Users may not use Helix AI to bypass, evade, obscure, or violate payment processor rules.
+Users may not use Aerealith AI to bypass, evade, obscure, or violate payment processor rules.
 
 SinLess Games LLC may take action when required by a payment processor, card network, bank, regulator, law enforcement agency, court order, or applicable law.
 
 ## 7. Core Compliance Commitments
 
-SinLess Games LLC will make reasonable efforts to operate Helix AI payment workflows according to the following principles:
+SinLess Games LLC will make reasonable efforts to operate Aerealith AI payment workflows according to the following principles:
 
 1. Payments should be lawful.
 2. Payments should be authorized.
@@ -196,7 +196,7 @@ Unauthorized payment activity may be reported to payment processors, banks, card
 
 ## 11. Prohibited Transactions
 
-Helix AI may not be used to process payments for illegal, deceptive, abusive, unsafe, or payment-processor-prohibited activity.
+Aerealith AI may not be used to process payments for illegal, deceptive, abusive, unsafe, or payment-processor-prohibited activity.
 
 Prohibited transactions may include, but are not limited to, transactions involving:
 
@@ -281,9 +281,9 @@ Restricted activity may include, depending on processor rules and applicable law
 
 SinLess Games LLC may deny, restrict, suspend, or terminate restricted activity if it is not approved, not adequately documented, or not supported by the applicable payment processor.
 
-## 13. Helix AI Product Restrictions
+## 13. Aerealith AI Product Restrictions
 
-Helix AI may not be used to sell, monetize, advertise, facilitate, or process payment for products, services, plugins, workflows, automations, prompts, templates, personalities, dashboards, or marketplace items that violate Helix AI policies.
+Aerealith AI may not be used to sell, monetize, advertise, facilitate, or process payment for products, services, plugins, workflows, automations, prompts, templates, personalities, dashboards, or marketplace items that violate Aerealith AI policies.
 
 This includes items that:
 
@@ -299,7 +299,7 @@ This includes items that:
 
 ## 14. AI-Specific Payment Restrictions
 
-Users may not use Helix AI payment features to monetize AI activity that is unlawful, abusive, deceptive, unsafe, or prohibited by policy.
+Users may not use Aerealith AI payment features to monetize AI activity that is unlawful, abusive, deceptive, unsafe, or prohibited by policy.
 
 Prohibited AI monetization may include:
 
@@ -320,7 +320,7 @@ Prohibited AI monetization may include:
 
 ## 15. Marketplace Payment Rules
 
-Marketplace publishers must comply with all payment processor, payout provider, tax, legal, and Helix AI marketplace requirements.
+Marketplace publishers must comply with all payment processor, payout provider, tax, legal, and Aerealith AI marketplace requirements.
 
 Marketplace publishers may not:
 
@@ -386,9 +386,9 @@ Marketplace publishers are responsible for their own tax obligations unless expr
 
 ## 18. Sanctions and Restricted Jurisdictions
 
-Helix AI may not be used to process payments in violation of sanctions, export controls, restricted-party rules, embargoes, or high-risk jurisdiction restrictions.
+Aerealith AI may not be used to process payments in violation of sanctions, export controls, restricted-party rules, embargoes, or high-risk jurisdiction restrictions.
 
-Users may not use Helix AI to:
+Users may not use Aerealith AI to:
 
 - Evade sanctions
 - Hide restricted-party involvement
@@ -403,7 +403,7 @@ SinLess Games LLC may screen accounts, transactions, organizations, marketplace 
 
 ## 19. Anti-Money Laundering and Fraud Prevention
 
-Users may not use Helix AI to launder money, conceal funds, evade reporting obligations, disguise transaction purpose, or facilitate financial crime.
+Users may not use Aerealith AI to launder money, conceal funds, evade reporting obligations, disguise transaction purpose, or facilitate financial crime.
 
 Prohibited behavior includes:
 
@@ -419,13 +419,13 @@ Prohibited behavior includes:
 - Creating fake invoices
 - Using refunds to move money
 - Using chargebacks to commit fraud
-- Using Helix AI as a pass-through payment system
+- Using Aerealith AI as a pass-through payment system
 
 SinLess Games LLC may monitor transactions for fraud, abuse, suspicious patterns, refund abuse, chargeback abuse, and policy violations.
 
 ## 20. Billing Transparency
 
-Helix AI should make reasonable efforts to clearly disclose billing terms before purchase.
+Aerealith AI should make reasonable efforts to clearly disclose billing terms before purchase.
 
 Disclosures may include:
 
@@ -469,7 +469,7 @@ Cancellation and refund rules are described in the [Billing, Refund, and Cancell
 
 ## 22. Usage-Based Billing
 
-Some Helix AI services may be billed based on usage.
+Some Aerealith AI services may be billed based on usage.
 
 Usage-based charges may include:
 
@@ -495,7 +495,7 @@ Usage charges are generally non-refundable once incurred unless required by law,
 
 Refunds may be subject to:
 
-- Helix AI refund rules
+- Aerealith AI refund rules
 - Payment processor rules
 - Card network rules
 - Marketplace rules
@@ -656,7 +656,7 @@ Users should not send full payment card numbers, bank credentials, passwords, pr
 
 ## 30. PCI DSS Considerations
 
-If Helix AI processes payment card data, SinLess Games LLC should use payment flows designed to reduce direct exposure to cardholder data.
+If Aerealith AI processes payment card data, SinLess Games LLC should use payment flows designed to reduce direct exposure to cardholder data.
 
 Depending on implementation, PCI DSS responsibilities may include:
 
@@ -1058,7 +1058,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, billing portal, email, release notes, legal notices page, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 48. Contact
 

@@ -55,7 +55,7 @@
       "continuous": true,
       "executor": "@naxodev/nx-cloudflare:serve",
       "options": {
-        "name": "helix-auth-service",
+        "name": "aerealith-auth-service",
         "port": 8787,
         "inspectorPort": 9321,
         "ip": "127.0.0.1",
@@ -99,7 +99,7 @@
       "cache": false,
       "executor": "@naxodev/nx-cloudflare:deploy",
       "options": {
-        "name": "helix-auth-service",
+        "name": "aerealith-auth-service",
         "env": "preview",
         "compatibilityDate": "2026-05-09",
         "compatibilityFlags": [
@@ -110,12 +110,12 @@
       },
       "configurations": {
         "preview": {
-          "name": "helix-auth-service-preview",
+          "name": "aerealith-auth-service-preview",
           "env": "preview",
           "outdir": "dist/apps/services/auth"
         },
         "production": {
-          "name": "helix-auth-service",
+          "name": "aerealith-auth-service",
           "env": "production",
           "outdir": "dist/apps/services/auth"
         }

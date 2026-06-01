@@ -1,6 +1,6 @@
 ---
 title: Billing, Refund, and Cancellation Policy
-description: Explains Helix AI billing, subscriptions, renewals, refunds, cancellations, credits, taxes, failed payments, and account changes.
+description: Explains Aerealith AI billing, subscriptions, renewals, refunds, cancellations, credits, taxes, failed payments, and account changes.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,13 +11,13 @@ status: draft
 
 ## 1. Purpose
 
-This Billing, Refund, and Cancellation Policy explains how billing, subscriptions, renewals, refunds, cancellations, credits, add-ons, usage charges, failed payments, and account changes work for Helix AI.
+This Billing, Refund, and Cancellation Policy explains how billing, subscriptions, renewals, refunds, cancellations, credits, add-ons, usage charges, failed payments, and account changes work for Aerealith AI.
 
-Helix AI is operated by SinLess Games LLC.
+Aerealith AI is operated by SinLess Games LLC.
 
 This policy is intended to provide clear expectations for users, customers, organizations, developers, and enterprise accounts.
 
-By purchasing, subscribing to, or using paid Helix AI services, you agree to this policy, our [Terms of Use](./terms-of-use.md), [Privacy Policy](./privacy-policy.md), [Data Policy](./data-policy.md), [Security Policy](./security-policy.md), [Acceptable Use Policy](./acceptable-use.md), and any applicable order form, invoice, service agreement, or enterprise agreement.
+By purchasing, subscribing to, or using paid Aerealith AI services, you agree to this policy, our [Terms of Use](./terms-of-use.md), [Privacy Policy](./privacy-policy.md), [Data Policy](./data-policy.md), [Security Policy](./security-policy.md), [Acceptable Use Policy](./acceptable-use.md), and any applicable order form, invoice, service agreement, or enterprise agreement.
 
 ## 2. Scope
 
@@ -40,7 +40,7 @@ Some products, services, marketplace items, enterprise contracts, or custom agre
 
 ## 3. Plans and Pricing
 
-Helix AI may offer free, paid, usage-based, custom, and enterprise plans.
+Aerealith AI may offer free, paid, usage-based, custom, and enterprise plans.
 
 Plans may include, but are not limited to:
 
@@ -123,7 +123,7 @@ If you are tax-exempt, you must provide valid tax exemption documentation before
 
 ## 9. Trials
 
-Helix AI may offer free trials, discounted trials, promotional trials, beta access, early access, or limited-time offers.
+Aerealith AI may offer free trials, discounted trials, promotional trials, beta access, early access, or limited-time offers.
 
 Trial terms may vary by offer and may include:
 
@@ -162,7 +162,7 @@ After a promotion ends, the subscription may renew at the then-current standard 
 
 ## 11. Add-Ons
 
-Helix AI may offer optional add-ons, including but not limited to:
+Aerealith AI may offer optional add-ons, including but not limited to:
 
 - Extra storage
 - Extra vector space
@@ -186,7 +186,7 @@ Some add-ons may be non-refundable once provisioned, consumed, activated, or del
 
 ## 12. Usage-Based Billing
 
-Some Helix AI features may be billed based on usage.
+Some Aerealith AI features may be billed based on usage.
 
 Usage-based charges may include, but are not limited to:
 
@@ -212,7 +212,7 @@ Usage charges are generally non-refundable once incurred, unless required by law
 
 ## 13. Billing Limits and Notifications
 
-Helix AI may provide usage dashboards, quota indicators, alerts, or billing notifications.
+Aerealith AI may provide usage dashboards, quota indicators, alerts, or billing notifications.
 
 These tools are provided for convenience and may not always be real-time, complete, or error-free.
 
@@ -456,7 +456,7 @@ You should promptly remove users, rotate credentials, disable unused API keys, a
 
 ## 30. Marketplace Purchases
 
-Helix AI may offer marketplace items, including plugins, integrations, personalities, dashboards, templates, workflows, connectors, or other extensions.
+Aerealith AI may offer marketplace items, including plugins, integrations, personalities, dashboards, templates, workflows, connectors, or other extensions.
 
 Marketplace purchases may have separate pricing, licensing, renewal, cancellation, and refund terms.
 
@@ -589,7 +589,7 @@ If a specific regional legal requirement applies, SinLess Games LLC will comply 
 
 Billing changes may affect access to data and features.
 
-Depending on the change, Helix AI may:
+Depending on the change, Aerealith AI may:
 
 - Reduce storage limits
 - Pause automations
@@ -656,7 +656,7 @@ If enterprise documents conflict with this policy, the signed enterprise documen
 
 To cancel a subscription, use one of the available cancellation methods:
 
-1. Sign in to your Helix AI account.
+1. Sign in to your Aerealith AI account.
 2. Open account or organization billing settings.
 3. Select the active subscription.
 4. Choose the cancellation option.
@@ -703,7 +703,7 @@ Before publishing this policy, confirm these email aliases exist and are monitor
 
 ## 46. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy-policy.md)
@@ -723,7 +723,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, email, release notes, billing portal, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 48. Legal Review Notice
 

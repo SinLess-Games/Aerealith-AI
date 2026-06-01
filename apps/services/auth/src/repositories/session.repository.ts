@@ -244,6 +244,10 @@ export class SessionRepository {
     return session;
   }
 
+  public async flush(): Promise<void> {
+    await this.em.flush();
+  }
+
   public async updateSession(
     sessionId: string,
     input: UpdateAuthSessionInput,

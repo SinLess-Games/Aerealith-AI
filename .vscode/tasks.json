@@ -228,6 +228,19 @@
 				"$tsc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "build-auth",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"exec",
+				"nx",
+				"build",
+				"auth"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

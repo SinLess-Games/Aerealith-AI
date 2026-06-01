@@ -434,7 +434,7 @@ export function Header({
   loginEndpoint = '/api/V1/auth/login',
   signupEndpoint = '/api/V1/auth/signup',
   logoutEndpoint = '/api/V1/auth/logout',
-  userProfileEndpoint = '/api/V1/users/{username}',
+  userProfileEndpoint = '/api/V1/auth/{username}',
 
   dashboardHref = '/dashboard',
   profileHref = '/profile',
@@ -934,12 +934,18 @@ export function Header({
     }
 
     if (currentUser) {
+      const currentUsername = resolveUsername(currentUser);
+      const resolvedProfileHref = buildUserProfileUrl(
+        profileHref,
+        currentUsername,
+      );
+
       return (
         <UserProfileMenu
           user={currentUser}
           logoutEndpoint={logoutEndpoint}
           dashboardHref={dashboardHref}
-          profileHref={profileHref}
+          profileHref={resolvedProfileHref}
           settingsHref={settingsHref}
           actions={userMenuActions ? [...userMenuActions] : undefined}
           onNavigate={handleAuthNavigate}

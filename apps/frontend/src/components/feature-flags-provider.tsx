@@ -2,7 +2,10 @@
 
 import * as React from 'react';
 
-import type { FrontendFeatureFlags, FrontendSafeFlagKey } from '../lib/feature-flags';
+import type {
+  FrontendFeatureFlags,
+  FrontendSafeFlagKey,
+} from '../lib/feature-flags';
 
 type FeatureFlagsContextValue = {
   flags: FrontendFeatureFlags;
@@ -10,10 +13,19 @@ type FeatureFlagsContextValue = {
 
 const FeatureFlagsContext = React.createContext<FeatureFlagsContextValue>({
   flags: {
+    registration: true,
     pricing: false,
     dashboard: false,
     onboarding: false,
     observability: false,
+    profile: true,
+    'profile-public': true,
+    'profile-private': true,
+    'profile-app-connections': true,
+    'profile-integrations': true,
+    'profile-files': true,
+    'profile-reports': true,
+    'profile-achievements': true,
   },
 });
 

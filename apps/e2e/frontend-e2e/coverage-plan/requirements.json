@@ -85,6 +85,11 @@
       "id": "api.waitlist.cors",
       "description": "Waitlist API exposes CORS preflight for allowed origins.",
       "specs": ["src/e2e/api.cy.ts"]
+    },
+    {
+      "id": "profile.public-private-boundary",
+      "description": "Profile routes distinguish public profile access from private dashboard authentication.",
+      "specs": ["src/e2e/profile.cy.ts"]
     }
   ]
 }

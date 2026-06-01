@@ -17,6 +17,12 @@ export * from './user/user.entity';
 export * from './user/profile.entity';
 export * from './user/settings.entity';
 export * from './user/account.entity';
+export * from './user/achievement.entity';
+export * from './user/activity-event.entity';
+export * from './user/app-connection.entity';
+export * from './user/file-reference.entity';
+export * from './user/integration.entity';
+export * from './user/report.entity';
 export * from './user/session.entity';
 export * from './user/verification-token.entity';
 

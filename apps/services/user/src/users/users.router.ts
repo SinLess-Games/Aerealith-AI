@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 
 import { flagBoolean } from '@aerealith-ai/flags';
 import type { UserContextVariables } from './types';
@@ -6,6 +7,8 @@ import type { UserContextVariables } from './types';
 import {
   createUserController,
   deleteUserController,
+  getPrivateProfileDashboardController,
+  getPublicProfileController,
   getUserController,
   getUserProfileController,
   getUserSettingsController,
@@ -29,6 +32,17 @@ const disabledResponse = (message: string) => ({
     message,
   },
 });
+
+const isEnabled = (
+  context: Context<UsersRouterEnv>,
+  key: string,
+  defaultValue: boolean,
+): Promise<boolean> =>
+  flagBoolean(
+    context as unknown as Parameters<typeof flagBoolean>[0],
+    key,
+    defaultValue,
+  );
 
 export const usersRouter = new Hono<UsersRouterEnv>();
 
@@ -67,76 +81,166 @@ usersRouter.get('/health', async (context) => {
   });
 });
 
-usersRouter.get('/', async (context, next) => {
-  if (!(await flagBoolean(context, 'dashboard', false))) {
-    return context.json(disabledResponse('Dashboard access is disabled.'), 404);
-  }
+usersRouter.get(
+  '/',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'dashboard', false))) {
+      return context.json(
+        disabledResponse('Dashboard access is disabled.'),
+        404,
+      );
+    }
 
-  await next();
-}, listUsersController);
+    return next();
+  },
+  listUsersController,
+);
 
-usersRouter.post('/', async (context, next) => {
-  if (!(await flagBoolean(context, 'onboarding', false))) {
-    return context.json(disabledResponse('Onboarding is disabled.'), 404);
-  }
+usersRouter.post(
+  '/',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'onboarding', false))) {
+      return context.json(disabledResponse('Onboarding is disabled.'), 404);
+    }
 
-  await next();
-}, createUserController);
+    return next();
+  },
+  createUserController,
+);
 
-usersRouter.get('/:username', async (context, next) => {
-  if (!(await flagBoolean(context, 'dashboard', false))) {
-    return context.json(disabledResponse('Dashboard access is disabled.'), 404);
-  }
+usersRouter.get(
+  '/:username',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'dashboard', false))) {
+      return context.json(
+        disabledResponse('Dashboard access is disabled.'),
+        404,
+      );
+    }
 
-  await next();
-}, getUserController);
+    return next();
+  },
+  getUserController,
+);
 
-usersRouter.patch('/:username', async (context, next) => {
-  if (!(await flagBoolean(context, 'onboarding', false))) {
-    return context.json(disabledResponse('Onboarding updates are disabled.'), 404);
-  }
+usersRouter.patch(
+  '/:username',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'onboarding', false))) {
+      return context.json(
+        disabledResponse('Onboarding updates are disabled.'),
+        404,
+      );
+    }
 
-  await next();
-}, updateUserController);
+    return next();
+  },
+  updateUserController,
+);
 
-usersRouter.delete('/:username', async (context, next) => {
-  if (!(await flagBoolean(context, 'billing', false))) {
-    return context.json(disabledResponse('Billing-related account actions are disabled.'), 404);
-  }
+usersRouter.delete(
+  '/:username',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'billing', false))) {
+      return context.json(
+        disabledResponse('Billing-related account actions are disabled.'),
+        404,
+      );
+    }
 
-  await next();
-}, deleteUserController);
+    return next();
+  },
+  deleteUserController,
+);
 
-usersRouter.get('/:username/profile', async (context, next) => {
-  if (!(await flagBoolean(context, 'dashboard', false))) {
-    return context.json(disabledResponse('Dashboard access is disabled.'), 404);
-  }
+usersRouter.get(
+  '/:username/profile',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'profile-public', true))) {
+      return context.json(
+        disabledResponse('Public profiles are disabled.'),
+        404,
+      );
+    }
 
-  await next();
-}, getUserProfileController);
+    return next();
+  },
+  getPublicProfileController,
+);
 
-usersRouter.patch('/:username/profile', async (context, next) => {
-  if (!(await flagBoolean(context, 'onboarding', false))) {
-    return context.json(disabledResponse('Onboarding updates are disabled.'), 404);
-  }
+usersRouter.get(
+  '/:username/profile/dashboard',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'profile-private', true))) {
+      return context.json(
+        disabledResponse('Private profiles are disabled.'),
+        404,
+      );
+    }
 
-  await next();
-}, updateUserProfileController);
+    return next();
+  },
+  getPrivateProfileDashboardController,
+);
 
-usersRouter.get('/:username/settings', async (context, next) => {
-  if (!(await flagBoolean(context, 'billing', false))) {
-    return context.json(disabledResponse('Billing settings are disabled.'), 404);
-  }
+usersRouter.get(
+  '/:username/profile/basic',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'dashboard', false))) {
+      return context.json(
+        disabledResponse('Dashboard access is disabled.'),
+        404,
+      );
+    }
 
-  await next();
-}, getUserSettingsController);
+    return next();
+  },
+  getUserProfileController,
+);
 
-usersRouter.patch('/:username/settings', async (context, next) => {
-  if (!(await flagBoolean(context, 'billing', false))) {
-    return context.json(disabledResponse('Billing settings are disabled.'), 404);
-  }
+usersRouter.patch(
+  '/:username/profile',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'profile-private', true))) {
+      return context.json(
+        disabledResponse('Profile updates are disabled.'),
+        404,
+      );
+    }
 
-  await next();
-}, updateUserSettingsController);
+    return next();
+  },
+  updateUserProfileController,
+);
+
+usersRouter.get(
+  '/:username/settings',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'billing', false))) {
+      return context.json(
+        disabledResponse('Billing settings are disabled.'),
+        404,
+      );
+    }
+
+    return next();
+  },
+  getUserSettingsController,
+);
+
+usersRouter.patch(
+  '/:username/settings',
+  async (context, next) => {
+    if (!(await isEnabled(context, 'billing', false))) {
+      return context.json(
+        disabledResponse('Billing settings are disabled.'),
+        404,
+      );
+    }
+
+    return next();
+  },
+  updateUserSettingsController,
+);
 
 export default usersRouter;

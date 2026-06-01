@@ -43,7 +43,7 @@
         "./libs/content/src/*"
       ],
       "@aerealith-ai/contracts": [
-        "./libs/contracts/src/index.ts"
+        "./libs/contracts/index.ts"
       ],
       "@aerealith-ai/db": [
         "./libs/db/src/index.ts"

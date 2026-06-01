@@ -196,5 +196,13 @@ export const FLAGS_COMMON_KEYS = {
   dashboard: 'dashboard',
   onboarding: 'onboarding',
   observability: 'observability',
+  profile: 'profile',
+  profilePublic: 'profile-public',
+  profilePrivate: 'profile-private',
+  profileAppConnections: 'profile-app-connections',
+  profileIntegrations: 'profile-integrations',
+  profileFiles: 'profile-files',
+  profileReports: 'profile-reports',
+  profileAchievements: 'profile-achievements',
   maintenanceMode: 'maintenance-mode',
 } as const satisfies Record<string, FlagKey>;

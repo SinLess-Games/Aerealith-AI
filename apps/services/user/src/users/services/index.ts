@@ -17,6 +17,12 @@ export {
 } from './get-user-profile.service';
 
 export {
+  GetProfileDashboardService,
+  GetProfileDashboardServiceError,
+  type GetProfileDashboardServiceOptions,
+} from './get-profile-dashboard.service';
+
+export {
   GetUserService,
   GetUserServiceError,
   type GetUserServiceOptions,

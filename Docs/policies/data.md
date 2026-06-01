@@ -1,6 +1,6 @@
 ---
 title: Data Policy
-description: Explains how Helix AI handles user data, ownership, storage, processing, research use, exports, deletion, retention, and data controls.
+description: Explains how Aerealith AI handles user data, ownership, storage, processing, research use, exports, deletion, retention, and data controls.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,14 +11,14 @@ status: draft
 
 ## 1. Purpose
 
-This Data Policy explains how Helix AI handles data provided by users, organizations, developers, integrations, automations, plugins, and connected services.
+This Data Policy explains how Aerealith AI handles data provided by users, organizations, developers, integrations, automations, plugins, and connected services.
 
-Helix AI is operated by SinLess Games LLC.
+Aerealith AI is operated by SinLess Games LLC.
 
 This policy explains:
 
 - Who owns user data
-- What data Helix AI may process
+- What data Aerealith AI may process
 - How data may be used
 - How data may not be used
 - How data is stored, retained, exported, and deleted
@@ -28,11 +28,11 @@ This policy explains:
 
 The core principle is simple:
 
-**Users own their data. Helix AI does not sell user data. Helix AI does not use user data outside of legitimate service business logic and approved research purposes.**
+**Users own their data. Aerealith AI does not sell user data. Aerealith AI does not use user data outside of legitimate service business logic and approved research purposes.**
 
 ## 2. Scope
 
-This policy applies to Helix AI services, including:
+This policy applies to Aerealith AI services, including:
 
 - Websites
 - Web applications
@@ -65,18 +65,18 @@ This policy applies to:
 - Marketplace publishers
 - API users
 - Enterprise customers
-- Anyone who uses Helix AI through an account, workspace, integration, automation, shared agent, or connected service
+- Anyone who uses Aerealith AI through an account, workspace, integration, automation, shared agent, or connected service
 
 ## 3. Core Data Commitments
 
-SinLess Games LLC makes the following commitments for Helix AI:
+SinLess Games LLC makes the following commitments for Aerealith AI:
 
 1. **Users own their data.**
-2. **Helix AI does not sell user data.**
-3. **Helix AI does not use user data outside legitimate service business logic and approved research purposes.**
-4. **Helix AI does not claim ownership over user-uploaded content.**
-5. **Helix AI only receives the rights needed to operate, secure, improve, and support the service.**
-6. **Helix AI should minimize unnecessary data collection.**
+2. **Aerealith AI does not sell user data.**
+3. **Aerealith AI does not use user data outside legitimate service business logic and approved research purposes.**
+4. **Aerealith AI does not claim ownership over user-uploaded content.**
+5. **Aerealith AI only receives the rights needed to operate, secure, improve, and support the service.**
+6. **Aerealith AI should minimize unnecessary data collection.**
 7. **Users should have meaningful controls over their data.**
 8. **Organizations should have administrative controls over organization data.**
 9. **Sensitive data should receive stronger handling and access controls.**
@@ -113,15 +113,15 @@ Your data may include:
 - API inputs
 - User-generated content
 - Marketplace publisher content
-- Any other content you submit, upload, connect, create, import, or process through Helix AI
+- Any other content you submit, upload, connect, create, import, or process through Aerealith AI
 
 SinLess Games LLC does not claim ownership of user data.
 
-By using Helix AI, you give SinLess Games LLC a limited right to process your data only as needed to provide, secure, maintain, troubleshoot, improve, support, and research Helix AI according to this policy, the Privacy Policy, the Terms of Use, and applicable agreements.
+By using Aerealith AI, you give SinLess Games LLC a limited right to process your data only as needed to provide, secure, maintain, troubleshoot, improve, support, and research Aerealith AI according to this policy, the Privacy Policy, the Terms of Use, and applicable agreements.
 
 ## 5. Customer Data
 
-“Customer Data” means data that users or organizations submit, upload, import, connect, generate, or process through Helix AI.
+“Customer Data” means data that users or organizations submit, upload, import, connect, generate, or process through Aerealith AI.
 
 Customer Data may include:
 
@@ -170,11 +170,11 @@ Account Data may include:
 - Consent records
 - Communication preferences
 
-Account Data is used to operate, secure, administer, and support Helix AI.
+Account Data is used to operate, secure, administer, and support Aerealith AI.
 
 ## 7. Service Data
 
-“Service Data” means operational data created by Helix AI while providing the service.
+“Service Data” means operational data created by Aerealith AI while providing the service.
 
 Service Data may include:
 
@@ -199,7 +199,7 @@ Service Data is used for legitimate service business logic, including reliabilit
 
 ## 8. Derived Data
 
-Helix AI may create derived data from user activity or service operation.
+Aerealith AI may create derived data from user activity or service operation.
 
 Derived Data may include:
 
@@ -226,7 +226,7 @@ Where practical, derived data should be scoped, minimized, aggregated, anonymize
 
 ## 9. Aggregated and De-Identified Data
 
-Helix AI may use aggregated or de-identified data for:
+Aerealith AI may use aggregated or de-identified data for:
 
 - Product improvement
 - Service reliability
@@ -249,7 +249,7 @@ SinLess Games LLC should not attempt to re-identify de-identified data except wh
 
 SinLess Games LLC does not sell user data.
 
-Helix AI will not sell:
+Aerealith AI will not sell:
 
 - Customer Data
 - User prompts
@@ -267,15 +267,15 @@ Helix AI will not sell:
 - Analytics inputs
 - Dashboard data
 
-Helix AI may use subprocessors, vendors, hosting providers, payment processors, AI providers, analytics providers, security providers, and support providers to operate the service. Use of these providers is not a sale of user data when they process data only on behalf of SinLess Games LLC or the customer according to applicable agreements and policies.
+Aerealith AI may use subprocessors, vendors, hosting providers, payment processors, AI providers, analytics providers, security providers, and support providers to operate the service. Use of these providers is not a sale of user data when they process data only on behalf of SinLess Games LLC or the customer according to applicable agreements and policies.
 
 Subprocessors and vendors should be disclosed in the applicable [Subprocessor Vendor List](./subprocessor-vendor-list.md).
 
 ## 11. No Unrelated Use
 
-Helix AI does not use user data for purposes unrelated to Helix AI service business logic or approved research.
+Aerealith AI does not use user data for purposes unrelated to Aerealith AI service business logic or approved research.
 
-Helix AI will not use user data to:
+Aerealith AI will not use user data to:
 
 - Sell personal data
 - Sell customer content
@@ -290,7 +290,7 @@ Helix AI will not use user data to:
 
 ## 12. Permitted Business Logic Uses
 
-Helix AI may use data for legitimate service business logic.
+Aerealith AI may use data for legitimate service business logic.
 
 Business logic uses may include:
 
@@ -329,7 +329,7 @@ Business logic uses may include:
 
 ## 13. Approved Research Uses
 
-Helix AI may use data for approved research purposes that support the Helix AI product, platform, safety, reliability, security, quality, and responsible AI goals.
+Aerealith AI may use data for approved research purposes that support the Aerealith AI product, platform, safety, reliability, security, quality, and responsible AI goals.
 
 Approved research may include:
 
@@ -369,14 +369,14 @@ Research use should follow these principles:
 
 ## 14. Model Training
 
-Helix AI should clearly distinguish between:
+Aerealith AI should clearly distinguish between:
 
 - Processing data to provide a requested response
 - Processing data to improve service quality
 - Processing data for internal research and evaluation
 - Training or fine-tuning models
 
-Unless clearly disclosed, enabled by user or organization settings, or permitted by a written agreement, Helix AI should not use private Customer Data to train public or general-purpose models.
+Unless clearly disclosed, enabled by user or organization settings, or permitted by a written agreement, Aerealith AI should not use private Customer Data to train public or general-purpose models.
 
 Organization and enterprise customers may have additional controls over whether their data may be used for model training, evaluation, research, or product improvement.
 
@@ -384,7 +384,7 @@ If SinLess Games LLC offers optional training, fine-tuning, or learning features
 
 ## 15. AI Memory
 
-Helix AI may support memory features that help the assistant provide continuity and personalization.
+Aerealith AI may support memory features that help the assistant provide continuity and personalization.
 
 Memory may include:
 
@@ -422,7 +422,7 @@ Deleting a memory entry may not immediately delete related logs, backups, audit 
 
 ## 16. Memory Sensitivity
 
-Helix AI should treat memory according to sensitivity.
+Aerealith AI should treat memory according to sensitivity.
 
 Memory sensitivity levels may include:
 
@@ -463,13 +463,13 @@ Secrets may include:
 
 Secrets should be stored in approved secret-management systems such as Vault, KMS, cloud secret managers, or customer-controlled secret stores.
 
-Helix AI should avoid storing secrets in plain text, logs, analytics, ordinary memory, or general user content.
+Aerealith AI should avoid storing secrets in plain text, logs, analytics, ordinary memory, or general user content.
 
-If secrets are detected, Helix AI may redact, restrict, rotate, remove, alert, or recommend remediation where supported.
+If secrets are detected, Aerealith AI may redact, restrict, rotate, remove, alert, or recommend remediation where supported.
 
 ## 18. Files and Uploads
 
-Users may upload or connect files to Helix AI.
+Users may upload or connect files to Aerealith AI.
 
 Files may be used for:
 
@@ -494,7 +494,7 @@ Uploaded files may be stored, indexed, embedded, cached, scanned, or processed a
 
 ## 19. Integrations and Connected Services
 
-Helix AI may connect to third-party services when authorized by the user or organization.
+Aerealith AI may connect to third-party services when authorized by the user or organization.
 
 Connected services may include:
 
@@ -512,13 +512,13 @@ Connected services may include:
 - Developer tools
 - Marketplace systems
 
-Helix AI will only access connected services according to granted permissions, technical configuration, user instructions, organization policies, and applicable agreements.
+Aerealith AI will only access connected services according to granted permissions, technical configuration, user instructions, organization policies, and applicable agreements.
 
 Users and administrators are responsible for managing integration permissions and disconnecting integrations that are no longer needed.
 
 ## 20. Automations and Tool Calls
 
-Helix AI may process data through automations, workflows, agents, plugins, and tool calls.
+Aerealith AI may process data through automations, workflows, agents, plugins, and tool calls.
 
 Automation data may include:
 
@@ -635,7 +635,7 @@ Users should only provide sensitive data when authorized and when the account, w
 
 ## 25. Data Minimization
 
-Helix AI should collect and process only the data reasonably needed for the applicable purpose.
+Aerealith AI should collect and process only the data reasonably needed for the applicable purpose.
 
 Data minimization may include:
 
@@ -681,7 +681,7 @@ Where practical, access should be:
 
 ## 27. Human Review
 
-Helix AI may involve human review of limited data in specific situations.
+Aerealith AI may involve human review of limited data in specific situations.
 
 Human review may occur for:
 
@@ -704,7 +704,7 @@ Sensitive data should receive additional safeguards.
 
 ## 28. Data Sharing
 
-Helix AI may share data only as needed for legitimate business logic, approved research, legal obligations, user direction, or organization configuration.
+Aerealith AI may share data only as needed for legitimate business logic, approved research, legal obligations, user direction, or organization configuration.
 
 Data may be shared with:
 
@@ -724,11 +724,11 @@ Data may be shared with:
 - Organization administrators, where applicable
 - Third parties authorized by the user or organization
 
-Helix AI does not sell user data.
+Aerealith AI does not sell user data.
 
 ## 29. Subprocessors and Vendors
 
-SinLess Games LLC may use subprocessors and vendors to operate Helix AI.
+SinLess Games LLC may use subprocessors and vendors to operate Aerealith AI.
 
 Subprocessors may support:
 
@@ -773,7 +773,7 @@ Enterprise customers may have additional data residency terms in written agreeme
 
 ## 31. Security of Data
 
-Helix AI should use reasonable technical and organizational safeguards to protect data.
+Aerealith AI should use reasonable technical and organizational safeguards to protect data.
 
 Safeguards may include:
 
@@ -799,7 +799,7 @@ Security commitments are described further in the [Security Policy](./security-p
 
 ## 32. Data Retention
 
-Helix AI retains data only as long as reasonably needed for the purposes described in this policy, unless a longer retention period is required or permitted by law, contract, security, compliance, backup, audit, billing, dispute resolution, or legitimate business needs.
+Aerealith AI retains data only as long as reasonably needed for the purposes described in this policy, unless a longer retention period is required or permitted by law, contract, security, compliance, backup, audit, billing, dispute resolution, or legitimate business needs.
 
 Retention may vary by data type.
 
@@ -876,7 +876,7 @@ Some exports may require administrator approval, identity verification, or organ
 
 ## 35. Data Portability
 
-Where required by law or supported by product functionality, Helix AI may provide data portability options.
+Where required by law or supported by product functionality, Aerealith AI may provide data portability options.
 
 Portability may allow users to receive certain data in a structured, commonly used, machine-readable format.
 
@@ -929,7 +929,7 @@ For organization data, users may need to contact their organization administrato
 
 ## 38. Backups
 
-Helix AI may maintain backups for reliability, disaster recovery, security, and business continuity.
+Aerealith AI may maintain backups for reliability, disaster recovery, security, and business continuity.
 
 Backups may contain copies of user data for a limited period.
 
@@ -941,7 +941,7 @@ Backup data should not be used for ordinary business purposes except restoration
 
 ## 39. Logs and Audit Records
 
-Helix AI may maintain logs and audit records.
+Aerealith AI may maintain logs and audit records.
 
 Logs and audit records may include:
 
@@ -966,7 +966,7 @@ Audit records may not be fully deletable if they are required for security, comp
 
 ## 40. Analytics Data
 
-Helix AI may process analytics data to understand and improve the service.
+Aerealith AI may process analytics data to understand and improve the service.
 
 Analytics data may include:
 
@@ -1012,7 +1012,7 @@ Research involving sensitive, regulated, or enterprise-restricted data may requi
 
 ## 42. AI Provider Data Handling
 
-Helix AI may use AI providers, local models, organization-controlled models, or self-hosted models depending on deployment and configuration.
+Aerealith AI may use AI providers, local models, organization-controlled models, or self-hosted models depending on deployment and configuration.
 
 Data sent to AI providers may include relevant portions of:
 
@@ -1025,7 +1025,7 @@ Data sent to AI providers may include relevant portions of:
 - Instructions
 - Memory, where enabled and relevant
 
-Helix AI should limit data sent to AI providers to what is reasonably needed for the requested function.
+Aerealith AI should limit data sent to AI providers to what is reasonably needed for the requested function.
 
 Enterprise and self-hosted deployments may have additional controls over which models or providers are allowed.
 
@@ -1033,7 +1033,7 @@ Relevant AI providers should be listed in the [Subprocessor Vendor List](./subpr
 
 ## 43. Data Sent to Tools
 
-When a user asks Helix AI to use tools, plugins, automations, or integrations, Helix AI may send relevant data to those tools.
+When a user asks Aerealith AI to use tools, plugins, automations, or integrations, Aerealith AI may send relevant data to those tools.
 
 Data sent to tools may include:
 
@@ -1052,7 +1052,7 @@ Users and organizations should review tool permissions before enabling integrati
 
 ## 44. Public Content
 
-Some Helix AI features may allow users to publish or share content publicly.
+Some Aerealith AI features may allow users to publish or share content publicly.
 
 Public content may include:
 
@@ -1151,7 +1151,7 @@ Air-gapped deployments should be designed to operate without public SaaS depende
 
 ## 48. Data Breach and Incidents
 
-If SinLess Games LLC becomes aware of a data incident affecting Helix AI, it will evaluate the incident and take appropriate action.
+If SinLess Games LLC becomes aware of a data incident affecting Aerealith AI, it will evaluate the incident and take appropriate action.
 
 Actions may include:
 
@@ -1177,7 +1177,7 @@ SinLess Games LLC may challenge requests that are overbroad, unclear, unlawful, 
 
 ## 50. Data After Account Termination
 
-After account termination, cancellation, or suspension, Helix AI may retain data for a limited period or as required by law, contract, backup rotation, security, abuse prevention, billing, audit, dispute resolution, or compliance obligations.
+After account termination, cancellation, or suspension, Aerealith AI may retain data for a limited period or as required by law, contract, backup rotation, security, abuse prevention, billing, audit, dispute resolution, or compliance obligations.
 
 Access to data may be limited or disabled after termination.
 
@@ -1187,7 +1187,7 @@ Users should export important data before canceling or terminating service.
 
 If a user or organization downgrades a plan, some data may exceed the limits of the new plan.
 
-Helix AI may:
+Aerealith AI may:
 
 - Restrict access
 - Make data read-only
@@ -1204,7 +1204,7 @@ Users are responsible for exporting or reducing data before downgrading where ne
 
 ## 52. Children’s Data
 
-Helix AI is not intended to collect or process children’s data unless permitted by applicable law, account settings, organization configuration, and written agreements.
+Aerealith AI is not intended to collect or process children’s data unless permitted by applicable law, account settings, organization configuration, and written agreements.
 
 Use by minors is governed by the [Underage Policy](./underage-policy.md).
 
@@ -1212,7 +1212,7 @@ If SinLess Games LLC learns that children’s data has been collected in violati
 
 ## 53. Data Classification
 
-Helix AI may classify data by sensitivity to support security, routing, access control, memory behavior, retention, and policy enforcement.
+Aerealith AI may classify data by sensitivity to support security, routing, access control, memory behavior, retention, and policy enforcement.
 
 Example classifications may include:
 
@@ -1288,7 +1288,7 @@ Before publishing this policy, confirm these email aliases exist and are monitor
 
 ## 57. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy-policy.md)
@@ -1312,7 +1312,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, email, release notes, legal notices page, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 59. Legal Review Notice
 

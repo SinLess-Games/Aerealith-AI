@@ -72,6 +72,7 @@ export const getAuthTokenSecret = (env: { AUTH_TOKEN_SECRET?: string }): string 
 
 export const createConfiguredAuthApp = async (
   env: {
+    NODE_ENV?: string;
     AUTH_TOKEN_SECRET?: string;
     AUTH_TOKEN_ISSUER?: string;
     AUTH_TOKEN_AUDIENCE?: string;
@@ -79,6 +80,7 @@ export const createConfiguredAuthApp = async (
     AUTH_REFRESH_TOKEN_TTL_SECONDS?: string;
     AUTH_EMAIL_VERIFICATION_TOKEN_TTL_SECONDS?: string;
     AUTH_PASSWORD_RESET_TOKEN_TTL_SECONDS?: string;
+    AUTH_EMAIL_ENABLED?: string;
     AUTH_SESSION_TTL_SECONDS?: string;
     AUTH_REFRESH_TOKEN_ROTATION_ENABLED?: string;
     AUTH_REVOKE_EXISTING_VERIFICATION_TOKENS_ON_CREATE?: string;
@@ -88,11 +90,67 @@ export const createConfiguredAuthApp = async (
   },
 ): Promise<ReturnType<typeof createAuthApp>> => {
 
-  const em = await getEntityManager();
-  const userRepository = createUserRepository(em);
-  const accountRepository = createAccountRepository(em);
-  const sessionRepository = createSessionRepository(em);
-  const verificationTokenRepository = createVerificationTokenRepository(em);
+  // Do NOT create a single shared EntityManager for the whole app instance.
+  // Instead, create lightweight per-method proxies that obtain a fresh
+  // request-safe EntityManager via `getEntityManager()` and delegate to a
+  // concrete repository instance. This avoids reusing the same EM across
+  // concurrent requests which can hang the Cloudflare Worker runtime.
+  const createScopedProxy = <T extends Record<string, unknown>>(
+    factory: (em: any) => T,
+  ): T => {
+    const handler: ProxyHandler<any> = {
+      get(_, prop: string) {
+        return async (...args: unknown[]) => {
+          // Timebox acquiring a request-safe EntityManager so a stalled
+          // database initialization does not block the Worker runtime and
+          // cause the runtime to cancel the request. If the timeout fires
+          // we propagate an error so the app can return a 5xx/503 quickly.
+          const EM_INIT_TIMEOUT_MS =
+            env.NODE_ENV === 'development' ? 5_000 : 700;
+
+          const em = await Promise.race([
+            getEntityManager(),
+            new Promise<never>((_, reject) =>
+              setTimeout(
+                () => reject(new Error('Database initialization timed out')),
+                EM_INIT_TIMEOUT_MS,
+              ),
+            ),
+          ]);
+
+          const repo = factory(em);
+
+          const fn = (repo as any)[prop];
+
+          if (typeof fn !== 'function') {
+            return (repo as any)[prop];
+          }
+
+          const OP_TIMEOUT_MS =
+            env.NODE_ENV === 'development' ? 20_000 : 1_500;
+
+          return await Promise.race([
+            fn.apply(repo, args),
+            new Promise<never>((_, reject) =>
+              setTimeout(
+                () => reject(new Error('Database operation timed out')),
+                OP_TIMEOUT_MS,
+              ),
+            ),
+          ]);
+        };
+      },
+    };
+
+    return new Proxy({}, handler) as T;
+  };
+
+  const userRepository = createScopedProxy(createUserRepository);
+  const accountRepository = createScopedProxy(createAccountRepository);
+  const sessionRepository = createScopedProxy(createSessionRepository);
+  const verificationTokenRepository = createScopedProxy(
+    createVerificationTokenRepository,
+  );
 
   const tokenService = createTokenService({
     config: pruneUndefined({
@@ -106,14 +164,19 @@ export const createConfiguredAuthApp = async (
     }),
   });
 
-  const sessionService = createSessionService({
-    repository: sessionRepository,
-    tokenService,
-    config: pruneUndefined({
-      sessionTtlSeconds: parsePositiveInteger(env.AUTH_SESSION_TTL_SECONDS),
-      refreshTokenRotationEnabled: parseBoolean(env.AUTH_REFRESH_TOKEN_ROTATION_ENABLED),
-    }),
+  const sessionServiceConfig = pruneUndefined({
+    sessionTtlSeconds: parsePositiveInteger(env.AUTH_SESSION_TTL_SECONDS),
+    refreshTokenRotationEnabled: parseBoolean(
+      env.AUTH_REFRESH_TOKEN_ROTATION_ENABLED,
+    ),
   });
+  const sessionService = createScopedProxy((em) =>
+    createSessionService({
+      repository: createSessionRepository(em),
+      tokenService,
+      config: sessionServiceConfig,
+    }),
+  );
 
   const verificationTokenService = createVerificationTokenService({
     repository: verificationTokenRepository,
@@ -131,6 +194,7 @@ export const createConfiguredAuthApp = async (
     sessionService,
     verificationTokenService,
     passwordService: createPasswordService(),
+    requireEmailVerification: env.NODE_ENV === 'production',
   });
 
   return createAuthApp({

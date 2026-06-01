@@ -1,6 +1,6 @@
 ---
 title: User-Generated Content Policy
-description: Explains ownership, attribution, licensing, sharing, moderation, public content, AI-generated content, and user responsibilities for content created, uploaded, generated, or shared through Helix AI.
+description: Explains ownership, attribution, licensing, sharing, moderation, public content, AI-generated content, and user responsibilities for content created, uploaded, generated, or shared through Aerealith AI.
 effective_date: 2026-05-19
 last_updated: 2026-05-19
 owner: SinLess Games LLC
@@ -11,19 +11,19 @@ status: draft
 
 ## 1. Purpose
 
-This User-Generated Content Policy explains how Helix AI handles content created, uploaded, generated, transformed, published, shared, distributed, or otherwise processed by users.
+This User-Generated Content Policy explains how Aerealith AI handles content created, uploaded, generated, transformed, published, shared, distributed, or otherwise processed by users.
 
-Helix AI is operated by SinLess Games LLC.
+Aerealith AI is operated by SinLess Games LLC.
 
-Helix AI allows users to create and work with prompts, messages, files, code, images, documents, dashboards, workflows, automations, marketplace items, plugins, templates, AI-generated outputs, and other content. This policy explains ownership, user responsibility, required attribution, prohibited content, moderation, takedowns, and public-sharing rules.
+Aerealith AI allows users to create and work with prompts, messages, files, code, images, documents, dashboards, workflows, automations, marketplace items, plugins, templates, AI-generated outputs, and other content. This policy explains ownership, user responsibility, required attribution, prohibited content, moderation, takedowns, and public-sharing rules.
 
 The core rule is:
 
-**Users own what they generate through Helix AI, as between the user and SinLess Games LLC, but Helix AI must be attributed in a reasonable manner when generated or AI-assisted content is published, distributed, sold, submitted professionally, or used publicly.**
+**Users own what they generate through Aerealith AI, as between the user and SinLess Games LLC, but Aerealith AI must be attributed in a reasonable manner when generated or AI-assisted content is published, distributed, sold, submitted professionally, or used publicly.**
 
 ## 2. Scope
 
-This policy applies to Helix AI services, including:
+This policy applies to Aerealith AI services, including:
 
 - Websites
 - Web applications
@@ -58,11 +58,11 @@ This policy applies to:
 - Marketplace publishers
 - API users
 - Enterprise customers
-- Anyone who creates, uploads, generates, shares, publishes, distributes, or processes content through Helix AI
+- Anyone who creates, uploads, generates, shares, publishes, distributes, or processes content through Aerealith AI
 
 ## 3. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy.md)
@@ -88,17 +88,17 @@ If there is a conflict between this policy and a written agreement signed by Sin
 
 For this policy:
 
-**“User Content”** means content submitted, uploaded, imported, connected, generated, transformed, published, distributed, or otherwise processed by a user through Helix AI.
+**“User Content”** means content submitted, uploaded, imported, connected, generated, transformed, published, distributed, or otherwise processed by a user through Aerealith AI.
 
-**“Input”** means content a user provides to Helix AI, including prompts, files, messages, code, data, instructions, images, audio, video, documents, logs, links, integration data, and other materials.
+**“Input”** means content a user provides to Aerealith AI, including prompts, files, messages, code, data, instructions, images, audio, video, documents, logs, links, integration data, and other materials.
 
-**“Output”** means content generated, edited, transformed, summarized, analyzed, classified, formatted, or otherwise produced by Helix AI in response to user input, tool results, files, integrations, automations, or other context.
+**“Output”** means content generated, edited, transformed, summarized, analyzed, classified, formatted, or otherwise produced by Aerealith AI in response to user input, tool results, files, integrations, automations, or other context.
 
-**“AI-Assisted Content”** means content created with material help from Helix AI, including generated text, code, images, reports, workflows, dashboards, scripts, summaries, designs, or other materials.
+**“AI-Assisted Content”** means content created with material help from Aerealith AI, including generated text, code, images, reports, workflows, dashboards, scripts, summaries, designs, or other materials.
 
 **“Public Content”** means User Content made visible outside a private account or workspace, including shared links, public dashboards, marketplace listings, plugins, templates, documentation, community posts, published reports, or other externally visible materials.
 
-**“Attribution”** means a reasonable notice that Helix AI was used to generate, assist, transform, or support the content.
+**“Attribution”** means a reasonable notice that Aerealith AI was used to generate, assist, transform, or support the content.
 
 ## 5. User Ownership
 
@@ -129,7 +129,7 @@ Your ownership may still be limited by applicable law, third-party rights, open-
 
 ## 6. AI Output Ownership Clarification
 
-As between you and SinLess Games LLC, you own the Outputs generated for you by Helix AI.
+As between you and SinLess Games LLC, you own the Outputs generated for you by Aerealith AI.
 
 However, SinLess Games LLC does not guarantee that any Output is copyrightable, protectable, exclusive, original, non-infringing, or free from third-party claims.
 
@@ -150,9 +150,9 @@ AI-generated or AI-assisted content may raise legal issues involving:
 
 You are responsible for reviewing Outputs before using, publishing, distributing, selling, submitting, or commercializing them.
 
-## 7. Required Helix AI Attribution
+## 7. Required Aerealith AI Attribution
 
-When you publish, distribute, sell, license, submit professionally, submit academically, release publicly, or otherwise make AI-Assisted Content available outside private personal use, you must attribute Helix AI in a reasonable manner.
+When you publish, distribute, sell, license, submit professionally, submit academically, release publicly, or otherwise make AI-Assisted Content available outside private personal use, you must attribute Aerealith AI in a reasonable manner.
 
 Attribution is required for public or external use of:
 
@@ -179,19 +179,19 @@ Attribution does not mean SinLess Games LLC endorses, approves, sponsors, verifi
 
 ## 8. Acceptable Attribution Formats
 
-Attribution must be clear enough for a reasonable viewer, reader, customer, reviewer, or recipient to understand that Helix AI assisted with the content.
+Attribution must be clear enough for a reasonable viewer, reader, customer, reviewer, or recipient to understand that Aerealith AI assisted with the content.
 
 Acceptable attribution examples include:
 
-- `Created with assistance from Helix AI.`
-- `Generated in part with Helix AI.`
-- `Drafted with Helix AI and reviewed by the author.`
-- `AI-assisted content created using Helix AI.`
-- `This report was prepared with assistance from Helix AI.`
-- `This dashboard was generated with assistance from Helix AI.`
-- `This workflow was created with assistance from Helix AI.`
-- `This plugin includes AI-assisted content generated with Helix AI.`
-- `Portions of this code were generated with assistance from Helix AI.`
+- `Created with assistance from Aerealith AI.`
+- `Generated in part with Aerealith AI.`
+- `Drafted with Aerealith AI and reviewed by the author.`
+- `AI-assisted content created using Aerealith AI.`
+- `This report was prepared with assistance from Aerealith AI.`
+- `This dashboard was generated with assistance from Aerealith AI.`
+- `This workflow was created with assistance from Aerealith AI.`
+- `This plugin includes AI-assisted content generated with Aerealith AI.`
+- `Portions of this code were generated with assistance from Aerealith AI.`
 
 For code projects, attribution may appear in:
 
@@ -235,7 +235,7 @@ Examples where visible attribution is generally not required include:
 - Private code experiments
 - Private internal reminders
 - Private personal planning
-- Private conversations with Helix AI
+- Private conversations with Aerealith AI
 - Private workspace material that is not distributed externally
 
 Organizations may still require internal attribution or AI-use disclosure under their own policies.
@@ -259,7 +259,7 @@ If an organization chooses to waive visible internal attribution, it should stil
 
 ## 11. No False Endorsement
 
-You may not use attribution in a way that falsely implies SinLess Games LLC or Helix AI:
+You may not use attribution in a way that falsely implies SinLess Games LLC or Aerealith AI:
 
 - Endorses your content
 - Sponsors your content
@@ -267,9 +267,9 @@ You may not use attribution in a way that falsely implies SinLess Games LLC or H
 - Verified your content
 - Approved your content
 - Is responsible for your content
-- Is affiliated with your business, project, product, campaign, or organization beyond providing the Helix AI service
+- Is affiliated with your business, project, product, campaign, or organization beyond providing the Aerealith AI service
 
-Do not use Helix AI branding, logos, icons, marks, trade dress, or official screenshots unless permitted by SinLess Games LLC brand guidelines or written permission.
+Do not use Aerealith AI branding, logos, icons, marks, trade dress, or official screenshots unless permitted by SinLess Games LLC brand guidelines or written permission.
 
 ## 12. Removal or Waiver of Attribution
 
@@ -320,7 +320,7 @@ You are responsible for your User Content.
 
 You represent and warrant that:
 
-- You have the rights needed to use your Inputs with Helix AI.
+- You have the rights needed to use your Inputs with Aerealith AI.
 - You have the rights needed to publish, distribute, sell, or share your User Content.
 - Your User Content does not violate law.
 - Your User Content does not violate another person’s rights.
@@ -328,7 +328,7 @@ You represent and warrant that:
 - Your User Content does not include malware or harmful code.
 - Your User Content does not include unauthorized confidential information.
 - Your User Content does not include secrets unless handled through approved secure features.
-- Your public or commercial use includes required Helix AI attribution.
+- Your public or commercial use includes required Aerealith AI attribution.
 
 You are responsible for reviewing Outputs before use.
 
@@ -384,13 +384,13 @@ Prohibited content includes, but is not limited to:
 - Deceptive impersonation
 - Fake credentials or forged records
 - Unlawful regulated goods or services
-- Content designed to bypass Helix AI safety systems
+- Content designed to bypass Aerealith AI safety systems
 
 ## 17. Age-Restricted and Mature Content
 
 Age-restricted content must comply with the [Underage Policy](./underage.md).
 
-You may not publish, distribute, sell, or expose minors to age-restricted content through Helix AI.
+You may not publish, distribute, sell, or expose minors to age-restricted content through Aerealith AI.
 
 Age-restricted content may include:
 
@@ -411,7 +411,7 @@ SinLess Games LLC may label, restrict, remove, disable, or age-gate age-restrict
 
 ## 18. Child Safety
 
-You may not use Helix AI to create, upload, generate, transform, summarize, store, publish, distribute, or facilitate content that exploits, sexualizes, grooms, manipulates, abuses, endangers, or harms minors.
+You may not use Aerealith AI to create, upload, generate, transform, summarize, store, publish, distribute, or facilitate content that exploits, sexualizes, grooms, manipulates, abuses, endangers, or harms minors.
 
 SinLess Games LLC may report apparent child exploitation or imminent harm to appropriate authorities where required or appropriate.
 
@@ -421,7 +421,7 @@ Child safety concerns should be reported to:
 
 ## 19. Copyright and Intellectual Property
 
-You may not use Helix AI to infringe, misappropriate, or violate intellectual property rights.
+You may not use Aerealith AI to infringe, misappropriate, or violate intellectual property rights.
 
 You may not:
 
@@ -433,8 +433,8 @@ You may not:
 - Circumvent DRM or technical protection measures
 - Misrepresent ownership
 - Publish marketplace items containing content you do not have rights to use
-- Use Helix AI to copy protected works unlawfully
-- Use Helix AI to evade license restrictions
+- Use Aerealith AI to copy protected works unlawfully
+- Use Aerealith AI to evade license restrictions
 
 Copyright complaints are handled under the [Copyright Takedown Policy](./copyright-takedown.md).
 
@@ -455,7 +455,7 @@ Open source obligations may include:
 - Commercial-use restrictions
 - Dependency license compatibility
 
-Helix AI attribution does not replace open source license obligations.
+Aerealith AI attribution does not replace open source license obligations.
 
 ## 21. Privacy and Personal Data in User Content
 
@@ -532,7 +532,7 @@ Before sharing publicly, review content for:
 
 ## 24. Shared Links
 
-Helix AI may allow users to create shared links.
+Aerealith AI may allow users to create shared links.
 
 Shared links may expose content to anyone with access to the link unless configured otherwise.
 
@@ -550,7 +550,7 @@ Organizations may restrict or disable shared links.
 
 ## 25. Organization Content
 
-If you use Helix AI through an organization workspace, User Content may be owned, controlled, accessed, exported, retained, deleted, or governed by the organization.
+If you use Aerealith AI through an organization workspace, User Content may be owned, controlled, accessed, exported, retained, deleted, or governed by the organization.
 
 Organization administrators may be able to access:
 
@@ -572,7 +572,7 @@ Users should not place personal content in organization workspaces unless permit
 
 ## 26. Marketplace Content
 
-Marketplace publishers are responsible for all content they publish through Helix AI marketplace features.
+Marketplace publishers are responsible for all content they publish through Aerealith AI marketplace features.
 
 Marketplace content may include:
 
@@ -596,7 +596,7 @@ Marketplace content may include:
 Marketplace publishers must:
 
 - Own or have rights to their content
-- Include required Helix AI attribution for AI-assisted content
+- Include required Aerealith AI attribution for AI-assisted content
 - Disclose AI-generated or AI-assisted content where appropriate
 - Disclose required permissions
 - Disclose data access
@@ -634,7 +634,7 @@ SinLess Games LLC may remove, hide, restrict, or moderate reviews, comments, and
 
 ## 28. Synthetic Media
 
-If Helix AI supports or integrates with synthetic media features, users must use those features responsibly.
+If Aerealith AI supports or integrates with synthetic media features, users must use those features responsibly.
 
 Users may not create or distribute synthetic media that:
 
@@ -650,7 +650,7 @@ Users may not create or distribute synthetic media that:
 
 Synthetic media should be labeled or disclosed when required by law, platform rules, professional standards, contract, organization policy, or reasonable audience expectations.
 
-Helix AI attribution is required for public or external use of synthetic media generated or assisted by Helix AI.
+Aerealith AI attribution is required for public or external use of synthetic media generated or assisted by Aerealith AI.
 
 ## 29. Academic, Professional, and Regulated Submissions
 
@@ -670,11 +670,11 @@ Before submitting AI-Assisted Content, users must follow applicable:
 - Disclosure requirements
 - Attribution requirements
 
-Helix AI must be attributed where required by this policy, and additional AI-use disclosure may be required by the relevant institution or authority.
+Aerealith AI must be attributed where required by this policy, and additional AI-use disclosure may be required by the relevant institution or authority.
 
 ## 30. Commercial Use
 
-Users may commercially use Outputs generated through Helix AI, subject to:
+Users may commercially use Outputs generated through Aerealith AI, subject to:
 
 - These policies
 - The Terms of Use
@@ -685,7 +685,7 @@ Users may commercially use Outputs generated through Helix AI, subject to:
 - Organization policies
 - Payment obligations
 - Subscription plan restrictions
-- Required Helix AI attribution
+- Required Aerealith AI attribution
 - Written agreements, where applicable
 
 SinLess Games LLC does not guarantee that Outputs are exclusive, copyrightable, non-infringing, commercially usable, or suitable for a particular market.
@@ -694,7 +694,7 @@ Users are responsible for legal and business review before commercial use.
 
 ## 31. Similar or Duplicate Outputs
 
-Because AI systems may generate similar or identical outputs for multiple users, Helix AI cannot guarantee that Outputs are unique.
+Because AI systems may generate similar or identical outputs for multiple users, Aerealith AI cannot guarantee that Outputs are unique.
 
 Other users may receive similar:
 
@@ -716,7 +716,7 @@ Your ownership of your Output does not prevent other users from owning or using 
 
 ## 32. Content Moderation
 
-SinLess Games LLC may moderate User Content to enforce policies, protect users, comply with law, and operate Helix AI.
+SinLess Games LLC may moderate User Content to enforce policies, protect users, comply with law, and operate Aerealith AI.
 
 Moderation actions may include:
 
@@ -857,11 +857,11 @@ Exportable content may include:
 
 Exports are governed by the [Data Policy](./data.md) and [Privacy Policy](./privacy.md).
 
-## 39. Helix AI Use of User Content
+## 39. Aerealith AI Use of User Content
 
 SinLess Games LLC may process User Content only as described in the [Terms of Use](./terms-of-use.md), [Data Policy](./data.md), and [Privacy Policy](./privacy.md).
 
-Helix AI may process User Content to:
+Aerealith AI may process User Content to:
 
 - Provide the service
 - Generate Outputs
@@ -886,7 +886,7 @@ SinLess Games LLC does not sell User Content.
 
 ## 40. Research and Product Improvement
 
-Helix AI may use User Content for approved research and product improvement only as described in the [Data Policy](./data.md) and [Privacy Policy](./privacy.md).
+Aerealith AI may use User Content for approved research and product improvement only as described in the [Data Policy](./data.md) and [Privacy Policy](./privacy.md).
 
 Research use should:
 
@@ -901,7 +901,7 @@ Research use should:
 
 ## 41. Model Training
 
-Unless clearly disclosed, enabled by user or organization settings, or permitted by written agreement, Helix AI should not use private Customer Data to train public or general-purpose models.
+Unless clearly disclosed, enabled by user or organization settings, or permitted by written agreement, Aerealith AI should not use private Customer Data to train public or general-purpose models.
 
 If optional training, fine-tuning, or learning features are offered, they should provide clear notice, controls, and documentation.
 
@@ -911,7 +911,7 @@ Enterprise and organization customers may have additional controls over whether 
 
 You grant SinLess Games LLC a limited, worldwide, non-exclusive, royalty-free license to host, store, process, transmit, display, copy, modify, create technical transformations of, analyze, and otherwise use User Content only as needed to:
 
-- Provide Helix AI
+- Provide Aerealith AI
 - Generate Outputs
 - Process prompts and files
 - Operate integrations
@@ -936,7 +936,7 @@ This license does not transfer ownership of User Content to SinLess Games LLC.
 
 ## 43. Content License for Public Sharing
 
-If you publish User Content through Helix AI public features, you grant SinLess Games LLC a limited license to display, host, transmit, reproduce, and distribute that public content as needed to provide the public-sharing feature.
+If you publish User Content through Aerealith AI public features, you grant SinLess Games LLC a limited license to display, host, transmit, reproduce, and distribute that public content as needed to provide the public-sharing feature.
 
 Public-sharing features may include:
 
@@ -979,18 +979,18 @@ The deploying organization may be responsible for:
 - Child-safety controls
 - Incident response
 
-SinLess Games LLC may still enforce license terms, official marketplace rules, hosted service terms, support terms, or intellectual property rights for official Helix AI components.
+SinLess Games LLC may still enforce license terms, official marketplace rules, hosted service terms, support terms, or intellectual property rights for official Aerealith AI components.
 
 ## 46. Developer and API Content
 
-Developers using Helix AI APIs are responsible for content submitted to or generated through the API.
+Developers using Aerealith AI APIs are responsible for content submitted to or generated through the API.
 
 Developers must:
 
 - Provide required notices to their users
 - Obtain required consent
 - Protect user data
-- Include required Helix AI attribution for public or commercial AI-assisted content
+- Include required Aerealith AI attribution for public or commercial AI-assisted content
 - Follow policy restrictions
 - Respect rate limits
 - Respect user permissions
@@ -999,7 +999,7 @@ Developers must:
 - Avoid hidden data collection
 - Avoid content that violates third-party rights
 
-Developers are responsible for how Helix AI content appears in their applications, products, services, plugins, workflows, or websites.
+Developers are responsible for how Aerealith AI content appears in their applications, products, services, plugins, workflows, or websites.
 
 ## 47. Content Classification and Labels
 
@@ -1045,11 +1045,11 @@ Warnings or disclosures may be required for:
 - User-generated public content
 - Content involving minors
 
-Helix AI attribution is separate from any other disclosure required by law, platform rules, professional standards, organization policy, or contract.
+Aerealith AI attribution is separate from any other disclosure required by law, platform rules, professional standards, organization policy, or contract.
 
 ## 49. Content Monetization
 
-Users may monetize AI-Assisted Content generated through Helix AI, subject to:
+Users may monetize AI-Assisted Content generated through Aerealith AI, subject to:
 
 - Required attribution
 - Subscription plan limits
@@ -1076,7 +1076,7 @@ User Content belongs to the user or organization that created, uploaded, generat
 
 SinLess Games LLC does not endorse, verify, approve, or guarantee User Content unless expressly stated in writing.
 
-Helix AI attribution does not mean SinLess Games LLC endorses or is responsible for the attributed content.
+Aerealith AI attribution does not mean SinLess Games LLC endorses or is responsible for the attributed content.
 
 ## 52. Enforcement
 
@@ -1105,7 +1105,7 @@ Depending on severity, risk, and context, SinLess Games LLC may:
 - Report unlawful activity where appropriate
 - Refuse future service
 
-SinLess Games LLC may act immediately and without prior notice when necessary to protect users, systems, data, Helix AI, SinLess Games LLC, third parties, minors, or the public.
+SinLess Games LLC may act immediately and without prior notice when necessary to protect users, systems, data, Aerealith AI, SinLess Games LLC, third parties, minors, or the public.
 
 ## 53. Repeat Violations
 
@@ -1114,7 +1114,7 @@ Repeat violations may result in stronger enforcement.
 Repeat violations may include:
 
 - Repeatedly publishing prohibited content
-- Repeatedly omitting required Helix AI attribution
+- Repeatedly omitting required Aerealith AI attribution
 - Repeatedly infringing intellectual property rights
 - Repeatedly uploading secrets
 - Repeatedly exposing personal data
@@ -1145,7 +1145,7 @@ Before publishing this policy, confirm these email aliases exist and are monitor
 Before publishing this policy, complete the following:
 
 - Confirm official company name: `SinLess Games LLC`
-- Confirm official product name: `Helix AI`
+- Confirm official product name: `Aerealith AI`
 - Confirm attribution requirement wording
 - Confirm whether attribution can be waived for paid or enterprise plans
 - Confirm acceptable attribution examples
@@ -1174,7 +1174,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, support portal, email, release notes, legal notices page, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 57. Legal Review Notice
 

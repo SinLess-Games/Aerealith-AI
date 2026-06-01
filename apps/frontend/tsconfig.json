@@ -58,19 +58,22 @@
   ],
   "references": [
     {
-      "path": "../../libs/config"
+      "path": "../../libs/contracts"
     },
     {
       "path": "../../libs/content"
     },
     {
-      "path": "../../libs/db"
+      "path": "../../libs/ui"
     },
     {
       "path": "../../libs/flags"
     },
     {
-      "path": "../../libs/ui"
+      "path": "../../libs/db"
+    },
+    {
+      "path": "../../libs/config"
     }
   ]
 }

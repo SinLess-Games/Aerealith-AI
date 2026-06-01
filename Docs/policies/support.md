@@ -1,6 +1,6 @@
 ---
 title: Support Policy
-description: Explains Helix AI support channels, support scope, priority levels, response targets, service availability, escalation, enterprise support, and customer responsibilities.
+description: Explains Aerealith AI support channels, support scope, priority levels, response targets, service availability, escalation, enterprise support, and customer responsibilities.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,9 +11,9 @@ status: draft
 
 ## 1. Purpose
 
-This Support Policy explains how SinLess Games LLC provides support for Helix AI.
+This Support Policy explains how SinLess Games LLC provides support for Aerealith AI.
 
-Helix AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because Helix AI may involve accounts, subscriptions, AI outputs, memory, automations, integrations, APIs, plugins, marketplace items, dashboards, and self-hosted deployments, support expectations should be clear.
+Aerealith AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because Aerealith AI may involve accounts, subscriptions, AI outputs, memory, automations, integrations, APIs, plugins, marketplace items, dashboards, and self-hosted deployments, support expectations should be clear.
 
 This policy explains:
 
@@ -30,7 +30,7 @@ This policy explains:
 
 ## 2. Scope
 
-This policy applies to Helix AI services, including:
+This policy applies to Aerealith AI services, including:
 
 - Websites
 - Web applications
@@ -66,11 +66,11 @@ This policy applies to:
 - Billing administrators
 - Security contacts
 - Support contacts
-- Anyone who requests help with Helix AI
+- Anyone who requests help with Aerealith AI
 
 ## 3. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy.md)
@@ -122,9 +122,9 @@ Before publishing this policy, confirm these email aliases exist and are monitor
 
 ## 5. Support Is Not Emergency Service
 
-Helix AI support is not an emergency service.
+Aerealith AI support is not an emergency service.
 
-Do not use Helix AI support for emergencies involving:
+Do not use Aerealith AI support for emergencies involving:
 
 - Immediate danger
 - Medical emergencies
@@ -138,7 +138,7 @@ For emergencies, contact the appropriate emergency services or local authorities
 
 ## 6. Support Scope
 
-Helix AI support may assist with:
+Aerealith AI support may assist with:
 
 - Account access issues
 - Login issues
@@ -166,7 +166,7 @@ Helix AI support may assist with:
 
 ## 7. Out-of-Scope Support
 
-Unless expressly included in a written agreement, Helix AI support does not include:
+Unless expressly included in a written agreement, Aerealith AI support does not include:
 
 - Custom software development
 - Custom plugin development
@@ -245,7 +245,7 @@ A Priority 1 issue may include:
 - Inability for an enterprise customer to access core services
 - Failed authentication affecting many users
 - Dangerous automation behavior
-- Active exploitation of a Helix AI vulnerability
+- Active exploitation of a Aerealith AI vulnerability
 - Major billing system failure affecting many customers
 - Severe data integrity issue
 
@@ -346,11 +346,11 @@ An SLA may define:
 - Claim process
 - Limitations
 
-Unless expressly included in a written agreement, order form, or published SLA, Helix AI does not provide service credits or guaranteed uptime.
+Unless expressly included in a written agreement, order form, or published SLA, Aerealith AI does not provide service credits or guaranteed uptime.
 
 ## 14. Status Page
 
-Helix AI may maintain a status page for service availability, incidents, degraded services, and scheduled maintenance.
+Aerealith AI may maintain a status page for service availability, incidents, degraded services, and scheduled maintenance.
 
 The status page may include:
 
@@ -364,7 +364,7 @@ The status page may include:
 
 Before publishing this policy, add the official status page URL:
 
-`[Insert Helix AI status page URL]`
+`[Insert Aerealith AI status page URL]`
 
 Security, privacy, abuse, and sensitive incidents may not be fully described on the public status page if public disclosure would increase risk or expose confidential information.
 
@@ -538,7 +538,7 @@ SinLess Games LLC may provide platform-level support but may not be responsible 
 
 Plugin and integration support may depend on whether the item is:
 
-- Official Helix AI software
+- Official Aerealith AI software
 - Official SinLess Games LLC software
 - Third-party marketplace software
 - Customer-created software
@@ -582,7 +582,7 @@ Support may not be able to reverse actions taken in customer-controlled third-pa
 
 ## 25. AI Output Support
 
-Helix AI support may review reports of incorrect, unsafe, or unexpected AI output.
+Aerealith AI support may review reports of incorrect, unsafe, or unexpected AI output.
 
 However:
 
@@ -617,7 +617,7 @@ Users should consult documentation before submitting non-urgent support requests
 
 ## 27. Community Support
 
-Helix AI may offer community spaces such as forums, Discord, GitHub Discussions, issue trackers, or other community channels.
+Aerealith AI may offer community spaces such as forums, Discord, GitHub Discussions, issue trackers, or other community channels.
 
 Community support may be useful for:
 
@@ -794,7 +794,7 @@ Cooperation may include:
 - Reviewing audit logs when advised
 - Disabling affected integrations when advised
 - Pausing affected automations when advised
-- Contacting third-party vendors when the issue is outside Helix AI control
+- Contacting third-party vendors when the issue is outside Aerealith AI control
 
 Failure to cooperate may delay or prevent resolution.
 
@@ -880,7 +880,7 @@ Attachments should not include secrets, credentials, private keys, unnecessary p
 
 ## 38. Third-Party Issues
 
-Helix AI may depend on third-party services, vendors, integrations, APIs, models, payment processors, hosting providers, and marketplace items.
+Aerealith AI may depend on third-party services, vendors, integrations, APIs, models, payment processors, hosting providers, and marketplace items.
 
 Support may be limited when an issue is caused by:
 
@@ -1088,7 +1088,7 @@ Support channels should not be used as the primary channel for formal legal noti
 
 ## 49. No Warranty Through Support
 
-Support guidance is provided to help users use Helix AI.
+Support guidance is provided to help users use Aerealith AI.
 
 Support responses do not create warranties, guarantees, legal advice, professional advice, or commitments beyond the applicable Terms of Use, policies, SLA, order form, or written agreement.
 
@@ -1099,7 +1099,7 @@ Users remain responsible for reviewing, testing, and validating actions taken ba
 Before publishing this policy, complete the following:
 
 - Confirm official company name: `SinLess Games LLC`
-- Confirm official product name: `Helix AI`
+- Confirm official product name: `Aerealith AI`
 - Confirm support email aliases
 - Confirm official support portal URL
 - Confirm official status page URL
@@ -1128,7 +1128,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, support portal, email, release notes, legal notices page, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 52. Contact
 

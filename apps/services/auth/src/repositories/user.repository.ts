@@ -4,7 +4,12 @@ import type {
   RequiredEntityData,
 } from '@mikro-orm/core';
 
-import { User, UserProfile, UserSettings } from '@aerealith-ai/db';
+import {
+  ProfileVisibility,
+  User,
+  UserProfile,
+  UserSettings,
+} from '@aerealith-ai/db';
 import { AUTH_USER_STATUS } from '@aerealith-ai/contracts';
 
 export type UserLookup = {
@@ -200,6 +205,7 @@ export class UserRepository {
       user,
       handle: username,
       displayName,
+      visibility: ProfileVisibility.Public,
       createdAt: now,
       updatedAt: now,
     } as RequiredEntityData<UserProfile>);

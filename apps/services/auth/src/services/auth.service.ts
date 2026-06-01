@@ -1,5 +1,4 @@
 import { AuthError } from '@aerealith-ai/api';
-import type { User } from '@aerealith-ai/db';
 import type {
   AuthLoginSchemas,
   AuthPasswordSchemas,
@@ -15,9 +14,19 @@ import {
   type AuthUserStatus,
   type PublicAuthUser,
 } from '@aerealith-ai/contracts';
+import type { User } from '@aerealith-ai/db';
 
 import type { AccountRepository } from '../repositories/account.repository';
 import type { UserRepository } from '../repositories/user.repository';
+import type {
+  AuthAccessTokenClaims,
+  AuthRefreshTokenClaims,
+  AuthTokenPair,
+} from '../types/auth-token.type';
+import {
+  passwordService as defaultPasswordService,
+  type PasswordService,
+} from './password.service';
 import type { SessionService } from './session.service';
 import {
   type AuthSessionResponse,
@@ -30,15 +39,6 @@ import {
   type VerificationTokenCreateResult,
   type VerificationTokenRevokeResult,
 } from './verification-token.service';
-import {
-  passwordService as defaultPasswordService,
-  type PasswordService,
-} from './password.service';
-import type {
-  AuthAccessTokenClaims,
-  AuthRefreshTokenClaims,
-  AuthTokenPair,
-} from '../types/auth-token.type';
 
 export const AUTH_PERSISTENT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
@@ -48,6 +48,7 @@ export type AuthServiceOptions = {
   sessionService: SessionService;
   verificationTokenService: VerificationTokenService;
   passwordService?: PasswordService;
+  requireEmailVerification?: boolean;
 };
 
 export type AuthRequestMetadata = {
@@ -313,7 +314,10 @@ const toAuthIdentityResponse = (user: User): AuthIdentityResponse => {
   };
 };
 
-const assertUserCanAuthenticate = (user: User): void => {
+const assertUserCanAuthenticate = (
+  user: User,
+  requireEmailVerification: boolean,
+): void => {
   const rawStatus = getRawUserStatus(user);
   const status = getUserStatus(user);
 
@@ -332,7 +336,7 @@ const assertUserCanAuthenticate = (user: User): void => {
     throw AuthError.userDeleted();
   }
 
-  if (!getEmailVerified(user)) {
+  if (requireEmailVerification && !getEmailVerified(user)) {
     throw AuthError.forbidden('Please verify your email before logging in.');
   }
 };
@@ -372,12 +376,15 @@ export class AuthService {
 
   private readonly passwordService: PasswordService;
 
+  private readonly requireEmailVerification: boolean;
+
   public constructor(options: AuthServiceOptions) {
     this.userRepository = options.userRepository;
     this.accountRepository = options.accountRepository;
     this.sessionService = options.sessionService;
     this.verificationTokenService = options.verificationTokenService;
     this.passwordService = options.passwordService ?? defaultPasswordService;
+    this.requireEmailVerification = options.requireEmailVerification ?? true;
   }
 
   private async findUserForEmailVerificationToken(
@@ -386,8 +393,8 @@ export class AuthService {
     const user =
       input.username !== undefined
         ? await this.userRepository.findByUsername(
-            normalizeUsername(input.username),
-          )
+          normalizeUsername(input.username),
+        )
         : input.email !== undefined
           ? await this.userRepository.findByEmail(normalizeEmail(input.email))
           : null;
@@ -468,15 +475,28 @@ export class AuthService {
     input: AuthLoginSchemas.AuthLoginDto,
     metadata: AuthRequestMetadata = {},
   ): Promise<AuthLoginResult> {
+    const loginStartedAt = Date.now();
+
+    const logLoginStep = (step: string, startedAt: number): void => {
+      console.info('Auth login step completed', {
+        step,
+        elapsedMs: Date.now() - startedAt,
+        totalElapsedMs: Date.now() - loginStartedAt,
+      });
+    };
+
+    const findUserStartedAt = Date.now();
     const user = await this.userRepository.findByUsernameOrEmail(
       input.identifier,
     );
+
+    logLoginStep('find-user', findUserStartedAt);
 
     if (user === null) {
       throw AuthError.invalidCredentials();
     }
 
-    assertUserCanAuthenticate(user);
+    assertUserCanAuthenticate(user, this.requireEmailVerification);
 
     const passwordHash = getPasswordHash(user);
 
@@ -484,33 +504,42 @@ export class AuthService {
       throw AuthError.invalidCredentials();
     }
 
+    const findCredentialsAccountStartedAt = Date.now();
     const credentialsAccount =
       await this.accountRepository.findOneByUserIdAndProvider(
         getUserId(user),
         AUTH_ACCOUNT_PROVIDER.CREDENTIALS,
       );
 
+    logLoginStep('find-credentials-account', findCredentialsAccountStartedAt);
+
     if (credentialsAccount === null) {
       throw AuthError.invalidCredentials();
     }
 
+    const verifyPasswordStartedAt = Date.now();
     const matches = await this.passwordService.verifyPassword(
       input.password,
       passwordHash,
     );
+
+    logLoginStep('verify-password', verifyPasswordStartedAt);
 
     if (!matches) {
       throw AuthError.invalidCredentials();
     }
 
     if (this.passwordService.needsRehash(passwordHash)) {
+      const rehashStartedAt = Date.now();
       setPasswordHash(
         user,
         await this.passwordService.hashPassword(input.password),
       );
       await this.userRepository.touchUpdatedAt(getUserId(user));
+      logLoginStep('rehash-password', rehashStartedAt);
     }
 
+    const createSessionStartedAt = Date.now();
     const session = await this.sessionService.createSession({
       user,
       username: getUserUsername(user),
@@ -518,6 +547,8 @@ export class AuthService {
       userAgent: metadata.userAgent ?? input.userAgent,
       ipAddress: metadata.ipAddress ?? input.ipAddress,
     });
+
+    logLoginStep('create-session', createSessionStartedAt);
 
     return {
       user: toAuthIdentityResponse(user),

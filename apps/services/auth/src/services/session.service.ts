@@ -3,10 +3,6 @@ import type { User, UserSession } from '@aerealith-ai/db';
 
 import type { SessionRepository } from '../repositories/session.repository';
 import { type ListUserSessionsOptions } from '../repositories/session.repository';
-import {
-  tokenService as defaultTokenService,
-  type TokenService,
-} from './token.service';
 import type {
   AuthAccessTokenClaims,
   AuthAccessTokenIssueInput,
@@ -15,6 +11,10 @@ import type {
   AuthTokenScope,
   AuthTokenString,
 } from '../types/auth-token.type';
+import {
+  tokenService as defaultTokenService,
+  type TokenService,
+} from './token.service';
 
 export type SessionServiceConfig = {
   sessionTtlSeconds: number;
@@ -138,6 +138,24 @@ const base64UrlEncode = (bytes: Uint8Array): string => {
   return base64.replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 };
 
+const createUuidV4FromRandomBytes = (bytes: Uint8Array): string => {
+  const view = bytes.slice(0, 16);
+
+  // Enforce RFC 4122 UUIDv4 version and variant bits.
+  view[6] = (view[6] & 0x0f) | 0x40;
+  view[8] = (view[8] & 0x3f) | 0x80;
+
+  const hex = Array.from(view, (byte) => byte.toString(16).padStart(2, '0'));
+
+  return [
+    hex.slice(0, 4).join(''),
+    hex.slice(4, 6).join(''),
+    hex.slice(6, 8).join(''),
+    hex.slice(8, 10).join(''),
+    hex.slice(10, 16).join(''),
+  ].join('-');
+};
+
 const createOpaqueToken = (): string => {
   const crypto = getCrypto();
 
@@ -150,6 +168,20 @@ const createOpaqueToken = (): string => {
   crypto.getRandomValues(bytes);
 
   return base64UrlEncode(bytes);
+};
+
+const createSessionId = (): string => {
+  const crypto = getCrypto();
+
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+
+  crypto.getRandomValues(bytes);
+
+  return createUuidV4FromRandomBytes(bytes);
 };
 
 const sha256Base64Url = async (value: string): Promise<string> => {
@@ -345,11 +377,13 @@ export class SessionService {
   ): Promise<CreateSessionResult> {
     const expiresAt =
       input.expiresAt ?? addSeconds(new Date(), this.config.sessionTtlSeconds);
+    const sessionId = createSessionId();
 
-    const temporaryRefreshTokenHash =
-      await this.hashRefreshToken(createOpaqueToken());
+    const temporaryRefreshTokenHash = await this.hashRefreshToken(
+      createOpaqueToken(),
+    );
 
-    const session = await this.repository.createAndFlush({
+    const session = this.repository.createSession({
       user: input.user,
       refreshTokenHash: temporaryRefreshTokenHash,
       deviceName: input.deviceName,
@@ -359,7 +393,7 @@ export class SessionService {
       lastSeenAt: new Date(),
     });
 
-    const sessionId = getSessionId(session);
+    session.id = sessionId;
 
     const tokens = await this.tokenService.issueTokenPair({
       userId: input.user.id,
@@ -377,15 +411,14 @@ export class SessionService {
 
     const refreshTokenHash = await this.hashRefreshToken(tokens.refreshToken);
 
-    const updatedSession =
-      (await this.repository.rotateRefreshToken(
-        sessionId,
-        refreshTokenHash,
-        new Date(tokens.refreshTokenExpiresAt),
-      )) ?? session;
+    session.sessionToken = refreshTokenHash;
+    session.expires = new Date(tokens.refreshTokenExpiresAt);
+    session.lastSeenAt = new Date();
+
+    await this.repository.flush();
 
     return {
-      session: this.toSessionResponse(updatedSession),
+      session: this.toSessionResponse(session),
       tokens,
       accessClaims,
       refreshClaims,

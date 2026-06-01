@@ -3,16 +3,38 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/observability/src",
   "projectType": "library",
-  "tags": ["scope:shared", "type:observability", "platform:aerealith"],
+  "tags": [
+    "scope:shared",
+    "type:observability",
+    "platform:aerealith"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/libs/observability",
         "main": "libs/observability/src/index.ts",
         "tsConfig": "libs/observability/tsconfig.lib.json",
-        "assets": ["libs/observability/*.md"]
+        "assets": [
+          "libs/observability/*.md"
+        ]
+      }
+    },
+    "sync-dist": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "build"
+      ],
+      "cache": false,
+      "outputs": [
+        "{projectRoot}/dist"
+      ],
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "node -e \"const fs=require('node:fs');const path=require('node:path');const repoRoot=process.cwd();const source=path.join(repoRoot,'dist/libs/observability');const target=path.join(repoRoot,'libs/observability/dist');fs.rmSync(target,{recursive:true,force:true});fs.cpSync(source,target,{recursive:true,force:true});\""
       }
     }
   }

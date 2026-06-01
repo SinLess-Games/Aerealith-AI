@@ -1,6 +1,6 @@
 ---
 title: Developer Policy
-description: Explains Helix AI developer rules for APIs, SDKs, webhooks, plugins, integrations, marketplace items, automations, data handling, security, attribution, and responsible AI use.
+description: Explains Aerealith AI developer rules for APIs, SDKs, webhooks, plugins, integrations, marketplace items, automations, data handling, security, attribution, and responsible AI use.
 effective_date: 2026-05-19
 last_updated: 2026-05-19
 owner: SinLess Games LLC
@@ -11,13 +11,13 @@ status: draft
 
 ## 1. Purpose
 
-This Developer Policy explains the rules for building, integrating, publishing, automating, extending, or connecting software with Helix AI.
+This Developer Policy explains the rules for building, integrating, publishing, automating, extending, or connecting software with Aerealith AI.
 
-Helix AI is operated by SinLess Games LLC.
+Aerealith AI is operated by SinLess Games LLC.
 
-Helix AI may provide APIs, SDKs, webhooks, plugins, marketplace items, automations, workflows, dashboards, templates, personalities, connectors, developer tools, and third-party integration features. Because these features may access user data, organization data, AI memory, files, integrations, automations, billing systems, and connected services, developers must follow clear safety, security, privacy, and responsible AI requirements.
+Aerealith AI may provide APIs, SDKs, webhooks, plugins, marketplace items, automations, workflows, dashboards, templates, personalities, connectors, developer tools, and third-party integration features. Because these features may access user data, organization data, AI memory, files, integrations, automations, billing systems, and connected services, developers must follow clear safety, security, privacy, and responsible AI requirements.
 
-This policy applies whether you are building for yourself, your organization, your customers, a private deployment, or the Helix AI marketplace.
+This policy applies whether you are building for yourself, your organization, your customers, a private deployment, or the Aerealith AI marketplace.
 
 ## 2. Scope
 
@@ -45,7 +45,7 @@ This policy applies to:
 - Self-hosted extensions
 - Air-gapped extensions
 - Developer documentation
-- Any software, service, or tool that connects to or extends Helix AI
+- Any software, service, or tool that connects to or extends Aerealith AI
 
 This policy applies to:
 
@@ -59,11 +59,11 @@ This policy applies to:
 - Enterprise developers
 - Contractors
 - Third-party service providers
-- Anyone who builds on or connects to Helix AI
+- Anyone who builds on or connects to Aerealith AI
 
 ## 3. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy.md)
@@ -87,11 +87,11 @@ If there is a conflict between this policy and a written agreement signed by Sin
 
 ## 4. Developer Responsibilities
 
-Developers are responsible for software, services, content, automations, integrations, plugins, API calls, marketplace items, and user experiences they create with Helix AI.
+Developers are responsible for software, services, content, automations, integrations, plugins, API calls, marketplace items, and user experiences they create with Aerealith AI.
 
 Developers must:
 
-- Use Helix AI lawfully and responsibly.
+- Use Aerealith AI lawfully and responsibly.
 - Protect user data.
 - Protect organization data.
 - Protect secrets and credentials.
@@ -105,11 +105,11 @@ Developers must:
 - Test software before release.
 - Monitor for misuse.
 - Respond to security, privacy, safety, and abuse reports.
-- Comply with applicable laws, contracts, platform rules, and Helix AI policies.
+- Comply with applicable laws, contracts, platform rules, and Aerealith AI policies.
 
 ## 5. Developer Account Requirements
 
-Developers may be required to create or use a Helix AI account.
+Developers may be required to create or use a Aerealith AI account.
 
 You must provide accurate, complete, and current information.
 
@@ -169,7 +169,7 @@ Where applicable, developers must:
 - Avoid permission confusion.
 - Avoid hidden or misleading authorization flows.
 
-Applications must not access data or perform actions beyond the permissions granted by the user, organization, or Helix AI.
+Applications must not access data or perform actions beyond the permissions granted by the user, organization, or Aerealith AI.
 
 ## 8. Permission Requirements
 
@@ -195,7 +195,7 @@ Applications must not request excessive, unnecessary, misleading, or hidden perm
 
 Users own their data.
 
-As between the user and SinLess Games LLC, users retain ownership of data they submit, upload, connect, create, generate, import, process, or produce through Helix AI.
+As between the user and SinLess Games LLC, users retain ownership of data they submit, upload, connect, create, generate, import, process, or produce through Aerealith AI.
 
 Developers do not gain ownership of user data merely because a user connects, installs, authorizes, or uses a developer application.
 
@@ -203,7 +203,7 @@ Developers must process user data only for the purpose disclosed to the user and
 
 ## 10. No Sale of User Data
 
-Developers may not sell user data obtained through Helix AI.
+Developers may not sell user data obtained through Aerealith AI.
 
 Developers may not sell:
 
@@ -225,7 +225,7 @@ Developers may not sell:
 - Tool execution data
 - Plugin execution data
 
-Developers may not use Helix AI data for unrelated products, unrelated advertising, hidden profiling, unauthorized targeting, or unrelated model training.
+Developers may not use Aerealith AI data for unrelated products, unrelated advertising, hidden profiling, unauthorized targeting, or unrelated model training.
 
 ## 11. Data Minimization
 
@@ -248,9 +248,9 @@ Developers should:
 
 ## 12. Data Use Restrictions
 
-Developers may use data obtained through Helix AI only to provide the disclosed and authorized functionality.
+Developers may use data obtained through Aerealith AI only to provide the disclosed and authorized functionality.
 
-Developers may not use Helix AI data to:
+Developers may not use Aerealith AI data to:
 
 - Sell data.
 - Build unrelated products.
@@ -262,7 +262,7 @@ Developers may not use Helix AI data to:
 - Extract secrets, credentials, or private keys.
 - Circumvent privacy settings.
 - Circumvent organization controls.
-- Circumvent Helix AI safety systems.
+- Circumvent Aerealith AI safety systems.
 - Mislead users about data use.
 
 ## 13. Data Retention and Deletion
@@ -276,7 +276,7 @@ Developers must delete or de-identify user data when:
 - The data is no longer needed.
 - The user requests deletion.
 - The organization requests deletion.
-- Helix AI requests deletion due to policy enforcement.
+- Aerealith AI requests deletion due to policy enforcement.
 - The developer account is terminated.
 - The marketplace item is removed and retention is not legally required.
 
@@ -396,7 +396,7 @@ Developers must promptly address security vulnerabilities in their applications.
 
 ## 18. Prohibited Security Activity
 
-Developers may not use Helix AI APIs, plugins, automations, or integrations to attack, disrupt, compromise, exploit, or gain unauthorized access to systems, accounts, services, devices, models, plugins, or datasets.
+Developers may not use Aerealith AI APIs, plugins, automations, or integrations to attack, disrupt, compromise, exploit, or gain unauthorized access to systems, accounts, services, devices, models, plugins, or datasets.
 
 Prohibited activity includes:
 
@@ -455,7 +455,7 @@ Developers may not:
 - Abuse retry logic.
 - Create excessive traffic.
 - Generate wasteful workloads.
-- Use Helix AI for unauthorized scraping.
+- Use Aerealith AI for unauthorized scraping.
 - Overload systems.
 - Interfere with service stability.
 - Hide usage to avoid billing.
@@ -483,7 +483,7 @@ Billing is governed by the [Billing, Refund, and Cancellation Policy](./billing-
 
 ## 22. AI Output and Developer Responsibility
 
-Developers are responsible for how Helix AI outputs are used in their applications, plugins, workflows, and products.
+Developers are responsible for how Aerealith AI outputs are used in their applications, plugins, workflows, and products.
 
 Developers must:
 
@@ -498,18 +498,18 @@ Developers must:
 
 AI limitations are described in the [AI Transparency Policy](./ai-transparency.md) and [Responsible AI Policy](./responsible-ai.md).
 
-## 23. Required Helix AI Attribution
+## 23. Required Aerealith AI Attribution
 
-When developers publish, distribute, sell, submit, or display AI-assisted content generated with Helix AI, they must attribute Helix AI in a reasonable manner.
+When developers publish, distribute, sell, submit, or display AI-assisted content generated with Aerealith AI, they must attribute Aerealith AI in a reasonable manner.
 
 Attribution may include:
 
-- `Created with assistance from Helix AI.`
-- `Generated in part with Helix AI.`
-- `AI-assisted content created using Helix AI.`
-- `Portions of this code were generated with assistance from Helix AI.`
-- `This workflow was created with assistance from Helix AI.`
-- `This plugin includes AI-assisted content generated with Helix AI.`
+- `Created with assistance from Aerealith AI.`
+- `Generated in part with Aerealith AI.`
+- `AI-assisted content created using Aerealith AI.`
+- `Portions of this code were generated with assistance from Aerealith AI.`
+- `This workflow was created with assistance from Aerealith AI.`
+- `This plugin includes AI-assisted content generated with Aerealith AI.`
 
 Attribution may appear in:
 
@@ -530,14 +530,14 @@ Attribution requirements are further described in the [User-Generated Content Po
 
 ## 24. No False Endorsement
 
-Developers may not imply that SinLess Games LLC or Helix AI endorses, certifies, sponsors, verifies, or is responsible for their application unless expressly authorized in writing.
+Developers may not imply that SinLess Games LLC or Aerealith AI endorses, certifies, sponsors, verifies, or is responsible for their application unless expressly authorized in writing.
 
 Developers may not:
 
-- Impersonate Helix AI.
+- Impersonate Aerealith AI.
 - Impersonate SinLess Games LLC.
 - Use confusing branding.
-- Use Helix AI marks without permission.
+- Use Aerealith AI marks without permission.
 - Misrepresent partnership status.
 - Misrepresent marketplace approval as full endorsement.
 - Misrepresent security review as a guarantee.
@@ -658,7 +658,7 @@ High-risk, destructive, irreversible, externally visible, or security-sensitive 
 
 ## 30. High-Risk and Regulated Use
 
-Developers may not use Helix AI as the sole decision-maker for high-risk or regulated decisions.
+Developers may not use Aerealith AI as the sole decision-maker for high-risk or regulated decisions.
 
 High-risk areas include:
 
@@ -764,7 +764,7 @@ Marketplace review does not guarantee that a marketplace item is error-free, sec
 
 ## 34. Plugin Requirements
 
-Plugins must be designed to operate safely within Helix AI.
+Plugins must be designed to operate safely within Aerealith AI.
 
 Plugins must:
 
@@ -821,7 +821,7 @@ Telemetry must not collect unnecessary personal data, secrets, private user cont
 
 Developers may not use hidden tracking.
 
-Developers must provide opt-outs where required by law, platform rules, or Helix AI policy.
+Developers must provide opt-outs where required by law, platform rules, or Aerealith AI policy.
 
 ## 37. Cookies and Tracking
 
@@ -832,7 +832,7 @@ Developers must follow:
 - Applicable cookie laws
 - Applicable privacy laws
 - Platform rules
-- Helix AI policies
+- Aerealith AI policies
 - Organization settings
 - User consent choices
 
@@ -854,7 +854,7 @@ Developers must:
 - Avoid using content without rights.
 - Avoid publishing marketplace items with unauthorized assets.
 
-Helix AI attribution does not replace open source license obligations.
+Aerealith AI attribution does not replace open source license obligations.
 
 ## 39. Copyright and Intellectual Property
 
@@ -870,7 +870,7 @@ Developers may not:
 - Use protected branding without permission.
 - Circumvent DRM or technical protection measures.
 - Publish marketplace items containing infringing content.
-- Use Helix AI to unlawfully copy protected works.
+- Use Aerealith AI to unlawfully copy protected works.
 
 Copyright complaints are handled under the [Copyright Takedown Policy](./copyright-takedown.md).
 
@@ -908,7 +908,7 @@ Payment behavior is governed by the [Payment Processor Compliance Policy](./paym
 
 Developers must comply with applicable export controls, sanctions, embargoes, restricted-party rules, and trade laws.
 
-Developers may not use Helix AI to:
+Developers may not use Aerealith AI to:
 
 - Evade sanctions.
 - Hide restricted-party involvement.
@@ -921,7 +921,7 @@ SinLess Games LLC may restrict access where required or appropriate.
 
 ## 42. Responsible AI Requirements
 
-Developers using Helix AI AI features must follow responsible AI requirements.
+Developers using Aerealith AI AI features must follow responsible AI requirements.
 
 Developers must:
 
@@ -959,11 +959,11 @@ Developers may not create or distribute synthetic media that:
 
 Synthetic media should be labeled or disclosed when required.
 
-Helix AI attribution is required for public or commercial AI-assisted synthetic media generated with Helix AI.
+Aerealith AI attribution is required for public or commercial AI-assisted synthetic media generated with Aerealith AI.
 
 ## 44. Public Communications
 
-Developers must not use Helix AI to send spam, deceptive messages, unlawful marketing, phishing, harassment, or abusive communications.
+Developers must not use Aerealith AI to send spam, deceptive messages, unlawful marketing, phishing, harassment, or abusive communications.
 
 If a developer application sends messages, emails, posts, comments, tickets, notifications, or public content, the developer must ensure:
 
@@ -973,7 +973,7 @@ If a developer application sends messages, emails, posts, comments, tickets, not
 - Messages comply with applicable law.
 - Messages comply with platform rules.
 - AI-generated or AI-assisted content is disclosed where required.
-- Helix AI is attributed where required.
+- Aerealith AI is attributed where required.
 
 ## 45. Logging and Auditability
 
@@ -997,7 +997,7 @@ Developers must provide auditability for high-impact, security-sensitive, or des
 
 ## 46. Incident Reporting
 
-Developers must promptly report incidents that affect Helix AI users, data, systems, or trust.
+Developers must promptly report incidents that affect Aerealith AI users, data, systems, or trust.
 
 Incidents may include:
 
@@ -1028,7 +1028,7 @@ Before publishing this policy, confirm these email aliases exist and are monitor
 
 ## 47. Vulnerability Disclosure
 
-Developers and researchers should report suspected Helix AI vulnerabilities to:
+Developers and researchers should report suspected Aerealith AI vulnerabilities to:
 
 `security@sinlessgames.com`
 
@@ -1187,7 +1187,7 @@ Developers must respect enterprise and organization controls.
 Developers may not:
 
 - Break the law.
-- Violate Helix AI policies.
+- Violate Aerealith AI policies.
 - Mislead users.
 - Sell user data.
 - Hide data collection.
@@ -1206,9 +1206,9 @@ Developers may not:
 - Circumvent rate limits.
 - Manipulate marketplace rankings.
 - Fake reviews or ratings.
-- Misrepresent affiliation with Helix AI.
+- Misrepresent affiliation with Aerealith AI.
 - Target minors with age-restricted content.
-- Use Helix AI for prohibited AI uses.
+- Use Aerealith AI for prohibited AI uses.
 - Continue operating after access is revoked.
 
 ## 56. Enforcement
@@ -1240,7 +1240,7 @@ Depending on severity, risk, and context, SinLess Games LLC may:
 - Report unlawful activity where appropriate.
 - Refuse future service.
 
-SinLess Games LLC may act immediately without prior notice when necessary to protect users, systems, data, Helix AI, SinLess Games LLC, third parties, minors, payment systems, or the public.
+SinLess Games LLC may act immediately without prior notice when necessary to protect users, systems, data, Aerealith AI, SinLess Games LLC, third parties, minors, payment systems, or the public.
 
 ## 57. Appeals
 
@@ -1333,7 +1333,7 @@ Before publishing this policy, confirm these email aliases exist and are monitor
 Before publishing this policy, complete the following:
 
 - Confirm official company name: `SinLess Games LLC`
-- Confirm official product name: `Helix AI`
+- Confirm official product name: `Aerealith AI`
 - Confirm developer portal URL
 - Confirm API documentation URL
 - Confirm SDK documentation URL
@@ -1368,7 +1368,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, developer portal, account settings, support portal, email, release notes, legal notices page, or another reasonable method.
 
-Continued use of Helix AI developer features after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI developer features after changes become effective means you accept the updated policy.
 
 ## 64. Legal Review Notice
 

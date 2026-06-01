@@ -1,6 +1,6 @@
 ---
 title: AI Transparency Policy
-description: Explains how Helix AI uses artificial intelligence, automation, memory, tools, and human oversight.
+description: Explains how Aerealith AI uses artificial intelligence, automation, memory, tools, and human oversight.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,15 +11,15 @@ status: draft
 
 ## 1. Purpose
 
-This AI Transparency Policy explains how Helix AI uses artificial intelligence, automation, memory, integrations, tools, and generated outputs.
+This AI Transparency Policy explains how Aerealith AI uses artificial intelligence, automation, memory, integrations, tools, and generated outputs.
 
-Helix AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because AI systems can produce inaccurate, incomplete, biased, or unexpected results, this policy explains what users should expect, what Helix AI can and cannot do, and when human review is required.
+Aerealith AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because AI systems can produce inaccurate, incomplete, biased, or unexpected results, this policy explains what users should expect, what Aerealith AI can and cannot do, and when human review is required.
 
 This policy is intended to support transparency, user control, responsible use, and informed decision-making.
 
 ## 2. Scope
 
-This policy applies to Helix AI, including:
+This policy applies to Aerealith AI, including:
 
 - Web, desktop, mobile, browser, terminal, and API experiences
 - AI chat, assistant, agent, and automation features
@@ -29,13 +29,13 @@ This policy applies to Helix AI, including:
 - Plugins, workflows, dashboards, templates, personalities, and marketplace items
 - Cloud-hosted, self-hosted, hybrid, and air-gapped deployments, where applicable
 
-This policy applies to individual users, organizations, developers, administrators, and anyone using Helix AI through an account, workspace, API key, integration, shared agent, embedded assistant, or connected service.
+This policy applies to individual users, organizations, developers, administrators, and anyone using Aerealith AI through an account, workspace, API key, integration, shared agent, embedded assistant, or connected service.
 
-## 3. What Helix AI Is
+## 3. What Aerealith AI Is
 
-Helix AI is an artificial intelligence assistant platform operated by SinLess Games LLC.
+Aerealith AI is an artificial intelligence assistant platform operated by SinLess Games LLC.
 
-Helix AI may help users:
+Aerealith AI may help users:
 
 - Draft, rewrite, summarize, and organize content
 - Analyze files, messages, code, logs, events, and structured data
@@ -46,26 +46,26 @@ Helix AI may help users:
 - Execute approved actions through connected tools, plugins, and integrations
 - Personalize responses based on user-controlled preferences and memory
 
-Helix AI is not a human, attorney, doctor, financial advisor, accountant, therapist, emergency responder, government official, or licensed professional.
+Aerealith AI is not a human, attorney, doctor, financial advisor, accountant, therapist, emergency responder, government official, or licensed professional.
 
 ## 4. No Claim of Human Status or Sentience
 
-Helix AI may use natural language, memory, personas, tone settings, and assistant identities to provide a more helpful experience.
+Aerealith AI may use natural language, memory, personas, tone settings, and assistant identities to provide a more helpful experience.
 
 However:
 
-- Helix AI is not human.
-- Helix AI is not sentient.
-- Helix AI does not have personal feelings, consciousness, legal personhood, or independent rights.
-- Helix AI may model empathy behaviorally, but it does not experience emotions.
-- Helix AI may use a name, voice, avatar, or persona, but these are interface and personalization features.
-- Helix AI does not replace the user’s judgment, responsibility, or legal obligations.
+- Aerealith AI is not human.
+- Aerealith AI is not sentient.
+- Aerealith AI does not have personal feelings, consciousness, legal personhood, or independent rights.
+- Aerealith AI may model empathy behaviorally, but it does not experience emotions.
+- Aerealith AI may use a name, voice, avatar, or persona, but these are interface and personalization features.
+- Aerealith AI does not replace the user’s judgment, responsibility, or legal obligations.
 
 Any references to assistant identity, personality, memory, continuity, or companionship are product features and should not be understood as proof of sentience or human status.
 
 ## 5. AI-Generated Output
 
-Helix AI may generate text, code, summaries, recommendations, classifications, plans, images, structured data, reports, or other outputs.
+Aerealith AI may generate text, code, summaries, recommendations, classifications, plans, images, structured data, reports, or other outputs.
 
 AI-generated output may be:
 
@@ -85,7 +85,7 @@ Users are responsible for reviewing, validating, testing, and approving AI-gener
 
 You are responsible for:
 
-- Reviewing Helix AI outputs before use
+- Reviewing Aerealith AI outputs before use
 - Verifying facts, numbers, citations, code, configurations, and recommendations
 - Testing generated code, scripts, automations, infrastructure changes, and workflows
 - Ensuring your use complies with applicable laws, contracts, policies, and professional obligations
@@ -93,11 +93,11 @@ You are responsible for:
 - Confirming that any automated action is authorized, safe, and appropriate
 - Applying human judgment to high-impact, regulated, sensitive, or irreversible decisions
 
-Helix AI may assist with decision-making, but it should not be treated as the sole source of truth.
+Aerealith AI may assist with decision-making, but it should not be treated as the sole source of truth.
 
 ## 7. Human Review Requirements
 
-Human review is required before using Helix AI output for:
+Human review is required before using Aerealith AI output for:
 
 - Legal, medical, financial, tax, insurance, or investment decisions
 - Employment, hiring, firing, discipline, promotion, or compensation decisions
@@ -114,15 +114,15 @@ Organizations may configure additional review requirements, approval gates, audi
 
 ## 8. Professional Advice Disclaimer
 
-Helix AI may help draft, explain, summarize, compare, or organize information related to legal, medical, financial, security, compliance, tax, employment, or business topics.
+Aerealith AI may help draft, explain, summarize, compare, or organize information related to legal, medical, financial, security, compliance, tax, employment, or business topics.
 
-Helix AI does not provide professional advice.
+Aerealith AI does not provide professional advice.
 
-Users should consult a qualified professional before relying on Helix AI output for regulated, specialized, or high-impact matters.
+Users should consult a qualified professional before relying on Aerealith AI output for regulated, specialized, or high-impact matters.
 
 ## 9. Sources, Retrieval, and Citations
 
-Helix AI may use information from:
+Aerealith AI may use information from:
 
 - User-provided prompts
 - Uploaded files
@@ -142,7 +142,7 @@ When no source is provided, users should treat the output as generated assistanc
 
 ## 10. Currentness and Knowledge Limits
 
-Helix AI may not always know the latest information.
+Aerealith AI may not always know the latest information.
 
 Information may be outdated when it relates to:
 
@@ -157,11 +157,11 @@ When current accuracy matters, users should request verification using approved 
 
 ## 11. Memory and Personalization
 
-Helix AI may support memory and personalization features.
+Aerealith AI may support memory and personalization features.
 
 Memory may be used to improve continuity, preferences, context, project awareness, assistant behavior, and user experience.
 
-Depending on user and organization settings, Helix AI may remember information such as:
+Depending on user and organization settings, Aerealith AI may remember information such as:
 
 - User preferences
 - Assistant identity settings
@@ -175,13 +175,13 @@ Depending on user and organization settings, Helix AI may remember information s
 
 Users and organization administrators may have controls to view, edit, delete, export, pause, disable, scope, or restrict memory, depending on the deployment and subscription.
 
-Helix AI should not store sensitive information unless allowed by user settings, organization policy, or explicit user instruction.
+Aerealith AI should not store sensitive information unless allowed by user settings, organization policy, or explicit user instruction.
 
 Memory behavior is governed by the applicable Privacy Policy, Data Policy, Security Policy, and organization settings.
 
 ## 12. Context Use
 
-Helix AI may use available context to provide better responses.
+Aerealith AI may use available context to provide better responses.
 
 Context may include:
 
@@ -198,11 +198,11 @@ Context may include:
 - Subscription entitlements
 - Safety and policy constraints
 
-Helix AI may not always use every available piece of context. Some context may be excluded due to privacy settings, permissions, security controls, relevance, size limits, technical limits, or organization restrictions.
+Aerealith AI may not always use every available piece of context. Some context may be excluded due to privacy settings, permissions, security controls, relevance, size limits, technical limits, or organization restrictions.
 
 ## 13. Tools, Integrations, and Automations
 
-Helix AI may use tools, APIs, plugins, integrations, and automations to perform actions or retrieve information.
+Aerealith AI may use tools, APIs, plugins, integrations, and automations to perform actions or retrieve information.
 
 Examples may include:
 
@@ -221,11 +221,11 @@ Examples may include:
 
 Tool use may require user permission, organization approval, integration authorization, API credentials, or role-based access.
 
-Helix AI should not perform high-risk, destructive, irreversible, or sensitive actions without appropriate authorization, confirmation, and logging.
+Aerealith AI should not perform high-risk, destructive, irreversible, or sensitive actions without appropriate authorization, confirmation, and logging.
 
 ## 14. Automated Actions
 
-Some Helix AI features may take actions automatically based on user-approved rules, workflows, triggers, schedules, or organization policies.
+Some Aerealith AI features may take actions automatically based on user-approved rules, workflows, triggers, schedules, or organization policies.
 
 Automated actions may include:
 
@@ -256,7 +256,7 @@ Automation should include reasonable safeguards, such as:
 
 ## 15. Model Routing and AI Providers
 
-Helix AI may route requests to different models, services, providers, or local systems depending on:
+Aerealith AI may route requests to different models, services, providers, or local systems depending on:
 
 - User settings
 - Organization settings
@@ -275,9 +275,9 @@ Relevant vendors and subprocessors should be listed in the applicable Subprocess
 
 ## 16. Data Sent to Models and Tools
 
-Depending on configuration and permissions, Helix AI may send relevant portions of user prompts, files, metadata, conversation history, retrieved context, or tool results to AI models or tools to generate a response or complete an action.
+Depending on configuration and permissions, Aerealith AI may send relevant portions of user prompts, files, metadata, conversation history, retrieved context, or tool results to AI models or tools to generate a response or complete an action.
 
-Helix AI should limit data shared with models and tools to what is reasonably needed for the requested function, subject to technical limitations, product behavior, and user or organization settings.
+Aerealith AI should limit data shared with models and tools to what is reasonably needed for the requested function, subject to technical limitations, product behavior, and user or organization settings.
 
 Users should not provide sensitive, confidential, regulated, or restricted information unless they are authorized to do so and the account, workspace, deployment, and settings are appropriate for that data.
 
@@ -320,7 +320,7 @@ Bias may result from:
 
 Users should carefully review AI output, especially when it relates to people, protected characteristics, eligibility, access to services, moderation, enforcement, or high-impact decisions.
 
-Helix AI should not be used as the sole basis for decisions that materially affect a person’s rights, safety, employment, housing, credit, education, healthcare, legal status, or access to essential services.
+Aerealith AI should not be used as the sole basis for decisions that materially affect a person’s rights, safety, employment, housing, credit, education, healthcare, legal status, or access to essential services.
 
 ## 19. Content Labeling and Disclosure
 
@@ -344,7 +344,7 @@ Users are responsible for following applicable disclosure rules.
 
 ## 20. Synthetic Media
 
-Helix AI may support or integrate with tools that generate or edit images, audio, video, avatars, voices, or other synthetic media.
+Aerealith AI may support or integrate with tools that generate or edit images, audio, video, avatars, voices, or other synthetic media.
 
 Users may not use synthetic media features to:
 
@@ -360,7 +360,7 @@ Synthetic media should be labeled or disclosed when appropriate.
 
 ## 21. Logs, Auditability, and Monitoring
 
-Helix AI may log certain activity to support:
+Aerealith AI may log certain activity to support:
 
 - Security
 - Abuse prevention
@@ -379,7 +379,7 @@ Access to logs should be limited according to role, permission, security control
 
 ## 22. Organization Controls
 
-Organizations may configure Helix AI with additional controls, including:
+Organizations may configure Aerealith AI with additional controls, including:
 
 - Role-based access controls
 - Attribute-based access controls
@@ -397,11 +397,11 @@ Organizations may configure Helix AI with additional controls, including:
 - Workspace-level assistant behavior
 - User permission limits
 
-Organization administrators are responsible for configuring Helix AI appropriately for their users, data, industry, and risk profile.
+Organization administrators are responsible for configuring Aerealith AI appropriately for their users, data, industry, and risk profile.
 
 ## 23. Self-Hosted and Air-Gapped Deployments
 
-Self-hosted, hybrid, and air-gapped deployments may behave differently from cloud-hosted Helix AI.
+Self-hosted, hybrid, and air-gapped deployments may behave differently from cloud-hosted Aerealith AI.
 
 Differences may include:
 
@@ -420,7 +420,7 @@ The organization or operator of the deployment is responsible for securing, moni
 
 ## 24. Marketplace and Third-Party Items
 
-Helix AI may support marketplace items, plugins, integrations, workflows, dashboards, templates, personalities, connectors, and other extensions.
+Aerealith AI may support marketplace items, plugins, integrations, workflows, dashboards, templates, personalities, connectors, and other extensions.
 
 Marketplace or third-party items may have their own behavior, permissions, limitations, data access, and terms.
 
@@ -440,7 +440,7 @@ SinLess Games LLC may review, restrict, remove, suspend, or disable marketplace 
 
 ## 25. Safety Systems
 
-Helix AI may use safety systems to detect, prevent, limit, or respond to misuse.
+Aerealith AI may use safety systems to detect, prevent, limit, or respond to misuse.
 
 Safety systems may include:
 
@@ -459,11 +459,11 @@ Safety systems may include:
 
 Safety systems are not perfect. They may incorrectly allow, block, limit, or flag content or actions.
 
-Users may not attempt to bypass, disable, manipulate, evade, or interfere with Helix AI safety systems.
+Users may not attempt to bypass, disable, manipulate, evade, or interfere with Aerealith AI safety systems.
 
 ## 26. Availability and Degraded Behavior
 
-Helix AI features may be unavailable, delayed, degraded, disabled, limited, or changed due to:
+Aerealith AI features may be unavailable, delayed, degraded, disabled, limited, or changed due to:
 
 - Maintenance
 - Outages
@@ -477,13 +477,13 @@ Helix AI features may be unavailable, delayed, degraded, disabled, limited, or c
 - Legal requirements
 - Technical constraints
 
-When features are degraded, Helix AI may provide partial answers, limited tool access, fallback behavior, or no response.
+When features are degraded, Aerealith AI may provide partial answers, limited tool access, fallback behavior, or no response.
 
-Users should not rely on Helix AI as the only system for emergency response, safety-critical operations, compliance obligations, production monitoring, backup, disaster recovery, or business continuity.
+Users should not rely on Aerealith AI as the only system for emergency response, safety-critical operations, compliance obligations, production monitoring, backup, disaster recovery, or business continuity.
 
 ## 27. Feedback and Correction
 
-Users may provide feedback when Helix AI output is inaccurate, unsafe, incomplete, biased, or inappropriate.
+Users may provide feedback when Aerealith AI output is inaccurate, unsafe, incomplete, biased, or inappropriate.
 
 Feedback may be used to:
 
@@ -523,7 +523,7 @@ When reporting an issue, include as much detail as possible, such as:
 
 ## 29. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy-policy.md)
@@ -545,7 +545,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, email, release notes, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 31. Contact
 

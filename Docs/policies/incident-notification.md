@@ -1,6 +1,6 @@
 ---
 title: Incident Notification Policy
-description: Explains how Helix AI identifies, classifies, communicates, escalates, and reports service, security, privacy, data, and operational incidents.
+description: Explains how Aerealith AI identifies, classifies, communicates, escalates, and reports service, security, privacy, data, and operational incidents.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,9 +11,9 @@ status: draft
 
 ## 1. Purpose
 
-This Incident Notification Policy explains how SinLess Games LLC communicates about incidents affecting Helix AI.
+This Incident Notification Policy explains how SinLess Games LLC communicates about incidents affecting Aerealith AI.
 
-Helix AI is designed to support users, organizations, developers, automations, integrations, analytics, infrastructure workflows, AI memory, and connected services. Because incidents may affect availability, security, privacy, data integrity, automation behavior, integrations, or user trust, SinLess Games LLC will use reasonable processes to identify, investigate, respond to, and notify affected parties when appropriate.
+Aerealith AI is designed to support users, organizations, developers, automations, integrations, analytics, infrastructure workflows, AI memory, and connected services. Because incidents may affect availability, security, privacy, data integrity, automation behavior, integrations, or user trust, SinLess Games LLC will use reasonable processes to identify, investigate, respond to, and notify affected parties when appropriate.
 
 This policy explains:
 
@@ -26,7 +26,7 @@ This policy explains:
 
 ## 2. Scope
 
-This policy applies to Helix AI services, including:
+This policy applies to Aerealith AI services, including:
 
 - Websites
 - Web applications
@@ -63,11 +63,11 @@ This policy applies to:
 - Billing contacts
 - Security contacts
 - Legal contacts
-- Anyone affected by a Helix AI incident
+- Anyone affected by a Aerealith AI incident
 
 ## 3. Incident Definition
 
-An incident is an event that may negatively affect the confidentiality, integrity, availability, reliability, safety, security, privacy, compliance, or expected operation of Helix AI.
+An incident is an event that may negatively affect the confidentiality, integrity, availability, reliability, safety, security, privacy, compliance, or expected operation of Aerealith AI.
 
 Incidents may include:
 
@@ -98,11 +98,11 @@ Not every bug, support request, failed request, model error, or temporary delay 
 
 ## 4. Incident Categories
 
-Helix AI incidents may be grouped into one or more categories.
+Aerealith AI incidents may be grouped into one or more categories.
 
 ### 4.1 Service Availability Incident
 
-A service availability incident affects the ability to access or use Helix AI.
+A service availability incident affects the ability to access or use Aerealith AI.
 
 Examples include:
 
@@ -206,7 +206,7 @@ Examples include:
 
 ### 4.7 Vendor or Subprocessor Incident
 
-A vendor or subprocessor incident involves a third-party service used to provide Helix AI.
+A vendor or subprocessor incident involves a third-party service used to provide Aerealith AI.
 
 Examples include:
 
@@ -231,7 +231,7 @@ Severity levels may be adjusted as new information becomes available.
 
 A critical incident may include:
 
-- Widespread outage of core Helix AI services
+- Widespread outage of core Aerealith AI services
 - Confirmed unauthorized access to sensitive data
 - Confirmed data breach affecting multiple users or organizations
 - Active exploitation of a critical vulnerability
@@ -323,11 +323,11 @@ Notification channels may include:
 - Release notes
 - Direct communication from support or customer success
 
-Before publishing this policy, confirm the official Helix AI status page URL and support channels.
+Before publishing this policy, confirm the official Aerealith AI status page URL and support channels.
 
 ## 8. Status Page
 
-Helix AI should maintain a public or customer-accessible status page for service availability and major incidents.
+Aerealith AI should maintain a public or customer-accessible status page for service availability and major incidents.
 
 The status page may include:
 
@@ -570,12 +570,12 @@ SinLess Games LLC may remove, disable, suspend, or restrict marketplace items du
 
 ## 20. Vendor and Subprocessor Incident Notification
 
-If a vendor or subprocessor incident affects Helix AI users, SinLess Games LLC may notify affected users or organizations when appropriate.
+If a vendor or subprocessor incident affects Aerealith AI users, SinLess Games LLC may notify affected users or organizations when appropriate.
 
 Notifications may include:
 
 - Vendor or subprocessor involved, where disclosure is permitted
-- Helix AI services affected
+- Aerealith AI services affected
 - Nature of the impact
 - Data affected, if known
 - Mitigation steps
@@ -751,7 +751,7 @@ Users and organizations receiving confidential incident information should prote
 
 ## 28. No Guarantee of Error-Free Service
 
-SinLess Games LLC works to operate Helix AI reliably and securely, but no online service, AI system, integration, automation platform, or software product can be guaranteed to be error-free, uninterrupted, or completely secure.
+SinLess Games LLC works to operate Aerealith AI reliably and securely, but no online service, AI system, integration, automation platform, or software product can be guaranteed to be error-free, uninterrupted, or completely secure.
 
 This policy does not create a guarantee that every issue will be detected, classified, communicated, resolved, or prevented.
 
@@ -759,7 +759,7 @@ Service commitments, if any, are governed by the applicable [Support Policy](./s
 
 ## 29. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy-policy.md)
@@ -798,7 +798,7 @@ Before publishing this policy, confirm these email aliases exist and are monitor
 Before publishing this policy, complete the following:
 
 - Confirm official company name: `SinLess Games LLC`
-- Confirm official Helix AI status page URL
+- Confirm official Aerealith AI status page URL
 - Confirm monitored incident intake emails
 - Confirm internal incident severity definitions
 - Confirm incident commander role
@@ -820,7 +820,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, email, release notes, legal notices page, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 33. Legal Review Notice
 

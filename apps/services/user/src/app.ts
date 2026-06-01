@@ -41,7 +41,7 @@ app.get('/', (context) =>
 
 app.use('*', async (context, next) => {
   const maintenanceMode = await flagBoolean(
-    context,
+    context as unknown as Parameters<typeof flagBoolean>[0],
     'maintenance-mode',
     false,
   );
@@ -67,6 +67,7 @@ app.use('*', async (context, next) => {
 
   try {
     await next();
+    return context.res;
   } finally {
     logger.info('User request completed', {
       success: context.res.ok,

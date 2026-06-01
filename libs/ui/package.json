@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "@aerealith-ai/config": "workspace:*",
+    "@aerealith-ai/contracts": "workspace:*",
     "@aerealith-ai/observability": "workspace:*",
     "@aerealith-ai/flags": "workspace:*",
     "@mui/system": "^9.0.1",

@@ -67,7 +67,7 @@ keep_names = true
 
 [[services]]
 binding = "AUTH_SERVICE"
-service = "helix-auth-service"
+service = "aerealith-auth-service"
 
 # -----------------------------------------------------------------------------
 # Non-secret runtime variables
@@ -142,7 +142,7 @@ preview_urls = true
 
 [[env.preview.services]]
 binding = "AUTH_SERVICE"
-service = "helix-auth-service-preview"
+service = "aerealith-auth-service-preview"
 
 [env.preview.vars]
 NODE_ENV = "preview"
@@ -198,7 +198,7 @@ preview_urls = false
 
 [[env.production.services]]
 binding = "AUTH_SERVICE"
-service = "helix-auth-service"
+service = "aerealith-auth-service"
 
 [env.production.vars]
 NODE_ENV = "production"

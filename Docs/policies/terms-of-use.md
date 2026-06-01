@@ -1,6 +1,6 @@
 ---
 title: Terms of Use
-description: Defines the legal terms for accessing and using Helix AI services, accounts, subscriptions, content, APIs, automations, integrations, marketplace items, and deployments.
+description: Defines the legal terms for accessing and using Aerealith AI services, accounts, subscriptions, content, APIs, automations, integrations, marketplace items, and deployments.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,19 +11,19 @@ status: draft
 
 ## 1. Purpose
 
-These Terms of Use govern access to and use of Helix AI.
+These Terms of Use govern access to and use of Aerealith AI.
 
-Helix AI is operated by SinLess Games LLC.
+Aerealith AI is operated by SinLess Games LLC.
 
-Helix AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because Helix AI may involve artificial intelligence, user data, memory, files, integrations, automations, APIs, plugins, marketplace items, dashboards, analytics, and organization workspaces, these Terms explain the rights, responsibilities, limits, and conditions that apply when using the service.
+Aerealith AI is designed to help users think, create, automate, analyze, monitor, and act across connected systems. Because Aerealith AI may involve artificial intelligence, user data, memory, files, integrations, automations, APIs, plugins, marketplace items, dashboards, analytics, and organization workspaces, these Terms explain the rights, responsibilities, limits, and conditions that apply when using the service.
 
-By accessing or using Helix AI, you agree to these Terms and all policies incorporated by reference.
+By accessing or using Aerealith AI, you agree to these Terms and all policies incorporated by reference.
 
-If you do not agree to these Terms, do not use Helix AI.
+If you do not agree to these Terms, do not use Aerealith AI.
 
 ## 2. Scope
 
-These Terms apply to Helix AI services, including:
+These Terms apply to Aerealith AI services, including:
 
 - Websites
 - Web applications
@@ -60,11 +60,11 @@ These Terms apply to:
 - Marketplace publishers
 - API users
 - Enterprise customers
-- Anyone who accesses or uses Helix AI through an account, workspace, integration, automation, shared agent, plugin, API key, or connected service
+- Anyone who accesses or uses Aerealith AI through an account, workspace, integration, automation, shared agent, plugin, API key, or connected service
 
 ## 3. Company Information
 
-Helix AI is operated by:
+Aerealith AI is operated by:
 
 **SinLess Games LLC**
 
@@ -90,7 +90,7 @@ Before publishing, confirm that these email aliases exist and are monitored.
 
 ## 4. Relationship to Other Policies
 
-These Terms work together with other Helix AI policies, including:
+These Terms work together with other Aerealith AI policies, including:
 
 - [Privacy Policy](./privacy.md)
 - [Data Policy](./data.md)
@@ -122,15 +122,15 @@ When we make material changes, we will update the `last_updated` date and may pr
 
 Changes become effective when posted unless a later effective date is stated.
 
-Continued use of Helix AI after changes become effective means you accept the updated Terms.
+Continued use of Aerealith AI after changes become effective means you accept the updated Terms.
 
-If you do not agree to the updated Terms, you must stop using Helix AI.
+If you do not agree to the updated Terms, you must stop using Aerealith AI.
 
 ## 6. Eligibility
 
-You may use Helix AI only if you can legally agree to these Terms and are not prohibited from using the service under applicable law.
+You may use Aerealith AI only if you can legally agree to these Terms and are not prohibited from using the service under applicable law.
 
-You may not use Helix AI if:
+You may not use Aerealith AI if:
 
 - You are legally barred from using the service.
 - You are located in a jurisdiction where use is prohibited.
@@ -142,16 +142,16 @@ Use by minors is governed by the applicable [Underage Policy](./underage.md), if
 
 ## 7. Use on Behalf of an Organization
 
-If you use Helix AI on behalf of an organization, you represent that:
+If you use Aerealith AI on behalf of an organization, you represent that:
 
 - You have authority to bind that organization to these Terms.
 - The organization agrees to these Terms.
-- You will use Helix AI only for authorized organization purposes.
+- You will use Aerealith AI only for authorized organization purposes.
 - You will follow the organization’s policies.
 - You will ensure organization users comply with these Terms.
 - The organization is responsible for activity under its workspaces, accounts, API keys, integrations, automations, plugins, and users.
 
-If you do not have authority to bind the organization, do not use Helix AI on behalf of that organization.
+If you do not have authority to bind the organization, do not use Aerealith AI on behalf of that organization.
 
 ## 8. Account Registration
 
@@ -183,7 +183,7 @@ You must not:
 - Bypass authentication or authorization controls
 - Allow unauthorized access to your account
 - Store secrets in ordinary prompts, files, memory, or support messages
-- Use Helix AI in a way that compromises security
+- Use Aerealith AI in a way that compromises security
 
 If you believe your account has been compromised, contact:
 
@@ -204,13 +204,13 @@ This includes activity by:
 - Your API keys
 - Your automations
 - Your connected integrations
-- Anyone you authorize to access Helix AI
+- Anyone you authorize to access Aerealith AI
 
 You are responsible for charges, data processing, actions, outputs, and policy violations caused by your account or organization.
 
-## 11. The Helix AI Service
+## 11. The Aerealith AI Service
 
-Helix AI may provide features that help users:
+Aerealith AI may provide features that help users:
 
 - Draft, rewrite, summarize, and organize content
 - Analyze files, messages, code, logs, events, and structured data
@@ -226,7 +226,7 @@ Features may vary by plan, region, deployment type, organization settings, accou
 
 ## 12. AI Nature of the Service
 
-Helix AI uses artificial intelligence and automation.
+Aerealith AI uses artificial intelligence and automation.
 
 AI-generated output may be:
 
@@ -242,37 +242,37 @@ AI-generated output may be:
 
 You are responsible for reviewing, validating, testing, and approving outputs before relying on them.
 
-Helix AI is not a human, attorney, doctor, financial advisor, accountant, therapist, emergency responder, government official, or licensed professional.
+Aerealith AI is not a human, attorney, doctor, financial advisor, accountant, therapist, emergency responder, government official, or licensed professional.
 
 AI behavior and limitations are described further in the [AI Transparency Policy](./ai-transparency.md) and [Responsible AI Policy](./responsible-ai.md).
 
 ## 13. No Claim of Sentience or Human Status
 
-Helix AI may use assistant identities, memory, personalization, voices, avatars, personas, and natural language interaction.
+Aerealith AI may use assistant identities, memory, personalization, voices, avatars, personas, and natural language interaction.
 
 However:
 
-- Helix AI is not human.
-- Helix AI is not sentient.
-- Helix AI does not have consciousness, emotions, independent legal personhood, or personal rights.
-- Helix AI may model empathy behaviorally, but it does not experience feelings.
-- Helix AI does not replace human judgment, professional responsibility, or user accountability.
+- Aerealith AI is not human.
+- Aerealith AI is not sentient.
+- Aerealith AI does not have consciousness, emotions, independent legal personhood, or personal rights.
+- Aerealith AI may model empathy behaviorally, but it does not experience feelings.
+- Aerealith AI does not replace human judgment, professional responsibility, or user accountability.
 
 Any assistant identity, continuity, personality, or companionship feature is a product feature and should not be interpreted as proof of sentience or human status.
 
 ## 14. Professional Advice Disclaimer
 
-Helix AI may help draft, explain, summarize, compare, or organize information related to legal, medical, financial, security, tax, employment, compliance, or business topics.
+Aerealith AI may help draft, explain, summarize, compare, or organize information related to legal, medical, financial, security, tax, employment, compliance, or business topics.
 
-Helix AI does not provide professional advice.
+Aerealith AI does not provide professional advice.
 
-You should consult qualified professionals before relying on Helix AI output for regulated, specialized, or high-impact matters.
+You should consult qualified professionals before relying on Aerealith AI output for regulated, specialized, or high-impact matters.
 
-You may not use Helix AI as the sole decision-maker for legal, medical, financial, employment, housing, credit, insurance, education, immigration, public benefits, law enforcement, safety-critical, or other high-impact decisions.
+You may not use Aerealith AI as the sole decision-maker for legal, medical, financial, employment, housing, credit, insurance, education, immigration, public benefits, law enforcement, safety-critical, or other high-impact decisions.
 
 ## 15. Human Review Requirements
 
-Human review is required before using Helix AI output for:
+Human review is required before using Aerealith AI output for:
 
 - Legal decisions
 - Medical decisions
@@ -298,11 +298,11 @@ Human review is required before using Helix AI output for:
 
 ## 16. Acceptable Use
 
-You must use Helix AI lawfully, safely, honestly, and responsibly.
+You must use Aerealith AI lawfully, safely, honestly, and responsibly.
 
 You must comply with the [Acceptable Use Policy](./acceptable-use.md).
 
-You may not use Helix AI to:
+You may not use Aerealith AI to:
 
 - Break the law
 - Harm people or systems
@@ -317,7 +317,7 @@ You may not use Helix AI to:
 - Evade safety systems
 - Bypass access controls
 - Abuse APIs, automations, integrations, or marketplace items
-- Use Helix AI for prohibited or restricted activity
+- Use Aerealith AI for prohibited or restricted activity
 
 SinLess Games LLC may suspend, restrict, or terminate access for violations.
 
@@ -349,7 +349,7 @@ Your data may include:
 - API inputs
 - User-generated content
 - Marketplace publisher content
-- Any other content you submit, upload, connect, create, import, or process through Helix AI
+- Any other content you submit, upload, connect, create, import, or process through Aerealith AI
 
 SinLess Games LLC does not claim ownership of your data.
 
@@ -359,7 +359,7 @@ Data handling is described in the [Data Policy](./data.md) and [Privacy Policy](
 
 SinLess Games LLC does not sell user data.
 
-Helix AI does not sell:
+Aerealith AI does not sell:
 
 - User prompts
 - User messages
@@ -376,13 +376,13 @@ Helix AI does not sell:
 - Analytics inputs
 - Dashboard data
 
-Helix AI does not use user data outside legitimate service business logic and approved research purposes.
+Aerealith AI does not use user data outside legitimate service business logic and approved research purposes.
 
 ## 19. License You Grant to SinLess Games LLC
 
 You grant SinLess Games LLC a limited, worldwide, non-exclusive, royalty-free license to host, store, process, transmit, display, copy, modify, create technical transformations of, analyze, and otherwise use your data only as needed to:
 
-- Provide Helix AI
+- Provide Aerealith AI
 - Generate responses
 - Process prompts and files
 - Operate integrations
@@ -407,16 +407,16 @@ This license ends when your data is deleted from active systems, except where co
 
 ## 20. Your Responsibilities for User Content
 
-You are responsible for content you submit, upload, connect, generate, publish, share, or process through Helix AI.
+You are responsible for content you submit, upload, connect, generate, publish, share, or process through Aerealith AI.
 
 You represent and warrant that:
 
-- You have the rights needed to use the content with Helix AI.
+- You have the rights needed to use the content with Aerealith AI.
 - Your content does not violate law.
 - Your content does not violate another person’s rights.
 - Your content does not contain malware or harmful code.
 - Your content does not violate these Terms or related policies.
-- Your use of Helix AI with that content is authorized.
+- Your use of Aerealith AI with that content is authorized.
 
 You are responsible for reviewing generated or transformed content before use, publication, deployment, or distribution.
 
@@ -455,23 +455,23 @@ Do not include secrets, regulated data, confidential data, or unnecessary person
 
 ## 23. SinLess Games LLC Intellectual Property
 
-Helix AI, including its software, interfaces, designs, documentation, branding, names, logos, trademarks, service marks, workflows, systems, models, prompts, tools, APIs, SDKs, marketplace infrastructure, and other materials, is owned by SinLess Games LLC or its licensors.
+Aerealith AI, including its software, interfaces, designs, documentation, branding, names, logos, trademarks, service marks, workflows, systems, models, prompts, tools, APIs, SDKs, marketplace infrastructure, and other materials, is owned by SinLess Games LLC or its licensors.
 
 These Terms do not transfer ownership of SinLess Games LLC intellectual property to you.
 
 You may not:
 
-- Copy, modify, distribute, sell, lease, or sublicense Helix AI except as allowed by these Terms or a written agreement
+- Copy, modify, distribute, sell, lease, or sublicense Aerealith AI except as allowed by these Terms or a written agreement
 - Remove proprietary notices
 - Misuse SinLess Games LLC trademarks
-- Reverse engineer Helix AI except where permitted by law
+- Reverse engineer Aerealith AI except where permitted by law
 - Bypass technical controls
-- Access Helix AI to build a competing service in violation of these Terms
-- Use Helix AI branding without permission
+- Access Aerealith AI to build a competing service in violation of these Terms
+- Use Aerealith AI branding without permission
 
 ## 24. Open Source Components
 
-Helix AI may include or interact with open source software.
+Aerealith AI may include or interact with open source software.
 
 Open source components are governed by their applicable licenses.
 
@@ -481,7 +481,7 @@ If there is a conflict between these Terms and an open source license for a spec
 
 ## 25. Third-Party Services
 
-Helix AI may integrate with or link to third-party services.
+Aerealith AI may integrate with or link to third-party services.
 
 Third-party services may include:
 
@@ -506,11 +506,11 @@ Third-party services are governed by their own terms, policies, privacy notices,
 
 SinLess Games LLC is not responsible for third-party services except as expressly stated in a written agreement.
 
-You are responsible for reviewing permissions and terms before connecting third-party services to Helix AI.
+You are responsible for reviewing permissions and terms before connecting third-party services to Aerealith AI.
 
 ## 26. Integrations
 
-If you connect Helix AI to third-party accounts, tools, systems, or services, you authorize Helix AI to access and process information from those integrations according to your permissions, instructions, organization settings, and applicable agreements.
+If you connect Aerealith AI to third-party accounts, tools, systems, or services, you authorize Aerealith AI to access and process information from those integrations according to your permissions, instructions, organization settings, and applicable agreements.
 
 You are responsible for:
 
@@ -527,7 +527,7 @@ SinLess Games LLC may disable integrations that create security, privacy, legal,
 
 ## 27. Automations and Tool Calls
 
-Helix AI may support automations, workflows, agents, schedules, triggers, tool calls, and connected actions.
+Aerealith AI may support automations, workflows, agents, schedules, triggers, tool calls, and connected actions.
 
 You are responsible for configuring automations safely.
 
@@ -547,7 +547,7 @@ SinLess Games LLC is not responsible for damage caused by user-approved automati
 
 ## 28. APIs and Developer Tools
 
-Helix AI may provide APIs, SDKs, webhooks, developer tools, and integration features.
+Aerealith AI may provide APIs, SDKs, webhooks, developer tools, and integration features.
 
 Developers must:
 
@@ -587,7 +587,7 @@ SinLess Games LLC may revoke, rotate, suspend, or disable API keys when needed f
 
 ## 30. Marketplace
 
-Helix AI may support a marketplace for plugins, integrations, workflows, dashboards, templates, personalities, prompt packs, connectors, or other items.
+Aerealith AI may support a marketplace for plugins, integrations, workflows, dashboards, templates, personalities, prompt packs, connectors, or other items.
 
 Marketplace users and publishers must follow:
 
@@ -615,7 +615,7 @@ Marketplace billing is governed by the [Billing, Refund, and Cancellation Policy
 
 ## 32. Plans, Subscriptions, and Billing
 
-Helix AI may offer free, paid, usage-based, custom, and enterprise plans.
+Aerealith AI may offer free, paid, usage-based, custom, and enterprise plans.
 
 Plans may include different:
 
@@ -647,7 +647,7 @@ Cancellation stops future renewals but does not automatically provide a refund f
 
 ## 34. Free Trials and Promotions
 
-Helix AI may offer free trials, beta access, early access, discounts, promotional credits, coupons, founder pricing, or special offers.
+Aerealith AI may offer free trials, beta access, early access, discounts, promotional credits, coupons, founder pricing, or special offers.
 
 Promotions may be subject to additional terms.
 
@@ -699,7 +699,7 @@ SinLess Games LLC may contest chargebacks and provide relevant records to paymen
 
 ## 38. Service Availability
 
-SinLess Games LLC works to provide reliable service, but Helix AI may be unavailable, delayed, degraded, interrupted, suspended, limited, modified, or discontinued.
+SinLess Games LLC works to provide reliable service, but Aerealith AI may be unavailable, delayed, degraded, interrupted, suspended, limited, modified, or discontinued.
 
 Causes may include:
 
@@ -718,7 +718,7 @@ Causes may include:
 - Technical constraints
 - Force majeure events
 
-Unless a written SLA applies, Helix AI does not guarantee uptime, availability, or error-free operation.
+Unless a written SLA applies, Aerealith AI does not guarantee uptime, availability, or error-free operation.
 
 Support and availability are governed by the [Support Policy](./support.md) and any applicable written agreement.
 
@@ -734,7 +734,7 @@ Emergency maintenance may occur without advance notice when needed to protect us
 
 ## 40. Beta, Preview, and Experimental Features
 
-Helix AI may offer beta, preview, early-access, experimental, research, or unreleased features.
+Aerealith AI may offer beta, preview, early-access, experimental, research, or unreleased features.
 
 These features may be:
 
@@ -795,7 +795,7 @@ Canceling a subscription does not automatically delete your account or all assoc
 
 ## 43. Suspension and Termination by SinLess Games LLC
 
-SinLess Games LLC may suspend, restrict, or terminate your access to Helix AI if:
+SinLess Games LLC may suspend, restrict, or terminate your access to Aerealith AI if:
 
 - You violate these Terms
 - You violate related policies
@@ -811,14 +811,14 @@ SinLess Games LLC may suspend, restrict, or terminate your access to Helix AI if
 - You misuse marketplace items
 - You infringe intellectual property rights
 - You violate payment processor rules
-- Your use may harm users, systems, Helix AI, SinLess Games LLC, third parties, or the public
+- Your use may harm users, systems, Aerealith AI, SinLess Games LLC, third parties, or the public
 - We are required to do so by law, court order, regulator, payment processor, vendor, or other legal obligation
 
 We may act immediately and without prior notice when necessary.
 
 ## 44. Termination by You
 
-You may stop using Helix AI at any time.
+You may stop using Aerealith AI at any time.
 
 You may cancel a paid subscription according to the [Billing, Refund, and Cancellation Policy](./billing-refund-cancellation.md).
 
@@ -865,7 +865,7 @@ You may not use SinLess Games LLC names, logos, trademarks, service marks, brand
 You may not:
 
 - Misrepresent affiliation with SinLess Games LLC
-- Impersonate Helix AI or SinLess Games LLC
+- Impersonate Aerealith AI or SinLess Games LLC
 - Use confusingly similar marks
 - Use branding in a way that suggests endorsement without permission
 - Use branding for scams, phishing, malware, or misleading services
@@ -874,15 +874,15 @@ You may not:
 
 Privacy is governed by the [Privacy Policy](./privacy.md).
 
-By using Helix AI, you acknowledge that SinLess Games LLC may process personal information as described in the Privacy Policy and related policies.
+By using Aerealith AI, you acknowledge that SinLess Games LLC may process personal information as described in the Privacy Policy and related policies.
 
-If you use Helix AI on behalf of an organization, you are responsible for providing any required notices and obtaining any required consents from your users, employees, contractors, customers, or other individuals.
+If you use Aerealith AI on behalf of an organization, you are responsible for providing any required notices and obtaining any required consents from your users, employees, contractors, customers, or other individuals.
 
 ## 49. Security
 
 Security is governed by the [Security Policy](./security.md).
 
-You must not use Helix AI to compromise accounts, systems, services, networks, models, plugins, APIs, integrations, or data.
+You must not use Aerealith AI to compromise accounts, systems, services, networks, models, plugins, APIs, integrations, or data.
 
 You must report suspected security vulnerabilities to:
 
@@ -900,7 +900,7 @@ Confidentiality obligations may also be governed by a separate written agreement
 
 ## 51. Regulated Data and Sensitive Use
 
-You must not use Helix AI for regulated or sensitive data unless your account, workspace, deployment, settings, subscription, and written agreements are appropriate for that use.
+You must not use Aerealith AI for regulated or sensitive data unless your account, workspace, deployment, settings, subscription, and written agreements are appropriate for that use.
 
 Regulated or sensitive contexts may include:
 
@@ -923,15 +923,15 @@ You are responsible for ensuring your use complies with applicable laws, contrac
 
 ## 52. Children and Minors
 
-Helix AI is not intended for children unless expressly permitted by applicable law, account settings, organization configuration, and written agreements.
+Aerealith AI is not intended for children unless expressly permitted by applicable law, account settings, organization configuration, and written agreements.
 
-You may not use Helix AI to exploit, sexualize, groom, manipulate, endanger, or harm minors.
+You may not use Aerealith AI to exploit, sexualize, groom, manipulate, endanger, or harm minors.
 
 Use by minors is governed by the applicable [Underage Policy](./underage.md), if published.
 
 ## 53. Self-Hosted, Hybrid, and Air-Gapped Deployments
 
-Helix AI may support self-hosted, hybrid, private, or air-gapped deployments.
+Aerealith AI may support self-hosted, hybrid, private, or air-gapped deployments.
 
 For these deployments, the customer or deployment operator may be responsible for:
 
@@ -992,9 +992,9 @@ If enterprise documents conflict with these Terms, the signed enterprise documen
 
 You must comply with applicable export control, sanctions, and trade laws.
 
-You may not use Helix AI if your use is prohibited by applicable sanctions, embargoes, restricted-party rules, export controls, or trade restrictions.
+You may not use Aerealith AI if your use is prohibited by applicable sanctions, embargoes, restricted-party rules, export controls, or trade restrictions.
 
-You may not use Helix AI to:
+You may not use Aerealith AI to:
 
 - Evade sanctions
 - Hide restricted-party involvement
@@ -1007,7 +1007,7 @@ SinLess Games LLC may restrict access where required or appropriate.
 
 ## 56. Compliance With Laws
 
-You are responsible for complying with all laws, regulations, rules, orders, contracts, professional obligations, platform rules, and organization policies that apply to your use of Helix AI.
+You are responsible for complying with all laws, regulations, rules, orders, contracts, professional obligations, platform rules, and organization policies that apply to your use of Aerealith AI.
 
 This includes laws and rules related to:
 
@@ -1035,7 +1035,7 @@ This includes laws and rules related to:
 
 ## 57. Disclaimers
 
-To the maximum extent permitted by law, Helix AI is provided “as is” and “as available.”
+To the maximum extent permitted by law, Aerealith AI is provided “as is” and “as available.”
 
 SinLess Games LLC disclaims all warranties, express or implied, including warranties of:
 
@@ -1053,7 +1053,7 @@ SinLess Games LLC disclaims all warranties, express or implied, including warran
 - Suitability for production deployment
 - Suitability of AI-generated output
 
-SinLess Games LLC does not warrant that Helix AI will meet your requirements, produce correct outputs, prevent all harm, prevent all security incidents, or be available without interruption.
+SinLess Games LLC does not warrant that Aerealith AI will meet your requirements, produce correct outputs, prevent all harm, prevent all security incidents, or be available without interruption.
 
 Some jurisdictions do not allow certain warranty disclaimers, so some disclaimers may not apply to you.
 
@@ -1081,9 +1081,9 @@ To the maximum extent permitted by law, SinLess Games LLC and its owners, office
 - Use of generated code or configurations without review
 - Decisions made based on AI output
 
-To the maximum extent permitted by law, the total liability of SinLess Games LLC for all claims arising out of or relating to Helix AI will not exceed the greater of:
+To the maximum extent permitted by law, the total liability of SinLess Games LLC for all claims arising out of or relating to Aerealith AI will not exceed the greater of:
 
-1. The amount you paid to SinLess Games LLC for Helix AI in the 12 months before the event giving rise to the claim; or
+1. The amount you paid to SinLess Games LLC for Aerealith AI in the 12 months before the event giving rise to the claim; or
 2. `USD $100`.
 
 Some jurisdictions do not allow certain liability limitations, so some limitations may not apply to you.
@@ -1092,7 +1092,7 @@ Some jurisdictions do not allow certain liability limitations, so some limitatio
 
 To the maximum extent permitted by law, you agree to defend, indemnify, and hold harmless SinLess Games LLC and its owners, officers, employees, contractors, affiliates, licensors, service providers, and suppliers from and against claims, damages, losses, liabilities, costs, and expenses, including reasonable attorneys’ fees, arising from or related to:
 
-- Your use of Helix AI
+- Your use of Aerealith AI
 - Your content
 - Your automations
 - Your integrations
@@ -1144,7 +1144,7 @@ Before publishing, confirm the correct governing law jurisdiction with qualified
 
 ## 62. Venue
 
-Any dispute arising out of or relating to these Terms or Helix AI will be brought in the courts located in:
+Any dispute arising out of or relating to these Terms or Aerealith AI will be brought in the courts located in:
 
 `[Insert venue and court location]`
 
@@ -1196,7 +1196,7 @@ Force majeure events may include:
 
 You may not assign or transfer these Terms or your rights under these Terms without written permission from SinLess Games LLC.
 
-SinLess Games LLC may assign these Terms in connection with a merger, acquisition, reorganization, financing, sale of assets, corporate transaction, or transfer of Helix AI.
+SinLess Games LLC may assign these Terms in connection with a merger, acquisition, reorganization, financing, sale of assets, corporate transaction, or transfer of Aerealith AI.
 
 ## 66. No Waiver
 
@@ -1212,9 +1212,9 @@ The unenforceable part will be modified to the minimum extent necessary to make 
 
 ## 68. Entire Agreement
 
-These Terms, together with incorporated policies and any applicable written agreement, form the entire agreement between you and SinLess Games LLC regarding Helix AI.
+These Terms, together with incorporated policies and any applicable written agreement, form the entire agreement between you and SinLess Games LLC regarding Aerealith AI.
 
-These Terms replace prior or contemporaneous understandings about Helix AI unless a signed written agreement says otherwise.
+These Terms replace prior or contemporaneous understandings about Aerealith AI unless a signed written agreement says otherwise.
 
 ## 69. Notices
 
@@ -1268,7 +1268,7 @@ Before publishing, confirm these email aliases exist and are monitored.
 Before publishing these Terms, complete the following:
 
 - Confirm official company name: `SinLess Games LLC`
-- Confirm official product name: `Helix AI`
+- Confirm official product name: `Aerealith AI`
 - Confirm physical business address
 - Confirm official legal notice email
 - Confirm support email

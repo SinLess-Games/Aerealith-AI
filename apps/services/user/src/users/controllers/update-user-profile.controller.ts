@@ -91,6 +91,21 @@ const updateUserProfileSchema = z.object({
   links: z.record(z.string().trim().min(1), z.string().trim().url()).nullable().optional(),
 });
 
+const readHeader = (context: Context, name: string): string | undefined =>
+  context.req.header(name)?.trim() || undefined;
+
+function canUpdateProfile(context: Context, username: string): boolean {
+  const forwardedUsername =
+    readHeader(context, 'x-aerealith-auth-username') ??
+    readHeader(context, 'x-helix-username');
+  const forwardedUserId = readHeader(context, 'x-aerealith-user-id');
+
+  return (
+    forwardedUsername?.toLowerCase() === username.toLowerCase() ||
+    Boolean(forwardedUserId)
+  );
+}
+
 export const updateUserProfileController = async (
   context: Context,
 ): Promise<Response> => {
@@ -106,6 +121,19 @@ export const updateUserProfileController = async (
         },
       },
       400,
+    );
+  }
+
+  if (!canUpdateProfile(context, usernameParam.username)) {
+    return context.json(
+      {
+        ok: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Login is required to update this profile.',
+        },
+      },
+      401,
     );
   }
 
@@ -151,7 +179,5 @@ export const updateUserProfileController = async (
     }
 
     throw error;
-  } finally {
-    await entityManager.getConnection().close();
   }
 };

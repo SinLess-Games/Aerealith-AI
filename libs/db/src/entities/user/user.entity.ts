@@ -14,7 +14,13 @@ import {
 
 import { BaseEntity } from '../../entity.base.js';
 import { UserAccount } from './account.entity.js';
+import { UserAchievement } from './achievement.entity.js';
+import { UserActivityEvent } from './activity-event.entity.js';
+import { UserAppConnection } from './app-connection.entity.js';
+import { UserFileReference } from './file-reference.entity.js';
+import { UserIntegration } from './integration.entity.js';
 import { UserProfile } from './profile.entity.js';
+import { UserReport } from './report.entity.js';
 import { UserSession } from './session.entity.js';
 import { UserSettings } from './settings.entity.js';
 import { UserVerificationToken } from './verification-token.entity.js';
@@ -125,6 +131,42 @@ export class User extends BaseEntity {
     orphanRemoval: true,
   })
   verificationTokens = new Collection<Rel<UserVerificationToken>>(this);
+
+  @OneToMany(() => UserAchievement, (achievement) => achievement.user, {
+    cascade: [Cascade.PERSIST, Cascade.REMOVE],
+    orphanRemoval: true,
+  })
+  achievements = new Collection<Rel<UserAchievement>>(this);
+
+  @OneToMany(() => UserAppConnection, (connection) => connection.user, {
+    cascade: [Cascade.PERSIST, Cascade.REMOVE],
+    orphanRemoval: true,
+  })
+  appConnections = new Collection<Rel<UserAppConnection>>(this);
+
+  @OneToMany(() => UserIntegration, (integration) => integration.user, {
+    cascade: [Cascade.PERSIST, Cascade.REMOVE],
+    orphanRemoval: true,
+  })
+  integrations = new Collection<Rel<UserIntegration>>(this);
+
+  @OneToMany(() => UserFileReference, (fileReference) => fileReference.user, {
+    cascade: [Cascade.PERSIST, Cascade.REMOVE],
+    orphanRemoval: true,
+  })
+  fileReferences = new Collection<Rel<UserFileReference>>(this);
+
+  @OneToMany(() => UserReport, (report) => report.user, {
+    cascade: [Cascade.PERSIST, Cascade.REMOVE],
+    orphanRemoval: true,
+  })
+  reports = new Collection<Rel<UserReport>>(this);
+
+  @OneToMany(() => UserActivityEvent, (activityEvent) => activityEvent.user, {
+    cascade: [Cascade.PERSIST, Cascade.REMOVE],
+    orphanRemoval: true,
+  })
+  activityEvents = new Collection<Rel<UserActivityEvent>>(this);
 
   get passwordHash(): string | undefined {
     return this.hashedPassword ?? undefined;

@@ -13,6 +13,12 @@ export {
 } from './user-profile.mapper';
 
 export {
+  toPrivateProfileDashboardDto,
+  toPublicProfileDto,
+  type ProfileDashboardMapperInput,
+} from './profile-dashboard.mapper';
+
+export {
   toUserSettingsDto,
   toUserSettingsDtos,
   type UserSettingsMapperInput,

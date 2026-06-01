@@ -1,11 +1,13 @@
-import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const DEFAULT_AUTH_LOGIN_PATH = '/auth/login';
 const PERSISTENT_LOGIN_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const DEFAULT_AUTH_SERVICE_TIMEOUT_MS =
+  process.env.NODE_ENV === 'development' ? 20_000 : 8_000;
 
 const HOP_BY_HOP_HEADERS = new Set([
   'connection',
@@ -41,11 +43,45 @@ type AuthCookiePayload = {
   maxAgeSeconds?: number;
 };
 
+function getAuthServiceTimeoutMs(): number {
+  const value = Number(process.env.AUTH_SERVICE_TIMEOUT_MS);
+
+  return Number.isFinite(value) && value > 0
+    ? value
+    : DEFAULT_AUTH_SERVICE_TIMEOUT_MS;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+function isFetchNetworkError(error: unknown): boolean {
+  return error instanceof TypeError && error.message === 'fetch failed';
+}
+
 function joinUrl(baseUrl: string, path: string): string {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 
-  return `${normalizedBaseUrl}${normalizedPath}`;
+  return normalizeLoopbackUrl(`${normalizedBaseUrl}${normalizedPath}`);
+}
+
+function normalizeLoopbackUrl(value: string): string {
+  if (process.env.NODE_ENV !== 'development') {
+    return value;
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (url.hostname === 'localhost') {
+      url.hostname = '127.0.0.1';
+    }
+
+    return url.toString();
+  } catch {
+    return value;
+  }
 }
 
 function getAuthLoginUrl(): string {
@@ -53,7 +89,7 @@ function getAuthLoginUrl(): string {
     process.env.AUTH_SERVICE_LOGIN_URL ?? process.env.AUTH_LOGIN_URL;
 
   if (explicitLoginUrl) {
-    return explicitLoginUrl;
+    return normalizeLoopbackUrl(explicitLoginUrl);
   }
 
   const authServiceUrl =
@@ -202,10 +238,7 @@ function unwrapApiSuccessResponse(value: unknown): unknown {
   return value;
 }
 
-function parseJsonResponseBody(
-  body: ArrayBuffer,
-  headers: Headers,
-): unknown {
+function parseJsonResponseBody(body: ArrayBuffer, headers: Headers): unknown {
   const contentType = headers.get('content-type') ?? '';
 
   if (!contentType.toLowerCase().includes('application/json')) {
@@ -290,10 +323,7 @@ function getAuthCookieNames(): {
       'AUTH_REFRESH_TOKEN_COOKIE_NAME',
       COOKIE.REFRESH_TOKEN,
     ),
-    sessionId: getCookieName(
-      'AUTH_SESSION_ID_COOKIE_NAME',
-      COOKIE.SESSION_ID,
-    ),
+    sessionId: getCookieName('AUTH_SESSION_ID_COOKIE_NAME', COOKIE.SESSION_ID),
     username: getCookieName('AUTH_USERNAME_COOKIE_NAME', COOKIE.USERNAME),
   };
 }
@@ -554,9 +584,11 @@ function createResponseHeaders(
 
 function createProxyErrorResponse(error: unknown): NextResponse {
   const message =
-    error instanceof Error
-      ? error.message
-      : 'Unable to connect to the auth service.';
+    isAbortError(error) || isFetchNetworkError(error)
+      ? 'The auth service is not responding. Please try again in a moment.'
+      : error instanceof Error
+        ? error.message
+        : 'Unable to connect to the auth service.';
 
   return NextResponse.json(
     {
@@ -573,6 +605,12 @@ function createProxyErrorResponse(error: unknown): NextResponse {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    getAuthServiceTimeoutMs(),
+  );
+
   try {
     const authResponse = await fetch(getAuthLoginUrl(), {
       method: 'POST',
@@ -581,6 +619,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       credentials: 'include',
       redirect: 'manual',
       cache: 'no-store',
+      signal: controller.signal,
     });
 
     const responseBody = await authResponse.arrayBuffer();
@@ -596,5 +635,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     return createProxyErrorResponse(error);
+  } finally {
+    clearTimeout(timeout);
   }
 }

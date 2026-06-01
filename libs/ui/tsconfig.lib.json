@@ -6,11 +6,7 @@
     "declarationMap": true,
     "emitDeclarationOnly": false,
     "outDir": "../../dist/libs/ui",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "types": [
       "node",
       "@nx/react/typings/cssmodule.d.ts",
@@ -24,13 +20,13 @@
   },
   "references": [
     {
-      "path": "../db/tsconfig.lib.json"
-    },
-    {
       "path": "../flags/tsconfig.lib.json"
     },
     {
       "path": "../observability/tsconfig.lib.json"
+    },
+    {
+      "path": "../contracts/tsconfig.lib.json"
     },
     {
       "path": "../config/tsconfig.lib.json"
@@ -52,10 +48,5 @@
     "eslint.config.cjs",
     "eslint.config.mjs"
   ],
-  "include": [
-    "src/**/*.js",
-    "src/**/*.jsx",
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ]
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"]
 }

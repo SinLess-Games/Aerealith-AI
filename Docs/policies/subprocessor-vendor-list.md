@@ -1,6 +1,6 @@
 ---
 title: Subprocessor and Vendor List
-description: Lists subprocessors, vendors, service providers, infrastructure providers, AI providers, payment processors, analytics providers, and other third parties used or planned for Helix AI.
+description: Lists subprocessors, vendors, service providers, infrastructure providers, AI providers, payment processors, analytics providers, and other third parties used or planned for Aerealith AI.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,11 +11,11 @@ status: draft
 
 ## 1. Purpose
 
-This Subprocessor and Vendor List identifies third parties that SinLess Games LLC may use to provide, secure, operate, support, monitor, bill, analyze, improve, and maintain Helix AI.
+This Subprocessor and Vendor List identifies third parties that SinLess Games LLC may use to provide, secure, operate, support, monitor, bill, analyze, improve, and maintain Aerealith AI.
 
-Helix AI is operated by SinLess Games LLC.
+Aerealith AI is operated by SinLess Games LLC.
 
-This list is intended to provide transparency about vendors that may process, store, transmit, access, or support data related to Helix AI.
+This list is intended to provide transparency about vendors that may process, store, transmit, access, or support data related to Aerealith AI.
 
 This document should be read together with:
 
@@ -31,12 +31,12 @@ This document should be read together with:
 
 ## 2. Core Commitments
 
-SinLess Games LLC makes the following commitments for Helix AI:
+SinLess Games LLC makes the following commitments for Aerealith AI:
 
 1. **Users own their data.**
-2. **Helix AI does not sell user data.**
-3. **Helix AI does not use user data outside legitimate service business logic and approved research purposes.**
-4. **Vendors and subprocessors should only process data for authorized Helix AI purposes.**
+2. **Aerealith AI does not sell user data.**
+3. **Aerealith AI does not use user data outside legitimate service business logic and approved research purposes.**
+4. **Vendors and subprocessors should only process data for authorized Aerealith AI purposes.**
 5. **Subprocessors should be reviewed before use where practical.**
 6. **Sensitive data should receive stronger protection.**
 7. **Enterprise customers should receive appropriate notice of material subprocessor changes where required by contract.**
@@ -44,7 +44,7 @@ SinLess Games LLC makes the following commitments for Helix AI:
 
 ## 3. Scope
 
-This list applies to Helix AI services, including:
+This list applies to Aerealith AI services, including:
 
 - Websites
 - Web applications
@@ -74,7 +74,7 @@ Some vendors may apply only to specific plans, regions, features, integrations, 
 
 ## 4.1 Subprocessor
 
-A **subprocessor** is a third party that may process personal data, Customer Data, Account Data, Service Data, or other protected data on behalf of SinLess Games LLC to provide Helix AI.
+A **subprocessor** is a third party that may process personal data, Customer Data, Account Data, Service Data, or other protected data on behalf of SinLess Games LLC to provide Aerealith AI.
 
 Examples may include hosting providers, database providers, AI model providers, payment processors, support tools, observability tools, email providers, and analytics providers.
 
@@ -86,7 +86,7 @@ Some vendors are subprocessors. Others may not process user data directly.
 
 ## 4.3 Service Provider
 
-A **service provider** is a third party that performs a business function for SinLess Games LLC or Helix AI.
+A **service provider** is a third party that performs a business function for SinLess Games LLC or Aerealith AI.
 
 ## 4.4 Customer-Controlled Vendor
 
@@ -96,7 +96,7 @@ Examples include customer GitHub accounts, customer Google Drive accounts, custo
 
 ## 5. Vendor Categories
 
-Helix AI vendors may fall into the following categories:
+Aerealith AI vendors may fall into the following categories:
 
 - Hosting and edge infrastructure
 - DNS and network security
@@ -122,7 +122,7 @@ Helix AI vendors may fall into the following categories:
 
 ## 6. Current and Planned Vendor List
 
-The table below includes current, planned, or expected vendors for Helix AI based on the intended architecture.
+The table below includes current, planned, or expected vendors for Aerealith AI based on the intended architecture.
 
 Before publishing this document, confirm each vendor’s actual use, data access, region, contract status, and whether the vendor is active, planned, optional, or deprecated.
 
@@ -188,7 +188,7 @@ The following vendors are expected or planned but must be confirmed before produ
 
 ## 9. Optional and Customer-Controlled Integrations
 
-Users and organizations may connect Helix AI to third-party services.
+Users and organizations may connect Aerealith AI to third-party services.
 
 These integrations may process user-authorized data based on granted permissions.
 
@@ -233,7 +233,7 @@ Users and organizations are responsible for:
 - Securing third-party accounts
 - Reviewing third-party terms
 - Reviewing third-party privacy policies
-- Managing data flow into and out of Helix AI
+- Managing data flow into and out of Aerealith AI
 - Ensuring lawful use of connected systems
 
 ## 10. Self-Hosted, Hybrid, and Air-Gapped Deployments
@@ -419,7 +419,7 @@ Analytics and tracking use should follow the [Cookie and Tracking Policy](./cook
 
 Where required, optional analytics and advertising cookies should only be used after consent.
 
-Helix AI should not use private user prompts, files, memory, organization data, or workspace data for third-party targeted advertising.
+Aerealith AI should not use private user prompts, files, memory, organization data, or workspace data for third-party targeted advertising.
 
 ## 18. Observability Vendors
 
@@ -478,7 +478,7 @@ Marketplace publishers may not sell user data, exfiltrate user data, hide tracki
 
 ## 21. Subprocessor Changes
 
-SinLess Games LLC may add, remove, or replace subprocessors as Helix AI evolves.
+SinLess Games LLC may add, remove, or replace subprocessors as Aerealith AI evolves.
 
 Subprocessor changes may occur due to:
 
@@ -558,7 +558,7 @@ Enterprise customers may have additional data residency or transfer terms in wri
 
 ## 25. Vendor Incident Notification
 
-If a vendor or subprocessor incident materially affects Helix AI users, SinLess Games LLC will evaluate the incident and provide notification where required by law, contract, or policy.
+If a vendor or subprocessor incident materially affects Aerealith AI users, SinLess Games LLC will evaluate the incident and provide notification where required by law, contract, or policy.
 
 Vendor incident handling may include:
 
@@ -598,7 +598,7 @@ Vendor removal may require migration, data export, data deletion, service change
 
 SinLess Games LLC does not sell user data.
 
-Using vendors and subprocessors to provide Helix AI is not a sale of user data when those vendors process data only for authorized Helix AI purposes.
+Using vendors and subprocessors to provide Aerealith AI is not a sale of user data when those vendors process data only for authorized Aerealith AI purposes.
 
 Vendors and subprocessors should not use user data for unrelated purposes.
 
@@ -618,7 +618,7 @@ Before publishing this policy, confirm these email aliases exist and are monitor
 Before publishing this document, complete the following:
 
 - Confirm official company name: `SinLess Games LLC`
-- Confirm official product name: `Helix AI`
+- Confirm official product name: `Aerealith AI`
 - Confirm all active vendors
 - Confirm all active subprocessors
 - Confirm planned vendors
@@ -656,7 +656,7 @@ We may update this list from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, email, legal notices page, release notes, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated list, subject to any rights provided by applicable law or written agreement.
+Continued use of Aerealith AI after changes become effective means you accept the updated list, subject to any rights provided by applicable law or written agreement.
 
 ## 31. Legal Review Notice
 

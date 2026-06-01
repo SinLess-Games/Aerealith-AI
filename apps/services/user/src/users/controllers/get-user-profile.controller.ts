@@ -67,8 +67,6 @@ export const getUserProfileController = async (
     }
 
     throw error;
-  } finally {
-    await entityManager.getConnection().close();
   }
 };
 

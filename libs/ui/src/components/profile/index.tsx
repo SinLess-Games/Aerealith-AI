@@ -1,502 +1,785 @@
-// libs/ui/src/components/profile/index.tsx
-
 'use client';
 
 import * as React from 'react';
+
 import Box from '@mui/material/Box';
+import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import Container from '@mui/material/Container';
-import Paper from '@mui/material/Paper';
+import Chip from '@mui/material/Chip';
+import Divider from '@mui/material/Divider';
+import LinearProgress from '@mui/material/LinearProgress';
+import MenuItem from '@mui/material/MenuItem';
+import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import { alpha } from '@mui/material/styles';
 
-import { ProfileAchievementsCard } from './achievements-card';
-import { ProfileConnectionsCard } from './connections-card';
-import { ProfileIntegrationsCard } from './integrations-card';
-import { ProfileLeftMenu } from './left-menu';
-import { ProfileModelsCard } from './models-card';
-import { ProfileOverviewCard } from './overview-card';
-import { ProfileCard } from './profile-card';
-import { ProfileEditDialog } from './profile-edit-dialog';
-import { ProfileTopbar } from './profile-topbar';
-import { ProfileProjectsCard } from './projects-card';
-import { ProfileRecentActivityCard } from './recent-activity-card';
-import { SettingsCard } from './settings-card';
+import { GlassCard } from '../cards';
 import type {
-  ProfileEditOptions,
-  ProfileIdentityScaffold,
-  ProfileScaffoldContent,
-  ProfileViewMode,
-} from './types';
-import type { ProfileCardProfile } from './profile-card';
-import type {
-  SettingsCardSettings,
-  SettingsCardUpdates,
-} from './settings-card';
+  PrivateUserProfileDashboardDto,
+  PublicUserProfileDto,
+  UserProfileDto,
+  UserAchievementDto,
+  UserActivityEventDto,
+  UserAppConnectionDto,
+  UserFileReferenceDto,
+  UserIntegrationDto,
+  UserReportDto,
+} from '@aerealith-ai/contracts';
 
-export type ProfilePageProps = {
-  content: ProfileScaffoldContent;
-  identity?: ProfileIdentityScaffold;
-  profile?: ProfileCardProfile;
-  settings?: SettingsCardSettings;
-  editOptions?: ProfileEditOptions;
-  activeTab?: string;
-  mode?: ProfileViewMode;
-  dashboardHref?: string;
+type ProfileFeatureFlags = Partial<
+  Record<
+    | 'profile-app-connections'
+    | 'profile-integrations'
+    | 'profile-files'
+    | 'profile-reports'
+    | 'profile-achievements',
+    boolean
+  >
+>;
+
+export type ProfileDashboardProps =
+  | {
+      mode: 'public';
+      data: PublicUserProfileDto;
+      flags?: ProfileFeatureFlags;
+    }
+  | {
+      mode: 'private';
+      data: PrivateUserProfileDashboardDto;
+      flags?: ProfileFeatureFlags;
+    };
+
+const panelSx = {
+  borderRadius: 2,
+  border: '1px solid rgba(167, 139, 250, 0.22)',
+  background:
+    'linear-gradient(145deg, rgba(9, 13, 30, 0.92), rgba(18, 17, 42, 0.78))',
 };
 
-function ProfileShell({
-  children,
-}: {
-  children: React.ReactNode;
-}): React.ReactElement {
+export function ProfileDashboard(
+  props: ProfileDashboardProps,
+): React.ReactElement {
+  const { data, mode } = props;
+  const flags = props.flags ?? {};
+  const profile = data.profile;
+  const isPrivate = mode === 'private';
+
   return (
     <Box
+      component="main"
       sx={{
-        minHeight: '100dvh',
+        minHeight: '100vh',
+        bgcolor: '#050816',
         color: '#f8fbff',
-        background:
-          'radial-gradient(circle at 85% 18%, rgba(236, 23, 153, 0.32), transparent 28%), radial-gradient(circle at 82% 88%, rgba(58, 216, 255, 0.18), transparent 24%), #030611',
+        backgroundImage:
+          'radial-gradient(circle at 12% 12%, rgba(168,85,247,.18), transparent 32%), radial-gradient(circle at 88% 16%, rgba(6,182,212,.2), transparent 34%)',
+        p: { xs: 2, md: 3 },
       }}
     >
       <Box
         sx={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-          opacity: 0.74,
-          backgroundImage:
-            'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.5) 0 1px, transparent 1.4px), radial-gradient(circle at 75% 35%, rgba(0, 229, 255,0.5) 0 1px, transparent 1.3px)',
-          backgroundSize: '110px 110px, 160px 160px',
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            lg: isPrivate ? '236px minmax(0, 1fr)' : 'minmax(0, 1fr)',
+          },
+          gap: 3,
+          maxWidth: 1560,
+          mx: 'auto',
         }}
-      />
-      <Box sx={{ position: 'relative', zIndex: 1 }}>{children}</Box>
+      >
+        {isPrivate ? <ProfileSidebar /> : null}
+        <Stack spacing={2.5}>
+          <ProfileHeader
+            avatarUrl={profile.avatarUrl}
+            bannerUrl={profile.bannerUrl}
+            bio={profile.bio}
+            displayName={profile.displayName}
+            handle={profile.handle}
+            joined={profile.createdAt}
+            location={profile.locationLabel}
+            mode={mode}
+            stats={data.stats}
+          />
+
+          {mode === 'public' ? (
+            <PermissionNotice text="This public profile only includes information the owner has made visible." />
+          ) : (
+            <PermissionNotice text="Private dashboard data is visible only to the signed-in account owner." />
+          )}
+
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                md: 'repeat(2, minmax(0, 1fr))',
+                xl: 'repeat(3, minmax(0, 1fr))',
+              },
+              gap: 2,
+            }}
+          >
+            {isPrivate && flags['profile-app-connections'] !== false ? (
+              <AppConnectionsPanel items={data.appConnections} />
+            ) : null}
+            {isPrivate && flags['profile-integrations'] !== false ? (
+              <IntegrationsPanel items={data.integrations} />
+            ) : null}
+            {flags['profile-files'] !== false ? (
+              <FilesPanel items={data.files} />
+            ) : null}
+            {flags['profile-reports'] !== false ? (
+              <ReportsPanel items={data.reports} />
+            ) : null}
+            {flags['profile-achievements'] !== false ? (
+              <AchievementsPanel
+                items={data.achievements}
+                totalPoints={data.stats.totalPoints}
+              />
+            ) : null}
+            {isPrivate ? <ActivityPanel items={data.activity} /> : null}
+            {isPrivate ? <SettingsPanel profile={data.profile} /> : null}
+          </Box>
+        </Stack>
+      </Box>
     </Box>
   );
 }
 
-function ProfileTabs({
-  tabs,
-  activeTab = 'overview',
-  mode,
-  onTabChange,
-}: {
-  tabs: ProfileScaffoldContent['tabs'];
-  activeTab?: string;
-  mode: ProfileViewMode;
-  onTabChange: (value: string) => void;
-}): React.ReactElement {
-  const visibleTabs = tabs.filter(
-    (tab) =>
-      mode === 'private' || (!tab.privateOnly && tab.publicHidden !== true),
-  );
-
+export function ProfileLoadingSkeleton(): React.ReactElement {
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        mt: 1.5,
-        borderRadius: 1,
-        overflowX: 'auto',
-        border: '1px solid rgba(236, 23, 153, 0.28)',
-        background:
-          'linear-gradient(180deg, rgba(7, 13, 38, 0.88), rgba(5, 9, 28, 0.82))',
-      }}
-    >
-      <Stack direction="row" sx={{ minWidth: 760 }}>
-        {visibleTabs.map((tab) => {
-          const active = tab.value === activeTab;
-
-          return (
-            <Button
-              key={tab.value}
-              href={tab.href}
-              onClick={() => onTabChange(tab.value)}
-              aria-current={active ? 'page' : undefined}
-              sx={{
-                position: 'relative',
-                minHeight: 64,
-                px: 3.2,
-                color: active ? '#ff1494' : 'rgba(235, 242, 255, 0.78)',
-                fontWeight: 900,
-                fontSize: 13,
-                textTransform: 'uppercase',
-                borderRadius: 0,
-                '&:after': active
-                  ? {
-                      content: '""',
-                      position: 'absolute',
-                      left: 18,
-                      right: 18,
-                      bottom: 0,
-                      height: 4,
-                      borderRadius: 999,
-                      bgcolor: '#ff1494',
-                      boxShadow: '0 0 16px rgba(236, 23, 153, 0.9)',
-                    }
-                  : undefined,
-              }}
-            >
-              {tab.label}
-            </Button>
-          );
-        })}
-      </Stack>
-    </Paper>
-  );
-}
-
-function normalizeActiveTab(
-  tab: string | undefined,
-  content: ProfileScaffoldContent,
-  mode: ProfileViewMode,
-): string {
-  const visibleTabs = content.tabs.filter(
-    (item) =>
-      mode === 'private' || (!item.privateOnly && item.publicHidden !== true),
-  );
-  const fallback =
-    mode === 'public'
-      ? visibleTabs.find((item) => item.value === 'profile')?.value ??
-        visibleTabs[0]?.value ??
-        'profile'
-      : visibleTabs[0]?.value ?? 'overview';
-
-  return visibleTabs.some((item) => item.value === tab)
-    ? tab ?? fallback
-    : fallback;
-}
-
-function getTabFromHash(content: ProfileScaffoldContent): string | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  const hash = window.location.hash.replace(/^#/, '');
-
-  return (
-    content.tabs.find((tab) => tab.value === hash || tab.href === `#${hash}`)
-      ?.value ?? null
-  );
-}
-
-function ActiveProfilePanel({
-  activeTab,
-  content,
-  editOptions,
-  mode,
-  profile,
-  settings,
-}: {
-  activeTab: string;
-  content: ProfileScaffoldContent;
-  editOptions?: ProfileEditOptions;
-  mode: ProfileViewMode;
-  profile?: ProfileCardProfile;
-  settings?: SettingsCardSettings;
-}): React.ReactElement {
-  const [editableProfile, setEditableProfile] = React.useState(profile);
-  const [editableSettings, setEditableSettings] = React.useState(settings);
-  const [editOpen, setEditOpen] = React.useState(false);
-  const [settingsEditOpen, setSettingsEditOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    setEditableProfile(profile);
-  }, [profile]);
-
-  React.useEffect(() => {
-    setEditableSettings(settings);
-  }, [settings]);
-
-  const handleSave = React.useCallback(
-    async (updates: Partial<ProfileCardProfile>): Promise<void> => {
-      if (!editableProfile) {
-        return;
-      }
-
-      const response = await fetch(
-        `/api/V1/users/${encodeURIComponent(
-          editableProfile.username ?? editableProfile.handle,
-        )}/profile`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Unable to update profile.');
-      }
-
-      const body = (await response.json()) as {
-        ok: boolean;
-        data?: ProfileCardProfile;
-      };
-
-      if (!body.ok || !body.data) {
-        throw new Error('Invalid profile update response.');
-      }
-
-      setEditableProfile(body.data);
-    },
-    [editableProfile],
-  );
-
-  const handleSettingsSave = React.useCallback(
-    async (updates: SettingsCardUpdates): Promise<void> => {
-      if (!editableSettings) {
-        return;
-      }
-
-      const response = await fetch(
-        `/api/V1/users/${encodeURIComponent(
-          editableSettings.username,
-        )}/settings`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Unable to update settings.');
-      }
-
-      const body = (await response.json()) as {
-        ok: boolean;
-        data?: SettingsCardSettings;
-      };
-
-      if (!body.ok || !body.data) {
-        throw new Error('Invalid settings update response.');
-      }
-
-      setEditableSettings(body.data);
-      setSettingsEditOpen(false);
-    },
-    [editableSettings],
-  );
-
-  switch (activeTab) {
-    case 'profile':
-      return editableProfile ? (
-        <>
-          <ProfileCard
-            profile={editableProfile}
-            viewerAccess={mode === 'private' ? 'owner' : 'public'}
-            showPreferences={mode === 'private'}
-            showPrivateFields={mode === 'private'}
-            showSensitiveFields={mode === 'private'}
-            variant="detailed"
-            onEdit={mode === 'private' ? () => setEditOpen(true) : undefined}
-            editing={editOpen}
-            editor={
-              mode === 'private' ? (
-                <ProfileEditDialog
-                  onClose={() => setEditOpen(false)}
-                  onSave={handleSave}
-                  open={editOpen}
-                  options={editOptions}
-                  profile={editableProfile}
-                />
-              ) : null
-            }
-          />
-        </>
-      ) : (
-        <ProfileOverviewCard />
-      );
-    case 'recent-activity':
-      return <ProfileRecentActivityCard />;
-    case 'projects':
-      return <ProfileProjectsCard />;
-    case 'models':
-      return <ProfileModelsCard />;
-    case 'connections':
-      return mode === 'private' ? (
-        <ProfileConnectionsCard categories={content.connectionCategories} />
-      ) : (
-        <ProfileOverviewCard />
-      );
-    case 'integrations':
-      return mode === 'private' ? (
-        <ProfileIntegrationsCard />
-      ) : (
-        <ProfileOverviewCard />
-      );
-    case 'settings':
-      return mode === 'private' && editableSettings ? (
-        <SettingsCard
-          settings={editableSettings}
-          editing={settingsEditOpen}
-          onEdit={() => setSettingsEditOpen(true)}
-          onCancel={() => setSettingsEditOpen(false)}
-          onSave={handleSettingsSave}
+    <Box sx={{ minHeight: '100vh', bgcolor: '#050816', p: 3 }}>
+      <Stack spacing={2}>
+        <Skeleton
+          variant="rounded"
+          height={260}
+          sx={{ bgcolor: 'rgba(255,255,255,.08)' }}
         />
-      ) : (
-        <ProfileOverviewCard />
-      );
-    case 'achievements':
-      return <ProfileAchievementsCard />;
-    case 'overview':
-      return <ProfileOverviewCard />;
-    default:
-      return mode === 'public' && editableProfile ? (
-        <ProfileCard
-          profile={editableProfile}
-          viewerAccess="public"
-          showPreferences={false}
-          showPrivateFields={false}
-          showSensitiveFields={false}
-          variant="detailed"
-        />
-      ) : (
-        <ProfileOverviewCard />
-      );
-  }
-}
-
-export function ProfilePage({
-  content,
-  editOptions,
-  identity,
-  profile,
-  settings,
-  activeTab = 'overview',
-  mode = 'public',
-  dashboardHref = '/dashboard',
-}: ProfilePageProps): React.ReactElement {
-  const [currentTab, setCurrentTab] = React.useState(() =>
-    normalizeActiveTab(activeTab, content, mode),
-  );
-
-  React.useEffect(() => {
-    const syncFromHash = (): void => {
-      const hashTab = getTabFromHash(content);
-
-      setCurrentTab(normalizeActiveTab(hashTab ?? activeTab, content, mode));
-    };
-
-    syncFromHash();
-    window.addEventListener('hashchange', syncFromHash);
-
-    return () => {
-      window.removeEventListener('hashchange', syncFromHash);
-    };
-  }, [activeTab, content, mode]);
-
-  const handleTabChange = React.useCallback(
-    (value: string): void => {
-      setCurrentTab(normalizeActiveTab(value, content, mode));
-    },
-    [content, mode],
-  );
-
-  return (
-    <ProfileShell>
-      <Box sx={{ display: { xs: 'block', lg: 'flex' } }}>
-        {mode === 'private' ? (
-          <ProfileLeftMenu
-            identity={identity}
-            items={content.sidebar}
-            activeHref={`#${currentTab}`}
-            mode={mode}
-          />
-        ) : null}
-
         <Box
-          component="main"
           sx={{
-            flexGrow: 1,
-            minWidth: 0,
-            ml: { lg: mode === 'private' ? '292px' : 0 },
-            p: { xs: 2, md: 3 },
-            pl: { lg: mode === 'private' ? 4 : 3 },
-            pb: 5,
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+            gap: 2,
           }}
         >
-          <Container
-            maxWidth={false}
-            sx={{ maxWidth: 1550, px: { xs: 0, md: 1 } }}
-          >
-            <ProfileTopbar
-              identity={identity}
-              mode={mode}
-              primaryAction={{
-                label: 'Go to Dashboard',
-                href: dashboardHref,
-                icon: 'dashboard',
-              }}
+          {[0, 1, 2].map((item) => (
+            <Skeleton
+              key={item}
+              variant="rounded"
+              height={260}
+              sx={{ bgcolor: 'rgba(255,255,255,.08)' }}
             />
-
-            <ProfileTabs
-              tabs={content.tabs}
-              activeTab={currentTab}
-              mode={mode}
-              onTabChange={handleTabChange}
-            />
-
-            <Stack spacing={2} sx={{ mt: 1.5 }}>
-              <ActiveProfilePanel
-                activeTab={currentTab}
-                content={content}
-                editOptions={editOptions}
-                mode={mode}
-                profile={profile}
-                settings={settings}
-              />
-            </Stack>
-          </Container>
+          ))}
         </Box>
-      </Box>
-    </ProfileShell>
+      </Stack>
+    </Box>
   );
 }
 
-export { ProfileAchievementsCard } from './achievements-card';
-export { ProfileActivityCard } from './activity-card';
-export { ProfileCard } from './profile-card';
-export { ProfileConnectionsCard } from './connections-card';
-export { ProfileFollowersCard } from './followers-card';
-export { ProfileIcon } from './icons';
-export { ProfileIntegrationsCard } from './integrations-card';
-export { ProfileLeftMenu } from './left-menu';
-export { ProfileModelsCard } from './models-card';
-export { ProfileOverviewCard } from './overview-card';
-export { ProfileTopbar } from './profile-topbar';
-export { ProfileProjectsCard } from './projects-card';
-export { ProfileRecentActivityCard } from './recent-activity-card';
-export { SettingsCard } from './settings-card';
-export { UserProfileMenu } from './user-profile-menu';
+export function ProfileErrorState({
+  message,
+}: {
+  message: string;
+}): React.ReactElement {
+  return (
+    <Box
+      component="main"
+      sx={{ minHeight: '100vh', bgcolor: '#050816', color: '#fff', p: 3 }}
+    >
+      <GlassCard padding="comfortable" radius="md" glow>
+        <Typography component="h1" variant="h5">
+          Profile unavailable
+        </Typography>
+        <Typography sx={{ mt: 1, color: 'rgba(248,251,255,.72)' }}>
+          {message}
+        </Typography>
+      </GlassCard>
+    </Box>
+  );
+}
 
-export type {
-  ProfileCardFieldVisibility,
-  ProfileCardLanguage,
-  ProfileCardLinks,
-  ProfileCardProfile,
-  ProfileCardProps,
-  ProfileCardVariant,
-  ProfileCardViewerAccess,
-} from './profile-card';
-export type {
-  SettingsCardProps,
-  SettingsCardSettings,
-  SettingsCardUpdates,
-  SettingsSectionKey,
-  SettingsSectionValue,
-} from './settings-card';
-export type {
-  UserProfileMenuAction,
-  UserProfileMenuProps,
-  UserProfileMenuUser,
-} from './user-profile-menu';
+function ProfileSidebar(): React.ReactElement {
+  const navItems = [
+    'Overview',
+    'Connections',
+    'Integrations',
+    'Files',
+    'Reports',
+    'Achievements',
+    'Settings',
+  ];
 
-export type * from './types';
+  return (
+    <Box
+      component="nav"
+      aria-label="Profile sections"
+      sx={{ display: { xs: 'none', lg: 'block' } }}
+    >
+      <Stack spacing={2} sx={{ position: 'sticky', top: 24 }}>
+        <Typography
+          variant="overline"
+          sx={{ color: '#c4b5fd', letterSpacing: 1 }}
+        >
+          Aerealith AI
+        </Typography>
+        {navItems.map((item) => (
+          <Button
+            key={item}
+            href={`#${item.toLowerCase()}`}
+            sx={{ justifyContent: 'flex-start', color: '#dbeafe' }}
+          >
+            {item}
+          </Button>
+        ))}
+      </Stack>
+    </Box>
+  );
+}
 
-export default ProfilePage;
+function ProfileHeader(props: {
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
+  bio?: string | null;
+  displayName: string;
+  handle: string;
+  joined: string;
+  location?: string | null;
+  mode: 'public' | 'private';
+  stats: {
+    achievements: number;
+    appConnections: number;
+    files: number;
+    integrations: number;
+    reports: number;
+    totalPoints: number;
+  };
+}): React.ReactElement {
+  return (
+    <GlassCard padding="none" radius="md" glow sx={{ overflow: 'hidden' }}>
+      <Box
+        sx={{
+          minHeight: 282,
+          p: { xs: 2.5, md: 4 },
+          backgroundImage: props.bannerUrl
+            ? `linear-gradient(90deg, rgba(5,8,22,.95), rgba(5,8,22,.38)), url(${props.bannerUrl})`
+            : 'linear-gradient(120deg, rgba(88,28,135,.36), rgba(14,165,233,.2) 48%, rgba(236,72,153,.22))',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={3}
+          alignItems={{ md: 'center' }}
+        >
+          <Box
+            aria-label={`${props.displayName} avatar`}
+            sx={{
+              width: 136,
+              height: 136,
+              borderRadius: '50%',
+              border: '1px solid rgba(34,211,238,.5)',
+              backgroundImage: props.avatarUrl
+                ? `url(${props.avatarUrl})`
+                : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              bgcolor: alpha('#8b5cf6', 0.18),
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: 42,
+              fontWeight: 800,
+            }}
+          >
+            {props.avatarUrl
+              ? null
+              : props.displayName.slice(0, 2).toUpperCase()}
+          </Box>
+          <Stack spacing={1} sx={{ flex: 1 }}>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
+              flexWrap="wrap"
+            >
+              <Typography
+                component="h1"
+                variant="h3"
+                sx={{ fontSize: { xs: 32, md: 42 }, fontWeight: 800 }}
+              >
+                {props.displayName}
+              </Typography>
+              <Chip
+                label={
+                  props.mode === 'private'
+                    ? 'Private dashboard'
+                    : 'Public profile'
+                }
+                size="small"
+                sx={{ color: '#e9d5ff', borderColor: '#7c3aed' }}
+                variant="outlined"
+              />
+            </Stack>
+            <Typography sx={{ color: '#cbd5e1' }}>@{props.handle}</Typography>
+            {props.location ? (
+              <Typography sx={{ color: '#cbd5e1' }}>
+                {props.location}
+              </Typography>
+            ) : null}
+            <Typography sx={{ color: '#cbd5e1' }}>
+              Member since {formatDate(props.joined)}
+            </Typography>
+            {props.bio ? (
+              <Typography sx={{ maxWidth: 720, color: '#f8fafc' }}>
+                {props.bio}
+              </Typography>
+            ) : null}
+          </Stack>
+        </Stack>
+        <Box
+          sx={{
+            mt: 4,
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(6, 1fr)' },
+            gap: 1.5,
+          }}
+        >
+          <Stat label="Achievements" value={props.stats.achievements} />
+          <Stat label="Points" value={props.stats.totalPoints} />
+          <Stat label="Files" value={props.stats.files} />
+          <Stat label="Reports" value={props.stats.reports} />
+          <Stat label="Apps" value={props.stats.appConnections} />
+          <Stat label="Integrations" value={props.stats.integrations} />
+        </Box>
+      </Box>
+    </GlassCard>
+  );
+}
+
+function Stat({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}): React.ReactElement {
+  return (
+    <Box
+      sx={{
+        p: 1.5,
+        borderRadius: 2,
+        bgcolor: 'rgba(15,23,42,.66)',
+        border: '1px solid rgba(148,163,184,.18)',
+      }}
+    >
+      <Typography sx={{ fontSize: 24, fontWeight: 800 }}>
+        {value.toLocaleString()}
+      </Typography>
+      <Typography sx={{ color: '#cbd5e1', fontSize: 13 }}>{label}</Typography>
+    </Box>
+  );
+}
+
+function Panel({
+  id,
+  title,
+  children,
+  empty,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+  empty: boolean;
+}): React.ReactElement {
+  return (
+    <Box id={id} component="section" sx={panelSx}>
+      <Stack spacing={1.5} sx={{ p: 2 }}>
+        <Typography component="h2" variant="h6">
+          {title}
+        </Typography>
+        {empty ? (
+          <EmptyState title={`No ${title.toLowerCase()} yet`} />
+        ) : (
+          children
+        )}
+      </Stack>
+    </Box>
+  );
+}
+
+function AppConnectionsPanel({
+  items,
+}: {
+  items: UserAppConnectionDto[];
+}): React.ReactElement {
+  return (
+    <Panel id="connections" title="App Connections" empty={items.length === 0}>
+      {items.map((item) => (
+        <Row
+          key={item.id}
+          title={item.displayName}
+          detail={item.connectedAccountIdentifier ?? item.provider}
+          badge={item.status}
+        />
+      ))}
+    </Panel>
+  );
+}
+
+function IntegrationsPanel({
+  items,
+}: {
+  items: UserIntegrationDto[];
+}): React.ReactElement {
+  return (
+    <Panel id="integrations" title="Integrations" empty={items.length === 0}>
+      {items.map((item) => (
+        <Row
+          key={item.id}
+          title={item.displayName}
+          detail={item.description ?? item.provider}
+          badge={item.enabled ? item.status : 'disabled'}
+        />
+      ))}
+    </Panel>
+  );
+}
+
+function FilesPanel({
+  items,
+}: {
+  items: UserFileReferenceDto[];
+}): React.ReactElement {
+  return (
+    <Panel id="files" title="Files" empty={items.length === 0}>
+      {items.map((item) => (
+        <Row
+          key={item.id}
+          title={item.name}
+          detail={formatBytes(item.sizeBytes)}
+          badge={item.visibility}
+        />
+      ))}
+    </Panel>
+  );
+}
+
+function ReportsPanel({
+  items,
+}: {
+  items: UserReportDto[];
+}): React.ReactElement {
+  return (
+    <Panel id="reports" title="Reports" empty={items.length === 0}>
+      {items.map((item) => (
+        <Row
+          key={item.id}
+          title={item.title}
+          detail={formatDate(item.generatedAt)}
+          badge={item.type.replaceAll('_', ' ')}
+        />
+      ))}
+    </Panel>
+  );
+}
+
+function AchievementsPanel({
+  items,
+  totalPoints,
+}: {
+  items: UserAchievementDto[];
+  totalPoints: number;
+}): React.ReactElement {
+  return (
+    <Panel id="achievements" title="Achievements" empty={items.length === 0}>
+      <Typography sx={{ color: '#c4b5fd', fontWeight: 700 }}>
+        {totalPoints.toLocaleString()} total points
+      </Typography>
+      {items.map((item) => (
+        <Box key={item.id} sx={{ py: 1 }}>
+          <Row
+            title={item.title}
+            detail={`${item.points} points`}
+            badge={item.unlocked ? 'unlocked' : 'in progress'}
+          />
+          <LinearProgress
+            variant="determinate"
+            value={item.progress.percentage}
+            sx={{ mt: 1, bgcolor: 'rgba(148,163,184,.18)' }}
+          />
+        </Box>
+      ))}
+    </Panel>
+  );
+}
+
+function ActivityPanel({
+  items,
+}: {
+  items: UserActivityEventDto[];
+}): React.ReactElement {
+  return (
+    <Panel id="activity" title="Recent Activity" empty={items.length === 0}>
+      {items.map((item) => (
+        <Row
+          key={item.id}
+          title={item.title}
+          detail={item.description ?? formatDate(item.createdAt)}
+          badge={item.type}
+        />
+      ))}
+    </Panel>
+  );
+}
+
+type EditableProfileField =
+  | 'displayName'
+  | 'handle'
+  | 'bio'
+  | 'locationLabel'
+  | 'websiteUrl'
+  | 'visibility';
+
+type EditableProfileForm = Record<EditableProfileField, string>;
+
+function createEditableProfileForm(profile: UserProfileDto): EditableProfileForm {
+  return {
+    displayName: profile.displayName ?? '',
+    handle: profile.handle ?? '',
+    bio: profile.bio ?? '',
+    locationLabel: profile.locationLabel ?? '',
+    websiteUrl: profile.websiteUrl ?? '',
+    visibility: profile.visibility ?? 'private',
+  };
+}
+
+function nullableValue(value: string): string | null {
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function SettingsPanel({
+  profile,
+}: {
+  profile: UserProfileDto;
+}): React.ReactElement {
+  const [form, setForm] = React.useState<EditableProfileForm>(() =>
+    createEditableProfileForm(profile),
+  );
+  const [status, setStatus] = React.useState<
+    { type: 'success' | 'error'; message: string } | undefined
+  >();
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const updateField =
+    (field: EditableProfileField) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setForm((current) => ({ ...current, [field]: event.target.value }));
+    };
+
+  const saveProfile = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setStatus(undefined);
+    setIsSaving(true);
+
+    try {
+      const response = await fetch(
+        `/api/V1/users/${encodeURIComponent(profile.username)}/profile`,
+        {
+          method: 'PATCH',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            displayName: form.displayName.trim(),
+            handle: form.handle.trim(),
+            bio: nullableValue(form.bio),
+            locationLabel: nullableValue(form.locationLabel),
+            websiteUrl: nullableValue(form.websiteUrl),
+            visibility: form.visibility,
+          }),
+        },
+      );
+      const body = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: { message?: string } }
+        | null;
+
+      if (!response.ok || body?.ok === false) {
+        throw new Error(
+          body?.error?.message ?? 'Unable to save profile changes.',
+        );
+      }
+
+      setStatus({ type: 'success', message: 'Profile saved.' });
+      window.location.reload();
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Unable to save profile changes.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Panel id="settings" title="Account & Settings" empty={false}>
+      <Box component="form" onSubmit={saveProfile}>
+        <Stack spacing={1.5}>
+          {status ? (
+            <Alert severity={status.type} variant="outlined">
+              {status.message}
+            </Alert>
+          ) : null}
+          <TextField
+            label="Display name"
+            value={form.displayName}
+            onChange={updateField('displayName')}
+            required
+            size="small"
+          />
+          <TextField
+            label="Handle"
+            value={form.handle}
+            onChange={updateField('handle')}
+            required
+            size="small"
+          />
+          <TextField
+            label="Bio"
+            value={form.bio}
+            onChange={updateField('bio')}
+            multiline
+            minRows={3}
+            size="small"
+          />
+          <TextField
+            label="Location"
+            value={form.locationLabel}
+            onChange={updateField('locationLabel')}
+            size="small"
+          />
+          <TextField
+            label="Website"
+            value={form.websiteUrl}
+            onChange={updateField('websiteUrl')}
+            size="small"
+          />
+          <TextField
+            label="Visibility"
+            value={form.visibility}
+            onChange={updateField('visibility')}
+            select
+            size="small"
+          >
+            <MenuItem value="private">Private</MenuItem>
+            <MenuItem value="public">Public</MenuItem>
+          </TextField>
+          <Button
+            disabled={isSaving}
+            type="submit"
+            variant="contained"
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            {isSaving ? 'Saving...' : 'Save profile'}
+          </Button>
+        </Stack>
+      </Box>
+    </Panel>
+  );
+}
+
+function Row({
+  title,
+  detail,
+  badge,
+}: {
+  title: string;
+  detail: string;
+  badge: string;
+}): React.ReactElement {
+  return (
+    <>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        alignItems="center"
+        justifyContent="space-between"
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
+            {title}
+          </Typography>
+          <Typography
+            sx={{ color: '#94a3b8', fontSize: 13, overflowWrap: 'anywhere' }}
+          >
+            {detail}
+          </Typography>
+        </Box>
+        <Chip
+          label={badge}
+          size="small"
+          sx={{ color: '#86efac', bgcolor: 'rgba(22,163,74,.12)' }}
+        />
+      </Stack>
+      <Divider sx={{ borderColor: 'rgba(148,163,184,.14)' }} />
+    </>
+  );
+}
+
+function EmptyState({ title }: { title: string }): React.ReactElement {
+  return (
+    <Box sx={{ py: 4, textAlign: 'center', color: '#94a3b8' }}>
+      <Typography>{title}</Typography>
+    </Box>
+  );
+}
+
+function PermissionNotice({ text }: { text: string }): React.ReactElement {
+  return (
+    <Box
+      role="note"
+      sx={{
+        px: 2,
+        py: 1.25,
+        borderRadius: 2,
+        color: '#dbeafe',
+        border: '1px solid rgba(34,211,238,.24)',
+        bgcolor: 'rgba(14,165,233,.08)',
+      }}
+    >
+      {text}
+    </Box>
+  );
+}
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) {
+    return 'Not generated';
+  }
+
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
+function formatBytes(value: number | null | undefined): string {
+  if (!value) {
+    return 'Size unavailable';
+  }
+
+  if (value < 1024 * 1024) {
+    return `${Math.round(value / 1024)} KB`;
+  }
+
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}

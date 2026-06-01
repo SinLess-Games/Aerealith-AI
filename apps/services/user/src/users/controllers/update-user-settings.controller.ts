@@ -91,7 +91,5 @@ export const updateUserSettingsController = async (
     }
 
     throw error;
-  } finally {
-    await entityManager.getConnection().close();
   }
 };

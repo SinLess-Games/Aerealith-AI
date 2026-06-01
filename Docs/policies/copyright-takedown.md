@@ -1,6 +1,6 @@
 ---
 title: Copyright Takedown Policy
-description: Explains how Helix AI handles copyright complaints, DMCA notices, counter-notices, repeat infringers, and copyright-related takedown requests.
+description: Explains how Aerealith AI handles copyright complaints, DMCA notices, counter-notices, repeat infringers, and copyright-related takedown requests.
 effective_date: 2026-05-18
 last_updated: 2026-05-18
 owner: SinLess Games LLC
@@ -11,15 +11,15 @@ status: draft
 
 ## 1. Purpose
 
-This Copyright Takedown Policy explains how SinLess Games LLC handles copyright complaints, takedown requests, counter-notices, repeat infringers, and copyright-related disputes involving Helix AI.
+This Copyright Takedown Policy explains how SinLess Games LLC handles copyright complaints, takedown requests, counter-notices, repeat infringers, and copyright-related disputes involving Aerealith AI.
 
-Helix AI may allow users, organizations, developers, marketplace publishers, and third-party integrations to upload, generate, store, publish, share, transform, summarize, distribute, or otherwise process content. Because that content may include copyrighted material, this policy describes how copyright owners may report alleged infringement and how affected users may respond.
+Aerealith AI may allow users, organizations, developers, marketplace publishers, and third-party integrations to upload, generate, store, publish, share, transform, summarize, distribute, or otherwise process content. Because that content may include copyrighted material, this policy describes how copyright owners may report alleged infringement and how affected users may respond.
 
 This policy is intended to support lawful copyright enforcement, fair dispute handling, and responsible platform operation.
 
 ## 2. Scope
 
-This policy applies to Helix AI services, including:
+This policy applies to Aerealith AI services, including:
 
 - Websites
 - Web applications
@@ -43,11 +43,11 @@ This policy applies to Helix AI services, including:
 - Organization workspaces
 - Cloud-hosted, self-hosted, hybrid, and air-gapped deployments, where applicable
 
-This policy applies to users, account owners, organization administrators, developers, marketplace publishers, copyright owners, authorized agents, and anyone who submits or receives a copyright-related notice through Helix AI.
+This policy applies to users, account owners, organization administrators, developers, marketplace publishers, copyright owners, authorized agents, and anyone who submits or receives a copyright-related notice through Aerealith AI.
 
 ## 3. Relationship to Other Policies
 
-This policy works together with other Helix AI policies, including:
+This policy works together with other Aerealith AI policies, including:
 
 - [Terms of Use](./terms-of-use.md)
 - [Privacy Policy](./privacy-policy.md)
@@ -72,15 +72,15 @@ Copyright law can be complex, and rights may vary by country, jurisdiction, cont
 
 ## 5. Copyright Ownership and User Responsibility
 
-Users are responsible for ensuring that they have the rights, licenses, permissions, exceptions, or legal basis needed to upload, generate, store, process, publish, distribute, share, modify, transform, or use content through Helix AI.
+Users are responsible for ensuring that they have the rights, licenses, permissions, exceptions, or legal basis needed to upload, generate, store, process, publish, distribute, share, modify, transform, or use content through Aerealith AI.
 
-You may not use Helix AI to infringe another person’s copyright or other intellectual property rights.
+You may not use Aerealith AI to infringe another person’s copyright or other intellectual property rights.
 
 You are responsible for content and activity associated with your account, organization, workspace, API keys, automations, plugins, integrations, marketplace items, and users.
 
 ## 6. Prohibited Copyright Activity
 
-You may not use Helix AI to:
+You may not use Aerealith AI to:
 
 - Upload, publish, share, or distribute copyrighted material without authorization
 - Copy, reproduce, or distribute protected works without permission or legal basis
@@ -89,7 +89,7 @@ You may not use Helix AI to:
 - Create or distribute tools intended to enable copyright infringement
 - Publish marketplace items containing content you do not have rights to use
 - Misrepresent ownership or licensing of content
-- Use Helix AI to mass-copy, scrape, or redistribute copyrighted material in violation of law, contract, or platform rules
+- Use Aerealith AI to mass-copy, scrape, or redistribute copyrighted material in violation of law, contract, or platform rules
 - Repeatedly upload or publish infringing content after notice
 
 ## 7. DMCA Designated Agent
@@ -102,10 +102,10 @@ Before publishing this policy, SinLess Games LLC should confirm that the designa
 
 Replace the placeholders below before publication.
 
-**DMCA Agent:** `Copyright Agent`  
-**Company:** `SinLess Games LLC`  
-**Address:** `[Insert physical mailing address]`  
-**Email:** `copyright@sinlessgames.com`  
+**DMCA Agent:** `Copyright Agent`
+**Company:** `SinLess Games LLC`
+**Address:** `[Insert physical mailing address]`
+**Email:** `copyright@sinlessgames.com`
 **Phone:** `[Insert phone number]`
 
 Copyright notices should be sent to the designated agent listed above.
@@ -114,7 +114,7 @@ Before publishing this policy, confirm that the email alias, mailing address, an
 
 ## 8. Copyright Takedown Notice Requirements
 
-If you believe content available through Helix AI infringes your copyright, you or your authorized agent may submit a written takedown notice to our designated agent.
+If you believe content available through Aerealith AI infringes your copyright, you or your authorized agent may submit a written takedown notice to our designated agent.
 
 Your notice should include:
 
@@ -223,7 +223,7 @@ We may decline to restore content if:
 
 - The counter-notice is incomplete
 - The counter-notice appears fraudulent or abusive
-- The content violates another Helix AI policy
+- The content violates another Aerealith AI policy
 - The content creates security, privacy, safety, or legal risk
 - The user’s account has been suspended or terminated for other reasons
 - Restoration is not technically possible
@@ -280,7 +280,7 @@ We may reject, limit, or take action against notices that appear to be:
 - Unsupported by copyright ownership or authorization
 - Designed to suppress lawful speech
 - Designed to interfere with competitors
-- Designed to evade Helix AI policies
+- Designed to evade Aerealith AI policies
 - Repeatedly incomplete or inaccurate
 
 We may suspend or terminate accounts that abuse copyright reporting systems.
@@ -319,7 +319,7 @@ Examples:
 
 Trademark and brand complaints are not handled through the DMCA takedown process.
 
-If you believe content on Helix AI misuses your trademark, brand, logo, trade name, or business identity, contact:
+If you believe content on Aerealith AI misuses your trademark, brand, logo, trade name, or business identity, contact:
 
 `legal@sinlessgames.com`
 
@@ -381,19 +381,19 @@ This includes obligations related to:
 - Dependency licensing
 - Third-party asset licensing
 
-Helix AI may remove or restrict code, plugins, templates, workflows, or marketplace items that appear to violate open source or third-party license obligations.
+Aerealith AI may remove or restrict code, plugins, templates, workflows, or marketplace items that appear to violate open source or third-party license obligations.
 
 ## 22. AI-Generated Content and Copyright
 
-Helix AI may assist users in generating, transforming, summarizing, or analyzing content.
+Aerealith AI may assist users in generating, transforming, summarizing, or analyzing content.
 
 Users remain responsible for reviewing AI-generated or AI-assisted content before using, publishing, distributing, or commercializing it.
 
 AI-generated content may raise copyright, licensing, attribution, originality, publicity, trademark, contract, or platform-policy issues.
 
-Users should not use Helix AI to intentionally generate content that infringes copyrighted works or unlawfully imitates protected material.
+Users should not use Aerealith AI to intentionally generate content that infringes copyrighted works or unlawfully imitates protected material.
 
-If you believe AI-generated or AI-assisted content on Helix AI infringes your copyright, you may submit a copyright takedown notice under this policy.
+If you believe AI-generated or AI-assisted content on Aerealith AI infringes your copyright, you may submit a copyright takedown notice under this policy.
 
 ## 23. User Content Backups and Cached Copies
 
@@ -447,7 +447,7 @@ The organization operating the deployment may be responsible for:
 - Controlling marketplace access
 - Reviewing private plugins and templates
 
-SinLess Games LLC may still enforce license terms, marketplace rules, account terms, or service terms related to Helix AI software, updates, hosted services, cloud components, or official marketplace access.
+SinLess Games LLC may still enforce license terms, marketplace rules, account terms, or service terms related to Aerealith AI software, updates, hosted services, cloud components, or official marketplace access.
 
 ## 26. International Copyright Complaints
 
@@ -548,7 +548,7 @@ We may update this policy from time to time.
 
 When we make material changes, we will update the `last_updated` date and may provide notice through the service, documentation, account settings, email, release notes, legal notices page, or another reasonable method.
 
-Continued use of Helix AI after changes become effective means you accept the updated policy.
+Continued use of Aerealith AI after changes become effective means you accept the updated policy.
 
 ## 33. Contact
 
