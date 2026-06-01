@@ -87,25 +87,6 @@
   description: Low urgency, polish, cleanup, or nice-to-have
 
 # -----------------------------
-# 🚨 Severity Labels
-# -----------------------------
-- name: severity:critical
-  color: B60205
-  description: Critical impact requiring immediate mitigation
-
-- name: severity:high
-  color: D93F0B
-  description: High-impact issue with significant risk or disruption
-
-- name: severity:medium
-  color: FBCA04
-  description: Moderate impact issue with manageable risk
-
-- name: severity:low
-  color: C2E0C6
-  description: Low-impact issue with limited risk
-
-# -----------------------------
 # 🏗️ Area / Scope Labels
 # -----------------------------
 - name: area:frontend
@@ -123,14 +104,6 @@
 - name: area:services
   color: 0366D6
   description: Backend services, APIs, workers, or service apps
-
-- name: area:connectors
-  color: 0B7285
-  description: Connector apps, provider bridges, adapters, or integration glue
-
-- name: area:engines
-  color: 5319E7
-  description: Engine apps, orchestration runtimes, or core execution systems
 
 - name: area:ui
   color: 7057FF
