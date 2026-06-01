@@ -106,6 +106,7 @@ safe-outputs:
 tools:
   github:
   bash:
+    # Preview config files with a bounded read size for safety/noise control.
     - "git status --short"
     - "test -f .github/labels.yaml && sed -n '1,260p' .github/labels.yaml || true"
     - "test -f .github/milestones.yaml && sed -n '1,260p' .github/milestones.yaml || true"
