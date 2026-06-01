@@ -3,7 +3,7 @@ description: "Repo manager agent for Helix AI. Intelligently triages issues and 
 
 engine:
   id: copilot
-  model: gpt-4-turbo
+  model: claude-haiku-4.5
 
 on:
   workflow_dispatch:

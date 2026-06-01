@@ -3,7 +3,7 @@ description: "Package manager agent for Helix AI. Audits and maintains release, 
 
 engine:
   id: copilot
-  model: gpt-4-turbo
+  model: claude-haiku-4.5
 
 on:
   workflow_dispatch:
