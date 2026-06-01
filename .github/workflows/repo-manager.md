@@ -24,7 +24,6 @@ on:
       - edited
       - labeled
       - unlabeled
-      - ready_for_review
 
   push:
     branches:
@@ -56,8 +55,8 @@ on:
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
+  issues: read
+  pull-requests: read
 
 safe-outputs:
   add-comment:
@@ -74,23 +73,22 @@ safe-outputs:
     max: 10
 
   assign-milestone:
-    target: "*"
     max: 1
 
-  add-assignees:
+  assign-to-user:
     target: "*"
     max: 5
 
-  add-reviewers:
-    target: "pr"
+  add-reviewer:
+    target: "triggering"
     max: 5
 
   update-issue:
-    target: "issue"
+    target: "triggering"
     max: 3
 
   update-pull-request:
-    target: "pr"
+    target: "triggering"
     max: 3
 
   create-issue:
@@ -196,8 +194,8 @@ Use:
 
 - `add-labels` / `remove-labels` for issue and PR labels.
 - `assign-milestone` for issue and PR milestones.
-- `add-assignees` for assignee assignment.
-- `add-reviewers` for PR reviewer assignment.
+- `assign-to-user` for assignee assignment.
+- `add-reviewer` for PR reviewer assignment.
 - `add-comment` for concise triage explanations when needed.
 - `update-issue` / `update-pull-request` for relationship islands.
 - `create-issue` for repo-manager report issues.
