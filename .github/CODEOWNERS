@@ -1,13 +1,22 @@
 # .github/CODEOWNERS
 # =============================================================================
-# Helix AI CODEOWNERS
+# Aerealith AI CODEOWNERS
 # -----------------------------------------------------------------------------
-# Default review ownership for the Helix AI Nx monorepo.
+# Default review ownership for the Aerealith AI Nx monorepo.
+#
+# Owner format:
+#   <path-pattern> <owner> <owner> <owner>
+#
+# Examples:
+#   /apps/frontend/ @sinless777 @SinLess-Games/frontend
+#   /.github/       @sinless777 @SinLess-Games/maintainers
 #
 # Notes:
-# - Each rule is path pattern followed by one or more owners.
+# - Each rule is a path pattern followed by one or more owners.
+# - Owners can be users or GitHub teams.
+# - GitHub team owners must be visible and have write access to the repository.
 # - Later matching rules override earlier matching rules.
-# - Keep this aligned with .github/assignees.yaml.
+# - Keep this aligned with .github/assignees.yaml and repo-management rules.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -22,8 +31,9 @@
 
 /apps/ @sinless777
 /apps/frontend/ @sinless777
+/apps/connectors/ @sinless777
 /apps/e2e/ @sinless777
-/apps/e2e/frontend-e2e/ @sinless777
+/apps/engines/ @sinless777
 /apps/integrations/ @sinless777
 /apps/services/ @sinless777
 
@@ -33,20 +43,41 @@
 
 /libs/ @sinless777
 /libs/ui/ @sinless777
+/libs/design/ @sinless777
+/libs/theme/ @sinless777
 /libs/config/ @sinless777
+/libs/env/ @sinless777
 /libs/db/ @sinless777
+/libs/database/ @sinless777
 /libs/flags/ @sinless777
+/libs/feature-flags/ @sinless777
 
 # -----------------------------------------------------------------------------
 # Frontend / Cloudflare deployment
 # -----------------------------------------------------------------------------
 
 /apps/frontend/next.config.js @sinless777
+/apps/frontend/next.config.mjs @sinless777
 /apps/frontend/project.json @sinless777
 /apps/frontend/wrangler.jsonc @sinless777
+/apps/frontend/wrangler.toml @sinless777
 /apps/frontend/open-next.config.ts @sinless777
 /apps/frontend/cloudflare-env.d.ts @sinless777
+/apps/frontend/worker-configuration.d.ts @sinless777
 /apps/frontend/public/_headers @sinless777
+/apps/frontend/public/_redirects @sinless777
+
+# -----------------------------------------------------------------------------
+# Cloudflare platform configuration
+# -----------------------------------------------------------------------------
+
+/wrangler.toml @sinless777
+/wrangler.jsonc @sinless777
+/**/wrangler.toml @sinless777
+/**/wrangler.jsonc @sinless777
+/**/open-next.config.ts @sinless777
+/**/cloudflare-env.d.ts @sinless777
+/**/worker-configuration.d.ts @sinless777
 
 # -----------------------------------------------------------------------------
 # Repository configuration
@@ -55,17 +86,42 @@
 /.github/ @sinless777
 /.github/workflows/ @sinless777
 /.github/actions/ @sinless777
-/.github/agents/ @sinless777
 /.github/scripts/ @sinless777
+/.github/scripts/ai/ @sinless777
+/.github/scripts/artifacts/ @sinless777
+/.github/scripts/cache/ @sinless777
+/.github/scripts/ci/ @sinless777
+/.github/scripts/cloudflare/ @sinless777
+/.github/scripts/docker/ @sinless777
+/.github/scripts/npm/ @sinless777
+/.github/scripts/release/ @sinless777
+/.github/scripts/repo/ @sinless777
+/.github/scripts/security/ @sinless777
+/.github/scripts/utils/ @sinless777
+/.github/repo-management/ @sinless777
+/.github/projects/ @sinless777
+
 /.github/CODEOWNERS @sinless777
 /.github/assignees.yaml @sinless777
 /.github/codeql.yaml @sinless777
 /.github/dependabot.yaml @sinless777
+/.github/dependabot.yml @sinless777
 /.github/labeler.yaml @sinless777
 /.github/labels.yaml @sinless777
 /.github/milestones.yaml @sinless777
 /.github/renovate.json5 @sinless777
-/.github/mcp.json @sinless777
+/.github/FUNDING.yaml @sinless777
+
+# -----------------------------------------------------------------------------
+# Issue templates
+# -----------------------------------------------------------------------------
+
+/.github/ISSUE_TEMPLATE/ @sinless777
+/.github/ISSUE_TEMPLATE/bug-report.yml @sinless777
+/.github/ISSUE_TEMPLATE/config.yml @sinless777
+/.github/ISSUE_TEMPLATE/feature-request.yml @sinless777
+/.github/ISSUE_TEMPLATE/maintenance.yml @sinless777
+/.github/ISSUE_TEMPLATE/security.yaml @sinless777
 
 # -----------------------------------------------------------------------------
 # Package / build / workspace configuration
@@ -77,6 +133,9 @@
 /nx.json @sinless777
 /tsconfig.json @sinless777
 /tsconfig.base.json @sinless777
+/.npmrc @sinless777
+/.nvmrc @sinless777
+/.node-version @sinless777
 
 # -----------------------------------------------------------------------------
 # Tooling and scripts
@@ -89,39 +148,86 @@
 /tools/ @sinless777
 
 # -----------------------------------------------------------------------------
-# Documentation
+# Docker / containers / GHCR publishing
 # -----------------------------------------------------------------------------
 
-/README.md @sinless777
-/Readme.md @sinless777
-/Docs/ @sinless777
-/docs/ @sinless777
-/mkdocs.yaml @sinless777
-/mkdocs.yml @sinless777
+/Dockerfile @sinless777
+/**/Dockerfile @sinless777
+/**/Dockerfile.* @sinless777
+/.dockerignore @sinless777
+/**/.dockerignore @sinless777
+/docker/ @sinless777
 
 # -----------------------------------------------------------------------------
-# Infrastructure
+# Release / publishing / artifacts
 # -----------------------------------------------------------------------------
 
-/IaC/ @sinless777
-/Infrastructure/ @sinless777
-/Kubernetes/ @sinless777
-/kubernetes/ @sinless777
-/Ansible/ @sinless777
-/ansible/ @sinless777
-/Terraform/ @sinless777
-/terraform/ @sinless777
-/Packer/ @sinless777
-/packer/ @sinless777
-/PXE/ @sinless777
-/pxe/ @sinless777
+/CHANGELOG.md @sinless777
+/.changeset/ @sinless777
+/**/package.json @sinless777
+/.github/workflows/release.yaml @sinless777
+/.github/workflows/publish-npm.yaml @sinless777
+/.github/workflows/publish-containers.yaml @sinless777
+/.github/workflows/artifact-hashes.yaml @sinless777
+/.github/workflows/attestations.yaml @sinless777
 
 # -----------------------------------------------------------------------------
 # Security-sensitive files
 # -----------------------------------------------------------------------------
 
 /.env.example @sinless777
-/.npmrc @sinless777
-/.nvmrc @sinless777
-/.node-version @sinless777
-/docker/ @sinless777
+/.env.sample @sinless777
+/**/.env.example @sinless777
+/**/.env.sample @sinless777
+/SECURITY.md @sinless777
+/security/ @sinless777
+/Security/ @sinless777
+/.github/workflows/security.yaml @sinless777
+/.github/workflows/codeql.yaml @sinless777
+/.github/workflows/dependency-review.yaml @sinless777
+/.github/workflows/dependency-management.yaml @sinless777
+/.github/workflows/dependency-auto-merge.yaml @sinless777
+
+# -----------------------------------------------------------------------------
+# Documentation
+# -----------------------------------------------------------------------------
+
+/README.md @sinless777
+/Readme.md @sinless777
+/CONTRIBUTING.md @sinless777
+/CODE_OF_CONDUCT.md @sinless777
+/Docs/ @sinless777
+/docs/ @sinless777
+/mkdocs.yaml @sinless777
+/mkdocs.yml @sinless777
+
+# -----------------------------------------------------------------------------
+# Future self-hosted deployment
+# -----------------------------------------------------------------------------
+
+/charts/ @sinless777
+/helm/ @sinless777
+/deploy/ @sinless777
+/deploy/self-hosted/ @sinless777
+/deploy/kubernetes/ @sinless777
+/k8s/ @sinless777
+/kubernetes/ @sinless777
+/**/Chart.yaml @sinless777
+/**/Chart.yml @sinless777
+/**/values.yaml @sinless777
+/**/values.yml @sinless777
+/**/values-*.yaml @sinless777
+/**/values-*.yml @sinless777
+/**/kustomization.yaml @sinless777
+/**/kustomization.yml @sinless777
+
+# -----------------------------------------------------------------------------
+# Observability
+# -----------------------------------------------------------------------------
+
+/observability/ @sinless777
+/grafana/ @sinless777
+/**/grafana/** @sinless777
+/**/dashboards/** @sinless777
+/**/otel/** @sinless777
+/**/opentelemetry/** @sinless777

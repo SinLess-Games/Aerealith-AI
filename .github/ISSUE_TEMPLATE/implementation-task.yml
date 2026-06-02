@@ -1,0 +1,570 @@
+# .github/ISSUE_TEMPLATE/implementation-task.yml
+name: "🛠️ Implementation Task"
+description: "Create a scoped engineering task for building, wiring, or implementing part of Aerealith AI."
+title: "[Implementation]: "
+labels:
+  - kind:chore
+  - status:triage
+assignees:
+  - Sinless777
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🛠️ Implementation Task
+
+        Use this template for **specific engineering work** that needs to be built, wired, connected, or implemented.
+
+        This is different from:
+
+        - A **bug report**, which describes something broken
+        - A **feature request**, which proposes a user-facing or platform capability
+        - A **maintenance task**, which handles cleanup, refactors, upgrades, or internal health work
+        - A **security report**, which tracks security vulnerabilities or risks
+
+        Use this when the work is already directionally known and needs to be scoped into an actionable task.
+
+        Good examples:
+
+        - Create a GitHub Actions workflow
+        - Build a repository automation script
+        - Implement an Nx target runner
+        - Add artifact hashing
+        - Add a Cloudflare deployment step
+        - Wire an OpenAI changelog generator
+        - Create a GHCR image discovery script
+        - Add npm package publishing detection
+        - Implement an issue-to-PR linker
+        - Build a config loader or validator
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm this implementation task is ready to be triaged."
+      options:
+        - label: "I searched existing issues and did not find a duplicate task."
+          required: true
+        - label: "This task has a clear implementation goal."
+          required: true
+        - label: "This task is specific enough to be assigned and worked on."
+          required: true
+        - label: "I included enough context for someone else to understand what needs to be built."
+          required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: "Task Summary"
+      description: "Write one clear sentence describing what needs to be implemented."
+      placeholder: "Example: Implement a script that detects all Dockerfiles and generates GHCR image metadata."
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: "Objective"
+      description: |
+        Explain the main goal of this task.
+
+        Focus on what should exist when the task is complete.
+      placeholder: |
+        Example:
+        Implement `.github/scripts/docker/discover-images.js` so the workflow can find every Dockerfile in the repository and output normalized image metadata for GHCR publishing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: "Background / Context"
+      description: |
+        Explain why this task exists and what larger workflow, feature, or milestone it supports.
+
+        Include relevant decisions, prior work, constraints, or related systems.
+      placeholder: |
+        Example:
+        The release pipeline needs to build and publish every Dockerfile in the repo.
+        Before publishing can work, the workflow needs a deterministic way to discover Dockerfiles and turn each one into a stable image name, context path, Dockerfile path, and release tag.
+
+        This supports:
+        - publish-containers.yaml
+        - GHCR publishing
+        - SBOM generation
+        - release attestations
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: "Affected Area"
+      description: |
+        Select the primary repository or platform area affected by this implementation task.
+
+        Pick the closest match. Additional affected areas can be listed later.
+      multiple: false
+      options:
+        - area:frontend
+        - area:connectors
+        - area:e2e
+        - area:engines
+        - area:integrations
+        - area:services
+        - area:libs
+        - area:ui
+        - area:config
+        - area:db
+        - area:flags
+        - area:github-actions
+        - area:repo-management
+        - area:ci
+        - area:security
+        - area:dependencies
+        - area:cloudflare
+        - area:workers
+        - area:queues
+        - area:r2
+        - area:d1
+        - area:kv
+        - area:secrets
+        - area:docker
+        - area:ghcr
+        - area:npm
+        - area:artifacts
+        - area:cache
+        - area:observability
+        - area:ai
+        - area:openai
+        - area:self-hosted
+        - area:helm
+        - area:kubernetes
+        - area:docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: implementation_type
+    attributes:
+      label: "Implementation Type"
+      description: "Choose the kind of implementation work being requested."
+      multiple: false
+      options:
+        - Application code
+        - Library code
+        - GitHub Actions workflow
+        - Repository automation script
+        - Config loader
+        - Validator / schema
+        - CI/CD task
+        - Security automation
+        - Release automation
+        - Publishing automation
+        - Cloudflare deployment
+        - Docker / container support
+        - npm package support
+        - Artifact / checksum / SBOM support
+        - Cache management
+        - OpenAI automation
+        - Issue / PR automation
+        - Project board automation
+        - Documentation support
+        - Self-hosted / Helm / Kubernetes support
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      description: |
+        Choose how important this implementation task is.
+
+        Use Critical only when this blocks security, CI, release, deployment, production, or a major milestone.
+      multiple: false
+      options:
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_impact
+    attributes:
+      label: "Release Impact"
+      description: |
+        Choose how this task should affect release planning.
+
+        This does not automatically create a release. Maintainers will confirm release labels separately.
+      multiple: false
+      options:
+        - no-release
+        - release:patch
+        - release:minor
+        - release:major
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target_environment
+    attributes:
+      label: "Target Environment"
+      description: "Choose where this implementation is expected to run or matter most."
+      multiple: false
+      options:
+        - Local development
+        - Pull request validation
+        - GitHub Actions
+        - Preview environment
+        - Staging environment
+        - Production environment
+        - Cloudflare Workers
+        - Cloudflare D1
+        - Cloudflare R2
+        - Cloudflare KV
+        - Cloudflare Queues
+        - npm registry
+        - GHCR
+        - GitHub Projects
+        - GitHub Discussions
+        - Self-hosted deployment
+        - Future Helm deployment
+        - Future Kubernetes deployment
+        - Not environment-specific
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: "Requirements"
+      description: |
+        List the required behavior.
+
+        These should describe what the implementation must do.
+      placeholder: |
+        Example:
+        - The script must recursively detect Dockerfiles under `apps/**` and `libs/**`.
+        - The script must ignore generated folders, build outputs, and node_modules.
+        - The script must produce stable image names.
+        - The script must output JSON for use by GitHub Actions.
+        - The script must support dry-run mode.
+        - The script must log through `.github/scripts/utils/logger.js`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: "Non-Goals"
+      description: |
+        List anything this task should not do.
+
+        This keeps the task scoped and prevents it from growing too large.
+      placeholder: |
+        Example:
+        This task should not:
+        - Build Docker images
+        - Push images to GHCR
+        - Generate SBOM files
+        - Create attestations
+        - Modify release tags
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposed_approach
+    attributes:
+      label: "Proposed Approach"
+      description: |
+        Describe the expected implementation approach.
+
+        Include file names, modules, functions, workflow steps, data structures, or command behavior if known.
+      placeholder: |
+        Example:
+        Create `.github/scripts/docker/discover-images.js`.
+
+        Suggested flow:
+        1. Load repository root.
+        2. Find Dockerfiles.
+        3. Normalize each Dockerfile path.
+        4. Derive image name from app/lib path.
+        5. Return JSON with `name`, `context`, `dockerfile`, and `image`.
+        6. Print a GitHub Actions output when running in CI.
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected_inputs
+    attributes:
+      label: "Expected Inputs"
+      description: |
+        List any inputs the implementation should accept.
+
+        This may include environment variables, CLI flags, config files, workflow inputs, labels, paths, secrets, or GitHub event data.
+      placeholder: |
+        Example:
+        Environment variables:
+        - GITHUB_WORKSPACE
+        - GITHUB_REPOSITORY
+        - DRY_RUN
+        - DEBUG_PROJECT_SYNC
+
+        CLI flags:
+        - --root
+        - --json
+        - --dry-run
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected_outputs
+    attributes:
+      label: "Expected Outputs"
+      description: |
+        List the expected outputs.
+
+        This may include files, JSON, workflow outputs, logs, comments, labels, project fields, artifacts, checksums, or deployment results.
+      placeholder: |
+        Example:
+        The script should output JSON like:
+
+        [
+          {
+            "name": "frontend",
+            "context": "apps/frontend",
+            "dockerfile": "apps/frontend/Dockerfile",
+            "image": "ghcr.io/sinless-games/aerealith-ai/frontend"
+          }
+        ]
+    validations:
+      required: false
+
+  - type: textarea
+    id: affected_files
+    attributes:
+      label: "Expected Files, Folders, or Systems Affected"
+      description: |
+        List likely files, folders, workflows, scripts, apps, libraries, packages, or systems that may need to change.
+      placeholder: |
+        Example:
+        - .github/scripts/docker/discover-images.js
+        - .github/scripts/utils/fs.js
+        - .github/scripts/utils/docker.js
+        - .github/workflows/publish-containers.yaml
+        - .github/repo-management/release-rules.yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: data_contract
+    attributes:
+      label: "Data Contract / Interface"
+      description: |
+        Describe any expected data shape, function contract, CLI contract, workflow output, or config schema.
+
+        This is especially useful for scripts and workflows that other steps will consume.
+      placeholder: |
+        Example:
+        The script should return:
+
+        {
+          "images": [
+            {
+              "name": "string",
+              "context": "string",
+              "dockerfile": "string",
+              "image": "string",
+              "tags": ["string"]
+            }
+          ]
+        }
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation_steps
+    attributes:
+      label: "Implementation Steps"
+      description: |
+        Break the task into clear implementation steps.
+
+        Use checklist items so progress can be tracked.
+      placeholder: |
+        - [ ] Create the implementation file.
+        - [ ] Add config loading if needed.
+        - [ ] Add validation if needed.
+        - [ ] Add dry-run support if the task changes repository state.
+        - [ ] Add structured logging.
+        - [ ] Add GitHub Actions output support if used by workflows.
+        - [ ] Update the relevant workflow or caller.
+        - [ ] Validate locally.
+        - [ ] Validate in CI.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: |
+        Define what must be true before this task is complete.
+
+        These should be specific and verifiable.
+      placeholder: |
+        - [ ] The implementation exists in the expected location.
+        - [ ] The implementation follows the repository script conventions.
+        - [ ] Dry-run mode is supported where applicable.
+        - [ ] Debug logging is supported where applicable.
+        - [ ] Inputs are validated.
+        - [ ] Outputs are deterministic.
+        - [ ] Errors are clear and actionable.
+        - [ ] Formatting passes.
+        - [ ] Linting passes.
+        - [ ] Typechecking passes where applicable.
+        - [ ] Tests pass where applicable.
+        - [ ] Build passes where applicable.
+        - [ ] Security checks pass where applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "Validation Plan"
+      description: |
+        Explain how this implementation should be tested or verified.
+
+        Include local commands, Nx targets, GitHub Actions workflows, dry-run mode, expected logs, or manual checks.
+      placeholder: |
+        Example:
+        - Run `pnpm install`.
+        - Run the affected Nx lint target.
+        - Run the affected Nx test target.
+        - Run the affected Nx build target.
+        - Run the script locally with `DRY_RUN=true`.
+        - Confirm the JSON output is valid.
+        - Confirm the workflow can consume the output.
+        - Confirm no release is triggered unless intended.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: error_handling
+    attributes:
+      label: "Error Handling Requirements"
+      description: |
+        Describe how errors should be handled.
+
+        Include missing files, malformed config, API failures, invalid input, missing secrets, permissions issues, or partial failures.
+      placeholder: |
+        Example:
+        - If no Dockerfiles are found, return an empty image list and exit successfully.
+        - If a Dockerfile path cannot be normalized, fail with a clear error.
+        - If GitHub API permissions are missing, log the permission issue and fail the workflow.
+        - If DRY_RUN is true, print planned actions without mutating repository state.
+    validations:
+      required: false
+
+  - type: textarea
+    id: security_considerations
+    attributes:
+      label: "Security, Permissions, or Safety Considerations"
+      description: |
+        Describe any security, permission, token, secret, or automation safety concerns.
+
+        This is required if the task touches GitHub API writes, OpenAI automation, release publishing, npm, GHCR, Cloudflare, secrets, or production.
+      placeholder: |
+        Example:
+        - The script must not print secrets.
+        - The workflow should use least-privilege permissions.
+        - The script must support dry-run mode before repository mutations.
+        - OpenAI automation must not push directly to main.
+        - Release and publishing jobs must only run from approved release flows.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Dependencies, Prerequisites, or Blockers"
+      description: |
+        List anything that must exist first.
+
+        Include related issues, pull requests, secrets, packages, labels, milestones, workflows, APIs, or config files.
+      placeholder: |
+        Example:
+        - Requires `.github/scripts/utils/logger.js`.
+        - Requires `.github/scripts/utils/fs.js`.
+        - Requires labels to be synced.
+        - Depends on #123.
+        - Blocks #456.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or ADRs"
+      description: |
+        Link anything related.
+
+        Use references such as:
+        - Related to #123
+        - Depends on #456
+        - Blocks #789
+      placeholder: |
+        Related to #
+        Depends on #
+        Blocks #
+    validations:
+      required: false
+
+  - type: textarea
+    id: documentation
+    attributes:
+      label: "Documentation Updates"
+      description: |
+        Describe any documentation, comments, examples, README updates, ADRs, or runbooks that should be updated.
+      placeholder: |
+        Example:
+        - Add comments explaining the script output.
+        - Update workflow documentation.
+        - Add a runbook entry if this affects release, deployment, or security automation.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that would help with triage, implementation, review, or validation."
+      placeholder: |
+        Example:
+        This task should be completed before publish-containers.yaml is implemented.
+        This task should be safe to test in dry-run mode.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm the implementation task is ready for triage."
+      options:
+        - label: "I explained what needs to be implemented."
+          required: true
+        - label: "I included requirements, implementation steps, or enough detail to create them."
+          required: true
+        - label: "I included validation steps or enough context to define them."
+          required: true
+        - label: "I understand maintainers may adjust priority, area, milestone, labels, and release impact."
+          required: true

@@ -1,5 +1,13 @@
-# These are supported funding model platforms
+# These funding links power GitHub's "Sponsor" button.
+# GitHub expects this file at: .github/FUNDING.yml
 
-github: Sinless777
+github:
+  - SinLess-Games
+  - Sinless777
+
+custom:
+  - "https://aerealith.com"
+  - "https://sinlessgamesllc.com"
+
 patreon: sinlessgames
-ko_fi: sinlessgames # Replace with a single Ko-fi username
+ko_fi: sinlessgames

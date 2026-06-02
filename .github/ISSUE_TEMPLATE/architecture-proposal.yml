@@ -1,0 +1,605 @@
+# .github/ISSUE_TEMPLATE/architecture-proposal.yml
+name: "🏛️ Architecture Proposal"
+description: "Propose a significant architecture, platform, security, deployment, workflow, data, or system design decision for Aerealith AI."
+title: "[Architecture]: "
+labels:
+  - discussion
+  - needs-architecture-review
+  - status:triage
+  - no-release
+assignees:
+  - Sinless777
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🏛️ Architecture Proposal
+
+        Use this template for **major design decisions** that affect the long-term structure, behavior, security, deployment, automation, or maintainability of Aerealith AI.
+
+        This template is for decisions that need discussion before implementation.
+
+        Good examples:
+
+        - Choosing a new service boundary
+        - Changing Cloudflare deployment architecture
+        - Designing release automation
+        - Designing repo-management automation
+        - Designing OpenAI automation behavior
+        - Choosing how issue/PR linking should work
+        - Defining package publishing rules
+        - Defining GHCR image naming rules
+        - Designing self-hosted Helm/Kubernetes architecture
+        - Changing security policy or branch protection strategy
+        - Designing data ownership, memory, or permission models
+        - Creating or updating an Architecture Decision Record
+
+        This is **not** for small bugs, small implementation tasks, or routine maintenance.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm this proposal is ready for architecture review."
+      options:
+        - label: "I searched existing issues, discussions, and ADRs for related decisions."
+          required: true
+        - label: "This proposal affects architecture, system design, security, deployment, automation, data flow, or long-term maintainability."
+          required: true
+        - label: "I explained the problem or decision clearly enough for review."
+          required: true
+        - label: "I included at least one proposed direction or decision option."
+          required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: "Proposal Summary"
+      description: "Write one clear sentence describing the architecture proposal."
+      placeholder: "Example: Adopt label-driven release automation with V-prefixed tags and release-only attestations."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: proposal_type
+    attributes:
+      label: "Proposal Type"
+      description: "Choose the primary type of architecture decision."
+      multiple: false
+      options:
+        - Platform architecture
+        - Application architecture
+        - Service architecture
+        - Library architecture
+        - Cloudflare architecture
+        - CI/CD architecture
+        - Release architecture
+        - Publishing architecture
+        - Security architecture
+        - Dependency automation architecture
+        - Repository management architecture
+        - OpenAI automation architecture
+        - Data architecture
+        - Permission / access-control architecture
+        - Observability architecture
+        - Self-hosted / Helm / Kubernetes architecture
+        - Developer experience architecture
+        - Documentation architecture
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: "Affected Area"
+      description: |
+        Select the primary area affected by this architecture proposal.
+
+        Pick the closest match. Additional areas can be listed later.
+      multiple: false
+      options:
+        - area:frontend
+        - area:connectors
+        - area:e2e
+        - area:engines
+        - area:integrations
+        - area:services
+        - area:libs
+        - area:ui
+        - area:config
+        - area:db
+        - area:flags
+        - area:github-actions
+        - area:repo-management
+        - area:ci
+        - area:security
+        - area:dependencies
+        - area:cloudflare
+        - area:workers
+        - area:queues
+        - area:r2
+        - area:d1
+        - area:kv
+        - area:secrets
+        - area:docker
+        - area:ghcr
+        - area:npm
+        - area:artifacts
+        - area:cache
+        - area:observability
+        - area:ai
+        - area:openai
+        - area:self-hosted
+        - area:helm
+        - area:kubernetes
+        - area:docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: decision_scope
+    attributes:
+      label: "Decision Scope"
+      description: "Choose the expected reach of this decision."
+      multiple: false
+      options:
+        - Single app
+        - Multiple apps
+        - Shared libraries
+        - Entire monorepo
+        - CI/CD system
+        - Security system
+        - Release system
+        - Deployment system
+        - Publishing system
+        - Repository management system
+        - Hosted platform
+        - Self-hosted platform
+        - Public API or package consumers
+        - Unknown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      description: |
+        Choose how important this architecture decision is.
+
+        Use Critical only if this blocks security, release, deployment, production readiness, or a major milestone.
+      multiple: false
+      options:
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_impact
+    attributes:
+      label: "Release Impact"
+      description: |
+        Most architecture proposals should start as `no-release`.
+
+        Add a release label later only when the accepted decision is implemented and affects released behavior.
+      multiple: false
+      options:
+        - no-release
+        - release:patch
+        - release:minor
+        - release:major
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Context"
+      description: |
+        Explain the background behind this proposal.
+
+        Include the current situation, why this matters now, what prompted the decision, and what larger milestone or workflow it supports.
+      placeholder: |
+        Example:
+        Aerealith AI needs a release process that is safe, auditable, and compatible with feature branches merging into `main`.
+
+        Current constraints:
+        - Releases should only occur after a merged PR on `main`.
+        - Dependency PRs must not trigger releases.
+        - Release tags must use `V1.2.3` format.
+        - Release artifacts require checksums, SBOMs, manifests, and attestations.
+        - Changelogs should be posted to the Announcements discussion category.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: "Problem Statement"
+      description: |
+        Describe the architectural problem or decision that needs to be made.
+
+        Focus on the underlying design issue, not just the first implementation idea.
+      placeholder: |
+        Example:
+        The repository does not yet have a single, consistent release architecture.
+
+        Without a clear decision, multiple workflows may create tags, publish artifacts, or generate changelogs inconsistently.
+        This could cause duplicate releases, dependency PRs triggering releases, incomplete release evidence, or unsafe production deployments.
+    validations:
+      required: true
+
+  - type: textarea
+    id: goals
+    attributes:
+      label: "Goals"
+      description: |
+        List what this architecture decision must accomplish.
+
+        Use checklist items where possible.
+      placeholder: |
+        - [ ] Define one source of truth for release eligibility.
+        - [ ] Prevent dependency PRs from creating releases.
+        - [ ] Support V-prefixed tags.
+        - [ ] Generate changelogs consistently.
+        - [ ] Generate release evidence.
+        - [ ] Keep production deployment approval-gated.
+        - [ ] Keep the design simple enough to maintain.
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: "Non-Goals"
+      description: |
+        List what this proposal intentionally does not cover.
+
+        This keeps the decision focused.
+      placeholder: |
+        This proposal does not:
+        - Define the complete implementation of every script.
+        - Replace branch protection rules.
+        - Allow dependency PRs to create releases.
+        - Allow OpenAI automation to push directly to main.
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposed_decision
+    attributes:
+      label: "Proposed Decision"
+      description: |
+        State the recommended architecture decision.
+
+        Be as direct as possible. If there are multiple options, put the preferred option here and list alternatives below.
+      placeholder: |
+        Example:
+        Use a label-driven release architecture.
+
+        A merged PR to `main` creates a release only when it has exactly one release label:
+        - `release:major`
+        - `release:minor`
+        - `release:patch`
+
+        The release workflow must skip PRs with:
+        - `no-release`
+        - `dependencies`
+        - `security:dependency`
+
+        Release tags must use `V{major}.{minor}.{patch}`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives Considered"
+      description: |
+        List other approaches and why they are less ideal.
+
+        Include tradeoffs, complexity, risks, and why the proposed decision is better.
+      placeholder: |
+        Option A: Release every merge to main.
+        - Pros: simple.
+        - Cons: dependency PRs could create releases; noisy releases; less intentional.
+
+        Option B: Manual release workflow only.
+        - Pros: maximum control.
+        - Cons: more manual work; easier to forget releases.
+
+        Option C: Label-driven release workflow.
+        - Pros: intentional, auditable, automated, safe.
+        - Cons: requires correct labels and validation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: decision_drivers
+    attributes:
+      label: "Decision Drivers"
+      description: |
+        List the forces, priorities, constraints, or principles driving this decision.
+      placeholder: |
+        Example:
+        - Security and auditability
+        - Low maintenance burden
+        - Clear ownership
+        - Strict CI and security gates
+        - Compatibility with feature branches
+        - Safe dependency automation
+        - Cloudflare deployment constraints
+        - Future self-hosted compatibility
+        - Clear user and maintainer workflows
+    validations:
+      required: false
+
+  - type: textarea
+    id: affected_systems
+    attributes:
+      label: "Affected Systems, Files, or Workflows"
+      description: |
+        List systems, files, workflows, packages, services, or docs that may be affected.
+
+        This helps estimate implementation scope and review impact.
+      placeholder: |
+        Example:
+        - .github/workflows/release.yaml
+        - .github/workflows/publish-npm.yaml
+        - .github/workflows/publish-containers.yaml
+        - .github/scripts/release/**
+        - .github/repo-management/release-rules.yaml
+        - .github/labels.yaml
+        - .github/milestones.yaml
+        - docs/architecture/release-automation.md
+        - docs/adrs/**
+    validations:
+      required: false
+
+  - type: textarea
+    id: data_flow
+    attributes:
+      label: "Data Flow, Control Flow, or Workflow Flow"
+      description: |
+        Describe the flow of data, requests, events, automation, or control.
+
+        Use step-by-step text if a diagram is not available.
+      placeholder: |
+        Example:
+        1. Developer opens a feature branch.
+        2. Developer opens a pull request into `main`.
+        3. Repo-management applies labels and links issues.
+        4. CI and security gates run.
+        5. Maintainer applies one release label when appropriate.
+        6. PR merges to `main`.
+        7. Release workflow reads the merged PR and labels.
+        8. Release workflow creates the V-prefixed tag.
+        9. Publish workflows create artifacts, SBOMs, checksums, and attestations.
+        10. Release announcement is posted to Discussions.
+    validations:
+      required: false
+
+  - type: textarea
+    id: security_considerations
+    attributes:
+      label: "Security, Privacy, Permission, or Safety Considerations"
+      description: |
+        Describe security implications.
+
+        Include secrets, tokens, permissions, least privilege, user data, memory data, production data, GitHub Actions permissions, Cloudflare permissions, OpenAI automation safety, or supply-chain concerns.
+      placeholder: |
+        Example:
+        - Workflows should use least-privilege permissions.
+        - Secrets must not be exposed to untrusted pull requests.
+        - OpenAI automation must not push directly to main.
+        - Dependency PRs must be excluded from release creation.
+        - Production deployment must require environment approval.
+        - Attestations should only be generated on release and publish jobs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: operational_considerations
+    attributes:
+      label: "Operational Considerations"
+      description: |
+        Describe how this decision affects operations, maintenance, reliability, debugging, rollback, observability, and support.
+      placeholder: |
+        Example:
+        - Workflows should produce clear summaries.
+        - Failed release steps should be easy to audit.
+        - Rollback should be documented.
+        - Logs should not expose secrets.
+        - Automation should support dry-run mode.
+        - Main branch security checks should run on a schedule.
+    validations:
+      required: false
+
+  - type: textarea
+    id: migration_plan
+    attributes:
+      label: "Migration or Adoption Plan"
+      description: |
+        Describe how the repo should move from the current state to the proposed architecture.
+
+        Include phases if useful.
+      placeholder: |
+        Example:
+        Phase 1:
+        - Add labels and milestones.
+        - Add release-rules.yaml.
+        - Add release detection script in dry-run mode.
+
+        Phase 2:
+        - Add tag creation.
+        - Add changelog generation.
+        - Add GitHub Release creation.
+
+        Phase 3:
+        - Add npm and GHCR publishing.
+        - Add SBOMs, checksums, manifests, and attestations.
+        - Add Announcements discussion posting.
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation_tasks
+    attributes:
+      label: "Likely Implementation Tasks"
+      description: |
+        List implementation issues that may need to be created if this proposal is accepted.
+
+        This helps split the architecture decision from actual implementation.
+      placeholder: |
+        - [ ] Create release-rules.yaml.
+        - [ ] Create determine-release-version.js.
+        - [ ] Create create-release-tag.js.
+        - [ ] Create build-changelog.js.
+        - [ ] Create post-discussion-announcement.js.
+        - [ ] Update release.yaml.
+        - [ ] Add release documentation.
+        - [ ] Add validation tests.
+    validations:
+      required: false
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "Validation Plan"
+      description: |
+        Explain how the accepted architecture should be validated.
+
+        Include tests, dry-runs, review steps, workflow checks, threat review, or documentation review.
+      placeholder: |
+        Example:
+        - Validate the decision with a dry-run workflow.
+        - Test release labels and release blockers.
+        - Test dependency PR release exclusion.
+        - Review workflow permissions.
+        - Confirm branch protection still blocks unsafe merges.
+        - Confirm documentation matches implementation.
+        - Confirm rollback steps exist.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: consequences
+    attributes:
+      label: "Consequences"
+      description: |
+        Describe the expected consequences of accepting this proposal.
+
+        Include benefits, costs, tradeoffs, complexity, limitations, risks, and long-term maintenance impact.
+      placeholder: |
+        Positive consequences:
+        - Releases become intentional and auditable.
+        - Dependency PRs cannot accidentally release.
+        - Release notes are more consistent.
+
+        Negative consequences:
+        - Maintainers must apply release labels correctly.
+        - Release workflow logic becomes more complex.
+        - More scripts require testing and maintenance.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: adr_required
+    attributes:
+      label: "ADR Required?"
+      description: |
+        Should this proposal become an Architecture Decision Record?
+
+        Use Yes when the decision affects long-term architecture, security, deployment, release behavior, data flow, public APIs, or self-hosted strategy.
+      multiple: false
+      options:
+        - "Yes"
+        - "No"
+        - "Unsure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: adr_notes
+    attributes:
+      label: "ADR Notes"
+      description: |
+        Add proposed ADR title, status, location, and important decision notes.
+
+        This is optional but helpful if an ADR should be created.
+      placeholder: |
+        Example:
+        Proposed ADR:
+        - Title: ADR-0001 — Label-Driven Release Automation
+        - Status: Proposed
+        - Location: docs/adrs/ADR-0001-label-driven-release-automation.md
+        - Decision: Use release labels to determine release type.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or ADRs"
+      description: |
+        Link anything related.
+
+        Use references such as:
+        - Related to #123
+        - Depends on #456
+        - Blocks #789
+      placeholder: |
+        Related to #
+        Depends on #
+        Blocks #
+    validations:
+      required: false
+
+  - type: textarea
+    id: open_questions
+    attributes:
+      label: "Open Questions"
+      description: |
+        List unresolved questions that reviewers should answer before the proposal is accepted.
+      placeholder: |
+        Example:
+        - Should release labels be applied manually only?
+        - Should OpenAI changelogs require review before posting?
+        - Should release artifacts be retained indefinitely or for 90 days?
+        - Should production deployment require one approval or two?
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that would help reviewers understand, compare, or decide on this proposal."
+      placeholder: |
+        Example:
+        This decision should be finalized before implementation tasks are created.
+        This may affect branch protection, release automation, and repo-management scripts.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm this architecture proposal is ready for review."
+      options:
+        - label: "I explained the context, problem, and proposed decision."
+          required: true
+        - label: "I included alternatives or enough information to compare options."
+          required: true
+        - label: "I included security, operational, and validation considerations."
+          required: true
+        - label: "I understand maintainers may adjust priority, area, milestone, labels, and ADR requirements."
+          required: true

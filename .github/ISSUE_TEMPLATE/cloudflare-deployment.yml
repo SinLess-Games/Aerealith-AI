@@ -1,0 +1,591 @@
+# .github/ISSUE_TEMPLATE/cloudflare-deployment.yml
+name: "☁️ Cloudflare Deployment Task"
+description: "Track Cloudflare Workers, preview, staging, production, bindings, migrations, rollbacks, or deployment automation for Aerealith AI."
+title: "[Cloudflare]: "
+labels:
+  - deployment
+  - cloudflare
+  - area:cloudflare
+  - status:triage
+assignees:
+  - Sinless777
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # ☁️ Cloudflare Deployment Task
+
+        Use this template for **Cloudflare deployment work** related to Aerealith AI.
+
+        This includes:
+
+        - Cloudflare Workers
+        - Cloudflare Queues
+        - Cloudflare R2
+        - Cloudflare D1
+        - Cloudflare KV
+        - Cloudflare Secrets Store
+        - Wrangler configuration
+        - Preview deployments
+        - Staging deployments
+        - Production deployments
+        - GitHub Environment approval
+        - Smoke tests
+        - Rollback planning
+        - Binding validation
+        - D1 migrations
+        - Deployment logs and artifacts
+        - CI/CD workflow integration
+
+        Cloudflare deployment work should be handled carefully because it can affect hosted environments, secrets, production availability, release safety, and user-facing behavior.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm this Cloudflare deployment task is ready for triage."
+      options:
+        - label: "I searched existing issues and did not find a duplicate Cloudflare deployment task."
+          required: true
+        - label: "I identified the affected Cloudflare service, environment, or workflow."
+          required: true
+        - label: "I included enough context for someone else to understand the deployment impact."
+          required: true
+        - label: "I removed or redacted secrets, tokens, account IDs, private URLs, and sensitive data."
+          required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: "Deployment Task Summary"
+      description: "Write one clear sentence describing the Cloudflare deployment task."
+      placeholder: "Example: Add staging deployment validation for Workers, D1 migrations, and KV bindings."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cloudflare_service
+    attributes:
+      label: "Cloudflare Service"
+      description: "Choose the primary Cloudflare service affected by this task."
+      multiple: false
+      options:
+        - Workers
+        - Queues
+        - R2
+        - D1
+        - KV
+        - Secrets Store
+        - Wrangler
+        - Routes / DNS
+        - Pages / frontend hosting
+        - Worker bindings
+        - Multiple Cloudflare services
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment_environment
+    attributes:
+      label: "Deployment Environment"
+      description: "Choose the environment affected by this task."
+      multiple: false
+      options:
+        - Preview
+        - Staging
+        - Production
+        - Local development
+        - GitHub Actions only
+        - Multiple environments
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment_task_type
+    attributes:
+      label: "Deployment Task Type"
+      description: "Choose the primary type of deployment work."
+      multiple: false
+      options:
+        - New deployment workflow
+        - Existing deployment workflow fix
+        - Wrangler configuration
+        - Worker deployment
+        - Binding configuration
+        - D1 migration
+        - KV namespace configuration
+        - R2 bucket configuration
+        - Queue producer / consumer configuration
+        - Secrets Store configuration
+        - Preview deployment
+        - Staging deployment
+        - Production deployment
+        - Smoke test
+        - Rollback procedure
+        - Deployment documentation
+        - Deployment security hardening
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: "Affected Area"
+      description: "Select the closest repository or platform area."
+      multiple: false
+      options:
+        - area:cloudflare
+        - area:workers
+        - area:queues
+        - area:r2
+        - area:d1
+        - area:kv
+        - area:secrets
+        - area:frontend
+        - area:services
+        - area:connectors
+        - area:integrations
+        - area:engines
+        - area:ci
+        - area:github-actions
+        - area:security
+        - area:db
+        - area:artifacts
+        - area:observability
+        - area:docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      description: |
+        Choose the urgency or impact level.
+
+        Use Critical when this blocks production, releases, security, deployments, or a core hosted environment.
+      multiple: false
+      options:
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_impact
+    attributes:
+      label: "Release Impact"
+      description: |
+        Choose how this task affects release planning.
+
+        Deployment workflow changes are often `no-release`, unless they intentionally affect production behavior, release deployment, or shipped infrastructure behavior.
+      multiple: false
+      options:
+        - no-release
+        - release:patch
+        - release:minor
+        - release:major
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: "Objective"
+      description: |
+        Explain what this deployment task should accomplish.
+
+        Focus on the expected deployment behavior after the task is complete.
+      placeholder: |
+        Example:
+        The staging workflow should deploy the frontend Worker from `main`, validate all required bindings, run D1 migrations, and execute smoke tests before marking the deployment successful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: "Current Behavior"
+      description: |
+        Describe how the deployment, workflow, Worker, binding, migration, or Cloudflare config currently behaves.
+
+        Include what is missing, broken, unsafe, unclear, or manual.
+      placeholder: |
+        Example:
+        Currently, the staging workflow deploys the Worker but does not validate D1 migrations, KV namespace bindings, R2 bucket bindings, or Queue bindings before deployment.
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired_behavior
+    attributes:
+      label: "Desired Behavior"
+      description: |
+        Describe exactly how the Cloudflare deployment should behave after this task is complete.
+      placeholder: |
+        Example:
+        The workflow should:
+        1. Install dependencies with pnpm 10.23.0.
+        2. Use Node.js 24.15.0.
+        3. Build the affected Nx project.
+        4. Validate Wrangler configuration.
+        5. Validate required Cloudflare bindings.
+        6. Run D1 migrations when required.
+        7. Deploy to the target environment.
+        8. Run smoke tests.
+        9. Upload deployment logs and summaries.
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected_resources
+    attributes:
+      label: "Affected Cloudflare Resources"
+      description: |
+        List affected Cloudflare resources.
+
+        Redact private values. Do not include real secrets.
+      placeholder: |
+        Example:
+        - Worker name:
+        - Environment: preview / staging / production
+        - D1 database:
+        - KV namespace:
+        - R2 bucket:
+        - Queue:
+        - Secrets Store secret names:
+        - Route:
+        - Domain:
+        - Wrangler config path:
+    validations:
+      required: false
+
+  - type: textarea
+    id: bindings
+    attributes:
+      label: "Bindings and Environment Variables"
+      description: |
+        List expected bindings and environment variables.
+
+        Do not include secret values. Only include names and purpose.
+      placeholder: |
+        Example:
+        Required bindings:
+        - DB: D1 database binding
+        - CACHE: KV namespace binding
+        - ASSETS: R2 bucket binding
+        - JOB_QUEUE: Queue binding
+
+        Required secret names:
+        - OPENAI_API_KEY
+        - CLOUDFLARE_API_TOKEN
+        - NPM_ACCESS_TOKEN
+    validations:
+      required: false
+
+  - type: textarea
+    id: migration_plan
+    attributes:
+      label: "Migration Plan"
+      description: |
+        Describe any migration steps.
+
+        This is especially important for D1 migrations, KV migrations, R2 structure changes, Queue changes, route changes, or production deployment changes.
+      placeholder: |
+        Example:
+        - [ ] Create D1 migration.
+        - [ ] Test migration locally.
+        - [ ] Apply migration to preview.
+        - [ ] Apply migration to staging.
+        - [ ] Verify staging reads/writes.
+        - [ ] Apply migration to production during release deployment.
+        - [ ] Confirm rollback procedure.
+    validations:
+      required: false
+
+  - type: textarea
+    id: workflow_requirements
+    attributes:
+      label: "Workflow Requirements"
+      description: |
+        Describe GitHub Actions behavior required for this Cloudflare task.
+      placeholder: |
+        Example:
+        - Preview deploys should run automatically on pull requests.
+        - Staging deploys should run automatically from `main`.
+        - Production deploys should run only from release tags.
+        - Production deploys must require GitHub Environment approval.
+        - Workflows should use least-privilege permissions.
+        - Workflows should not expose secrets to untrusted pull requests.
+        - Deployment output should be posted to the PR or workflow summary.
+    validations:
+      required: false
+
+  - type: textarea
+    id: security_requirements
+    attributes:
+      label: "Security, Secrets, and Permission Requirements"
+      description: |
+        Describe security considerations.
+
+        Include secrets, permissions, token scope, production approval, log redaction, and least-privilege requirements.
+      placeholder: |
+        Example:
+        - Do not print secrets in logs.
+        - Use GitHub Environment secrets for production.
+        - Production must require manual approval.
+        - Do not expose Cloudflare tokens to untrusted pull requests.
+        - Use minimum Cloudflare API token permissions required for deployment.
+        - Validate that D1, KV, R2, and Queue bindings match the target environment.
+    validations:
+      required: true
+
+  - type: textarea
+    id: smoke_tests
+    attributes:
+      label: "Smoke Tests or Post-Deployment Checks"
+      description: |
+        Describe what should be checked after deployment.
+
+        Include URLs, routes, health endpoints, Worker checks, database checks, queue checks, or artifact checks.
+      placeholder: |
+        Example:
+        - Confirm Worker responds with 200 on health route.
+        - Confirm frontend loads successfully.
+        - Confirm D1 query works.
+        - Confirm KV read/write works if applicable.
+        - Confirm R2 object access works if applicable.
+        - Confirm Queue producer sends a test message if safe.
+        - Confirm no critical errors appear in logs.
+    validations:
+      required: false
+
+  - type: textarea
+    id: rollback_plan
+    attributes:
+      label: "Rollback Plan"
+      description: |
+        Describe how to recover if this deployment fails.
+
+        This is required for production-impacting changes.
+      placeholder: |
+        Example:
+        - Revert the workflow or Wrangler config change.
+        - Redeploy the previous known-good Worker version.
+        - Roll back D1 migration if safe.
+        - Disable the route temporarily if needed.
+        - Restore previous environment variables or bindings.
+        - Open a follow-up incident issue if production was affected.
+    validations:
+      required: false
+
+  - type: textarea
+    id: affected_files
+    attributes:
+      label: "Expected Files, Folders, Workflows, or Scripts Affected"
+      description: |
+        List likely files, folders, workflows, scripts, or project configs that may need changes.
+      placeholder: |
+        Example:
+        - .github/workflows/wrangler-deploy.yaml
+        - .github/workflows/cloudflare-preview.yaml
+        - .github/workflows/cloudflare-staging.yaml
+        - .github/workflows/cloudflare-production.yaml
+        - .github/scripts/cloudflare/discover-deployments.js
+        - .github/scripts/cloudflare/deploy-staging.js
+        - .github/scripts/cloudflare/run-d1-migrations.js
+        - apps/frontend/wrangler.jsonc
+        - apps/frontend/open-next.config.ts
+        - apps/services/*/wrangler.toml
+        - nx.json
+        - package.json
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation_plan
+    attributes:
+      label: "Implementation Plan"
+      description: |
+        Break the deployment task into concrete implementation steps.
+
+        Use checklist items so progress can be tracked.
+      placeholder: |
+        - [ ] Identify target Cloudflare resources.
+        - [ ] Update Wrangler configuration.
+        - [ ] Add or update deployment script.
+        - [ ] Add binding validation.
+        - [ ] Add D1 migration handling if needed.
+        - [ ] Add preview deployment behavior if needed.
+        - [ ] Add staging deployment behavior if needed.
+        - [ ] Add production approval behavior if needed.
+        - [ ] Add smoke tests.
+        - [ ] Add workflow summary output.
+        - [ ] Document rollback procedure.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: |
+        Define what must be true before this deployment task is complete.
+
+        These should be specific and verifiable.
+      placeholder: |
+        - [ ] Cloudflare configuration is updated.
+        - [ ] Required bindings are documented and validated.
+        - [ ] Preview deployment works if applicable.
+        - [ ] Staging deployment works if applicable.
+        - [ ] Production deployment is approval-gated if applicable.
+        - [ ] D1 migrations are handled safely if applicable.
+        - [ ] Smoke tests pass.
+        - [ ] Workflow logs do not expose secrets.
+        - [ ] Workflow summary explains what deployed.
+        - [ ] Rollback plan is documented.
+        - [ ] CI and security checks pass.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "Validation Plan"
+      description: |
+        Explain how this Cloudflare deployment task should be tested.
+
+        Include local validation, preview deployment, staging deployment, smoke tests, dry-run behavior, and production approval checks when relevant.
+      placeholder: |
+        Example:
+        Local:
+        - Run `pnpm install`.
+        - Run affected Nx lint target.
+        - Run affected Nx build target.
+        - Validate Wrangler config.
+
+        Preview:
+        - Open a test PR.
+        - Confirm preview deployment runs.
+        - Confirm preview URL is posted or summarized.
+        - Confirm bindings are correct.
+
+        Staging:
+        - Merge to main.
+        - Confirm staging deployment runs.
+        - Confirm smoke tests pass.
+
+        Production:
+        - Confirm release tag triggers production workflow.
+        - Confirm approval is required.
+        - Confirm production smoke tests pass.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure_modes
+    attributes:
+      label: "Expected Failure Modes"
+      description: |
+        Describe how deployment should fail safely.
+      placeholder: |
+        Example:
+        - Missing Cloudflare token should fail before deployment.
+        - Missing binding should fail before deployment.
+        - Failed D1 migration should stop deployment.
+        - Failed build should stop deployment.
+        - Failed smoke test should mark deployment as failed.
+        - Production deployment should not continue without approval.
+        - Secrets must never be printed in logs.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Dependencies, Prerequisites, or Blockers"
+      description: |
+        List anything required before this task can be completed.
+
+        Include secrets, variables, Cloudflare resources, GitHub Environments, workflows, scripts, labels, or related issues.
+      placeholder: |
+        Example:
+        - Requires CLOUDFLARE_API_TOKEN.
+        - Requires CLOUDFLARE_ACCOUNT_ID.
+        - Requires preview, staging, and production GitHub Environments.
+        - Requires D1 database to exist.
+        - Requires KV namespace to exist.
+        - Requires R2 bucket to exist.
+        - Requires Queue to exist.
+        - Depends on #123.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or ADRs"
+      description: |
+        Link anything related.
+
+        Use references such as:
+        - Related to #123
+        - Depends on #456
+        - Blocks #789
+      placeholder: |
+        Related to #
+        Depends on #
+        Blocks #
+    validations:
+      required: false
+
+  - type: textarea
+    id: documentation
+    attributes:
+      label: "Documentation Updates"
+      description: |
+        Describe any Cloudflare deployment docs, runbooks, README sections, ADRs, or comments that should be updated.
+      placeholder: |
+        Example:
+        - Document required Cloudflare secrets and variables.
+        - Document preview, staging, and production deployment behavior.
+        - Document D1 migration process.
+        - Document rollback process.
+        - Document smoke test expectations.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that would help with triage, implementation, validation, review, or rollback."
+      placeholder: |
+        Example:
+        This should be completed before production release deployment is enabled.
+        This should be tested in preview and staging before production.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm this Cloudflare deployment task is ready for triage."
+      options:
+        - label: "I explained the Cloudflare deployment behavior that needs to be added, changed, or fixed."
+          required: true
+        - label: "I included affected resources, implementation steps, or enough detail to create them."
+          required: true
+        - label: "I included validation steps or enough context to define them."
+          required: true
+        - label: "I understand maintainers may adjust priority, area, milestone, labels, and release impact."
+          required: true

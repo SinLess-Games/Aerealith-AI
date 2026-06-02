@@ -1,9 +1,14 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
 
-  description: "Helix AI Renovate configuration for pnpm, GitHub Actions, Docker, Kubernetes, Helm, Kustomize, Terraform, and Ansible.",
+  description:
+    "Aerealith AI Renovate configuration for pnpm, Nx, GitHub Actions, Docker, Cloudflare tooling, and future Helm/Kubernetes self-hosted Helix deployment support.",
+
+  enabled: true,
 
   baseBranchPatterns: ["main"],
+
+  timezone: "America/Boise",
 
   extends: [
     "config:recommended",
@@ -12,24 +17,20 @@
     ":semanticCommitScope(deps)",
     ":maintainLockFilesMonthly",
     ":prHourlyLimit2",
-    ":label(dependencies)",
   ],
-
-  enabled: true,
 
   enabledManagers: [
     "npm",
     "dockerfile",
     "github-actions",
-    "terraform",
-    "helm-values",
-    "kustomize",
-    "helmfile",
-    "ansible-galaxy",
-    "kubernetes",
-  ],
 
-  timezone: "America/Boise",
+    // Future self-hosted deployment support.
+    "helmv3",
+    "helm-values",
+    "helmfile",
+    "kubernetes",
+    "kustomize",
+  ],
 
   schedule: [
     "after 5pm every weekday",
@@ -45,18 +46,26 @@
   dependencyDashboardLabels: [
     "dependencies",
     "repo-management",
+    "no-release",
   ],
 
   labels: [
     "dependencies",
+    "no-release",
   ],
 
   addLabels: [
     "status:ready",
   ],
 
+  assigneesFromCodeOwners: true,
+  reviewersFromCodeOwners: true,
+
   rebaseWhen: "behind-base-branch",
+
+  automerge: false,
   automergeStrategy: "merge-commit",
+  platformAutomerge: true,
 
   rangeStrategy: "bump",
 
@@ -72,9 +81,12 @@
     ],
     labels: [
       "dependencies",
+      "no-release",
       "kind:chore",
       "status:ready",
     ],
+    automerge: true,
+    platformAutomerge: true,
   },
 
   ignorePaths: [
@@ -89,14 +101,16 @@
     "**/.cache/**",
     "**/.nx/**",
     "**/tmp/**",
-    "apps/e2e/**",
-    "tools/scripts/**",
+    "**/.turbo/**",
+    "**/.vercel/**",
+    "**/.netlify/**",
   ],
 
   npm: {
     managerFilePatterns: [
       "/(^|/)package\\.json$/",
-      "/(^|/)pnpm-workspace\\.yaml$/",
+      "/(^|/)pnpm-workspace\\.ya?ml$/",
+      "/(^|/)pnpm-lock\\.yaml$/",
       "/(^|/)\\.npmrc$/",
     ],
   },
@@ -106,6 +120,10 @@
       "/(^|/)Dockerfile$/",
       "/(^|/)Dockerfile\\.[^/]+$/",
       "/(^|/)docker/.+Dockerfile$/",
+      "/(^|/)apps/.+/Dockerfile$/",
+      "/(^|/)apps/.+/Dockerfile\\.[^/]+$/",
+      "/(^|/)libs/.+/Dockerfile$/",
+      "/(^|/)libs/.+/Dockerfile\\.[^/]+$/",
     ],
   },
 
@@ -116,62 +134,79 @@
     ],
   },
 
-  terraform: {
+  helmv3: {
     managerFilePatterns: [
-      "/(^|/)(Terraform|terraform)/.+\\.tf$/",
-      "/(^|/).+\\.tf$/",
+      "/(^|/)charts/.+/Chart\\.ya?ml$/",
+      "/(^|/)deploy/.+/Chart\\.ya?ml$/",
+      "/(^|/)helm/.+/Chart\\.ya?ml$/",
     ],
   },
 
   "helm-values": {
     managerFilePatterns: [
-      "/(^|/)(Kubernetes|kubernetes)/.+values\\.ya?ml$/",
-      "/(^|/)values\\.ya?ml$/",
-    ],
-  },
-
-  kustomize: {
-    managerFilePatterns: [
-      "/(^|/)(Kubernetes|kubernetes)/.+kustomization\\.ya?ml$/",
-      "/(^|/)kustomization\\.ya?ml$/",
+      "/(^|/)charts/.+/values\\.ya?ml$/",
+      "/(^|/)charts/.+/values-.+\\.ya?ml$/",
+      "/(^|/)deploy/.+/values\\.ya?ml$/",
+      "/(^|/)deploy/.+/values-.+\\.ya?ml$/",
+      "/(^|/)helm/.+/values\\.ya?ml$/",
+      "/(^|/)helm/.+/values-.+\\.ya?ml$/",
     ],
   },
 
   helmfile: {
     managerFilePatterns: [
-      "/(^|/)(Kubernetes|kubernetes)/.+helmfile\\.ya?ml$/",
       "/(^|/)helmfile\\.ya?ml$/",
+      "/(^|/)helmfile.d/.+\\.ya?ml$/",
+      "/(^|/)deploy/.+/helmfile\\.ya?ml$/",
     ],
   },
 
   kubernetes: {
     managerFilePatterns: [
-      "/(^|/)(Kubernetes|kubernetes)/.+\\.ya?ml$/",
+      "/(^|/)k8s/.+\\.ya?ml$/",
+      "/(^|/)kubernetes/.+\\.ya?ml$/",
+      "/(^|/)deploy/kubernetes/.+\\.ya?ml$/",
+      "/(^|/)deploy/manifests/.+\\.ya?ml$/",
+      "/(^|/)charts/.+/templates/.+\\.ya?ml$/",
     ],
   },
 
-  "ansible-galaxy": {
+  kustomize: {
     managerFilePatterns: [
-      "/(^|/)(Ansible|ansible)/requirements\\.ya?ml$/",
-      "/(^|/)(Ansible|ansible)/.+/requirements\\.ya?ml$/",
-      "/(^|/)requirements\\.ya?ml$/",
+      "/(^|/)kustomization\\.ya?ml$/",
+      "/(^|/)k8s/.+/kustomization\\.ya?ml$/",
+      "/(^|/)kubernetes/.+/kustomization\\.ya?ml$/",
+      "/(^|/)deploy/.+/kustomization\\.ya?ml$/",
     ],
   },
 
   packageRules: [
+    // -------------------------------------------------------------------------
+    // Global dependency PR behavior
+    // -------------------------------------------------------------------------
     {
-      description: "Group safe npm and pnpm patch updates and allow automerge after checks pass.",
-      matchManagers: ["npm"],
-      matchUpdateTypes: ["patch"],
-      matchDepTypes: [
-        "dependencies",
-        "devDependencies",
-        "optionalDependencies",
-        "peerDependencies",
+      description: "Mark every Renovate PR as dependency work and prevent release workflows.",
+      matchManagers: [
+        "npm",
+        "dockerfile",
+        "github-actions",
+        "helmv3",
+        "helm-values",
+        "helmfile",
+        "kubernetes",
+        "kustomize",
       ],
-      groupName: "npm patch dependencies",
-      labels: [
+      addLabels: [
         "dependencies",
+        "no-release",
+        "automation:renovate",
+      ],
+    },
+
+    {
+      description: "Automerge safe patch updates after branch protection and required checks pass.",
+      matchUpdateTypes: ["patch"],
+      addLabels: [
         "kind:chore",
         "priority:low",
         "status:ready",
@@ -182,30 +217,25 @@
     },
 
     {
-      description: "Group npm and pnpm minor updates for manual review.",
-      matchManagers: ["npm"],
+      description: "Automerge safe minor updates after branch protection and required checks pass.",
       matchUpdateTypes: ["minor"],
-      groupName: "npm minor dependencies",
-      labels: [
-        "dependencies",
+      addLabels: [
         "kind:chore",
         "priority:medium",
         "status:ready",
       ],
-      automerge: false,
+      automerge: true,
+      platformAutomerge: true,
       minimumReleaseAge: "5 days",
     },
 
     {
-      description: "Require manual review for npm and pnpm major updates.",
-      matchManagers: ["npm"],
+      description: "Require manual review for all major updates.",
       matchUpdateTypes: ["major"],
-      groupName: "npm major dependencies",
-      labels: [
-        "dependencies",
+      addLabels: [
         "kind:chore",
         "priority:high",
-        "status:ready",
+        "status:needs-review",
       ],
       dependencyDashboardApproval: true,
       automerge: false,
@@ -213,12 +243,162 @@
     },
 
     {
-      description: "Do not update local Helix workspace package references.",
+      description: "Automerge security vulnerability fixes after strict CI and security checks pass.",
+      matchVulnerabilityAlerts: true,
+      addLabels: [
+        "kind:security",
+        "security:dependency",
+        "area:security",
+        "priority:critical",
+        "status:ready",
+      ],
+      dependencyDashboardApproval: false,
+      automerge: true,
+      platformAutomerge: true,
+      minimumReleaseAge: "0 days",
+    },
+
+    // -------------------------------------------------------------------------
+    // Workspace package protection
+    // -------------------------------------------------------------------------
+    {
+      description: "Do not update local Aerealith workspace package references.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "/^@aerealith-ai\\//",
+      ],
+      enabled: false,
+    },
+
+    {
+      description: "Do not update legacy local Helix workspace package references.",
       matchManagers: ["npm"],
       matchPackageNames: [
         "/^@helix-ai\\//",
       ],
       enabled: false,
+    },
+
+    // -------------------------------------------------------------------------
+    // Monorepo path labels
+    // -------------------------------------------------------------------------
+    {
+      description: "Label frontend dependency updates.",
+      matchFileNames: [
+        "apps/frontend/**",
+      ],
+      addLabels: [
+        "area:frontend",
+      ],
+    },
+
+    {
+      description: "Label connector dependency updates.",
+      matchFileNames: [
+        "apps/connectors/**",
+      ],
+      addLabels: [
+        "area:connectors",
+      ],
+    },
+
+    {
+      description: "Label engine dependency updates.",
+      matchFileNames: [
+        "apps/engines/**",
+      ],
+      addLabels: [
+        "area:engines",
+      ],
+    },
+
+    {
+      description: "Label integration dependency updates.",
+      matchFileNames: [
+        "apps/integrations/**",
+      ],
+      addLabels: [
+        "area:integrations",
+      ],
+    },
+
+    {
+      description: "Label service dependency updates.",
+      matchFileNames: [
+        "apps/services/**",
+      ],
+      addLabels: [
+        "area:services",
+      ],
+    },
+
+    {
+      description: "Label e2e dependency updates.",
+      matchFileNames: [
+        "apps/e2e/**",
+      ],
+      addLabels: [
+        "area:e2e",
+        "kind:test",
+      ],
+    },
+
+    {
+      description: "Label library dependency updates.",
+      matchFileNames: [
+        "libs/**",
+      ],
+      addLabels: [
+        "area:libs",
+      ],
+    },
+
+    // -------------------------------------------------------------------------
+    // npm / pnpm package groups
+    // -------------------------------------------------------------------------
+    {
+      description: "Group npm and pnpm patch dependencies.",
+      matchManagers: ["npm"],
+      matchUpdateTypes: ["patch"],
+      matchDepTypes: [
+        "dependencies",
+        "devDependencies",
+        "optionalDependencies",
+        "peerDependencies",
+      ],
+      groupName: "npm patch dependencies",
+      addLabels: [
+        "area:dependencies",
+      ],
+    },
+
+    {
+      description: "Group npm and pnpm minor dependencies.",
+      matchManagers: ["npm"],
+      matchUpdateTypes: ["minor"],
+      matchDepTypes: [
+        "dependencies",
+        "devDependencies",
+        "optionalDependencies",
+        "peerDependencies",
+      ],
+      groupName: "npm minor dependencies",
+      addLabels: [
+        "area:dependencies",
+      ],
+    },
+
+    {
+      description: "Group npm and pnpm major dependencies for manual review.",
+      matchManagers: ["npm"],
+      matchUpdateTypes: ["major"],
+      groupName: "npm major dependencies",
+      addLabels: [
+        "area:dependencies",
+        "status:needs-review",
+      ],
+      dependencyDashboardApproval: true,
+      automerge: false,
     },
 
     {
@@ -233,12 +413,11 @@
         "@emotion/**",
       ],
       groupName: "frontend framework dependencies",
-      labels: [
-        "dependencies",
+      addLabels: [
         "area:frontend",
         "area:ui",
         "priority:high",
-        "status:ready",
+        "status:needs-review",
       ],
       automerge: false,
       dependencyDashboardApproval: true,
@@ -252,25 +431,25 @@
         "@nx/**",
       ],
       groupName: "nx workspace dependencies",
-      labels: [
-        "dependencies",
+      addLabels: [
         "area:ci",
         "kind:chore",
         "priority:high",
-        "status:ready",
+        "status:needs-review",
       ],
       automerge: false,
       dependencyDashboardApproval: true,
     },
 
     {
-      description: "Group TypeScript, ESLint, Prettier, Jest, Vitest, and test tooling updates.",
+      description: "Group TypeScript, ESLint, Prettier, Jest, Vitest, Cypress, Playwright, and test tooling updates.",
       matchManagers: ["npm"],
       matchPackageNames: [
         "typescript",
         "eslint",
         "@eslint/**",
         "typescript-eslint",
+        "@typescript-eslint/**",
         "prettier",
         "jest",
         "@jest/**",
@@ -280,103 +459,127 @@
         "playwright",
         "@playwright/**",
         "cypress",
+        "@cypress/**",
       ],
       groupName: "lint test and typescript tooling",
-      labels: [
-        "dependencies",
+      addLabels: [
         "area:ci",
         "kind:test",
         "priority:medium",
-        "status:ready",
       ],
       automerge: false,
     },
 
     {
-      description: "Group Cloudflare and OpenNext updates for manual review.",
+      description: "Group Cloudflare, Wrangler, Workers, and OpenNext updates for manual review.",
       matchManagers: ["npm"],
       matchPackageNames: [
         "wrangler",
         "@cloudflare/**",
+        "@cloudflare/workers-types",
         "@opennextjs/cloudflare",
       ],
       groupName: "cloudflare deployment dependencies",
-      labels: [
-        "dependencies",
+      addLabels: [
         "area:cloudflare",
         "cloudflare",
         "deployment",
         "priority:high",
-        "status:ready",
+        "status:needs-review",
       ],
       automerge: false,
       dependencyDashboardApproval: true,
     },
 
     {
-      description: "Group MikroORM and database driver updates for manual review.",
+      description: "Group OpenAI and AI automation dependencies for manual review.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "openai",
+        "@ai-sdk/**",
+        "ai",
+      ],
+      groupName: "ai automation dependencies",
+      addLabels: [
+        "area:ai",
+        "automation:openai",
+        "priority:high",
+        "status:needs-review",
+      ],
+      automerge: false,
+      dependencyDashboardApproval: true,
+    },
+
+    {
+      description: "Group GitHub API and workflow scripting dependencies.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "@actions/**",
+        "@octokit/**",
+        "octokit",
+        "js-yaml",
+        "zod",
+        "glob",
+        "minimatch",
+        "semver",
+      ],
+      groupName: "github automation script dependencies",
+      addLabels: [
+        "area:github-actions",
+        "area:repo-management",
+        "automation",
+        "priority:medium",
+      ],
+      automerge: false,
+    },
+
+    {
+      description: "Group database, ORM, and driver updates for manual review.",
       matchManagers: ["npm"],
       matchPackageNames: [
         "@mikro-orm/**",
         "pg",
+        "postgres",
         "uuid",
+        "drizzle-orm",
+        "@neondatabase/**",
       ],
       groupName: "database dependencies",
-      labels: [
-        "dependencies",
+      addLabels: [
         "area:db",
         "priority:high",
-        "status:ready",
+        "status:needs-review",
       ],
       automerge: false,
       dependencyDashboardApproval: true,
     },
 
+    // -------------------------------------------------------------------------
+    // GitHub Actions
+    // -------------------------------------------------------------------------
     {
-      description: "Group Grafana, Faro, and observability dependencies.",
-      matchManagers: ["npm"],
-      matchPackageNames: [
-        "@grafana/**",
-        "@opentelemetry/**",
-        "prom-client",
-      ],
-      groupName: "observability dependencies",
-      labels: [
-        "dependencies",
-        "area:observability",
-        "priority:medium",
-        "status:ready",
-      ],
-      automerge: false,
-    },
-
-    {
-      description: "Group GitHub Actions updates for manual review.",
+      description: "Group GitHub Actions updates.",
       matchManagers: ["github-actions"],
       groupName: "github actions dependencies",
-      labels: [
-        "dependencies",
+      addLabels: [
         "actions-update",
         "area:github-actions",
         "area:ci",
         "automation",
-        "status:ready",
       ],
       automerge: false,
     },
 
     {
-      description: "Allow patch-level GitHub Actions updates to automerge after checks pass.",
+      description: "Automerge patch-level GitHub Actions updates after checks pass.",
       matchManagers: ["github-actions"],
       matchUpdateTypes: ["patch"],
-      labels: [
-        "dependencies",
+      addLabels: [
         "actions-update",
         "area:github-actions",
         "area:ci",
         "automation",
         "priority:low",
-        "status:ready",
       ],
       automerge: true,
       platformAutomerge: true,
@@ -384,116 +587,110 @@
     },
 
     {
+      description: "Automerge minor GitHub Actions updates after checks pass.",
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["minor"],
+      addLabels: [
+        "actions-update",
+        "area:github-actions",
+        "area:ci",
+        "automation",
+        "priority:medium",
+      ],
+      automerge: true,
+      platformAutomerge: true,
+      minimumReleaseAge: "5 days",
+    },
+
+    {
+      description: "Require manual review for major GitHub Actions updates.",
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["major"],
+      addLabels: [
+        "actions-update",
+        "area:github-actions",
+        "area:ci",
+        "automation",
+        "priority:high",
+        "status:needs-review",
+      ],
+      automerge: false,
+      dependencyDashboardApproval: true,
+    },
+
+    // -------------------------------------------------------------------------
+    // Docker
+    // -------------------------------------------------------------------------
+    {
       description: "Group Dockerfile image updates.",
       matchManagers: ["dockerfile"],
       groupName: "docker image dependencies",
-      labels: [
-        "dependencies",
+      addLabels: [
         "deployment",
+        "area:docker",
         "area:ci",
         "priority:medium",
-        "status:ready",
       ],
       automerge: false,
     },
 
     {
-      description: "Group Kubernetes manifest image updates.",
-      matchManagers: ["kubernetes"],
-      matchFileNames: [
-        "Kubernetes/**",
-        "kubernetes/**",
+      description: "Automerge Docker patch updates after image build and security checks pass.",
+      matchManagers: ["dockerfile"],
+      matchUpdateTypes: ["patch"],
+      addLabels: [
+        "deployment",
+        "area:docker",
+        "priority:low",
       ],
-      groupName: "kubernetes manifest dependencies",
-      labels: [
-        "dependencies",
-        "k8s-dependencies",
-        "area:kubernetes",
-        "priority:medium",
-        "status:ready",
-      ],
-      automerge: false,
+      automerge: true,
+      platformAutomerge: true,
+      minimumReleaseAge: "3 days",
     },
 
+    // -------------------------------------------------------------------------
+    // Future Helm / Kubernetes self-hosted support
+    // -------------------------------------------------------------------------
     {
-      description: "Group Helm values, Helmfile, and Kustomize updates.",
+      description: "Group Helm chart dependency updates for self-hosted deployments.",
       matchManagers: [
+        "helmv3",
         "helm-values",
         "helmfile",
+      ],
+      groupName: "helm self hosted deployment dependencies",
+      addLabels: [
+        "area:helm",
+        "area:self-hosted",
+        "deployment",
+        "priority:high",
+        "status:needs-review",
+      ],
+      automerge: false,
+      dependencyDashboardApproval: true,
+    },
+
+    {
+      description: "Group Kubernetes and Kustomize dependency updates for self-hosted deployments.",
+      matchManagers: [
+        "kubernetes",
         "kustomize",
       ],
-      matchFileNames: [
-        "Kubernetes/**",
-        "kubernetes/**",
-      ],
-      groupName: "kubernetes infra updates",
-      labels: [
-        "dependencies",
-        "k8s-dependencies",
+      groupName: "kubernetes self hosted deployment dependencies",
+      addLabels: [
         "area:kubernetes",
-        "priority:medium",
-        "status:ready",
-      ],
-      automerge: false,
-    },
-
-    {
-      description: "Group Terraform provider and module updates for manual review.",
-      matchManagers: ["terraform"],
-      matchFileNames: [
-        "Terraform/**",
-        "terraform/**",
-        "**/*.tf",
-        "**/*.tfvars",
-        "**/*.hcl",
-      ],
-      groupName: "terraform dependencies",
-      labels: [
-        "dependencies",
-        "terraform-dependencies",
-        "area:terraform",
-        "priority:medium",
-        "status:ready",
-      ],
-      automerge: false,
-      dependencyDashboardApproval: true,
-    },
-
-    {
-      description: "Group Ansible Galaxy dependency updates for manual review.",
-      matchManagers: ["ansible-galaxy"],
-      matchFileNames: [
-        "Ansible/**",
-        "ansible/**",
-        "**/requirements.yaml",
-        "**/requirements.yml",
-      ],
-      groupName: "ansible dependencies",
-      labels: [
-        "dependencies",
-        "ansible-dependencies",
-        "area:ansible",
-        "priority:medium",
-        "status:ready",
-      ],
-      automerge: false,
-      dependencyDashboardApproval: true,
-    },
-
-    {
-      description: "Mark security-related vulnerability fixes as high priority.",
-      matchVulnerabilityAlerts: true,
-      labels: [
-        "dependencies",
-        "kind:security",
-        "area:security",
+        "area:self-hosted",
+        "deployment",
         "priority:high",
-        "status:ready",
+        "status:needs-review",
       ],
       automerge: false,
-      dependencyDashboardApproval: false,
+      dependencyDashboardApproval: true,
     },
 
+    // -------------------------------------------------------------------------
+    // Generated files
+    // -------------------------------------------------------------------------
     {
       description: "Disable updates in generated or build-output package files.",
       matchFileNames: [
@@ -502,6 +699,9 @@
         "**/.next/**",
         "**/.open-next/**",
         "**/.wrangler/**",
+        "**/coverage/**",
+        "**/.cache/**",
+        "**/.nx/**",
       ],
       enabled: false,
     },

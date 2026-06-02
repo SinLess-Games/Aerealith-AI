@@ -1,65 +1,275 @@
-name: Wrangler Deploy
+name: Aerealith AI Wrangler Deploy
+
+run-name: >-
+  Wrangler Deploy / ${{ github.event_name }} / ${{ github.head_ref || github.ref_name || 'manual' }}
 
 on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Wrangler deployment mode."
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - build-only
+          - discover-only
+          - summarize-only
+      environment_name:
+        description: "GitHub deployment environment. Auto maps main=production, staging=staging, everything else=preview."
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - preview
+          - staging
+          - production
+      wrangler_environment:
+        description: "Optional Wrangler --env value. Leave empty to deploy the default Wrangler environment."
+        required: false
+        default: ""
+        type: string
+      deploy_all:
+        description: "Deploy every discovered Wrangler app instead of only changed apps."
+        required: true
+        default: false
+        type: boolean
+      ref_base:
+        description: "Optional base ref/SHA to compare against."
+        required: false
+        default: ""
+        type: string
+      config_filter:
+        description: "Optional Wrangler config path/name filter."
+        required: false
+        default: ""
+        type: string
+      run_build:
+        description: "Run cf:build or build before deploying when an app package.json exists."
+        required: true
+        default: true
+        type: boolean
+      dry_run:
+        description: "Build and summarize without deploying to Cloudflare."
+        required: true
+        default: false
+        type: boolean
+
   push:
     branches:
       - main
       - develop
-
-  workflow_dispatch:
-    inputs:
-      deploy_all:
-        description: Deploy all discovered Wrangler apps
-        required: false
-        default: false
-        type: boolean
-      ref_base:
-        description: Optional base ref/SHA to compare against
-        required: false
-        default: ''
-        type: string
+      - staging
+      - "release/**"
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
 
 permissions:
+  actions: read
+  checks: write
   contents: read
   deployments: write
 
 concurrency:
-  group: wrangler-deploy-${{ github.ref }}
+  group: wrangler-deploy-${{ github.workflow }}-${{ github.ref_name || github.run_id }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 env:
-  CI: true
-  NODE_VERSION: '24'
-  PNPM_HOME: ~/.local/share/pnpm
-  NX_DAEMON: 'false'
-  NEXT_TELEMETRY_DISABLED: '1'
+  PROJECT_NAME: Aerealith AI
+  CI: "true"
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  NX_DAEMON: "false"
+  NEXT_TELEMETRY_DISABLED: "1"
+  CLOUDFLARE_OUTPUT_DIR: artifacts/cloudflare/wrangler
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
 
 jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      environment_name: ${{ steps.context.outputs.environment_name }}
+      wrangler_environment: ${{ steps.context.outputs.wrangler_environment }}
+      deploy_all: ${{ steps.context.outputs.deploy_all }}
+      ref_base: ${{ steps.context.outputs.ref_base }}
+      config_filter: ${{ steps.context.outputs.config_filter }}
+      run_build: ${{ steps.context.outputs.run_build }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      should_discover: ${{ steps.context.outputs.should_discover }}
+      should_build: ${{ steps.context.outputs.should_build }}
+      should_deploy: ${{ steps.context.outputs.should_deploy }}
+      should_run_apps: ${{ steps.context.outputs.should_run_apps }}
+      should_summarize: ${{ steps.context.outputs.should_summarize }}
+
+    steps:
+      - name: Resolve Wrangler deploy context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'deploy' }}
+          INPUT_ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name || 'auto' }}
+          INPUT_WRANGLER_ENVIRONMENT: ${{ github.event.inputs.wrangler_environment || '' }}
+          INPUT_DEPLOY_ALL: ${{ github.event.inputs.deploy_all || 'false' }}
+          INPUT_REF_BASE: ${{ github.event.inputs.ref_base || '' }}
+          INPUT_CONFIG_FILTER: ${{ github.event.inputs.config_filter || '' }}
+          INPUT_RUN_BUILD: ${{ github.event.inputs.run_build || 'true' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          REF_NAME: ${{ github.ref_name || '' }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-deploy}"
+          environment_name="${INPUT_ENVIRONMENT_NAME:-auto}"
+          wrangler_environment="${INPUT_WRANGLER_ENVIRONMENT:-}"
+          deploy_all="${INPUT_DEPLOY_ALL:-false}"
+          ref_base="${INPUT_REF_BASE:-}"
+          config_filter="${INPUT_CONFIG_FILTER:-}"
+          run_build="${INPUT_RUN_BUILD:-true}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+
+          if [[ "$environment_name" == "auto" ]]; then
+            case "${REF_NAME:-}" in
+              main)
+                environment_name="production"
+                ;;
+              staging)
+                environment_name="staging"
+                ;;
+              release/*)
+                environment_name="staging"
+                ;;
+              *)
+                environment_name="preview"
+                ;;
+            esac
+          fi
+
+          should_discover="false"
+          should_build="false"
+          should_deploy="false"
+          should_summarize="true"
+
+          case "$mode" in
+            deploy)
+              should_discover="true"
+              should_build="$run_build"
+              should_deploy="true"
+              ;;
+            build-only)
+              should_discover="true"
+              should_build="$run_build"
+              should_deploy="false"
+              ;;
+            discover-only)
+              should_discover="true"
+              should_build="false"
+              should_deploy="false"
+              ;;
+            summarize-only)
+              should_discover="false"
+              should_build="false"
+              should_deploy="false"
+              ;;
+            *)
+              echo "::error::Unsupported Wrangler deploy mode: $mode"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$dry_run" == "true" ]]; then
+            should_deploy="false"
+          fi
+
+          should_run_apps="false"
+          if [[ "$should_build" == "true" || "$should_deploy" == "true" ]]; then
+            should_run_apps="true"
+          fi
+
+          {
+            echo "mode=$mode"
+            echo "environment_name=$environment_name"
+            echo "wrangler_environment=$wrangler_environment"
+            echo "deploy_all=$deploy_all"
+            echo "ref_base=$ref_base"
+            echo "config_filter=$config_filter"
+            echo "run_build=$run_build"
+            echo "dry_run=$dry_run"
+            echo "should_discover=$should_discover"
+            echo "should_build=$should_build"
+            echo "should_deploy=$should_deploy"
+            echo "should_run_apps=$should_run_apps"
+            echo "should_summarize=$should_summarize"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Wrangler Deploy"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Mode | \`$mode\` |"
+            echo "| GitHub environment | \`$environment_name\` |"
+            echo "| Wrangler environment | \`${wrangler_environment:-default}\` |"
+            echo "| Deploy all | \`$deploy_all\` |"
+            echo "| Ref base | \`${ref_base:-auto}\` |"
+            echo "| Config filter | \`${config_filter:-none}\` |"
+            echo "| Run build | \`$run_build\` |"
+            echo "| Dry run | \`$dry_run\` |"
+            echo "| Discover | \`$should_discover\` |"
+            echo "| Build | \`$should_build\` |"
+            echo "| Deploy | \`$should_deploy\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   discover:
-    name: Discover Changed Wrangler Apps
+    name: Discover Wrangler apps
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs:
+      - preflight
+
+    if: needs.preflight.outputs.should_discover == 'true'
 
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
       has_changes: ${{ steps.discover.outputs.has_changes }}
+      app_count: ${{ steps.discover.outputs.app_count }}
+
+    env:
+      DEPLOY_ALL: ${{ needs.preflight.outputs.deploy_all }}
+      REF_BASE: ${{ needs.preflight.outputs.ref_base }}
+      CONFIG_FILTER: ${{ needs.preflight.outputs.config_filter }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare Wrangler output directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$CLOUDFLARE_OUTPUT_DIR"
 
       - name: Discover changed Wrangler apps
         id: discover
-        shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before }}
+          BEFORE_SHA: ${{ github.event.before || '' }}
           CURRENT_SHA: ${{ github.sha }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          DEPLOY_ALL: ${{ inputs.deploy_all || false }}
-          REF_BASE: ${{ inputs.ref_base || '' }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+          OUTPUT_DIR: ${{ env.CLOUDFLARE_OUTPUT_DIR }}
         run: |
           set -euo pipefail
 
@@ -68,16 +278,19 @@ jobs:
           import os
           import re
           import subprocess
+          from datetime import datetime, timezone
           from pathlib import Path
 
           workspace = Path.cwd()
+          output_dir = Path(os.environ["OUTPUT_DIR"])
+          output_dir.mkdir(parents=True, exist_ok=True)
 
           ignored_parts = {
               ".git",
-              ".github",
               ".next",
               ".nx",
               ".turbo",
+              "artifacts",
               "coverage",
               "dist",
               "node_modules",
@@ -103,12 +316,13 @@ jobs:
 
           zero_sha = "0000000000000000000000000000000000000000"
 
-          event_name = os.environ["EVENT_NAME"]
+          event_name = os.environ.get("EVENT_NAME", "")
           before_sha = os.environ.get("BEFORE_SHA", "")
-          current_sha = os.environ["CURRENT_SHA"]
+          current_sha = os.environ.get("CURRENT_SHA", "HEAD")
           default_branch = os.environ.get("DEFAULT_BRANCH", "main")
           deploy_all = os.environ.get("DEPLOY_ALL", "false").lower() == "true"
           ref_base = os.environ.get("REF_BASE", "").strip()
+          config_filter = os.environ.get("CONFIG_FILTER", "").strip().lower()
 
           def run(command: list[str]) -> str:
               return subprocess.check_output(command, text=True).strip()
@@ -119,22 +333,23 @@ jobs:
               value = value.strip("-")
               return value or "root"
 
+          def posix(path: Path) -> str:
+              return path.as_posix()
+
           def is_ignored(path: Path) -> bool:
               return any(part in ignored_parts for part in path.parts)
 
           def is_wrangler_file(path: Path) -> bool:
               name = path.name.lower()
 
-              if name.startswith("wrangler") and name.endswith(".jsonc"):
-                  return True
-
-              if name.startswith("wrangler") and name.endswith(".json"):
-                  return True
-
-              if name.startswith("wrangler") and name.endswith(".toml"):
-                  return True
-
-              return False
+              return (
+                  name.startswith("wrangler")
+                  and (
+                      name.endswith(".jsonc")
+                      or name.endswith(".json")
+                      or name.endswith(".toml")
+                  )
+              )
 
           def resolve_base_ref() -> str:
               if ref_base:
@@ -142,6 +357,11 @@ jobs:
 
               if event_name == "push" and before_sha and before_sha != zero_sha:
                   return before_sha
+
+              try:
+                  run(["git", "fetch", "--no-tags", "--prune", "--depth=1", "origin", default_branch])
+              except subprocess.CalledProcessError:
+                  pass
 
               try:
                   run(["git", "rev-parse", f"origin/{default_branch}"])
@@ -170,13 +390,13 @@ jobs:
                           "git",
                           "diff",
                           "--name-only",
-                          f"{base_ref}",
+                          base_ref,
                           current_sha,
                       ]
                   )
 
               return {
-                  line.strip()
+                  line.strip().replace("\\", "/")
                   for line in diff_output.splitlines()
                   if line.strip()
               }
@@ -191,7 +411,9 @@ jobs:
           wrangler_files = [
               path
               for path in sorted(workspace.rglob("*"))
-              if path.is_file() and is_wrangler_file(path) and not is_ignored(path.relative_to(workspace))
+              if path.is_file()
+              and is_wrangler_file(path)
+              and not is_ignored(path.relative_to(workspace))
           ]
 
           changed_files = get_changed_files()
@@ -204,8 +426,20 @@ jobs:
               app_root = wrangler_file.parent
               relative_app_root = app_root.relative_to(workspace)
 
-              app_root_str = "." if str(relative_app_root) == "." else str(relative_app_root)
-              wrangler_path_str = str(relative_wrangler)
+              app_root_str = "." if str(relative_app_root) == "." else posix(relative_app_root)
+              wrangler_path_str = posix(relative_wrangler)
+
+              app_name = slugify(app_root_str)
+              config_name = slugify(wrangler_file.name)
+
+              if config_name not in {"wrangler-jsonc", "wrangler-json", "wrangler-toml"}:
+                  app_name = slugify(f"{app_name}-{config_name}")
+
+              if config_filter:
+                  filter_target = f"{app_name} {app_root_str} {wrangler_path_str}".lower()
+
+                  if config_filter not in filter_target:
+                      continue
 
               app_changed = deploy_all or root_or_shared_changed
 
@@ -221,61 +455,140 @@ jobs:
               if not app_changed:
                   continue
 
-              app_name = slugify(app_root_str)
-              config_name = slugify(wrangler_file.name)
-
-              if config_name not in {"wrangler-jsonc", "wrangler-json", "wrangler-toml"}:
-                  app_name = slugify(f"{app_name}-{config_name}")
+              package_json = app_root / "package.json"
 
               entries.append(
                   {
                       "name": app_name,
                       "root": app_root_str,
                       "config": wrangler_path_str,
+                      "package_json": posix(package_json.relative_to(workspace)) if package_json.exists() else "",
+                      "has_package_json": package_json.exists(),
                   }
               )
 
+          matrix = {"include": entries}
+
+          report = {
+              "schema_version": 1,
+              "type": "wrangler-deploy-discovery",
+              "project": os.environ.get("PROJECT_NAME", "Aerealith AI"),
+              "repository": os.environ.get("GITHUB_REPOSITORY", ""),
+              "run_id": os.environ.get("GITHUB_RUN_ID", ""),
+              "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+              "event_name": event_name,
+              "deploy_all": deploy_all,
+              "ref_base": ref_base or None,
+              "config_filter": config_filter or None,
+              "changed_files": sorted(changed_files),
+              "root_or_shared_changed": root_or_shared_changed,
+              "wrangler_files": [posix(path.relative_to(workspace)) for path in wrangler_files],
+              "apps": entries,
+              "totals": {
+                  "wrangler_files": len(wrangler_files),
+                  "changed_files": len(changed_files),
+                  "apps": len(entries),
+              },
+              "has_changes": bool(entries),
+              "created_at": datetime.now(timezone.utc).isoformat(),
+          }
+
+          (output_dir / "discover-wrangler-apps.json").write_text(json.dumps(report, indent=2) + "\n")
+
+          lines = [
+              "# Aerealith AI Wrangler App Discovery",
+              "",
+              f"Generated: `{report['created_at']}`",
+              "",
+              "## Status",
+              "",
+              f"- Wrangler configs found: `{len(wrangler_files)}`",
+              f"- Changed files: `{len(changed_files)}`",
+              f"- Apps selected: `{len(entries)}`",
+              f"- Deploy all: `{'true' if deploy_all else 'false'}`",
+              f"- Root/shared changed: `{'true' if root_or_shared_changed else 'false'}`",
+              "",
+              "## Selected Apps",
+              "",
+              "| App | Root | Config | Package |",
+              "|---|---|---|---|",
+          ]
+
+          if entries:
+              for entry in entries:
+                  lines.append(
+                      f"| `{entry['name']}` | `{entry['root']}` | `{entry['config']}` | `{entry['package_json'] or 'none'}` |"
+                  )
+          else:
+              lines.append("| `none` | `n/a` | `n/a` | `n/a` |")
+
+          lines.append("")
+
+          (output_dir / "discover-wrangler-apps.md").write_text("\n".join(lines).strip() + "\n")
+
           print(f"has_changes={'true' if entries else 'false'}")
-          print(
-              "matrix="
-              + json.dumps(
-                  {"include": entries},
-                  separators=(",", ":"),
-              )
-          )
+          print(f"app_count={len(entries)}")
+          print("matrix=" + json.dumps(matrix, separators=(",", ":")))
           PY
 
       - name: Show deployment matrix
-        shell: bash
         run: |
+          set -euo pipefail
           echo '${{ steps.discover.outputs.matrix }}' | python -m json.tool
 
-  deploy:
-    name: Deploy ${{ matrix.name }}
+      - name: Write discovery summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [[ -f "$CLOUDFLARE_OUTPUT_DIR/discover-wrangler-apps.md" ]]; then
+            cat "$CLOUDFLARE_OUTPUT_DIR/discover-wrangler-apps.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Wrangler discovery artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wrangler-discovery-${{ github.run_id }}
+          path: |
+            artifacts/cloudflare/wrangler/discover-wrangler-apps.*
+          if-no-files-found: ignore
+          retention-days: 14
+
+  build-and-deploy:
+    name: ${{ needs.preflight.outputs.should_deploy == 'true' && 'Deploy' || 'Build' }} ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     needs:
+      - preflight
       - discover
 
-    if: needs.discover.outputs.has_changes == 'true'
+    if: >-
+      needs.discover.outputs.has_changes == 'true' &&
+      needs.preflight.outputs.should_run_apps == 'true'
 
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
 
     environment:
-      name: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      name: ${{ needs.preflight.outputs.environment_name }}
 
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_DEPLOY_ENVIRONMENT: ${{ needs.preflight.outputs.environment_name }}
+      WRANGLER_ENVIRONMENT: ${{ needs.preflight.outputs.wrangler_environment }}
+      WRANGLER_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      SHOULD_BUILD: ${{ needs.preflight.outputs.should_build }}
+      SHOULD_DEPLOY: ${{ needs.preflight.outputs.should_deploy }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -292,75 +605,296 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare app output directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$CLOUDFLARE_OUTPUT_DIR/apps"
+
       - name: Validate Cloudflare credentials
-        shell: bash
+        if: env.SHOULD_DEPLOY == 'true'
         run: |
           set -euo pipefail
 
           if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
-            echo "Missing required secret: CLOUDFLARE_API_TOKEN"
+            echo "::error::Missing required secret: CLOUDFLARE_API_TOKEN"
             exit 1
+          fi
+
+          if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+            echo "::warning::CLOUDFLARE_ACCOUNT_ID is not set. Wrangler may still work if the account is configured in the Wrangler config."
           fi
 
       - name: Show Wrangler version
         run: pnpm exec wrangler --version
 
       - name: Build app when build script exists
-        shell: bash
+        if: env.SHOULD_BUILD == 'true'
+        env:
+          APP_ROOT: ${{ matrix.root }}
         run: |
           set -euo pipefail
 
-          APP_ROOT="${{ matrix.root }}"
+          script_name="$(node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
 
-          if [[ -f "$APP_ROOT/package.json" ]]; then
-            if node -e "const p=require('./${APP_ROOT}/package.json'); process.exit(p.scripts?.['cf:build'] ? 0 : 1)"; then
-              pnpm --dir "$APP_ROOT" run cf:build
-            elif node -e "const p=require('./${APP_ROOT}/package.json'); process.exit(p.scripts?.build ? 0 : 1)"; then
-              pnpm --dir "$APP_ROOT" run build
-            else
-              echo "No cf:build or build script found for $APP_ROOT. Skipping app build."
-            fi
-          else
-            echo "No package.json found in $APP_ROOT. Skipping app build."
+          const appRoot = process.env.APP_ROOT || ".";
+          const packageJsonPath = path.join(appRoot, "package.json");
+
+          if (!fs.existsSync(packageJsonPath)) {
+            process.exit(0);
+          }
+
+          const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+          const scripts = pkg.scripts || {};
+
+          if (scripts["cf:build"]) {
+            console.log("cf:build");
+          } else if (scripts["cloudflare:build"]) {
+            console.log("cloudflare:build");
+          } else if (scripts["wrangler:build"]) {
+            console.log("wrangler:build");
+          } else if (scripts.build) {
+            console.log("build");
+          }
+          NODE
+          )"
+
+          if [[ -z "$script_name" ]]; then
+            echo "No cf:build, cloudflare:build, wrangler:build, or build script found for $APP_ROOT. Skipping build."
+            exit 0
           fi
 
+          echo "Running '$script_name' for $APP_ROOT."
+          pnpm --dir "$APP_ROOT" run "$script_name"
+
       - name: Deploy with Wrangler
-        shell: bash
+        id: deploy
+        if: env.SHOULD_DEPLOY == 'true'
+        env:
+          APP_NAME: ${{ matrix.name }}
+          APP_ROOT: ${{ matrix.root }}
+          WRANGLER_CONFIG: ${{ matrix.config }}
         run: |
           set -euo pipefail
 
-          pnpm exec wrangler deploy --config "${{ matrix.config }}"
+          log_file="$CLOUDFLARE_OUTPUT_DIR/apps/${APP_NAME}-wrangler.log"
+          report_file="$CLOUDFLARE_OUTPUT_DIR/apps/${APP_NAME}.json"
+          summary_file="$CLOUDFLARE_OUTPUT_DIR/apps/${APP_NAME}.md"
+
+          deploy_args=(deploy --config "$WRANGLER_CONFIG")
+
+          if [[ -n "${WRANGLER_ENVIRONMENT:-}" && "${WRANGLER_ENVIRONMENT:-}" != "default" && "${WRANGLER_ENVIRONMENT:-}" != "none" ]]; then
+            deploy_args+=(--env "$WRANGLER_ENVIRONMENT")
+          fi
+
+          echo "Deploy command: pnpm exec wrangler ${deploy_args[*]}"
+
+          set +e
+          pnpm exec wrangler "${deploy_args[@]}" 2>&1 | tee "$log_file"
+          deploy_status="${PIPESTATUS[0]}"
+          set -e
+
+          APP_NAME="$APP_NAME" \
+          APP_ROOT="$APP_ROOT" \
+          WRANGLER_CONFIG="$WRANGLER_CONFIG" \
+          WRANGLER_ENVIRONMENT="${WRANGLER_ENVIRONMENT:-}" \
+          WRANGLER_DEPLOY_ENVIRONMENT="$WRANGLER_DEPLOY_ENVIRONMENT" \
+          DEPLOY_STATUS="$deploy_status" \
+          LOG_FILE="$log_file" \
+          REPORT_FILE="$report_file" \
+          SUMMARY_FILE="$summary_file" \
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          const log = fs.existsSync(process.env.LOG_FILE)
+            ? fs.readFileSync(process.env.LOG_FILE, "utf8")
+            : "";
+
+          const urls = Array.from(new Set(log.match(/https?:\/\/[^\s<>"')]+/g) || []));
+          const deploymentUrl = urls.find((url) => url.includes("workers.dev")) || urls[0] || "";
+
+          const statusCode = Number(process.env.DEPLOY_STATUS || 1);
+          const ok = statusCode === 0;
+
+          const report = {
+            schema_version: 1,
+            type: "wrangler-deploy-app",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            app: {
+              name: process.env.APP_NAME,
+              root: process.env.APP_ROOT,
+              config: process.env.WRANGLER_CONFIG,
+              wrangler_environment: process.env.WRANGLER_ENVIRONMENT || "",
+              github_environment: process.env.WRANGLER_DEPLOY_ENVIRONMENT || "",
+            },
+            deployment: {
+              status_code: statusCode,
+              status: ok ? "passed" : "failed",
+              ok,
+              url: deploymentUrl,
+              urls,
+            },
+            log_file: process.env.LOG_FILE,
+            created_at: new Date().toISOString(),
+          };
+
+          fs.writeFileSync(process.env.REPORT_FILE, `${JSON.stringify(report, null, 2)}\n`);
+
+          const lines = [
+            `# Wrangler Deployment: ${report.app.name}`,
+            "",
+            `Generated: \`${report.created_at}\``,
+            "",
+            "## Status",
+            "",
+            `- Status: \`${report.deployment.status}\``,
+            `- App root: \`${report.app.root}\``,
+            `- Config: \`${report.app.config}\``,
+            `- GitHub environment: \`${report.app.github_environment || "none"}\``,
+            `- Wrangler environment: \`${report.app.wrangler_environment || "default"}\``,
+            `- Deployment URL: ${report.deployment.url || "`none detected`"}`,
+            "",
+          ];
+
+          fs.writeFileSync(process.env.SUMMARY_FILE, `${lines.join("\n").trim()}\n`);
+
+          if (deploymentUrl) {
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `deployment_url=${deploymentUrl}\n`);
+          }
+          NODE
+
+          if [[ -f "$summary_file" ]]; then
+            cat "$summary_file" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [[ "$deploy_status" -ne 0 ]]; then
+            exit "$deploy_status"
+          fi
+
+      - name: Write build-only or dry-run report
+        if: env.SHOULD_DEPLOY != 'true'
+        env:
+          APP_NAME: ${{ matrix.name }}
+          APP_ROOT: ${{ matrix.root }}
+          WRANGLER_CONFIG: ${{ matrix.config }}
+        run: |
+          set -euo pipefail
+
+          report_file="$CLOUDFLARE_OUTPUT_DIR/apps/${APP_NAME}.json"
+          summary_file="$CLOUDFLARE_OUTPUT_DIR/apps/${APP_NAME}.md"
+
+          cat > "$report_file" <<JSON
+          {
+            "schema_version": 1,
+            "type": "wrangler-deploy-app",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "app": {
+              "name": "$APP_NAME",
+              "root": "$APP_ROOT",
+              "config": "$WRANGLER_CONFIG",
+              "wrangler_environment": "$WRANGLER_ENVIRONMENT",
+              "github_environment": "$WRANGLER_DEPLOY_ENVIRONMENT"
+            },
+            "deployment": {
+              "status": "skipped",
+              "ok": true,
+              "reason": "Deployment disabled by mode or dry-run."
+            },
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          {
+            echo "# Wrangler Build/Dry-Run: $APP_NAME"
+            echo ""
+            echo "Generated: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo ""
+            echo "- App root: \`$APP_ROOT\`"
+            echo "- Config: \`$WRANGLER_CONFIG\`"
+            echo "- Build enabled: \`$SHOULD_BUILD\`"
+            echo "- Deploy enabled: \`$SHOULD_DEPLOY\`"
+            echo "- Dry run: \`$WRANGLER_DRY_RUN\`"
+          } > "$summary_file"
+
+          cat "$summary_file" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Wrangler app artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wrangler-${{ matrix.name }}-${{ github.run_id }}
+          path: |
+            artifacts/cloudflare/wrangler/apps/${{ matrix.name }}.*
+          if-no-files-found: ignore
+          retention-days: 14
 
   deploy-complete:
     name: Wrangler Deploy Complete
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
     needs:
+      - preflight
       - discover
-      - deploy
+      - build-and-deploy
 
     if: always()
 
     steps:
-      - name: Check deployment result
-        shell: bash
+      - name: Write final Wrangler deployment summary
         run: |
           set -euo pipefail
 
-          if [[ "${{ needs.discover.result }}" != "success" ]]; then
-            echo "Wrangler app discovery failed."
+          {
+            echo "## Aerealith AI Wrangler Deploy Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Discovery | \`${{ needs.discover.result }}\` |"
+            echo "| Build/deploy | \`${{ needs.build-and-deploy.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| GitHub environment | \`${{ needs.preflight.outputs.environment_name }}\` |"
+            echo "| Wrangler environment | \`${{ needs.preflight.outputs.wrangler_environment || 'default' }}\` |"
+            echo "| Deploy all | \`${{ needs.preflight.outputs.deploy_all }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| Apps selected | \`${{ needs.discover.outputs.app_count || '0' }}\` |"
+            echo "| Has changes | \`${{ needs.discover.outputs.has_changes || 'false' }}\` |"
+            echo "| Build | \`${{ needs.preflight.outputs.should_build }}\` |"
+            echo "| Deploy | \`${{ needs.preflight.outputs.should_deploy }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce Wrangler deployment result
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ needs.preflight.result }}" != "success" ]]; then
+            echo "::error::Wrangler preflight failed."
             exit 1
           fi
 
-          if [[ "${{ needs.discover.outputs.has_changes }}" != "true" ]]; then
+          if [[ "${{ needs.preflight.outputs.should_discover }}" == "true" && "${{ needs.discover.result }}" != "success" ]]; then
+            echo "::error::Wrangler app discovery failed."
+            exit 1
+          fi
+
+          if [[ "${{ needs.discover.outputs.has_changes || 'false' }}" != "true" ]]; then
             echo "No changed Wrangler apps found. Nothing to deploy."
             exit 0
           fi
 
-          if [[ "${{ needs.deploy.result }}" != "success" ]]; then
-            echo "One or more Wrangler deployments failed."
+          if [[ "${{ needs.preflight.outputs.should_run_apps }}" == "true" && "${{ needs.build-and-deploy.result }}" != "success" ]]; then
+            echo "::error::One or more Wrangler build/deploy jobs failed."
             exit 1
           fi
 
-          echo "Wrangler deployments passed."
+          echo "Wrangler deployment workflow completed."

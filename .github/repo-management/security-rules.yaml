@@ -1,0 +1,1264 @@
+# .github/repo-management/security-rules.yaml
+# =============================================================================
+# Aerealith AI Security Rules
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Source-of-truth security policy for pull request gates, main branch security
+#   monitoring, dependency vulnerability handling, CodeQL, SonarQube Cloud,
+#   Dependabot, Mend, Renovate, dependency review, pnpm audit, secret scanning,
+#   container scanning, SBOMs, attestations, security issue creation, and release
+#   blocking behavior.
+#
+# Used by:
+#   - .github/workflows/security.yaml
+#   - .github/workflows/codeql.yaml
+#   - .github/workflows/sonarqube.yaml
+#   - .github/workflows/dependency-review.yaml
+#   - .github/workflows/dependency-management.yaml
+#   - .github/workflows/dependency-auto-merge.yaml
+#   - .github/workflows/release.yaml
+#   - .github/workflows/publish-containers.yaml
+#   - .github/workflows/attestations.yaml
+#   - .github/scripts/security/**
+#   - .github/scripts/repo/**
+#   - .github/scripts/release/**
+#
+# Core policy:
+#   - Security is strict.
+#   - Pull requests must pass security gates before merge.
+#   - main must be scanned regularly.
+#   - Critical and high findings block merge, release, and production deploy.
+#   - Dependency security patches may auto-merge only after all required checks pass.
+#   - Dependency and security dependency PRs must never trigger releases.
+#   - Attestations are generated only on release and publish jobs.
+#   - Security automation must support dry-run mode.
+# =============================================================================
+
+version: 1
+
+repository:
+  owner: SinLess-Games
+  name: Aerealith-AI
+  full_name: SinLess-Games/Aerealith-AI
+  default_branch: main
+  visibility: public
+
+tooling:
+  package_manager: pnpm
+  pnpm_version: 10.23.0
+  node_version: 24.15.0
+  monorepo_tool: nx
+  primary_language: TypeScript
+
+# -----------------------------------------------------------------------------
+# Global Security Policy
+# -----------------------------------------------------------------------------
+policy:
+  enabled: true
+  strict: true
+  dry_run_supported: true
+  debug_supported: true
+
+  require_security_on_pull_requests: true
+  require_security_on_main: true
+  require_security_before_merge: true
+  require_security_before_release: true
+  require_security_before_publish: true
+  require_security_before_production_deploy: true
+
+  block_merge_on_critical: true
+  block_merge_on_high: true
+  warn_on_medium: true
+  warn_on_low: true
+
+  block_release_on_critical: true
+  block_release_on_high: true
+  block_publish_on_critical: true
+  block_publish_on_high: true
+  block_production_deploy_on_critical: true
+  block_production_deploy_on_high: true
+
+  dependency_prs_never_release: true
+  security_dependency_prs_never_release: true
+
+  attestations_only_on_release_or_publish_jobs: true
+
+  no_secrets_on_untrusted_pull_requests: true
+  no_write_tokens_on_untrusted_pull_requests: true
+  no_production_deploy_on_untrusted_pull_requests: true
+
+  require_least_privilege_workflow_permissions: true
+  redact_secrets_in_logs: true
+  fail_on_secret_exposure: true
+
+# -----------------------------------------------------------------------------
+# Security Tools
+# -----------------------------------------------------------------------------
+tools:
+  codeql:
+    enabled: true
+    config_file: .github/codeql.yaml
+    workflow: .github/workflows/codeql.yaml
+    languages:
+      - javascript-typescript
+    query_suites:
+      - security-extended
+      - security-and-quality
+    sarif_upload: true
+    block_on:
+      - critical
+      - high
+
+  sonarqube_cloud:
+    enabled: true
+    workflow: .github/workflows/sonarqube.yaml
+    token_secret: SONAR_TOKEN
+    quality_gate_required: true
+    block_on_quality_gate_failure: true
+    block_on_security_hotspots: true
+    block_on_vulnerabilities: true
+    block_on_bugs: false
+    block_on_code_smells: false
+
+  dependency_review:
+    enabled: true
+    workflow: .github/workflows/dependency-review.yaml
+    fail_on_severity:
+      - critical
+      - high
+    fail_on_scopes:
+      - runtime
+      - development
+    fail_on_openssf_scorecard_level: null
+    allow_licenses: true
+    block_disallowed_licenses: true
+
+  dependabot:
+    enabled: true
+    config_file: .github/dependabot.yaml
+    alerts_enabled: true
+    security_updates_enabled: true
+    npm_security_updates_only: true
+    github_actions_updates: true
+    labels:
+      - dependabot
+      - dependencies
+      - no-release
+
+  renovate:
+    enabled: true
+    config_file: .github/renovate.json5
+    normal_dependency_updates: true
+    labels:
+      - renovate
+      - dependencies
+      - no-release
+
+  mend:
+    enabled: true
+    security_management: true
+    secret: MEND_API_KEY
+    labels:
+      - mend
+      - dependencies
+      - no-release
+
+  pnpm_audit:
+    enabled: true
+    command: pnpm audit --audit-level high
+    fail_on:
+      - critical
+      - high
+    warn_on:
+      - medium
+      - low
+
+  osv_scanner:
+    enabled: true
+    fail_on:
+      - critical
+      - high
+    warn_on:
+      - medium
+      - low
+
+  secret_scanning:
+    enabled: true
+    tools:
+      github_secret_scanning: true
+      gitleaks: true
+      trufflehog: true
+    fail_on_verified_secret: true
+    fail_on_possible_secret: true
+    redact_output: true
+
+  container_scanning:
+    enabled: true
+    tools:
+      trivy: true
+      grype: true
+    scan_dockerfiles: true
+    scan_built_images: true
+    scan_ghcr_images_on_publish: true
+    fail_on:
+      - critical
+      - high
+    warn_on:
+      - medium
+      - low
+
+  dockerfile_linting:
+    enabled: true
+    tools:
+      hadolint: true
+    fail_on_error: true
+    warn_on_warning: true
+
+  sbom:
+    enabled: true
+    format: spdx-json
+    generate_on_release: true
+    generate_on_publish: true
+    generate_on_pull_request: false
+    artifact_name: sbom.spdx.json
+
+  attestations:
+    enabled: true
+    generate_on_release: true
+    generate_on_publish: true
+    generate_on_pull_request: false
+    build_provenance: true
+    sbom_attestation: true
+
+# -----------------------------------------------------------------------------
+# Workflow Coverage
+# -----------------------------------------------------------------------------
+workflows:
+  pull_request_security:
+    enabled: true
+    events:
+      - pull_request
+      - pull_request_target
+    required: true
+    read_only_on_untrusted_pull_requests: true
+
+  main_branch_security:
+    enabled: true
+    events:
+      - push
+      - schedule
+      - workflow_dispatch
+    branch: main
+    required: true
+
+  scheduled_security_scan:
+    enabled: true
+    cron: "0 8 * * *"
+    timezone: America/Boise
+    branch: main
+
+  dependency_security:
+    enabled: true
+    events:
+      - pull_request
+      - schedule
+      - workflow_dispatch
+    required: true
+
+  release_security:
+    enabled: true
+    events:
+      - push
+      - release
+      - workflow_dispatch
+    required_before_release: true
+
+  publish_security:
+    enabled: true
+    events:
+      - release
+      - workflow_dispatch
+    required_before_publish: true
+
+# -----------------------------------------------------------------------------
+# Required Checks
+# -----------------------------------------------------------------------------
+required_checks:
+  pull_request:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  main:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  release:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+    - Artifact Hashes
+    - SBOM
+    - Attestations
+
+  dependency_pr:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  security_dependency_pr:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  production_deploy:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+    - Release
+    - Cloudflare Smoke Tests
+
+# -----------------------------------------------------------------------------
+# Severity Policy
+# -----------------------------------------------------------------------------
+severity_policy:
+  critical:
+    labels:
+      - severity:critical
+      - priority:critical
+      - blocked-by-security
+      - do-not-merge
+      - needs-security-review
+    block_merge: true
+    block_release: true
+    block_publish: true
+    block_deploy: true
+    create_issue: true
+    require_security_review: true
+    milestone: Security — Strict Pull Request Gate
+
+  high:
+    labels:
+      - severity:high
+      - priority:high
+      - blocked-by-security
+      - do-not-merge
+      - needs-security-review
+    block_merge: true
+    block_release: true
+    block_publish: true
+    block_deploy: true
+    create_issue: true
+    require_security_review: true
+    milestone: Security — Strict Pull Request Gate
+
+  medium:
+    labels:
+      - severity:medium
+      - priority:medium
+      - needs-security-review
+    block_merge: false
+    block_release: false
+    block_publish: false
+    block_deploy: false
+    create_issue: true
+    require_security_review: false
+    milestone: Security — Main Branch Monitoring
+
+  low:
+    labels:
+      - severity:low
+      - priority:low
+    block_merge: false
+    block_release: false
+    block_publish: false
+    block_deploy: false
+    create_issue: false
+    require_security_review: false
+    milestone: Security — Main Branch Monitoring
+
+# -----------------------------------------------------------------------------
+# Pull Request Security Gate
+# -----------------------------------------------------------------------------
+pull_request_gate:
+  enabled: true
+
+  required_before_merge:
+    checks:
+      - CI
+      - Security
+      - CodeQL
+      - SonarQube
+      - Dependency Review
+
+    labels_absent:
+      - do-not-merge
+      - blocked-by-security
+      - status:blocked
+
+  fail_if:
+    codeql:
+      severity:
+        - critical
+        - high
+
+    sonarqube:
+      quality_gate_failed: true
+      vulnerabilities: true
+      security_hotspots_unreviewed: true
+
+    dependency_review:
+      severity:
+        - critical
+        - high
+      disallowed_license: true
+      malicious_package: true
+
+    pnpm_audit:
+      severity:
+        - critical
+        - high
+
+    secret_scanning:
+      secret_detected: true
+
+    container_scanning:
+      severity:
+        - critical
+        - high
+
+  warn_if:
+    vulnerabilities:
+      - medium
+      - low
+
+  labels_to_add_on_failure:
+    - blocked-by-security
+    - do-not-merge
+    - needs-security-review
+    - area:security
+    - kind:security
+
+# -----------------------------------------------------------------------------
+# Main Branch Security Monitoring
+# -----------------------------------------------------------------------------
+main_branch_monitoring:
+  enabled: true
+  branch: main
+
+  schedule:
+    enabled: true
+    cron: "0 8 * * *"
+    timezone: America/Boise
+
+  scans:
+    codeql: true
+    sonarqube: true
+    dependency_review: true
+    dependabot_alerts: true
+    mend: true
+    pnpm_audit: true
+    osv_scanner: true
+    secret_scanning: true
+    container_scanning: true
+
+  create_issues_for_findings: true
+
+  labels:
+    - kind:security
+    - area:security
+    - status:triage
+
+  milestone: Security — Main Branch Monitoring
+
+# -----------------------------------------------------------------------------
+# Dependency Security Policy
+# -----------------------------------------------------------------------------
+dependency_security:
+  enabled: true
+
+  security_dependency_labels:
+    - dependencies
+    - security:dependency
+    - kind:security
+    - area:security
+    - area:dependencies
+    - priority:critical
+    - status:ready
+    - auto-merge
+    - no-release
+
+  release_allowed: false
+
+  automerge:
+    enabled: true
+    allowed_authors:
+      - dependabot[bot]
+      - renovate[bot]
+      - mend[bot]
+
+    allowed_branch_patterns:
+      - "^dependabot/.+$"
+      - "^renovate/.+$"
+      - "^mend/.+$"
+
+    required_labels:
+      - dependencies
+      - security:dependency
+      - no-release
+      - auto-merge
+
+    required_absent_labels:
+      - do-not-merge
+      - blocked-by-security
+      - needs-maintainer-review
+      - automation:needs-review
+      - release:major
+      - release:minor
+      - release:patch
+      - status:blocked
+
+    required_checks:
+      - CI
+      - Security
+      - CodeQL
+      - SonarQube
+      - Dependency Review
+
+    require_branch_up_to_date: true
+    require_no_conflicts: true
+    require_no_requested_changes: true
+    merge_strategy: merge
+
+  create_issue_when:
+    security_patch_fails: true
+    vulnerability_unpatchable: true
+    vulnerability_has_no_pr: true
+    repeated_failure_count: 3
+
+  issue_template:
+    title: "[Security]: Dependency vulnerability in {{packageName}}"
+    labels:
+      - kind:security
+      - security:dependency
+      - area:dependencies
+      - area:security
+      - status:triage
+      - no-release
+    milestone: Security — Dependency Vulnerability Response
+
+# -----------------------------------------------------------------------------
+# Secret Scanning Policy
+# -----------------------------------------------------------------------------
+secret_scanning:
+  enabled: true
+
+  fail_on:
+    - verified_secret
+    - possible_private_key
+    - github_token
+    - cloudflare_token
+    - npm_token
+    - openai_key
+    - sonar_token
+    - mend_token
+
+  redaction:
+    enabled: true
+    redact_patterns:
+      - "ghp_[A-Za-z0-9_]+"
+      - "github_pat_[A-Za-z0-9_]+"
+      - "sk-[A-Za-z0-9_-]+"
+      - "Bearer [A-Za-z0-9._-]+"
+      - "npm_[A-Za-z0-9_]+"
+      - "-----BEGIN [A-Z ]+PRIVATE KEY-----"
+      - "CLOUDFLARE_API_TOKEN"
+      - "NPM_ACCESS_TOKEN"
+      - "OPENAI_API_KEY"
+      - "SONAR_TOKEN"
+      - "MEND_API_KEY"
+
+  allowed_secret_names:
+    - CLOUDFLARE_API_TOKEN
+    - CLOUDFLARE_ACCOUNT_ID
+    - NPM_ACCESS_TOKEN
+    - OPENAI_API_KEY
+    - PROJECTS_PAT
+    - SONAR_TOKEN
+    - MEND_API_KEY
+    - NX_ACCESS_TOKEN
+
+  rules:
+    secret_names_allowed_in_docs: true
+    secret_values_never_allowed: true
+    fail_if_secret_value_detected: true
+    fail_if_private_key_detected: true
+    warn_on_placeholder_values: false
+
+# -----------------------------------------------------------------------------
+# License Policy
+# -----------------------------------------------------------------------------
+license_policy:
+  enabled: true
+
+  block_disallowed_licenses: true
+  warn_on_unknown_license: true
+  block_unknown_license: false
+
+  allowed:
+    - MIT
+    - Apache-2.0
+    - BSD-2-Clause
+    - BSD-3-Clause
+    - ISC
+    - MPL-2.0
+    - Unlicense
+    - CC0-1.0
+
+  forbidden:
+    - AGPL-1.0
+    - AGPL-3.0
+    - SSPL-1.0
+    - BUSL-1.1
+
+  review_required:
+    - GPL-2.0
+    - GPL-3.0
+    - LGPL-2.1
+    - LGPL-3.0
+
+  labels_on_violation:
+    - blocked-by-security
+    - do-not-merge
+    - needs-security-review
+    - area:dependencies
+    - area:security
+
+# -----------------------------------------------------------------------------
+# Container Security
+# -----------------------------------------------------------------------------
+container_security:
+  enabled: true
+
+  dockerfile_detection:
+    enabled: true
+    patterns:
+      - Dockerfile
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+
+  build_scan:
+    enabled: true
+    scan_before_publish: true
+    scan_after_publish: true
+
+  fail_on:
+    - critical
+    - high
+
+  warn_on:
+    - medium
+    - low
+
+  dockerfile_rules:
+    require_non_root_user: true
+    warn_if_latest_tag_used: true
+    warn_if_no_healthcheck: false
+    warn_if_apt_cache_not_cleaned: true
+    block_privileged_container: true
+    block_secret_args: true
+
+  labels_on_failure:
+    - blocked-by-security
+    - do-not-merge
+    - needs-security-review
+    - area:docker
+    - area:security
+
+# -----------------------------------------------------------------------------
+# Supply Chain Security
+# -----------------------------------------------------------------------------
+supply_chain:
+  enabled: true
+
+  sbom:
+    required_on_release: true
+    required_on_publish: true
+    required_on_pull_request: false
+    format: spdx-json
+    artifact_name: sbom.spdx.json
+
+  checksums:
+    required_on_release: true
+    algorithms:
+      - sha256
+      - sha512
+    files:
+      sha256: SHA256SUMS
+      sha512: SHA512SUMS
+
+  artifact_manifest:
+    required_on_release: true
+    file: artifact-manifest.json
+
+  attestations:
+    required_on_release: true
+    required_on_publish: true
+    forbidden_on_pull_request: true
+    build_provenance: true
+    sbom_attestation: true
+
+  provenance:
+    npm_provenance_required: true
+    ghcr_provenance_required: true
+
+  labels:
+    - sbom
+    - attestations
+    - checksums
+    - area:security
+
+  milestone: Security — Supply Chain Integrity
+
+# -----------------------------------------------------------------------------
+# Release Security Gate
+# -----------------------------------------------------------------------------
+release_security:
+  enabled: true
+
+  require_before_release:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  block_release_if_labels_present:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked
+
+  block_release_if_author:
+    - renovate[bot]
+    - dependabot[bot]
+    - mend[bot]
+
+  block_release_if_branch_matches:
+    - "^renovate/.+$"
+    - "^dependabot/.+$"
+    - "^mend/.+$"
+
+  required_release_evidence:
+    - SHA256SUMS
+    - SHA512SUMS
+    - artifact-manifest.json
+    - sbom.spdx.json
+
+  require_attestations: true
+
+# -----------------------------------------------------------------------------
+# Cloudflare Security Gate
+# -----------------------------------------------------------------------------
+cloudflare_security:
+  enabled: true
+
+  require_before_staging_deploy: true
+  require_before_production_deploy: true
+
+  production:
+    require_release_tag: true
+    require_github_environment_approval: true
+    require_security_success: true
+    require_smoke_tests: true
+
+  block_deploy_if_labels_present:
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked
+
+  block_production_if_labels_present:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked
+
+  secrets:
+    require_environment_scoped_secrets: true
+    block_secret_printing: true
+    block_untrusted_pr_secret_access: true
+
+# -----------------------------------------------------------------------------
+# OpenAI Security Policy
+# -----------------------------------------------------------------------------
+openai_security:
+  enabled: true
+
+  allowed_use_cases:
+    - changelog_drafts
+    - release_announcement_drafts
+    - issue_creation_from_pull_requests
+    - pull_request_creation_from_issues
+    - issue_pr_link_suggestions
+    - security_triage_summaries
+    - dependency_update_summaries
+
+  forbidden_actions:
+    - push_to_main
+    - merge_pull_requests
+    - approve_pull_requests
+    - publish_npm
+    - publish_ghcr
+    - deploy_production
+    - remove_security_labels
+    - reveal_secrets
+
+  data_handling:
+    redact_secrets_before_prompt: true
+    redact_private_data_before_prompt: true
+    do_not_send_secret_values: true
+    do_not_send_private_keys: true
+    do_not_send_production_data: true
+
+  review:
+    require_review_for_ai_created_prs: true
+    require_review_for_security_summaries: true
+    require_review_for_release_announcements: false
+
+  labels:
+    ai_generated:
+      - automation:openai
+    needs_review:
+      - automation:needs-review
+      - needs-maintainer-review
+
+# -----------------------------------------------------------------------------
+# Security Issue Creation
+# -----------------------------------------------------------------------------
+issue_creation:
+  enabled: true
+
+  create_for:
+    - critical_vulnerability
+    - high_vulnerability
+    - failed_security_patch
+    - unpatchable_dependency
+    - secret_exposure
+    - license_violation
+    - malicious_package
+    - repeated_security_workflow_failure
+    - container_critical_vulnerability
+    - container_high_vulnerability
+
+  default_assignees:
+    - Sinless777
+
+  default_labels:
+    - kind:security
+    - area:security
+    - status:triage
+    - needs-security-review
+    - no-release
+
+  severity_labels:
+    critical:
+      - severity:critical
+      - priority:critical
+      - blocked-by-security
+      - do-not-merge
+
+    high:
+      - severity:high
+      - priority:high
+      - blocked-by-security
+      - do-not-merge
+
+    medium:
+      - severity:medium
+      - priority:medium
+
+    low:
+      - severity:low
+      - priority:low
+
+  milestones:
+    default: Security — Strict Pull Request Gate
+    dependency: Security — Dependency Vulnerability Response
+    supply_chain: Security — Supply Chain Integrity
+    monitoring: Security — Main Branch Monitoring
+
+  body_template: |
+    ## Security Finding
+
+    A security finding was detected by repository automation.
+
+    ### Summary
+
+    {summary}
+
+    ### Source
+
+    - Tool: {tool}
+    - Severity: {severity}
+    - Package / file / component: {component}
+    - Branch / ref: {ref}
+    - Workflow run: {workflow_url}
+
+    ### Required Action
+
+    {required_action}
+
+    ### Notes
+
+    Sensitive values are redacted. Do not post secrets, tokens, private keys, or private user data in this issue.
+
+# -----------------------------------------------------------------------------
+# Label Routing
+# -----------------------------------------------------------------------------
+routing:
+  labels:
+    security_finding:
+      - kind:security
+      - area:security
+      - status:triage
+      - needs-security-review
+
+    critical_blocker:
+      - severity:critical
+      - priority:critical
+      - blocked-by-security
+      - do-not-merge
+
+    high_blocker:
+      - severity:high
+      - priority:high
+      - blocked-by-security
+      - do-not-merge
+
+    dependency_security:
+      - dependencies
+      - security:dependency
+      - area:dependencies
+      - area:security
+      - no-release
+
+    supply_chain:
+      - sbom
+      - attestations
+      - area:security
+
+    secret_exposure:
+      - area:secrets
+      - area:security
+      - blocked-by-security
+      - do-not-merge
+
+    container_security:
+      - area:docker
+      - area:security
+
+  milestones:
+    strict_gate: Security — Strict Pull Request Gate
+    monitoring: Security — Main Branch Monitoring
+    dependency_response: Security — Dependency Vulnerability Response
+    supply_chain: Security — Supply Chain Integrity
+
+# -----------------------------------------------------------------------------
+# Reporting and Artifacts
+# -----------------------------------------------------------------------------
+reporting:
+  enabled: true
+
+  add_workflow_summary: true
+  add_pr_comment_on_failure: true
+  add_pr_comment_on_warning: false
+  add_issue_on_main_findings: true
+
+  artifact_retention_days:
+    pull_request: 30
+    main: 90
+    release: 90
+    security_reports: 90
+
+  artifacts:
+    upload_sarif: true
+    upload_dependency_report: true
+    upload_audit_report: true
+    upload_secret_scan_report: true
+    upload_container_scan_report: true
+    upload_sbom: true
+
+  files:
+    security_summary: security-summary.md
+    dependency_report: dependency-security-report.json
+    audit_report: pnpm-audit-report.json
+    secret_scan_report: secret-scan-report.json
+    container_scan_report: container-scan-report.json
+    sarif: security-results.sarif
+    sbom: sbom.spdx.json
+
+  comment_footer:
+    start: "<!-- security-management:start -->"
+    end: "<!-- security-management:end -->"
+
+  summary:
+    include_tool_results: true
+    include_severity_counts: true
+    include_blockers: true
+    include_required_checks: true
+    include_dependency_status: true
+    include_secret_status: true
+    include_container_status: true
+    include_release_status: true
+    include_dry_run: true
+    include_skipped_reason: true
+
+# -----------------------------------------------------------------------------
+# Required Secrets and Variables
+# -----------------------------------------------------------------------------
+configuration:
+  required_secrets:
+    sonarqube:
+      - SONAR_TOKEN
+
+    mend:
+      - MEND_API_KEY
+
+    openai:
+      - OPENAI_API_KEY
+
+  optional_secrets:
+    github_projects:
+      - PROJECTS_PAT
+
+    nx:
+      - NX_ACCESS_TOKEN
+
+  required_variables:
+    - NODE_VERSION
+    - PNPM_VERSION
+    - DEFAULT_BRANCH
+
+  recommended_values:
+    NODE_VERSION: "24.15.0"
+    PNPM_VERSION: "10.23.0"
+    DEFAULT_BRANCH: main
+    OPENAI_MODEL: gpt-5.5
+
+# -----------------------------------------------------------------------------
+# Workflow Permissions
+# -----------------------------------------------------------------------------
+permissions:
+  pull_request_security:
+    contents: read
+    pull-requests: write
+    issues: write
+    security-events: write
+
+  main_security:
+    contents: read
+    issues: write
+    security-events: write
+
+  dependency_review:
+    contents: read
+    pull-requests: write
+
+  codeql:
+    contents: read
+    security-events: write
+    actions: read
+
+  release_security:
+    contents: read
+    security-events: write
+    attestations: write
+    id-token: write
+
+  publish_security:
+    contents: read
+    packages: write
+    attestations: write
+    id-token: write
+
+# -----------------------------------------------------------------------------
+# Enforcement
+# -----------------------------------------------------------------------------
+enforcement:
+  on_critical_finding:
+    action: fail
+    labels:
+      - severity:critical
+      - priority:critical
+      - blocked-by-security
+      - do-not-merge
+    message: |
+      Critical security finding detected. Merge, release, publish, and production deployment are blocked.
+
+  on_high_finding:
+    action: fail
+    labels:
+      - severity:high
+      - priority:high
+      - blocked-by-security
+      - do-not-merge
+    message: |
+      High security finding detected. Merge, release, publish, and production deployment are blocked.
+
+  on_medium_finding:
+    action: warn
+    labels:
+      - severity:medium
+      - priority:medium
+    message: |
+      Medium security finding detected. Review and remediate as appropriate.
+
+  on_low_finding:
+    action: warn
+    labels:
+      - severity:low
+      - priority:low
+    message: |
+      Low security finding detected.
+
+  on_secret_detected:
+    action: fail
+    labels:
+      - area:secrets
+      - blocked-by-security
+      - do-not-merge
+      - needs-security-review
+    message: |
+      Possible secret detected. Remove the secret, rotate it if necessary, and rerun security checks.
+
+  on_disallowed_license:
+    action: fail
+    labels:
+      - area:dependencies
+      - area:security
+      - blocked-by-security
+      - do-not-merge
+    message: |
+      Disallowed license detected in dependency tree.
+
+  on_sonarqube_quality_gate_failed:
+    action: fail
+    labels:
+      - area:security
+      - blocked-by-security
+      - do-not-merge
+    message: |
+      SonarQube quality gate failed.
+
+  on_codeql_failure:
+    action: fail
+    labels:
+      - area:security
+      - blocked-by-security
+      - do-not-merge
+    message: |
+      CodeQL detected blocking security findings.
+
+  on_dependency_review_failure:
+    action: fail
+    labels:
+      - area:dependencies
+      - area:security
+      - blocked-by-security
+      - do-not-merge
+    message: |
+      Dependency review detected blocking dependency risk.
+
+  on_container_scan_failure:
+    action: fail
+    labels:
+      - area:docker
+      - area:security
+      - blocked-by-security
+      - do-not-merge
+    message: |
+      Container scan detected blocking vulnerabilities.
+
+  on_release_security_failure:
+    action: fail
+    message: |
+      Release blocked because security validation failed.
+
+  on_production_security_failure:
+    action: fail
+    message: |
+      Production deployment blocked because security validation failed.
+
+  on_missing_required_secret:
+    action: fail
+    message: |
+      Required security secret is missing.
+
+  on_untrusted_pull_request:
+    action: read_only
+    message: |
+      Untrusted pull requests may only run read-only security checks.
+
+# -----------------------------------------------------------------------------
+# Safety
+# -----------------------------------------------------------------------------
+safety:
+  dry_run_supported: true
+  debug_supported: true
+
+  do_not_push_to_main: true
+  do_not_merge_pull_requests: true
+  do_not_approve_pull_requests: true
+  do_not_publish_packages: true
+  do_not_publish_containers: true
+  do_not_deploy_production: true
+  do_not_create_release: true
+
+  do_not_remove_security_labels_automatically: true
+  do_not_remove_blocker_labels_automatically: true
+  do_not_print_secrets: true
+  do_not_send_secrets_to_openai: true
+  do_not_run_write_actions_on_untrusted_pull_requests: true
+
+  protected_labels:
+    - do-not-merge
+    - blocked-by-security
+    - needs-security-review
+    - security:dependency
+    - severity:critical
+    - severity:high
+    - release:major
+    - release:minor
+    - release:patch
+
+  labels_to_never_remove_automatically:
+    - do-not-merge
+    - blocked-by-security
+    - needs-security-review
+    - severity:critical
+    - severity:high
+
+  release_blocking_labels:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked

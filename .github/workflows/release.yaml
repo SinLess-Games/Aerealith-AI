@@ -1,0 +1,999 @@
+name: Aerealith AI Release
+
+run-name: >-
+  Release / ${{ github.event_name }} / ${{ github.ref_name || github.event.release.tag_name || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Release mode to run."
+        required: true
+        default: "release"
+        type: choice
+        options:
+          - release
+          - prepare
+          - tag-only
+          - github-release-only
+          - changelog-only
+          - announcement-only
+          - summarize-only
+      release_type:
+        description: "Release type. Auto allows the release label script to decide."
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+          - prerelease
+      version:
+        description: "Optional version override, such as 2.10.0. Leave empty to calculate."
+        required: false
+        default: ""
+        type: string
+      tag_name:
+        description: "Optional tag override, such as v2.10.0. Leave empty to calculate."
+        required: false
+        default: ""
+        type: string
+      tag_prefix:
+        description: "Release tag prefix."
+        required: true
+        default: "v"
+        type: string
+      prerelease_identifier:
+        description: "Prerelease identifier used for prerelease mode."
+        required: false
+        default: "rc"
+        type: string
+      target_ref:
+        description: "Target ref, branch, tag, or SHA. Defaults to the current ref."
+        required: false
+        default: ""
+        type: string
+      draft:
+        description: "Create the GitHub release as a draft."
+        required: true
+        default: false
+        type: boolean
+      prerelease:
+        description: "Mark the GitHub release as a prerelease."
+        required: true
+        default: false
+        type: boolean
+      generate_notes:
+        description: "Allow GitHub to generate release notes when supported."
+        required: true
+        default: true
+        type: boolean
+      discussion_category_name:
+        description: "Optional GitHub Discussions category for release announcement."
+        required: false
+        default: "Announcements"
+        type: string
+      dispatch_publish_npm:
+        description: "Dispatch publish-npm.yaml after release creation."
+        required: true
+        default: false
+        type: boolean
+      dispatch_publish_containers:
+        description: "Dispatch publish-containers.yaml after release creation."
+        required: true
+        default: false
+        type: boolean
+      dispatch_artifact_hashes:
+        description: "Dispatch artifact-hashes.yaml after release creation."
+        required: true
+        default: false
+        type: boolean
+      dispatch_attestations:
+        description: "Dispatch attestations.yaml after release creation."
+        required: true
+        default: false
+        type: boolean
+      deploy_production:
+        description: "Dispatch cloudflare-production.yaml after release creation."
+        required: true
+        default: false
+        type: boolean
+      dry_run:
+        description: "Evaluate release steps without creating tags, releases, announcements, or downstream dispatches."
+        required: true
+        default: false
+        type: boolean
+
+  push:
+    tags:
+      - "v*.*.*"
+      - "v*.*.*-*"
+
+  release:
+    types:
+      - published
+
+permissions:
+  actions: write
+  checks: write
+  contents: write
+  discussions: write
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: >-
+    release-${{ github.event.release.tag_name || github.ref_name || github.run_id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  CI: "true"
+  NX_DAEMON: "false"
+  NEXT_TELEMETRY_DISABLED: "1"
+  RELEASE_OUTPUT_DIR: artifacts/release
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      release_type: ${{ steps.context.outputs.release_type }}
+      version: ${{ steps.context.outputs.version }}
+      tag_name: ${{ steps.context.outputs.tag_name }}
+      tag_prefix: ${{ steps.context.outputs.tag_prefix }}
+      prerelease_identifier: ${{ steps.context.outputs.prerelease_identifier }}
+      target_ref: ${{ steps.context.outputs.target_ref }}
+      draft: ${{ steps.context.outputs.draft }}
+      prerelease: ${{ steps.context.outputs.prerelease }}
+      generate_notes: ${{ steps.context.outputs.generate_notes }}
+      discussion_category_name: ${{ steps.context.outputs.discussion_category_name }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      should_validate_source: ${{ steps.context.outputs.should_validate_source }}
+      should_detect_release_label: ${{ steps.context.outputs.should_detect_release_label }}
+      should_determine_version: ${{ steps.context.outputs.should_determine_version }}
+      should_build_changelog: ${{ steps.context.outputs.should_build_changelog }}
+      should_create_tag: ${{ steps.context.outputs.should_create_tag }}
+      should_create_github_release: ${{ steps.context.outputs.should_create_github_release }}
+      should_post_announcement: ${{ steps.context.outputs.should_post_announcement }}
+      should_summarize_release: ${{ steps.context.outputs.should_summarize_release }}
+      dispatch_publish_npm: ${{ steps.context.outputs.dispatch_publish_npm }}
+      dispatch_publish_containers: ${{ steps.context.outputs.dispatch_publish_containers }}
+      dispatch_artifact_hashes: ${{ steps.context.outputs.dispatch_artifact_hashes }}
+      dispatch_attestations: ${{ steps.context.outputs.dispatch_attestations }}
+      deploy_production: ${{ steps.context.outputs.deploy_production }}
+      should_dispatch_downstream: ${{ steps.context.outputs.should_dispatch_downstream }}
+
+    steps:
+      - name: Resolve release context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'release' }}
+          INPUT_RELEASE_TYPE: ${{ github.event.inputs.release_type || 'auto' }}
+          INPUT_VERSION: ${{ github.event.inputs.version || '' }}
+          INPUT_TAG_NAME: ${{ github.event.inputs.tag_name || '' }}
+          INPUT_TAG_PREFIX: ${{ github.event.inputs.tag_prefix || 'v' }}
+          INPUT_PRERELEASE_IDENTIFIER: ${{ github.event.inputs.prerelease_identifier || 'rc' }}
+          INPUT_TARGET_REF: ${{ github.event.inputs.target_ref || '' }}
+          INPUT_DRAFT: ${{ github.event.inputs.draft || 'false' }}
+          INPUT_PRERELEASE: ${{ github.event.inputs.prerelease || 'false' }}
+          INPUT_GENERATE_NOTES: ${{ github.event.inputs.generate_notes || 'true' }}
+          INPUT_DISCUSSION_CATEGORY_NAME: ${{ github.event.inputs.discussion_category_name || 'Announcements' }}
+          INPUT_DISPATCH_PUBLISH_NPM: ${{ github.event.inputs.dispatch_publish_npm || 'false' }}
+          INPUT_DISPATCH_PUBLISH_CONTAINERS: ${{ github.event.inputs.dispatch_publish_containers || 'false' }}
+          INPUT_DISPATCH_ARTIFACT_HASHES: ${{ github.event.inputs.dispatch_artifact_hashes || 'false' }}
+          INPUT_DISPATCH_ATTESTATIONS: ${{ github.event.inputs.dispatch_attestations || 'false' }}
+          INPUT_DEPLOY_PRODUCTION: ${{ github.event.inputs.deploy_production || 'false' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          REF_TYPE: ${{ github.ref_type || '' }}
+          REF_NAME: ${{ github.ref_name || '' }}
+          SHA: ${{ github.sha || '' }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-release}"
+          release_type="${INPUT_RELEASE_TYPE:-auto}"
+          version="${INPUT_VERSION:-}"
+          tag_name="${INPUT_TAG_NAME:-}"
+          tag_prefix="${INPUT_TAG_PREFIX:-v}"
+          prerelease_identifier="${INPUT_PRERELEASE_IDENTIFIER:-rc}"
+          target_ref="${INPUT_TARGET_REF:-}"
+          draft="${INPUT_DRAFT:-false}"
+          prerelease="${INPUT_PRERELEASE:-false}"
+          generate_notes="${INPUT_GENERATE_NOTES:-true}"
+          discussion_category_name="${INPUT_DISCUSSION_CATEGORY_NAME:-Announcements}"
+          dispatch_publish_npm="${INPUT_DISPATCH_PUBLISH_NPM:-false}"
+          dispatch_publish_containers="${INPUT_DISPATCH_PUBLISH_CONTAINERS:-false}"
+          dispatch_artifact_hashes="${INPUT_DISPATCH_ARTIFACT_HASHES:-false}"
+          dispatch_attestations="${INPUT_DISPATCH_ATTESTATIONS:-false}"
+          deploy_production="${INPUT_DEPLOY_PRODUCTION:-false}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+
+          if [[ -z "$target_ref" ]]; then
+            target_ref="${REF_NAME:-$SHA}"
+          fi
+
+          if [[ "$EVENT_NAME" == "push" && "$REF_TYPE" == "tag" ]]; then
+            mode="github-release-only"
+            tag_name="$REF_NAME"
+            target_ref="$REF_NAME"
+            dry_run="false"
+          fi
+
+          if [[ "$EVENT_NAME" == "release" ]]; then
+            mode="announcement-only"
+            tag_name="${RELEASE_TAG:-$REF_NAME}"
+            target_ref="${RELEASE_TAG:-$REF_NAME}"
+            dry_run="false"
+          fi
+
+          if [[ -n "$tag_name" && -z "$version" ]]; then
+            version="${tag_name#"$tag_prefix"}"
+          fi
+
+          case "$mode" in
+            release|prepare|tag-only|github-release-only|changelog-only|announcement-only|summarize-only)
+              ;;
+            *)
+              echo "::error::Unsupported release mode: $mode"
+              exit 1
+              ;;
+          esac
+
+          case "$release_type" in
+            auto|patch|minor|major|prerelease)
+              ;;
+            *)
+              echo "::error::Unsupported release type: $release_type"
+              exit 1
+              ;;
+          esac
+
+          should_validate_source="false"
+          should_detect_release_label="false"
+          should_determine_version="false"
+          should_build_changelog="false"
+          should_create_tag="false"
+          should_create_github_release="false"
+          should_post_announcement="false"
+          should_summarize_release="true"
+
+          case "$mode" in
+            release)
+              should_validate_source="true"
+              should_detect_release_label="true"
+              should_determine_version="true"
+              should_build_changelog="true"
+              should_create_tag="true"
+              should_create_github_release="true"
+              if [[ -n "$discussion_category_name" ]]; then
+                should_post_announcement="true"
+              fi
+              ;;
+            prepare)
+              should_validate_source="true"
+              should_detect_release_label="true"
+              should_determine_version="true"
+              should_build_changelog="true"
+              ;;
+            tag-only)
+              should_validate_source="true"
+              should_detect_release_label="true"
+              should_determine_version="true"
+              should_create_tag="true"
+              ;;
+            github-release-only)
+              should_validate_source="true"
+              should_build_changelog="true"
+              should_create_github_release="true"
+              ;;
+            changelog-only)
+              should_validate_source="true"
+              should_detect_release_label="true"
+              should_determine_version="true"
+              should_build_changelog="true"
+              ;;
+            announcement-only)
+              if [[ -n "$discussion_category_name" ]]; then
+                should_post_announcement="true"
+              fi
+              ;;
+            summarize-only)
+              should_summarize_release="true"
+              ;;
+          esac
+
+          if [[ -n "$tag_name" ]]; then
+            should_determine_version="false"
+
+            if [[ "$mode" == "release" || "$mode" == "tag-only" ]]; then
+              should_create_tag="true"
+            fi
+          fi
+
+          if [[ "$dry_run" == "true" ]]; then
+            dispatch_publish_npm="false"
+            dispatch_publish_containers="false"
+            dispatch_artifact_hashes="false"
+            dispatch_attestations="false"
+            deploy_production="false"
+          fi
+
+          should_dispatch_downstream="false"
+          if [[ "$dispatch_publish_npm" == "true" || "$dispatch_publish_containers" == "true" || "$dispatch_artifact_hashes" == "true" || "$dispatch_attestations" == "true" || "$deploy_production" == "true" ]]; then
+            should_dispatch_downstream="true"
+          fi
+
+          {
+            echo "mode=$mode"
+            echo "release_type=$release_type"
+            echo "version=$version"
+            echo "tag_name=$tag_name"
+            echo "tag_prefix=$tag_prefix"
+            echo "prerelease_identifier=$prerelease_identifier"
+            echo "target_ref=$target_ref"
+            echo "draft=$draft"
+            echo "prerelease=$prerelease"
+            echo "generate_notes=$generate_notes"
+            echo "discussion_category_name=$discussion_category_name"
+            echo "dry_run=$dry_run"
+            echo "should_validate_source=$should_validate_source"
+            echo "should_detect_release_label=$should_detect_release_label"
+            echo "should_determine_version=$should_determine_version"
+            echo "should_build_changelog=$should_build_changelog"
+            echo "should_create_tag=$should_create_tag"
+            echo "should_create_github_release=$should_create_github_release"
+            echo "should_post_announcement=$should_post_announcement"
+            echo "should_summarize_release=$should_summarize_release"
+            echo "dispatch_publish_npm=$dispatch_publish_npm"
+            echo "dispatch_publish_containers=$dispatch_publish_containers"
+            echo "dispatch_artifact_hashes=$dispatch_artifact_hashes"
+            echo "dispatch_attestations=$dispatch_attestations"
+            echo "deploy_production=$deploy_production"
+            echo "should_dispatch_downstream=$should_dispatch_downstream"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Release"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Mode | \`$mode\` |"
+            echo "| Release type | \`$release_type\` |"
+            echo "| Version | \`${version:-auto}\` |"
+            echo "| Tag | \`${tag_name:-auto}\` |"
+            echo "| Target ref | \`${target_ref:-none}\` |"
+            echo "| Draft | \`$draft\` |"
+            echo "| Prerelease | \`$prerelease\` |"
+            echo "| Dry run | \`$dry_run\` |"
+            echo "| Build changelog | \`$should_build_changelog\` |"
+            echo "| Create tag | \`$should_create_tag\` |"
+            echo "| Create GitHub release | \`$should_create_github_release\` |"
+            echo "| Post announcement | \`$should_post_announcement\` |"
+            echo "| Dispatch downstream | \`$should_dispatch_downstream\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - preflight
+
+    environment:
+      name: release
+      url: ${{ steps.github_release.outputs.release_url || '' }}
+
+    outputs:
+      version: ${{ steps.resolve_release.outputs.version }}
+      tag_name: ${{ steps.resolve_release.outputs.tag_name }}
+      release_url: ${{ steps.github_release.outputs.release_url }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      RELEASE_MODE: ${{ needs.preflight.outputs.mode }}
+      RELEASE_TYPE: ${{ needs.preflight.outputs.release_type }}
+      RELEASE_VERSION_OVERRIDE: ${{ needs.preflight.outputs.version }}
+      RELEASE_TAG_NAME: ${{ needs.preflight.outputs.tag_name }}
+      RELEASE_TAG_PREFIX: ${{ needs.preflight.outputs.tag_prefix }}
+      RELEASE_PRERELEASE_IDENTIFIER: ${{ needs.preflight.outputs.prerelease_identifier }}
+      RELEASE_TARGET_REF: ${{ needs.preflight.outputs.target_ref }}
+      RELEASE_DRAFT: ${{ needs.preflight.outputs.draft }}
+      RELEASE_PRERELEASE: ${{ needs.preflight.outputs.prerelease }}
+      RELEASE_GENERATE_NOTES: ${{ needs.preflight.outputs.generate_notes }}
+      RELEASE_DISCUSSION_CATEGORY_NAME: ${{ needs.preflight.outputs.discussion_category_name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.target_ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack
+        if: hashFiles('package.json') != ''
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          corepack prepare "$PACKAGE_MANAGER" --activate
+
+          pnpm --version || true
+
+      - name: Prepare release output directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$RELEASE_OUTPUT_DIR"
+
+      - name: Validate release source
+        if: needs.preflight.outputs.should_validate_source == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/release/validate-release-source.js" ]]; then
+            echo "::warning::Missing script: .github/scripts/release/validate-release-source.js"
+            exit 0
+          fi
+
+          node ".github/scripts/release/validate-release-source.js" \
+            --mode "$RELEASE_MODE" \
+            --target-ref "$RELEASE_TARGET_REF" \
+            --output "$RELEASE_OUTPUT_DIR/validate-release-source.json" \
+            --summary "$RELEASE_OUTPUT_DIR/validate-release-source.md"
+
+      - name: Detect release label
+        if: needs.preflight.outputs.should_detect_release_label == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/release/detect-release-label.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/release/detect-release-label.js"
+            exit 0
+          fi
+
+          node ".github/scripts/release/detect-release-label.js" \
+            --release-type "$RELEASE_TYPE" \
+            --target-ref "$RELEASE_TARGET_REF" \
+            --output "$RELEASE_OUTPUT_DIR/detect-release-label.json" \
+            --summary "$RELEASE_OUTPUT_DIR/detect-release-label.md"
+
+      - name: Determine release version
+        if: needs.preflight.outputs.should_determine_version == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/release/determine-release-version.js" ]]; then
+            echo "::warning::Missing script: .github/scripts/release/determine-release-version.js"
+            exit 0
+          fi
+
+          detected_release_type="$(node <<'NODE'
+          const fs = require("node:fs");
+
+          const file = "artifacts/release/detect-release-label.json";
+
+          if (!fs.existsSync(file)) {
+            process.exit(0);
+          }
+
+          const data = JSON.parse(fs.readFileSync(file, "utf8"));
+          const value =
+            data.release_type ||
+            data.release?.type ||
+            data.label?.release_type ||
+            data.detected_release_type ||
+            "";
+
+          if (value) {
+            console.log(value);
+          }
+          NODE
+          )"
+
+          effective_release_type="$RELEASE_TYPE"
+
+          if [[ "$effective_release_type" == "auto" && -n "${detected_release_type:-}" ]]; then
+            effective_release_type="$detected_release_type"
+          fi
+
+          if [[ "$effective_release_type" == "auto" ]]; then
+            effective_release_type="patch"
+          fi
+
+          node ".github/scripts/release/determine-release-version.js" \
+            --release-type "$effective_release_type" \
+            --version "$RELEASE_VERSION_OVERRIDE" \
+            --tag-prefix "$RELEASE_TAG_PREFIX" \
+            --prerelease-identifier "$RELEASE_PRERELEASE_IDENTIFIER" \
+            --target-ref "$RELEASE_TARGET_REF" \
+            --output "$RELEASE_OUTPUT_DIR/determine-release-version.json" \
+            --summary "$RELEASE_OUTPUT_DIR/determine-release-version.md"
+
+      - name: Resolve release version and tag
+        id: resolve_release
+        run: |
+          set -euo pipefail
+
+          version="${RELEASE_VERSION_OVERRIDE:-}"
+          tag_name="${RELEASE_TAG_NAME:-}"
+
+          if [[ -f "$RELEASE_OUTPUT_DIR/determine-release-version.json" ]]; then
+            resolved_version="$(node <<'NODE'
+          const fs = require("node:fs");
+
+          const file = "artifacts/release/determine-release-version.json";
+          const data = JSON.parse(fs.readFileSync(file, "utf8"));
+
+          const value =
+            data.version ||
+            data.next_version ||
+            data.release_version ||
+            data.release?.version ||
+            data.versioning?.version ||
+            "";
+
+          if (value) {
+            console.log(value);
+          }
+          NODE
+          )"
+
+            resolved_tag="$(node <<'NODE'
+          const fs = require("node:fs");
+
+          const file = "artifacts/release/determine-release-version.json";
+          const data = JSON.parse(fs.readFileSync(file, "utf8"));
+
+          const value =
+            data.tag_name ||
+            data.tag ||
+            data.release_tag ||
+            data.release?.tag_name ||
+            data.versioning?.tag_name ||
+            "";
+
+          if (value) {
+            console.log(value);
+          }
+          NODE
+          )"
+
+            if [[ -z "$version" && -n "${resolved_version:-}" ]]; then
+              version="$resolved_version"
+            fi
+
+            if [[ -z "$tag_name" && -n "${resolved_tag:-}" ]]; then
+              tag_name="$resolved_tag"
+            fi
+          fi
+
+          if [[ -n "$tag_name" && -z "$version" ]]; then
+            version="${tag_name#"$RELEASE_TAG_PREFIX"}"
+          fi
+
+          if [[ -n "$version" && -z "$tag_name" ]]; then
+            clean_version="${version#"$RELEASE_TAG_PREFIX"}"
+            tag_name="${RELEASE_TAG_PREFIX}${clean_version}"
+          fi
+
+          if [[ -z "$version" || -z "$tag_name" ]]; then
+            if [[ "$RELEASE_MODE" == "summarize-only" || "$PROJECT_SYNC_DRY_RUN" == "true" ]]; then
+              version="${version:-0.0.0-dry-run.${GITHUB_RUN_NUMBER}}"
+              tag_name="${tag_name:-${RELEASE_TAG_PREFIX}${version}}"
+            else
+              echo "::error::Unable to resolve release version or tag."
+              exit 1
+            fi
+          fi
+
+          {
+            echo "version=$version"
+            echo "tag_name=$tag_name"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Resolved Release"
+            echo ""
+            echo "- Version: \`$version\`"
+            echo "- Tag: \`$tag_name\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build changelog
+        if: needs.preflight.outputs.should_build_changelog == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.resolve_release.outputs.version }}
+          RELEASE_TAG: ${{ steps.resolve_release.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/release/build-changelog.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/release/build-changelog.js"
+            exit 0
+          fi
+
+          node ".github/scripts/release/build-changelog.js" \
+            --version "$RELEASE_VERSION" \
+            --tag "$RELEASE_TAG" \
+            --target-ref "$RELEASE_TARGET_REF" \
+            --output "$RELEASE_OUTPUT_DIR/build-changelog.json" \
+            --summary "$RELEASE_OUTPUT_DIR/CHANGELOG.md"
+
+      - name: Create release tag
+        if: needs.preflight.outputs.should_create_tag == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.resolve_release.outputs.version }}
+          RELEASE_TAG: ${{ steps.resolve_release.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$PROJECT_SYNC_DRY_RUN" == "true" ]]; then
+            echo "::notice::Dry run enabled. Skipping release tag creation."
+            exit 0
+          fi
+
+          if [[ ! -f ".github/scripts/release/create-release-tag.js" ]]; then
+            echo "::error::Missing script: .github/scripts/release/create-release-tag.js"
+            exit 1
+          fi
+
+          node ".github/scripts/release/create-release-tag.js" \
+            --version "$RELEASE_VERSION" \
+            --tag "$RELEASE_TAG" \
+            --target-ref "$RELEASE_TARGET_REF" \
+            --output "$RELEASE_OUTPUT_DIR/create-release-tag.json" \
+            --summary "$RELEASE_OUTPUT_DIR/create-release-tag.md"
+
+      - name: Create GitHub release
+        id: github_release
+        if: needs.preflight.outputs.should_create_github_release == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.resolve_release.outputs.version }}
+          RELEASE_TAG: ${{ steps.resolve_release.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$PROJECT_SYNC_DRY_RUN" == "true" ]]; then
+            echo "::notice::Dry run enabled. Skipping GitHub release creation."
+            echo "release_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ ! -f ".github/scripts/release/create-github-release.js" ]]; then
+            echo "::error::Missing script: .github/scripts/release/create-github-release.js"
+            exit 1
+          fi
+
+          notes_file="$RELEASE_OUTPUT_DIR/CHANGELOG.md"
+
+          if [[ ! -f "$notes_file" ]]; then
+            notes_file=""
+          fi
+
+          args=(
+            --version "$RELEASE_VERSION"
+            --tag "$RELEASE_TAG"
+            --name "Aerealith AI $RELEASE_TAG"
+            --draft "$RELEASE_DRAFT"
+            --prerelease "$RELEASE_PRERELEASE"
+            --generate-notes "$RELEASE_GENERATE_NOTES"
+            --output "$RELEASE_OUTPUT_DIR/create-github-release.json"
+            --summary "$RELEASE_OUTPUT_DIR/create-github-release.md"
+          )
+
+          if [[ -n "$notes_file" ]]; then
+            args+=(--notes-file "$notes_file")
+          fi
+
+          node ".github/scripts/release/create-github-release.js" "${args[@]}"
+
+          release_url="$(node <<'NODE'
+          const fs = require("node:fs");
+
+          const file = "artifacts/release/create-github-release.json";
+
+          if (!fs.existsSync(file)) {
+            process.exit(0);
+          }
+
+          const data = JSON.parse(fs.readFileSync(file, "utf8"));
+          const value =
+            data.release_url ||
+            data.html_url ||
+            data.url ||
+            data.release?.html_url ||
+            data.github_release?.html_url ||
+            "";
+
+          if (value) {
+            console.log(value);
+          }
+          NODE
+          )"
+
+          echo "release_url=$release_url" >> "$GITHUB_OUTPUT"
+
+      - name: Post release discussion announcement
+        if: needs.preflight.outputs.should_post_announcement == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.resolve_release.outputs.version }}
+          RELEASE_TAG: ${{ steps.resolve_release.outputs.tag_name }}
+          RELEASE_URL: ${{ steps.github_release.outputs.release_url || '' }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$PROJECT_SYNC_DRY_RUN" == "true" ]]; then
+            echo "::notice::Dry run enabled. Skipping release discussion announcement."
+            exit 0
+          fi
+
+          if [[ ! -f ".github/scripts/release/post-discussion-announcement.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/release/post-discussion-announcement.js"
+            exit 0
+          fi
+
+          node ".github/scripts/release/post-discussion-announcement.js" \
+            --version "$RELEASE_VERSION" \
+            --tag "$RELEASE_TAG" \
+            --release-url "$RELEASE_URL" \
+            --category "$RELEASE_DISCUSSION_CATEGORY_NAME" \
+            --notes-file "$RELEASE_OUTPUT_DIR/CHANGELOG.md" \
+            --output "$RELEASE_OUTPUT_DIR/post-discussion-announcement.json" \
+            --summary "$RELEASE_OUTPUT_DIR/post-discussion-announcement.md"
+
+      - name: Summarize release
+        if: always() && needs.preflight.outputs.should_summarize_release == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.resolve_release.outputs.version || needs.preflight.outputs.version }}
+          RELEASE_TAG: ${{ steps.resolve_release.outputs.tag_name || needs.preflight.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/release/summarize-release.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/release/summarize-release.js"
+
+            cat > "$RELEASE_OUTPUT_DIR/summarize-release.md" <<EOF
+          # Aerealith AI Release Summary
+
+          - Mode: \`${RELEASE_MODE}\`
+          - Version: \`${RELEASE_VERSION:-unknown}\`
+          - Tag: \`${RELEASE_TAG:-unknown}\`
+          - Dry run: \`${PROJECT_SYNC_DRY_RUN}\`
+          EOF
+
+            cat "$RELEASE_OUTPUT_DIR/summarize-release.md" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          node ".github/scripts/release/summarize-release.js" \
+            --input-dir "$RELEASE_OUTPUT_DIR" \
+            --version "${RELEASE_VERSION:-}" \
+            --tag "${RELEASE_TAG:-}" \
+            --output "$RELEASE_OUTPUT_DIR/summarize-release.json" \
+            --summary "$RELEASE_OUTPUT_DIR/summarize-release.md" \
+            --no-fail-on-error
+
+          if [[ -f "$RELEASE_OUTPUT_DIR/summarize-release.md" ]]; then
+            cat "$RELEASE_OUTPUT_DIR/summarize-release.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Write release output summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Release Output Files"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            if [[ -d "$RELEASE_OUTPUT_DIR" ]]; then
+              while IFS= read -r file; do
+                size="$(wc -c < "$file" | xargs)"
+                echo "| \`$file\` | \`$size\` bytes |"
+              done < <(find "$RELEASE_OUTPUT_DIR" -type f | sort)
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ github.run_id }}
+          path: |
+            artifacts/release/**
+          if-no-files-found: ignore
+          retention-days: 30
+
+  dispatch-downstream:
+    name: Dispatch downstream release workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - preflight
+      - release
+
+    if: >-
+      needs.preflight.outputs.should_dispatch_downstream == 'true' &&
+      needs.preflight.outputs.dry_run != 'true' &&
+      needs.release.result == 'success'
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      RELEASE_TAG: ${{ needs.release.outputs.tag_name }}
+      RELEASE_VERSION: ${{ needs.release.outputs.version }}
+
+    steps:
+      - name: Dispatch selected workflows
+        run: |
+          set -euo pipefail
+
+          dispatch_workflow() {
+            local workflow_file="$1"
+            shift || true
+
+            echo "::group::Dispatch $workflow_file"
+
+            if gh workflow view "$workflow_file" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh workflow run "$workflow_file" \
+                --repo "$GITHUB_REPOSITORY" \
+                --ref "$RELEASE_TAG" \
+                "$@"
+
+              echo "Dispatched $workflow_file."
+            else
+              echo "::notice::Workflow not found or not enabled: $workflow_file"
+            fi
+
+            echo "::endgroup::"
+          }
+
+          if [[ "${{ needs.preflight.outputs.dispatch_publish_npm }}" == "true" ]]; then
+            dispatch_workflow "publish-npm.yaml" \
+              -f mode=publish \
+              -f npm_tag=latest \
+              -f dry_run=false
+          fi
+
+          if [[ "${{ needs.preflight.outputs.dispatch_publish_containers }}" == "true" ]]; then
+            dispatch_workflow "publish-containers.yaml" \
+              -f mode=publish \
+              -f registry=ghcr \
+              -f dry_run=false
+          fi
+
+          if [[ "${{ needs.preflight.outputs.dispatch_artifact_hashes }}" == "true" ]]; then
+            dispatch_workflow "artifact-hashes.yaml" \
+              -f source_run_id="$GITHUB_RUN_ID" \
+              -f verify_only=false \
+              -f create_manifest=true \
+              -f create_checksums=true \
+              -f create_sbom=true \
+              -f dry_run=false
+          fi
+
+          if [[ "${{ needs.preflight.outputs.dispatch_attestations }}" == "true" ]]; then
+            dispatch_workflow "attestations.yaml" \
+              -f source_run_id="$GITHUB_RUN_ID" \
+              -f create_manifest=true \
+              -f create_checksums=true \
+              -f create_sbom=true \
+              -f dry_run=false
+          fi
+
+          if [[ "${{ needs.preflight.outputs.deploy_production }}" == "true" ]]; then
+            dispatch_workflow "cloudflare-production.yaml" \
+              -f mode=deploy \
+              -f environment_name=production \
+              -f dry_run=false
+          fi
+
+      - name: Write downstream dispatch summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Downstream Release Dispatch"
+            echo ""
+            echo "| Workflow | Requested |"
+            echo "|---|---|"
+            echo "| publish-npm.yaml | \`${{ needs.preflight.outputs.dispatch_publish_npm }}\` |"
+            echo "| publish-containers.yaml | \`${{ needs.preflight.outputs.dispatch_publish_containers }}\` |"
+            echo "| artifact-hashes.yaml | \`${{ needs.preflight.outputs.dispatch_artifact_hashes }}\` |"
+            echo "| attestations.yaml | \`${{ needs.preflight.outputs.dispatch_attestations }}\` |"
+            echo "| cloudflare-production.yaml | \`${{ needs.preflight.outputs.deploy_production }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - preflight
+      - release
+      - dispatch-downstream
+
+    if: always()
+
+    steps:
+      - name: Write final release summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Release Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Release | \`${{ needs.release.result }}\` |"
+            echo "| Downstream dispatch | \`${{ needs.dispatch-downstream.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| Release type | \`${{ needs.preflight.outputs.release_type }}\` |"
+            echo "| Version | \`${{ needs.release.outputs.version || needs.preflight.outputs.version || 'unknown' }}\` |"
+            echo "| Tag | \`${{ needs.release.outputs.tag_name || needs.preflight.outputs.tag_name || 'unknown' }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| Create tag | \`${{ needs.preflight.outputs.should_create_tag }}\` |"
+            echo "| Create GitHub release | \`${{ needs.preflight.outputs.should_create_github_release }}\` |"
+            echo "| Dispatch downstream | \`${{ needs.preflight.outputs.should_dispatch_downstream }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce release result
+        run: |
+          set -euo pipefail
+
+          check_required_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
+
+          check_optional_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
+
+          check_required_job "Preflight" "${{ needs.preflight.result }}"
+          check_required_job "Release" "${{ needs.release.result }}"
+          check_optional_job "Downstream dispatch" "${{ needs.dispatch-downstream.result }}"
+
+          echo "Release workflow completed."

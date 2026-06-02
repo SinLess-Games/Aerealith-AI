@@ -1,26 +1,51 @@
 # .github/assignees.yaml
 # ==========================================================
-# 👥 Helix AI Default Assignee Configuration
+# Aerealith AI Default Assignee Configuration
 # ==========================================================
 # Purpose:
 #   Central source of truth for deterministic assignment,
-#   reviewer recommendations, milestone hints, and ownership
-#   routing for issues and pull requests.
+#   reviewer recommendations, milestone hints, ownership routing,
+#   and issue / pull request relationship behavior.
 #
 # Used by:
-#   - .github/workflows/assign.yaml
-#   - .github/scripts/assign.js
-#   - .github/workflows/repo-manager.md
+#   - .github/workflows/repo-management.yaml
+#   - .github/scripts/repo/assign-assignees.js
+#   - .github/scripts/repo/assign-reviewers.js
+#   - .github/scripts/repo/assign-milestones.js
+#   - .github/scripts/repo/link-issues-prs.js
+#
+# Owner fields:
+#   assignees:
+#     - GitHub usernames only
+#
+#   reviewers:
+#     - GitHub usernames only
+#
+#   team_reviewers:
+#     - GitHub team slugs in owner/team format
+#
+# Example:
+#   assignees:
+#     - Sinless777
+#     - AnotherUser
+#
+#   reviewers:
+#     - Sinless777
+#     - AnotherReviewer
+#
+#   team_reviewers:
+#     - SinLess-Games/platform
+#     - SinLess-Games/security
 #
 # Notes:
-#   - Repo-manager may recommend owners from this file.
-#   - The deterministic assignment script should apply assignments.
-#   - Bots are listed only where useful for automation context.
-#   - If GitHub rejects a bot assignment, the script should skip it safely.
+#   - GitHub issue assignees must be users, not teams.
+#   - Pull request reviewers may be users or teams.
+#   - If GitHub rejects a bot, user, or team assignment, scripts should warn and continue.
+#   - Keep this aligned with .github/CODEOWNERS, .github/labels.yaml, and .github/milestones.yaml.
 # ==========================================================
 
 # ----------------------------------------------------------
-# 🔧 Core Maintainers
+# Core Maintainers
 # ----------------------------------------------------------
 maintainers:
   - Sinless777
@@ -29,25 +54,74 @@ automation_accounts:
   - github-actions[bot]
   - dependabot[bot]
   - renovate[bot]
+  - mend[bot]
   - github-copilot[bot]
 
 # ----------------------------------------------------------
-# ⚙️ Global Defaults
+# Optional Owner Groups
+# ----------------------------------------------------------
+# These groups are reference hints for scripts and future expansion.
+# Rules below still include explicit assignees/reviewers so they remain simple.
+# ----------------------------------------------------------
+owner_groups:
+  default:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+
+  platform:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+
+  security:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+
+  release:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+
+  cloudflare:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+
+  automation:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+
+# ----------------------------------------------------------
+# Global Defaults
 # ----------------------------------------------------------
 default:
   assignees:
     - Sinless777
   reviewers:
     - Sinless777
+  team_reviewers: []
   labels:
     - status:backlog
   milestone: Backlog
 
 # ----------------------------------------------------------
-# 🧠 Rule Matching Strategy
+# Rule Matching Strategy
 # ----------------------------------------------------------
-# Rules are keyed by labels or automation contexts.
-#
 # Recommended script behavior:
 #   1. Match exact labels first.
 #   2. Apply all matching area labels.
@@ -55,18 +129,21 @@ default:
 #   4. Apply one matching priority label.
 #   5. Apply one matching status label.
 #   6. Prefer the most specific milestone.
-#   7. Fall back to `default`.
+#   7. Fall back to default.
 #
-# Labels should match the label families used by repo-manager:
-#   - area:*
-#   - kind:*
-#   - priority:*
-#   - status:*
+# Rules may include:
+#   - assignees
+#   - reviewers
+#   - team_reviewers
+#   - labels
+#   - milestone
+#   - paths
+#   - automation_safe
 # ----------------------------------------------------------
 
 rules:
   # --------------------------------------------------------
-  # 🧩 Kind-based ownership
+  # Kind-based ownership
   # --------------------------------------------------------
 
   "kind:bug":
@@ -74,6 +151,7 @@ rules:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - kind:bug
       - status:ready
@@ -84,19 +162,34 @@ rules:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - kind:feature
       - status:backlog
-    milestone: MVP
+    milestone: Backlog
 
   "kind:chore":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - kind:chore
       - status:ready
+      - no-release
+    milestone: Backlog
+
+  "kind:maintenance":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - kind:maintenance
+      - status:ready
+      - no-release
     milestone: Backlog
 
   "kind:refactor":
@@ -104,6 +197,7 @@ rules:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - kind:refactor
       - status:ready
@@ -114,47 +208,75 @@ rules:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - kind:security
       - area:security
       - priority:high
       - status:ready
-    milestone: Security
+    milestone: Security — Strict Pull Request Gate
 
   "kind:documentation":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - kind:documentation
       - area:docs
       - status:ready
-    milestone: Documentation
+    milestone: Documentation — Developer Experience
 
   "kind:test":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - kind:test
       - status:ready
-    milestone: CI/CD
+    milestone: CI/CD — Pull Request Validation
 
   "kind:release":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - kind:release
       - release
       - status:ready
-    milestone: Release
+    milestone: V0.5.0 — Release Automation
+
+  "kind:deployment":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - kind:deployment
+      - deployment
+      - status:ready
+    milestone: V0.7.0 — Cloudflare Platform
+
+  "kind:ci":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - kind:ci
+      - area:ci
+      - status:ready
+    milestone: V0.3.0 — CI/CD Expansion
 
   # --------------------------------------------------------
-  # 🗂️ Area-based ownership
+  # App area ownership
   # --------------------------------------------------------
 
   "area:frontend":
@@ -162,34 +284,59 @@ rules:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - area:frontend
-    milestone: Frontend
+    milestone: V0.1.0 — Foundation
     paths:
       - apps/frontend/**
-      - apps/e2e/frontend-e2e/**
+
+  "area:connectors":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:connectors
+    milestone: V0.1.0 — Foundation
+    paths:
+      - apps/connectors/**
 
   "area:e2e":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - area:e2e
       - kind:test
-    milestone: CI/CD
+    milestone: CI/CD — Pull Request Validation
     paths:
       - apps/e2e/**
-      - apps/e2e/frontend-e2e/**
+
+  "area:engines":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:engines
+    milestone: V0.1.0 — Foundation
+    paths:
+      - apps/engines/**
 
   "area:integrations":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - area:integrations
-    milestone: MVP
+    milestone: V0.1.0 — Foundation
     paths:
       - apps/integrations/**
 
@@ -198,204 +345,845 @@ rules:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - area:services
-    milestone: MVP
+    milestone: V0.1.0 — Foundation
     paths:
       - apps/services/**
 
-  "area:ui":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - area:ui
-      - area:frontend
-    milestone: Frontend
-    paths:
-      - libs/ui/**
-
-  "area:config":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - area:config
-    milestone: MVP
-    paths:
-      - libs/config/**
-
-  "area:db":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - area:db
-    milestone: MVP
-    paths:
-      - libs/db/**
-
-  "area:flags":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - area:flags
-    milestone: MVP
-    paths:
-      - libs/flags/**
+  # --------------------------------------------------------
+  # Library area ownership
+  # --------------------------------------------------------
 
   "area:libs":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - area:libs
-    milestone: MVP
+    milestone: V0.1.0 — Foundation
     paths:
       - libs/**
+
+  "area:ui":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:ui
+      - area:frontend
+    milestone: V0.1.0 — Foundation
+    paths:
+      - libs/ui/**
+      - libs/design/**
+      - libs/theme/**
+
+  "area:config":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:config
+    milestone: V0.1.0 — Foundation
+    paths:
+      - libs/config/**
+      - libs/env/**
+      - "**/config/**"
+
+  "area:db":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:db
+    milestone: V0.1.0 — Foundation
+    paths:
+      - libs/db/**
+      - libs/database/**
+      - "**/migrations/**"
+      - "**/*schema*"
+      - "**/*entity*"
+
+  "area:flags":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:flags
+    milestone: V0.1.0 — Foundation
+    paths:
+      - libs/flags/**
+      - libs/feature-flags/**
+      - "**/*flag*"
+      - "**/*entitlement*"
+
+  # --------------------------------------------------------
+  # GitHub / repo-management / CI ownership
+  # --------------------------------------------------------
 
   "area:github-actions":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - area:github-actions
       - automation
-    milestone: CI/CD
+    milestone: V0.2.0 — Automation Core
     paths:
-      - .github/**
+      - .github/workflows/**
+      - .github/actions/**
+      - .github/scripts/**
 
-  "area:cloudflare":
+  "area:repo-management":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
-      - area:cloudflare
-      - cloudflare
-      - deployment
-    milestone: Cloudflare Setup
+      - area:repo-management
+      - automation
+    milestone: Repo Management — Issues & Pull Requests
     paths:
-      - apps/frontend/wrangler.jsonc
-      - apps/frontend/open-next.config.ts
-      - apps/frontend/cloudflare-env.d.ts
-      - apps/frontend/public/_headers
-      - wrangler.toml
-      - "**/wrangler.toml"
-
-  "area:docs":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - area:docs
-      - kind:documentation
-    milestone: Documentation
-    paths:
-      - docs/**
-      - Docs/**
-      - README.md
-      - Readme.md
-      - "**/*.md"
-
-  "area:kubernetes":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - area:kubernetes
-    milestone: Infrastructure
-    paths:
-      - kubernetes/**
-      - Kubernetes/**
-
-  "area:ansible":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - area:ansible
-    milestone: Infrastructure
-    paths:
-      - ansible/**
-      - Ansible/**
-
-  "area:terraform":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - area:terraform
-    milestone: Infrastructure
-    paths:
-      - terraform/**
-      - Terraform/**
-
-  "area:security":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - area:security
-      - kind:security
-    milestone: Security
-    paths:
-      - .github/workflows/codeQL.yaml
-      - .github/codeql.yaml
-      - "**/*security*"
-      - "**/*auth*"
-      - "**/*policy*"
-      - "**/*secret*"
-
-  "area:observability":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - area:observability
-    milestone: Observability
-    paths:
-      - "**/*grafana*"
-      - "**/*faro*"
-      - "**/*otel*"
-      - "**/*opentelemetry*"
-      - "**/*prometheus*"
-      - "**/*loki*"
-      - "**/*tempo*"
-      - "**/*dashboard*"
+      - .github/assignees.yaml
+      - .github/CODEOWNERS
+      - .github/labeler.yaml
+      - .github/labels.yaml
+      - .github/milestones.yaml
+      - .github/projects/**
+      - .github/repo-management/**
+      - .github/scripts/repo/**
 
   "area:ci":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - area:ci
       - automation
-    milestone: CI/CD
+    milestone: V0.3.0 — CI/CD Expansion
     paths:
       - .github/workflows/**
+      - .github/scripts/ci/**
+      - .github/scripts/cache/**
+      - .github/scripts/artifacts/**
       - nx.json
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
       - tsconfig.base.json
+      - tsconfig.json
+      - "**/project.json"
+
+  "area:cache":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:cache
+      - area:ci
+    milestone: CI/CD — Cache Management
+    paths:
+      - .github/workflows/cache-maintenance.yaml
+      - .github/scripts/cache/**
+      - "**/*cache*"
+
+  "area:artifacts":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:artifacts
+      - area:ci
+    milestone: CI/CD — Artifacts & Hashes
+    paths:
+      - .github/workflows/artifact-hashes.yaml
+      - .github/scripts/artifacts/**
+      - "**/*artifact*"
+      - "**/*manifest*"
 
   # --------------------------------------------------------
-  # 🚦 Priority-based ownership
+  # Cloudflare ownership
+  # --------------------------------------------------------
+
+  "area:cloudflare":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:cloudflare
+      - cloudflare
+      - deployment
+    milestone: V0.7.0 — Cloudflare Platform
+    paths:
+      - wrangler.toml
+      - wrangler.jsonc
+      - "**/wrangler.toml"
+      - "**/wrangler.jsonc"
+      - "**/open-next.config.ts"
+      - "**/cloudflare-env.d.ts"
+      - "**/worker-configuration.d.ts"
+      - .github/scripts/cloudflare/**
+
+  "area:workers":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:workers
+      - area:cloudflare
+      - cloudflare
+    milestone: V0.7.0 — Cloudflare Platform
+
+  "area:queues":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:queues
+      - area:cloudflare
+      - cloudflare
+    milestone: V0.7.0 — Cloudflare Platform
+
+  "area:r2":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:r2
+      - area:cloudflare
+      - cloudflare
+    milestone: V0.7.0 — Cloudflare Platform
+
+  "area:d1":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:d1
+      - area:cloudflare
+      - cloudflare
+      - area:db
+    milestone: V0.7.0 — Cloudflare Platform
+
+  "area:kv":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:kv
+      - area:cloudflare
+      - cloudflare
+    milestone: V0.7.0 — Cloudflare Platform
+
+  "area:secrets":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:secrets
+      - area:security
+      - priority:high
+    milestone: Security — Strict Pull Request Gate
+
+  # --------------------------------------------------------
+  # Publishing ownership
+  # --------------------------------------------------------
+
+  "area:docker":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:docker
+      - deployment
+    milestone: Publishing — GHCR Containers
+    paths:
+      - Dockerfile
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+      - docker/**
+      - .dockerignore
+      - "**/.dockerignore"
+      - .github/scripts/docker/**
+
+  "area:ghcr":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:ghcr
+      - ghcr
+      - publishing
+    milestone: Publishing — GHCR Containers
+
+  "area:npm":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:npm
+      - npm-package
+      - publishing
+    milestone: Publishing — npm Packages
+    paths:
+      - .npmrc
+      - package.json
+      - "**/package.json"
+      - .github/workflows/publish-npm.yaml
+      - .github/scripts/npm/**
+
+  "publishing":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - publishing
+      - kind:release
+    milestone: V0.6.0 — Publishing Pipeline
+
+  "sbom":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - sbom
+      - area:security
+      - area:artifacts
+    milestone: Security — Supply Chain Integrity
+
+  "attestations":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - attestations
+      - area:security
+      - area:artifacts
+    milestone: Security — Supply Chain Integrity
+
+  "checksums":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - checksums
+      - area:artifacts
+    milestone: CI/CD — Artifacts & Hashes
+
+  # --------------------------------------------------------
+  # Security ownership
+  # --------------------------------------------------------
+
+  "area:security":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:security
+      - kind:security
+      - priority:high
+    milestone: Security — Strict Pull Request Gate
+    paths:
+      - .github/codeql.yaml
+      - .github/workflows/codeql.yaml
+      - .github/workflows/security.yaml
+      - .github/workflows/dependency-review.yaml
+      - .github/workflows/dependency-management.yaml
+      - .github/workflows/dependency-auto-merge.yaml
+      - .github/scripts/security/**
+      - security/**
+      - Security/**
+      - "**/*security*"
+      - "**/*auth*"
+      - "**/*policy*"
+      - "**/*secret*"
+      - "**/*permission*"
+
+  "security:dependency":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - security:dependency
+      - dependencies
+      - kind:security
+      - area:security
+      - priority:critical
+      - auto-merge
+      - no-release
+    milestone: Security — Dependency Vulnerability Response
+    automation_safe: true
+
+  "blocked-by-security":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - blocked-by-security
+      - do-not-merge
+      - area:security
+      - priority:critical
+    milestone: Security — Strict Pull Request Gate
+
+  "needs-security-review":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - needs-security-review
+      - area:security
+      - status:needs-review
+    milestone: Security — Strict Pull Request Gate
+
+  # --------------------------------------------------------
+  # Dependency automation ownership
+  # --------------------------------------------------------
+
+  "dependencies":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - dependencies
+      - area:dependencies
+      - kind:chore
+      - no-release
+    milestone: Dependencies — Renovate Weekly Updates
+    paths:
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - "**/package.json"
+
+  "area:dependencies":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:dependencies
+      - dependencies
+      - no-release
+    milestone: Dependencies — Renovate Weekly Updates
+
+  "renovate":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - renovate
+      - dependencies
+      - automation
+      - automation:renovate
+      - no-release
+    milestone: Dependencies — Renovate Weekly Updates
+    automation_safe: true
+
+  "dependabot":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - dependabot
+      - dependencies
+      - automation
+      - automation:dependabot
+      - no-release
+    milestone: Dependencies — Renovate Weekly Updates
+    automation_safe: true
+
+  "mend":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - mend
+      - dependencies
+      - automation
+      - automation:mend
+      - no-release
+    milestone: Dependencies — Mend Management
+    automation_safe: true
+
+  "lockfile":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - lockfile
+      - dependencies
+      - no-release
+    milestone: Dependencies — Renovate Weekly Updates
+
+  "auto-merge":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - auto-merge
+      - status:ready
+    milestone: Dependencies — Renovate Weekly Updates
+    automation_safe: true
+
+  # --------------------------------------------------------
+  # Release ownership
+  # --------------------------------------------------------
+
+  "release":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - release
+      - kind:release
+    milestone: V0.5.0 — Release Automation
+    paths:
+      - .github/workflows/release.yaml
+      - .github/workflows/publish-npm.yaml
+      - .github/workflows/publish-containers.yaml
+      - .github/workflows/attestations.yaml
+      - .github/scripts/release/**
+      - CHANGELOG.md
+      - .changeset/**
+
+  "release:major":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - release:major
+      - release
+      - kind:release
+      - breaking-change
+    milestone: V0.5.0 — Release Automation
+
+  "release:minor":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - release:minor
+      - release
+      - kind:release
+    milestone: V0.5.0 — Release Automation
+
+  "release:patch":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - release:patch
+      - release
+      - kind:release
+    milestone: V0.5.0 — Release Automation
+
+  "no-release":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - no-release
+    milestone: Backlog
+
+  # --------------------------------------------------------
+  # Deployment environment ownership
+  # --------------------------------------------------------
+
+  "deployment":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - deployment
+      - kind:deployment
+    milestone: V0.7.0 — Cloudflare Platform
+
+  "preview":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - preview
+      - deployment
+    milestone: Cloudflare — Preview Environments
+
+  "staging":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - staging
+      - deployment
+    milestone: Cloudflare — Staging Environment
+
+  "production":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - production
+      - deployment
+      - priority:high
+      - needs-maintainer-review
+    milestone: Cloudflare — Production Environment
+
+  # --------------------------------------------------------
+  # AI automation ownership
+  # --------------------------------------------------------
+
+  "area:ai":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:ai
+      - automation
+    milestone: V0.8.0 — AI Repository Assistant
+    paths:
+      - .github/scripts/ai/**
+      - .github/scripts/ai/prompts/**
+
+  "area:openai":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:openai
+      - area:ai
+      - automation:openai
+    milestone: V0.8.0 — AI Repository Assistant
+
+  "automation:openai":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - automation:openai
+      - automation
+      - automation:needs-review
+    milestone: V0.8.0 — AI Repository Assistant
+    automation_safe: false
+
+  "automation:needs-review":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - automation:needs-review
+      - needs-maintainer-review
+      - status:needs-review
+    milestone: V0.8.0 — AI Repository Assistant
+
+  # --------------------------------------------------------
+  # Self-hosted future deployment ownership
+  # --------------------------------------------------------
+
+  "area:self-hosted":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:self-hosted
+      - deployment
+    milestone: Self-Hosted — Helm Chart
+    paths:
+      - charts/**
+      - helm/**
+      - deploy/**
+      - deploy/self-hosted/**
+      - deploy/kubernetes/**
+      - k8s/**
+      - kubernetes/**
+
+  "area:helm":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:helm
+      - area:self-hosted
+      - deployment
+    milestone: Self-Hosted — Helm Chart
+    paths:
+      - charts/**
+      - helm/**
+      - "**/Chart.yaml"
+      - "**/Chart.yml"
+      - "**/values.yaml"
+      - "**/values.yml"
+      - "**/values-*.yaml"
+      - "**/values-*.yml"
+      - "**/templates/**"
+
+  "area:kubernetes":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:kubernetes
+      - area:self-hosted
+      - deployment
+    milestone: Self-Hosted — Kubernetes Manifests
+    paths:
+      - k8s/**
+      - kubernetes/**
+      - deploy/kubernetes/**
+      - deploy/manifests/**
+      - "**/*.k8s.yaml"
+      - "**/*.k8s.yml"
+      - "**/kustomization.yaml"
+      - "**/kustomization.yml"
+
+  # --------------------------------------------------------
+  # Observability and documentation ownership
+  # --------------------------------------------------------
+
+  "area:observability":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:observability
+    milestone: Observability — Grafana Cloud
+    paths:
+      - "**/*grafana*"
+      - "**/*faro*"
+      - "**/*otel*"
+      - "**/*opentelemetry*"
+      - "**/*dashboard*"
+      - "**/*metrics*"
+      - "**/*trace*"
+      - "**/*traces*"
+      - "**/*log*"
+      - "**/*logs*"
+      - "**/*alert*"
+
+  "area:docs":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - area:docs
+      - kind:documentation
+    milestone: Documentation — Developer Experience
+    paths:
+      - docs/**
+      - Docs/**
+      - README.md
+      - Readme.md
+      - CONTRIBUTING.md
+      - CODE_OF_CONDUCT.md
+      - SECURITY.md
+      - "**/*.md"
+      - "**/*.mdx"
+
+  # --------------------------------------------------------
+  # Priority-based ownership
   # --------------------------------------------------------
 
   "priority:critical":
@@ -403,26 +1191,29 @@ rules:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - priority:critical
       - status:blocked
-    milestone: MVP
+    milestone: Security — Strict Pull Request Gate
 
   "priority:high":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - priority:high
       - status:ready
-    milestone: MVP
+    milestone: Backlog
 
   "priority:medium":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - priority:medium
     milestone: Backlog
@@ -432,40 +1223,24 @@ rules:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - priority:low
       - status:backlog
     milestone: Backlog
 
   # --------------------------------------------------------
-  # 📌 Status-based ownership
+  # Status-based ownership
   # --------------------------------------------------------
 
-  "status:blocked":
+  "status:triage":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
-      - status:blocked
-    milestone: Backlog
-
-  "status:needs-info":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - status:needs-info
-    milestone: Backlog
-
-  "status:ready":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - status:ready
+      - status:triage
     milestone: Backlog
 
   "status:backlog":
@@ -473,8 +1248,19 @@ rules:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - status:backlog
+    milestone: Backlog
+
+  "status:ready":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - status:ready
     milestone: Backlog
 
   "status:in-progress":
@@ -482,229 +1268,255 @@ rules:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
       - status:in-progress
-    milestone: MVP
-
-  # --------------------------------------------------------
-  # 🤖 Agentic workflow ownership
-  # --------------------------------------------------------
-
-  "agentic-workflow":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - agentic-workflow
-      - automation
-      - area:github-actions
-    milestone: Agentic Workflows
-    paths:
-      - .github/workflows/*.md
-      - .github/workflows/*.lock.yml
-      - .github/agents/**
-      - .github/mcp.json
-
-  "repo-management":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - repo-management
-      - automation
-      - area:github-actions
-    milestone: Agentic Workflows
-    paths:
-      - .github/workflows/repo-manager.md
-      - .github/workflows/repo-manager.lock.yml
-      - .github/assignees.yaml
-      - .github/labels.yaml
-      - .github/labeler.yaml
-      - .github/milestones.yaml
-
-  # --------------------------------------------------------
-  # 📦 Release / dependency ownership
-  # --------------------------------------------------------
-
-  "release":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - release
-      - kind:release
-    milestone: Release
-    paths:
-      - .github/workflows/publish-libs.yaml
-      - .github/workflows/container-build-publish.yaml
-      - .github/workflows/package-manager.md
-      - .github/workflows/package-manager.lock.yml
-
-  "dependencies":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - dependencies
-      - kind:chore
-    milestone: Backlog
-    paths:
-      - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-
-  "deployment":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - deployment
-    milestone: Cloudflare Setup
-
-  "cloudflare":
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - cloudflare
-      - area:cloudflare
-      - deployment
-    milestone: Cloudflare Setup
-
-  # --------------------------------------------------------
-  # 🤖 Bot / automation contexts
-  # --------------------------------------------------------
-
-  renovate:
-    assignees:
-      - Sinless777
-    reviewers:
-      - Sinless777
-    labels:
-      - dependencies
-      - kind:chore
-      - automation
     milestone: Backlog
 
-  dependabot:
+  "status:needs-info":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
-      - dependencies
-      - kind:security
-      - automation
-    milestone: Security
+      - status:needs-info
+    milestone: Backlog
 
-  github-actions:
+  "status:needs-review":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
-      - automation
-      - area:github-actions
-    milestone: CI/CD
+      - status:needs-review
+    milestone: Backlog
 
-  github-copilot:
+  "status:changes-requested":
     assignees:
       - Sinless777
     reviewers:
       - Sinless777
+    team_reviewers: []
     labels:
-      - agentic-workflow
-      - automation
-    milestone: Agentic Workflows
+      - status:changes-requested
+    milestone: Backlog
+
+  "status:blocked":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - status:blocked
+    milestone: Backlog
+
+  "status:ready-to-merge":
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - status:ready-to-merge
+    milestone: Backlog
 
 # ----------------------------------------------------------
-# 🧭 Milestone Routing Hints
+# Milestone Routing Hints
 # ----------------------------------------------------------
-# Repo-manager and assignment scripts can use this map when
-# a label or changed path does not already provide a milestone.
+# Repo-management scripts can use this map when a label or changed path
+# does not already provide a milestone.
 # ----------------------------------------------------------
 
 milestones:
   Backlog:
-    description: Future work, unclear priority, or deferred work.
+    description: Future work, unclear priority, deferred work, or general planning.
     labels:
       - status:backlog
       - priority:low
+      - no-release
 
-  MVP:
-    description: Critical MVP-facing feature work or launch blockers.
-    labels:
-      - priority:critical
-      - priority:high
-      - kind:feature
-
-  Frontend:
-    description: Frontend application, UI, pages, layout, app router, and shared UI components.
+  "V0.1.0 — Foundation":
+    description: Foundation work across the Nx and pnpm monorepo.
     labels:
       - area:frontend
-      - area:ui
+      - area:connectors
+      - area:engines
+      - area:integrations
+      - area:services
+      - area:libs
 
-  Cloudflare Setup:
-    description: Cloudflare Workers, OpenNext, Wrangler, deployment, DNS, and domain routing.
+  "V0.2.0 — Automation Core":
+    description: Repository automation, ownership, project routing, labels, milestones, and scripts.
+    labels:
+      - area:repo-management
+      - area:github-actions
+      - automation
+
+  "V0.3.0 — CI/CD Expansion":
+    description: CI/CD workflow expansion, Nx targets, tests, Docker validation, caches, and artifacts.
+    labels:
+      - area:ci
+      - kind:ci
+      - kind:test
+      - area:cache
+      - area:artifacts
+
+  "V0.4.0 — Security Automation":
+    description: Strict automated security workflows, policy gates, scanning, and security issue creation.
+    labels:
+      - area:security
+      - kind:security
+      - blocked-by-security
+      - needs-security-review
+
+  "V0.5.0 — Release Automation":
+    description: Release labels, V-prefixed tags, changelogs, GitHub Releases, and announcements.
+    labels:
+      - release
+      - kind:release
+      - release:major
+      - release:minor
+      - release:patch
+
+  "V0.6.0 — Publishing Pipeline":
+    description: npm package publishing, GHCR publishing, SBOMs, checksums, manifests, and attestations.
+    labels:
+      - publishing
+      - area:npm
+      - area:ghcr
+      - area:docker
+      - sbom
+      - attestations
+      - checksums
+
+  "V0.7.0 — Cloudflare Platform":
+    description: Cloudflare Workers, Queues, R2, D1, KV, Secrets Store, preview, staging, and production.
     labels:
       - area:cloudflare
       - cloudflare
       - deployment
+      - area:workers
+      - area:queues
+      - area:r2
+      - area:d1
+      - area:kv
 
-  Infrastructure:
-    description: Kubernetes, Ansible, Terraform, Proxmox, homelab, and platform infrastructure.
+  "V0.8.0 — AI Repository Assistant":
+    description: OpenAI-powered changelogs, issue creation, PR creation, linking, and security triage.
     labels:
-      - area:kubernetes
-      - area:ansible
-      - area:terraform
+      - area:ai
+      - area:openai
+      - automation:openai
+      - automation:needs-review
 
-  Security:
-    description: Security scanning, CodeQL, secrets, auth, policy, permissions, and supply-chain work.
+  "Dependencies — Renovate Weekly Updates":
+    description: Safe dependency updates from Renovate and dependency automation.
+    labels:
+      - dependencies
+      - renovate
+      - lockfile
+      - auto-merge
+
+  "Dependencies — Mend Management":
+    description: Mend.io dependency and vulnerability management.
+    labels:
+      - mend
+      - security:dependency
+
+  "Security — Strict Pull Request Gate":
+    description: Strict security blocking rules for pull requests.
     labels:
       - area:security
       - kind:security
+      - priority:critical
+      - blocked-by-security
+      - do-not-merge
 
-  Observability:
-    description: Grafana, Faro, OpenTelemetry, logs, metrics, traces, alerts, and dashboards.
+  "Security — Dependency Vulnerability Response":
+    description: Vulnerability remediation through dependency updates and security patches.
+    labels:
+      - security:dependency
+      - dependencies
+      - auto-merge
+
+  "Security — Supply Chain Integrity":
+    description: SBOMs, checksums, attestations, provenance, and release evidence.
+    labels:
+      - sbom
+      - attestations
+      - checksums
+
+  "Cloudflare — Preview Environments":
+    description: Pull request preview deployment work.
+    labels:
+      - preview
+      - deployment
+      - area:cloudflare
+
+  "Cloudflare — Staging Environment":
+    description: Staging deployment and validation work.
+    labels:
+      - staging
+      - deployment
+      - area:cloudflare
+
+  "Cloudflare — Production Environment":
+    description: Production deployment, approval, release deployment, smoke checks, and rollback.
+    labels:
+      - production
+      - deployment
+      - area:cloudflare
+
+  "Publishing — npm Packages":
+    description: npm package discovery, validation, packing, publishing, and release evidence.
+    labels:
+      - area:npm
+      - npm-package
+      - publishing
+
+  "Publishing — GHCR Containers":
+    description: Dockerfile discovery, image build, GHCR tags, image SBOMs, and attestations.
+    labels:
+      - area:docker
+      - area:ghcr
+      - ghcr
+      - publishing
+
+  "Self-Hosted — Helm Chart":
+    description: Future Helm chart support for self-hosted deployment.
+    labels:
+      - area:self-hosted
+      - area:helm
+
+  "Self-Hosted — Kubernetes Manifests":
+    description: Future Kubernetes and Kustomize support for self-hosted deployment.
+    labels:
+      - area:self-hosted
+      - area:kubernetes
+
+  "Observability — Grafana Cloud":
+    description: Grafana Cloud, telemetry, metrics, logs, traces, dashboards, and alerts.
     labels:
       - area:observability
 
-  Agentic Workflows:
-    description: gh-aw, repo-manager, package-manager, workflow agents, and GitHub automation agents.
-    labels:
-      - agentic-workflow
-      - repo-management
-
-  Documentation:
-    description: Docs, ADRs, README, MkDocs, and architecture documentation.
+  "Documentation — Developer Experience":
+    description: README, setup docs, contribution docs, test conventions, and developer workflow docs.
     labels:
       - area:docs
       - kind:documentation
 
-  Release:
-    description: npm publishing, GHCR publishing, versioning, changelog, and release automation.
+  "Documentation — Architecture":
+    description: ADRs, architecture docs, CI/CD architecture, security architecture, and release architecture.
     labels:
-      - release
-      - kind:release
-
-  CI/CD:
-    description: GitHub Actions, lint, tests, builds, Nx, package-manager automation, and validation pipelines.
-    labels:
-      - area:ci
-      - area:github-actions
-      - automation
+      - needs-architecture-review
 
 # ----------------------------------------------------------
-# 🔗 Relationship Routing Hints
+# Relationship Routing Hints
 # ----------------------------------------------------------
-# Repo-manager should use these as signals when associating
-# issues and pull requests.
+# Repo-management should use these as signals when associating issues and PRs.
 # ----------------------------------------------------------
 
 relationships:
@@ -724,47 +1536,151 @@ relationships:
     - fix
     - frontend
     - workflow
+    - ci
+    - security
     - docs
     - config
     - build
+    - cloudflare
+    - release
+    - dependency
+    - renovate
+    - dependabot
+    - mend
+
+  branch_issue_patterns:
+    - "^(feature|feat|fix|bugfix|hotfix|chore|docs|refactor|test|security|ci|deploy|deployment)/(?<issue>[0-9]+)-(?<slug>.+)$"
+    - "^(feature|feat|fix|bugfix|hotfix|chore|docs|refactor|test|security|ci|deploy|deployment)/issue-(?<issue>[0-9]+)-(?<slug>.+)$"
+    - "^(?<issue>[0-9]+)-(?<slug>.+)$"
 
   require_strong_evidence: true
 
+  create_issue_when_missing:
+    enabled: true
+    require_openai_review: true
+    labels:
+      - automation:openai
+      - automation:needs-review
+      - status:needs-review
+
   relationship_footer:
-    start: "<!-- repo-manager:relationships:start -->"
-    end: "<!-- repo-manager:relationships:end -->"
+    start: "<!-- repo-management:relationships:start -->"
+    end: "<!-- repo-management:relationships:end -->"
 
   same_repo_link_format:
     issue: "#{{number}}"
     pull_request: "#{{number}}"
 
 # ----------------------------------------------------------
-# 🛡️ Safety
+# Automation Merge Hints
+# ----------------------------------------------------------
+# Actual merge permissions must still be controlled by branch protection.
+# ----------------------------------------------------------
+
+automation_merge:
+  dependency_prs:
+    enabled: true
+    allowed_labels:
+      - dependencies
+      - no-release
+      - auto-merge
+
+    required_absent_labels:
+      - do-not-merge
+      - blocked-by-security
+      - needs-maintainer-review
+      - needs-security-review
+      - automation:needs-review
+      - release:major
+      - release:minor
+      - release:patch
+
+    allowed_authors:
+      - dependabot[bot]
+      - renovate[bot]
+      - mend[bot]
+
+  security_patch_prs:
+    enabled: true
+    allowed_labels:
+      - security:dependency
+      - dependencies
+      - auto-merge
+      - no-release
+
+    required_absent_labels:
+      - do-not-merge
+      - blocked-by-security
+      - needs-maintainer-review
+      - automation:needs-review
+      - release:major
+      - release:minor
+      - release:patch
+
+# ----------------------------------------------------------
+# Safety
 # ----------------------------------------------------------
 safety:
+  dry_run_supported: true
+
   do_not_assign_without_matching_rule: true
   do_not_assign_bots_when_github_rejects: true
+
+  # Milestones are managed by sync-milestones, not assignment scripts.
   do_not_create_milestones: true
-  do_not_delete_labels: true
   do_not_delete_milestones: true
+
+  # Labels are managed by sync-labels, not assignment scripts.
+  do_not_create_labels: true
+  do_not_delete_labels: true
+
   do_not_close_issues: true
   do_not_merge_pull_requests: true
+  do_not_push_to_main: true
 
   protected_labels:
     - security-reviewed
     - approved
     - merged
     - do-not-merge
+    - blocked-by-security
+    - needs-security-review
+    - release:major
+    - release:minor
+    - release:patch
 
   replace_status_labels:
-    - status:needs-info
-    - status:ready
+    - status:triage
     - status:backlog
-    - status:blocked
+    - status:ready
     - status:in-progress
+    - status:needs-info
+    - status:needs-review
+    - status:changes-requested
+    - status:blocked
+    - status:ready-to-merge
+    - status:merged
 
   replace_priority_labels:
     - priority:low
     - priority:medium
     - priority:high
     - priority:critical
+
+  replace_severity_labels:
+    - severity:low
+    - severity:medium
+    - severity:high
+    - severity:critical
+
+  release_labels:
+    - release:major
+    - release:minor
+    - release:patch
+
+  release_blocking_labels:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security

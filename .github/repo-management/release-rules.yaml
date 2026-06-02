@@ -1,0 +1,988 @@
+# .github/repo-management/release-rules.yaml
+# =============================================================================
+# Aerealith AI Release Rules
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Source-of-truth release policy for versioning, release eligibility,
+#   changelog generation, GitHub Releases, npm publishing, GHCR publishing,
+#   release artifacts, checksums, SBOMs, attestations, production deployment,
+#   and discussion announcements.
+#
+# Used by:
+#   - .github/workflows/release.yaml
+#   - .github/workflows/publish-npm.yaml
+#   - .github/workflows/publish-containers.yaml
+#   - .github/workflows/attestations.yaml
+#   - .github/workflows/cloudflare-production.yaml
+#   - .github/scripts/release/determine-release-version.js
+#   - .github/scripts/release/validate-release-source.js
+#   - .github/scripts/release/build-changelog.js
+#   - .github/scripts/release/create-github-release.js
+#   - .github/scripts/release/post-discussion-announcement.js
+#   - .github/scripts/npm/discover-publishable-packages.js
+#   - .github/scripts/docker/discover-images.js
+#   - .github/scripts/artifacts/create-checksums.js
+#   - .github/scripts/artifacts/create-sbom.js
+#   - .github/scripts/security/run-policy-gate.js
+#
+# Core release policy:
+#   - Releases only occur from merged pull requests on main.
+#   - A release requires exactly one release label:
+#       release:major
+#       release:minor
+#       release:patch
+#   - Dependency automation must never trigger a release.
+#   - no-release must block release creation.
+#   - Tags use V-prefixed semantic versions, such as V1.2.3.
+#   - Attestations are generated only for release and publish jobs.
+# =============================================================================
+
+version: 1
+
+repository:
+  owner: SinLess-Games
+  name: Aerealith-AI
+  default_branch: main
+
+tooling:
+  package_manager: pnpm
+  pnpm_version: 10.23.0
+  node_version: 24.15.0
+  monorepo_tool: nx
+
+# -----------------------------------------------------------------------------
+# Global Release Policy
+# -----------------------------------------------------------------------------
+policy:
+  enabled: true
+  dry_run_supported: true
+  debug_supported: true
+
+  release_only_from_default_branch: true
+  release_only_from_branch: main
+  release_only_after_pr_merge: true
+  release_only_from_merged_pull_request: true
+  release_only_when_checks_pass: true
+
+  require_release_label: true
+  require_exactly_one_release_label: true
+  infer_release_from_branch_name: false
+  infer_release_from_commit_message: false
+  infer_release_from_milestone: false
+
+  dependency_prs_never_release: true
+  security_dependency_prs_never_release: true
+  lockfile_only_prs_never_release: true
+  github_actions_dependency_prs_never_release: true
+
+  require_clean_release_source: true
+  require_ci_success: true
+  require_security_success: true
+  require_codeql_success: true
+  require_sonarqube_success: true
+  require_dependency_review_success: true
+
+  allow_manual_workflow_dispatch: true
+  manual_dispatch_requires_dry_run_by_default: true
+  manual_dispatch_write_mode_requires_confirmation: true
+
+  create_github_release: true
+  create_git_tag: true
+  create_changelog: true
+  publish_npm_packages: true
+  publish_ghcr_containers: true
+  deploy_cloudflare_production: true
+  post_discussion_announcement: true
+
+# -----------------------------------------------------------------------------
+# Release Labels
+# -----------------------------------------------------------------------------
+release_labels:
+  valid:
+    - release:major
+    - release:minor
+    - release:patch
+
+  major:
+    label: release:major
+    bump: major
+    description: Breaking change or major release.
+
+  minor:
+    label: release:minor
+    bump: minor
+    description: New feature or meaningful non-breaking capability.
+
+  patch:
+    label: release:patch
+    bump: patch
+    description: Bug fix, security fix, small improvement, or non-breaking correction.
+
+  forbidden_on_dependency_prs:
+    - release:major
+    - release:minor
+    - release:patch
+
+  remove_from_dependency_prs: true
+
+# -----------------------------------------------------------------------------
+# Release Blockers
+# -----------------------------------------------------------------------------
+blockers:
+  labels:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked
+    - status:needs-info
+    - status:changes-requested
+
+  authors:
+    - renovate[bot]
+    - dependabot[bot]
+    - mend[bot]
+
+  branch_patterns:
+    - "^renovate/.+$"
+    - "^dependabot/.+$"
+    - "^mend/.+$"
+
+  changed_files:
+    lockfile_only:
+      enabled: true
+      patterns:
+        - pnpm-lock.yaml
+        - package-lock.json
+        - yarn.lock
+
+  failed_checks:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  security_findings:
+    block_on:
+      - critical
+      - high
+
+  release_label_conflicts:
+    block_if_multiple_release_labels: true
+    block_if_release_label_with_no_release: true
+    block_if_release_label_with_dependencies: true
+    block_if_release_label_with_security_dependency: true
+
+# -----------------------------------------------------------------------------
+# Versioning
+# -----------------------------------------------------------------------------
+versioning:
+  scheme: semver
+  prefix: V
+  tag_format: "V{major}.{minor}.{patch}"
+  tag_pattern: "^V[0-9]+\\.[0-9]+\\.[0-9]+$"
+
+  initial_version: V0.1.0
+  default_bump: patch
+
+  source:
+    latest_tag: git
+    fallback_version: V0.0.0
+
+  bump_rules:
+    "release:major": major
+    "release:minor": minor
+    "release:patch": patch
+
+  validation:
+    fail_if_tag_exists: true
+    fail_if_version_not_greater_than_latest: true
+    fail_if_version_not_semver: true
+    fail_if_version_missing_prefix: true
+    fail_if_dirty_workspace: true
+
+  prerelease:
+    enabled: true
+    channels:
+      - alpha
+      - beta
+      - test
+      - release
+
+    default_channel: release
+
+    tag_suffix_format: "{version}-{channel}"
+    examples:
+      - V1.2.3-alpha
+      - V1.2.3-beta
+      - V1.2.3-test
+      - V1.2.3-release
+
+# -----------------------------------------------------------------------------
+# Release Source Detection
+# -----------------------------------------------------------------------------
+release_source:
+  event_sources:
+    push_to_main:
+      enabled: true
+      event: push
+      branch: main
+      description: Detect merged pull request from push to main.
+
+    workflow_dispatch:
+      enabled: true
+      event: workflow_dispatch
+      default_dry_run: true
+      description: Manual validation or controlled release rerun.
+
+    release:
+      enabled: true
+      event: release
+      description: Used by publish and announcement jobs after GitHub Release creation.
+
+  pull_request_resolution:
+    enabled: true
+    strategy: merge_commit
+    fallback_strategy: associated_prs
+
+    require_pull_request_number: true
+    require_merged: true
+    require_base_branch: main
+    require_head_branch_not_main: false
+
+  accepted_merge_methods:
+    - merge
+    - squash
+    - rebase
+
+  ignored_sources:
+    authors:
+      - renovate[bot]
+      - dependabot[bot]
+      - mend[bot]
+
+    branch_patterns:
+      - "^renovate/.+$"
+      - "^dependabot/.+$"
+      - "^mend/.+$"
+
+# -----------------------------------------------------------------------------
+# Required Checks
+# -----------------------------------------------------------------------------
+required_checks:
+  release_eligibility:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  before_tag:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  before_publish:
+    - Release
+    - Artifact Hashes
+    - SBOM
+    - Attestations
+
+  before_production_deploy:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+    - Release
+    - Publish npm
+    - Publish Containers
+
+# -----------------------------------------------------------------------------
+# Changelog Rules
+# -----------------------------------------------------------------------------
+changelog:
+  enabled: true
+  output_file: CHANGELOG.md
+  update_changelog_file: true
+
+  source:
+    include_merged_pull_requests_since_last_release: true
+    include_linked_issues: true
+    include_pr_labels: true
+    include_pr_authors: true
+    include_commit_links: true
+    include_full_changelog_link: true
+
+  exclude:
+    labels:
+      - no-release
+      - dependencies
+      - security:dependency
+      - automation:renovate
+      - automation:dependabot
+      - automation:mend
+
+    authors:
+      - renovate[bot]
+      - dependabot[bot]
+      - mend[bot]
+
+  grouping:
+    enabled: true
+    order:
+      - Breaking Changes
+      - Features
+      - Fixes
+      - Security
+      - Performance
+      - CI/CD
+      - Cloudflare
+      - Publishing
+      - Documentation
+      - Maintenance
+      - Internal
+
+  label_mapping:
+    "release:major": Breaking Changes
+    "breaking-change": Breaking Changes
+
+    "kind:feature": Features
+    "kind:bug": Fixes
+    "kind:security": Security
+    "kind:ci": CI/CD
+    "kind:deployment": Cloudflare
+    "kind:release": Publishing
+    "kind:documentation": Documentation
+    "kind:maintenance": Maintenance
+    "kind:chore": Maintenance
+    "kind:refactor": Internal
+    "kind:test": CI/CD
+
+    "area:cloudflare": Cloudflare
+    "area:workers": Cloudflare
+    "area:queues": Cloudflare
+    "area:r2": Cloudflare
+    "area:d1": Cloudflare
+    "area:kv": Cloudflare
+
+    "area:npm": Publishing
+    "area:ghcr": Publishing
+    "area:docker": Publishing
+    "area:artifacts": Publishing
+    "checksums": Publishing
+    "sbom": Security
+    "attestations": Security
+
+  required_sections:
+    - Summary
+    - Changes
+    - Validation
+    - Release Evidence
+
+  optional_sections:
+    - Breaking Changes
+    - Migration Notes
+    - Known Issues
+    - Rollback Notes
+    - Contributors
+
+  openai:
+    enabled: true
+    mode: draft
+    model_variable: OPENAI_MODEL
+    default_model: gpt-5.5
+
+    prompt_file: .github/scripts/ai/prompts/changelog.md
+
+    safety:
+      do_not_invent_changes: true
+      require_pr_links: true
+      require_uncertainty_notes: true
+      exclude_dependency_only_changes: true
+      exclude_no_release_changes: true
+      redact_secrets: true
+
+# -----------------------------------------------------------------------------
+# GitHub Release Rules
+# -----------------------------------------------------------------------------
+github_release:
+  enabled: true
+
+  title_format: "Aerealith AI {version}"
+  tag_name_format: "{version}"
+  target_commitish: main
+
+  draft: false
+  prerelease:
+    alpha: true
+    beta: true
+    test: true
+    release: false
+
+  generate_release_notes: false
+  use_generated_changelog: true
+
+  body_template: |
+    ## Aerealith AI {version}
+
+    {summary}
+
+    ### Changes
+
+    {changes}
+
+    ### Validation
+
+    {validation}
+
+    ### Release Evidence
+
+    {release_evidence}
+
+    ### Links
+
+    - Full changelog: {full_changelog_url}
+    - Commit: {commit_url}
+
+  assets:
+    upload: true
+    required:
+      - SHA256SUMS
+      - SHA512SUMS
+      - artifact-manifest.json
+
+    optional:
+      - sbom.spdx.json
+      - npm-package-manifest.json
+      - ghcr-image-manifest.json
+      - cloudflare-deployment-summary.md
+
+# -----------------------------------------------------------------------------
+# npm Publishing Rules
+# -----------------------------------------------------------------------------
+npm:
+  enabled: true
+
+  publish_only_on_release: true
+  publish_only_from_tag: true
+  publish_only_when_package_private_false: true
+
+  registry: "https://registry.npmjs.org"
+  access: public
+
+  token_secret: NPM_ACCESS_TOKEN
+
+  package_discovery:
+    enabled: true
+    package_json_patterns:
+      - package.json
+      - "apps/**/package.json"
+      - "libs/**/package.json"
+
+    ignore_paths:
+      - "**/node_modules/**"
+      - "**/dist/**"
+      - "**/build/**"
+      - "**/.next/**"
+      - "**/.open-next/**"
+      - "**/.wrangler/**"
+      - "**/.nx/**"
+      - "**/coverage/**"
+
+    publishable_when:
+      private: false
+
+  validation:
+    require_package_json: true
+    require_name: true
+    require_version: true
+    require_private_false: true
+    fail_if_private_missing: false
+    fail_if_package_version_mismatch: true
+    pack_before_publish: true
+
+  provenance:
+    enabled: true
+    npm_provenance: true
+    require_id_token: true
+
+  artifacts:
+    create_package_manifest: true
+    manifest_file: npm-package-manifest.json
+
+  commands:
+    pack: "pnpm pack"
+    publish: "pnpm publish --access public --provenance --no-git-checks"
+
+# -----------------------------------------------------------------------------
+# GHCR Container Publishing Rules
+# -----------------------------------------------------------------------------
+ghcr:
+  enabled: true
+
+  publish_only_on_release: true
+  publish_only_from_tag: true
+
+  registry: ghcr.io
+  owner: sinless-games
+  namespace: aerealith-ai
+
+  image_repository_format: "ghcr.io/sinless-games/aerealith-ai/{name}"
+  image_tag_format: "{version}-{channel}"
+
+  examples:
+    - "ghcr.io/sinless-games/aerealith-ai/frontend:V1.2.3-release"
+    - "ghcr.io/sinless-games/aerealith-ai/api:V1.2.3-beta"
+    - "ghcr.io/sinless-games/aerealith-ai/worker:V1.2.3-alpha"
+    - "ghcr.io/sinless-games/aerealith-ai/service:V1.2.3-test"
+
+  dockerfile_discovery:
+    enabled: true
+    build_every_dockerfile: true
+
+    dockerfile_patterns:
+      - Dockerfile
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+
+    ignore_paths:
+      - "**/node_modules/**"
+      - "**/dist/**"
+      - "**/build/**"
+      - "**/.next/**"
+      - "**/.open-next/**"
+      - "**/.wrangler/**"
+      - "**/.nx/**"
+      - "**/coverage/**"
+      - "**/tmp/**"
+      - "**/temp/**"
+
+  naming:
+    derive_name_from_parent_directory: true
+    normalize_to_lowercase: true
+    replace_invalid_characters_with: "-"
+    collapse_duplicate_separators: true
+
+  build:
+    builder: docker-buildx
+    push: true
+    platforms:
+      - linux/amd64
+
+    cache:
+      enabled: true
+      type: gha
+      readable_names: true
+
+    labels:
+      org.opencontainers.image.source: "https://github.com/SinLess-Games/Aerealith-AI"
+      org.opencontainers.image.vendor: "SinLess Games"
+      org.opencontainers.image.title: "Aerealith AI"
+      org.opencontainers.image.version: "{version}"
+      org.opencontainers.image.revision: "{sha}"
+
+  sbom:
+    enabled: true
+    format: spdx-json
+    attach_to_release: true
+
+  artifacts:
+    create_image_manifest: true
+    manifest_file: ghcr-image-manifest.json
+
+# -----------------------------------------------------------------------------
+# Artifact, Checksum, SBOM, and Attestation Rules
+# -----------------------------------------------------------------------------
+release_evidence:
+  enabled: true
+
+  artifacts:
+    enabled: true
+    output_directory: artifacts/release
+
+    manifest:
+      enabled: true
+      file: artifact-manifest.json
+
+    checksums:
+      enabled: true
+      algorithms:
+        - sha256
+        - sha512
+
+      files:
+        sha256: SHA256SUMS
+        sha512: SHA512SUMS
+
+    sbom:
+      enabled: true
+      format: spdx-json
+      file: sbom.spdx.json
+
+  attestations:
+    enabled: true
+    only_on_release_or_publish_jobs: true
+
+    build_provenance:
+      enabled: true
+      predicate_type: slsa
+
+    sbom_attestation:
+      enabled: true
+
+    required_permissions:
+      id-token: write
+      attestations: write
+      contents: read
+
+  retention_days:
+    pull_request: 7
+    main: 30
+    release: 90
+    security_reports: 90
+
+# -----------------------------------------------------------------------------
+# Cloudflare Production Deployment Rules
+# -----------------------------------------------------------------------------
+cloudflare_production:
+  enabled: true
+
+  deploy_only_on_release_tag: true
+  require_github_environment_approval: true
+  github_environment: production
+
+  allowed_tag_pattern: "^V[0-9]+\\.[0-9]+\\.[0-9]+$"
+
+  block_if_labels_present:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked
+
+  require_release_evidence: true
+  require_artifact_manifest: true
+  require_smoke_tests: true
+
+  workflow: .github/workflows/cloudflare-production.yaml
+
+# -----------------------------------------------------------------------------
+# Discussion Announcement Rules
+# -----------------------------------------------------------------------------
+discussion_announcement:
+  enabled: true
+
+  category: Announcements
+  create_discussion: true
+  update_existing_discussion: false
+
+  title_format: "Aerealith AI {version}"
+
+  require_release_success: true
+  require_github_release_url: true
+
+  skip_if:
+    labels:
+      - no-release
+      - dependencies
+      - security:dependency
+
+    authors:
+      - renovate[bot]
+      - dependabot[bot]
+      - mend[bot]
+
+  openai:
+    enabled: true
+    mode: draft
+    prompt_file: .github/scripts/ai/prompts/release-announcement.md
+    model_variable: OPENAI_MODEL
+    default_model: gpt-5.5
+
+    safety:
+      do_not_invent_changes: true
+      require_release_links: true
+      require_pr_links: true
+      redact_secrets: true
+      do_not_publish_unfixed_security_details: true
+
+  failure_behavior:
+    fail_release_if_post_fails: false
+    warn_on_post_failure: true
+    add_workflow_summary_on_failure: true
+
+# -----------------------------------------------------------------------------
+# Workflow Permissions
+# -----------------------------------------------------------------------------
+permissions:
+  release:
+    contents: write
+    pull-requests: read
+    issues: read
+    discussions: write
+
+  publish_npm:
+    contents: read
+    packages: read
+    id-token: write
+    attestations: write
+
+  publish_containers:
+    contents: read
+    packages: write
+    id-token: write
+    attestations: write
+
+  cloudflare_production:
+    contents: read
+    deployments: write
+    id-token: write
+
+  changelog:
+    contents: write
+    pull-requests: read
+    issues: read
+
+# -----------------------------------------------------------------------------
+# Required Secrets and Variables
+# -----------------------------------------------------------------------------
+configuration:
+  required_secrets:
+    release:
+      - OPENAI_API_KEY
+
+    npm:
+      - NPM_ACCESS_TOKEN
+
+    cloudflare:
+      - CLOUDFLARE_API_TOKEN
+
+  required_variables:
+    release:
+      - NODE_VERSION
+      - PNPM_VERSION
+
+    cloudflare:
+      - CLOUDFLARE_ACCOUNT_ID
+
+  optional_variables:
+    - OPENAI_MODEL
+    - DISCUSSION_CATEGORY
+    - DEFAULT_BRANCH
+    - RELEASE_CHANNEL
+
+  recommended_values:
+    NODE_VERSION: "24.15.0"
+    PNPM_VERSION: "10.23.0"
+    DEFAULT_BRANCH: main
+    DISCUSSION_CATEGORY: Announcements
+    RELEASE_CHANNEL: release
+    OPENAI_MODEL: gpt-5.5
+
+# -----------------------------------------------------------------------------
+# Validation Matrix
+# -----------------------------------------------------------------------------
+validation:
+  dry_run:
+    enabled: true
+    default_for_manual_dispatch: true
+    print_planned_version: true
+    print_release_source: true
+    print_changelog_preview: true
+    print_publishable_packages: true
+    print_discovered_dockerfiles: true
+    print_artifact_plan: true
+    print_discussion_preview: true
+    create_tag: false
+    create_github_release: false
+    publish_npm: false
+    publish_ghcr: false
+    deploy_cloudflare: false
+    post_discussion: false
+
+  release_label_tests:
+    - name: patch release
+      labels:
+        - release:patch
+      expected_bump: patch
+      expected_release: true
+
+    - name: minor release
+      labels:
+        - release:minor
+      expected_bump: minor
+      expected_release: true
+
+    - name: major release
+      labels:
+        - release:major
+      expected_bump: major
+      expected_release: true
+
+    - name: no release
+      labels:
+        - no-release
+      expected_release: false
+
+    - name: dependency release blocked
+      labels:
+        - dependencies
+        - no-release
+      expected_release: false
+
+    - name: security dependency release blocked
+      labels:
+        - security:dependency
+        - dependencies
+        - no-release
+      expected_release: false
+
+    - name: conflicting release labels blocked
+      labels:
+        - release:minor
+        - release:patch
+      expected_release: false
+      expected_failure: true
+
+# -----------------------------------------------------------------------------
+# Reporting
+# -----------------------------------------------------------------------------
+reporting:
+  add_workflow_summary: true
+  add_pr_comment_on_release_skip: false
+  add_pr_comment_on_release_failure: true
+
+  comment_footer:
+    start: "<!-- release-rules:start -->"
+    end: "<!-- release-rules:end -->"
+
+  summary:
+    include_release_source: true
+    include_pr_number: true
+    include_release_labels: true
+    include_blockers: true
+    include_previous_version: true
+    include_next_version: true
+    include_channel: true
+    include_changelog: true
+    include_publishable_packages: true
+    include_discovered_images: true
+    include_artifacts: true
+    include_attestations: true
+    include_discussion_url: true
+    include_dry_run: true
+    include_skipped_reason: true
+
+# -----------------------------------------------------------------------------
+# Enforcement
+# -----------------------------------------------------------------------------
+enforcement:
+  on_missing_release_label:
+    action: skip
+    message: |
+      Release skipped because the merged pull request does not have a release label.
+
+  on_multiple_release_labels:
+    action: fail
+    message: |
+      Release failed because the merged pull request has multiple release labels.
+      Exactly one of release:major, release:minor, or release:patch is required.
+
+  on_release_blocking_label:
+    action: skip
+    message: |
+      Release skipped because the merged pull request has a release-blocking label.
+
+  on_dependency_source:
+    action: skip
+    message: |
+      Release skipped because dependency automation must not create releases.
+
+  on_failed_required_check:
+    action: fail
+    message: |
+      Release blocked because one or more required checks failed.
+
+  on_existing_tag:
+    action: fail
+    message: |
+      Release failed because the target tag already exists.
+
+  on_invalid_version:
+    action: fail
+    message: |
+      Release failed because the calculated version is invalid.
+
+  on_missing_npm_token:
+    action: fail
+    message: |
+      NPM_ACCESS_TOKEN is required for npm publishing.
+
+  on_missing_cloudflare_token:
+    action: fail
+    message: |
+      CLOUDFLARE_API_TOKEN is required for Cloudflare production deployment.
+
+  on_missing_openai_key:
+    action: fail
+    message: |
+      OPENAI_API_KEY is required for AI-generated changelog and announcement drafts.
+
+  on_artifact_hash_failure:
+    action: fail
+    message: |
+      Release failed because artifact checksums could not be generated.
+
+  on_sbom_failure:
+    action: fail
+    message: |
+      Release failed because SBOM generation failed.
+
+  on_attestation_failure:
+    action: fail
+    message: |
+      Release failed because release attestation generation failed.
+
+  on_discussion_post_failure:
+    action: warn
+    message: |
+      Release completed, but the Announcements discussion post failed.
+
+# -----------------------------------------------------------------------------
+# Safety
+# -----------------------------------------------------------------------------
+safety:
+  dry_run_supported: true
+  debug_supported: true
+
+  do_not_release_from_feature_branch: true
+  do_not_release_from_pull_request_event: true
+  do_not_release_from_dependency_pr: true
+  do_not_release_from_security_dependency_pr: true
+  do_not_release_when_no_release_label_present: true
+  do_not_release_when_blocked_by_security: true
+
+  do_not_generate_attestations_outside_release_or_publish_jobs: true
+  do_not_publish_npm_outside_release: true
+  do_not_publish_containers_outside_release: true
+  do_not_deploy_production_without_approval: true
+  do_not_post_announcement_for_skipped_release: true
+  do_not_include_secrets_in_changelog: true
+  do_not_include_private_data_in_announcements: true
+
+  protected_labels:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security
+    - needs-security-review
+    - release:major
+    - release:minor
+    - release:patch

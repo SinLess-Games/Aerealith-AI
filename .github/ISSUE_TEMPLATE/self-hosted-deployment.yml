@@ -1,0 +1,654 @@
+# .github/ISSUE_TEMPLATE/self-hosted-deployment.yml
+name: "🏠 Self-Hosted Deployment Task"
+description: "Track self-hosted deployment, Helm chart, Kubernetes manifests, local deployment, values files, GHCR image usage, secrets, storage, or runtime configuration for Aerealith AI."
+title: "[Self-Hosted]: "
+labels:
+  - area:self-hosted
+  - deployment
+  - status:triage
+  - no-release
+assignees:
+  - Sinless777
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🏠 Self-Hosted Deployment Task
+
+        Use this template for **self-hosted deployment work** for Aerealith AI.
+
+        This includes future support for:
+
+        - Helm charts
+        - Kubernetes manifests
+        - Kustomize overlays
+        - Local deployment
+        - Homelab deployment
+        - Air-gapped or restricted-network planning
+        - GHCR image deployment
+        - Values files
+        - Secrets configuration
+        - Storage configuration
+        - Database configuration
+        - Queue equivalents
+        - Object storage equivalents
+        - Observability
+        - Deployment documentation
+        - Upgrade and rollback procedures
+
+        Self-hosted deployment work should stay isolated from hosted Cloudflare workflows until the deployment model is ready.
+
+        The goal is to eventually make Aerealith AI deployable outside the hosted Cloudflare platform while preserving security, reliability, clear configuration, and repeatable operations.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm this self-hosted deployment task is ready for triage."
+      options:
+        - label: "I searched existing issues and did not find a duplicate self-hosted deployment task."
+          required: true
+        - label: "I identified whether this task affects Helm, Kubernetes, local deployment, configuration, secrets, storage, or documentation."
+          required: true
+        - label: "I included enough context for someone else to understand the deployment goal."
+          required: true
+        - label: "I removed or redacted secrets, private URLs, tokens, credentials, and sensitive infrastructure details."
+          required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: "Self-Hosted Task Summary"
+      description: "Write one clear sentence describing the self-hosted deployment task."
+      placeholder: "Example: Create the initial Helm chart structure for deploying Aerealith AI services from GHCR images."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: self_hosted_category
+    attributes:
+      label: "Self-Hosted Category"
+      description: "Choose the primary type of self-hosted work."
+      multiple: false
+      options:
+        - Helm chart
+        - Helm values
+        - Kubernetes manifests
+        - Kustomize overlay
+        - Local deployment
+        - Homelab deployment
+        - Air-gapped deployment planning
+        - GHCR image deployment
+        - Secrets configuration
+        - Database configuration
+        - Storage configuration
+        - Queue configuration
+        - Object storage configuration
+        - Networking / ingress
+        - TLS / certificates
+        - Observability
+        - Security hardening
+        - Upgrade process
+        - Rollback process
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: "Affected Area"
+      description: "Select the closest repository or platform area."
+      multiple: false
+      options:
+        - area:self-hosted
+        - area:helm
+        - area:kubernetes
+        - area:docker
+        - area:ghcr
+        - area:services
+        - area:connectors
+        - area:integrations
+        - area:engines
+        - area:frontend
+        - area:db
+        - area:security
+        - area:secrets
+        - area:observability
+        - area:ci
+        - area:github-actions
+        - area:artifacts
+        - area:docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target_runtime
+    attributes:
+      label: "Target Runtime"
+      description: "Choose the expected self-hosted runtime or deployment target."
+      multiple: false
+      options:
+        - Kubernetes
+        - Helm on Kubernetes
+        - Kustomize on Kubernetes
+        - Docker Compose
+        - Local development
+        - Homelab
+        - Air-gapped / restricted network
+        - Single-node deployment
+        - Multi-node deployment
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      description: |
+        Choose the urgency or impact level.
+
+        Use Critical only when this blocks deployment, release validation, security, or a major self-hosted milestone.
+      multiple: false
+      options:
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_impact
+    attributes:
+      label: "Release Impact"
+      description: |
+        Most self-hosted planning and configuration work should be `no-release`.
+
+        Use a release label only if this intentionally changes shipped deployment artifacts, container behavior, package behavior, or production-facing deployment behavior.
+      multiple: false
+      options:
+        - no-release
+        - release:patch
+        - release:minor
+        - release:major
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: "Objective"
+      description: |
+        Explain what this self-hosted task should accomplish.
+
+        Focus on what should exist or work when the task is complete.
+      placeholder: |
+        Example:
+        Create the initial Helm chart layout so Aerealith AI can eventually be deployed from GHCR images with configurable services, secrets, storage, database, and ingress values.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Background / Context"
+      description: |
+        Explain why this task exists and how it fits into the broader self-hosted deployment plan.
+
+        Include any hosted Cloudflare behavior that needs a self-hosted equivalent.
+      placeholder: |
+        Example:
+        Aerealith AI currently targets hosted Cloudflare services such as Workers, Queues, R2, D1, KV, and Secrets Store.
+
+        Self-hosted deployment will need equivalents or adapters for:
+        - Worker/service runtime
+        - Queue processing
+        - Object storage
+        - Database
+        - Key-value storage
+        - Secret management
+        - Observability
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_state
+    attributes:
+      label: "Current State"
+      description: |
+        Describe what exists today.
+
+        Include existing Dockerfiles, GHCR images, deployment folders, Helm files, Kubernetes manifests, scripts, or docs.
+      placeholder: |
+        Example:
+        Currently:
+        - Dockerfiles are planned for every deployable app.
+        - GHCR publishing is planned through release automation.
+        - No Helm chart exists yet.
+        - No values files exist yet.
+        - Cloudflare-hosted deployment is separate from self-hosted deployment.
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired_state
+    attributes:
+      label: "Desired State"
+      description: |
+        Describe how self-hosted deployment should behave after this task is complete.
+      placeholder: |
+        Example:
+        After this task:
+        - A chart directory exists under `charts/aerealith-ai`.
+        - Values files define image repository, tags, environment variables, secrets, storage, ingress, and service configuration.
+        - The chart can render Kubernetes manifests without errors.
+        - The chart references GHCR images.
+        - Secrets are referenced by name, not stored in the repository.
+        - Documentation explains required values.
+    validations:
+      required: true
+
+  - type: textarea
+    id: cloudflare_equivalents
+    attributes:
+      label: "Hosted Cloudflare Equivalents"
+      description: |
+        Describe how hosted Cloudflare services should map to self-hosted equivalents.
+
+        Leave unknown items as `TBD`.
+      placeholder: |
+        Example:
+        - Cloudflare Workers -> Kubernetes Deployments / services
+        - Cloudflare Queues -> TBD / queue service
+        - Cloudflare R2 -> S3-compatible object storage
+        - Cloudflare D1 -> PostgreSQL / SQLite / TBD
+        - Cloudflare KV -> Redis / Valkey / TBD
+        - Cloudflare Secrets Store -> Kubernetes Secrets / external secrets
+        - Cloudflare routes -> Ingress
+    validations:
+      required: false
+
+  - type: textarea
+    id: image_requirements
+    attributes:
+      label: "Container Image Requirements"
+      description: |
+        Describe GHCR image expectations.
+
+        Include image naming, tags, pull policy, and which apps need images.
+      placeholder: |
+        Example:
+        Images should come from:
+        - ghcr.io/sinless-games/aerealith-ai/{name}:V1.2.3-release
+
+        Requirements:
+        - Every detected Dockerfile should produce an image.
+        - Image tags should include version and channel.
+        - Values files should allow overriding repository, tag, and pull policy.
+        - Image pull secrets should be configurable.
+    validations:
+      required: false
+
+  - type: textarea
+    id: configuration_requirements
+    attributes:
+      label: "Configuration Requirements"
+      description: |
+        List configuration values that should be exposed.
+
+        Include values file keys, environment variables, feature flags, app settings, service settings, and deployment options.
+      placeholder: |
+        Example:
+        Values should support:
+        - global.imageRegistry
+        - global.imageTag
+        - global.imagePullSecrets
+        - frontend.enabled
+        - services.enabled
+        - connectors.enabled
+        - engines.enabled
+        - integrations.enabled
+        - ingress.enabled
+        - secrets.existingSecret
+        - database.urlSecretKey
+        - objectStorage.bucket
+        - queue.enabled
+        - observability.enabled
+    validations:
+      required: false
+
+  - type: textarea
+    id: secrets_requirements
+    attributes:
+      label: "Secrets Requirements"
+      description: |
+        List secret names and purposes.
+
+        Do not include secret values.
+      placeholder: |
+        Example:
+        Required secret names:
+        - OPENAI_API_KEY
+        - DATABASE_URL
+        - JWT_SECRET
+        - SESSION_SECRET
+        - ENCRYPTION_KEY
+
+        Requirements:
+        - Secrets must not be committed to the repository.
+        - Chart should support existing Kubernetes Secret names.
+        - Documentation should explain required keys.
+    validations:
+      required: false
+
+  - type: textarea
+    id: storage_requirements
+    attributes:
+      label: "Storage Requirements"
+      description: |
+        Describe persistent storage, object storage, database storage, logs, uploads, backups, or volume requirements.
+      placeholder: |
+        Example:
+        Storage considerations:
+        - Database persistence
+        - Object storage for uploaded assets
+        - Persistent volume claims if needed
+        - Backup strategy
+        - Retention policy
+        - Migration behavior
+    validations:
+      required: false
+
+  - type: textarea
+    id: networking_requirements
+    attributes:
+      label: "Networking, Ingress, and TLS Requirements"
+      description: |
+        Describe service exposure, ports, ingress, TLS, routes, domains, and internal networking.
+      placeholder: |
+        Example:
+        - Frontend should be exposed through ingress.
+        - API services should be internal unless explicitly enabled.
+        - TLS should be configurable.
+        - Hostnames should be values-driven.
+        - Local development should support local.sinlessgamesllc.com if desired.
+    validations:
+      required: false
+
+  - type: textarea
+    id: security_requirements
+    attributes:
+      label: "Security Requirements"
+      description: |
+        Describe security rules for self-hosted deployment.
+
+        Include secrets, RBAC, network policies, image provenance, least privilege, service accounts, and production safety.
+      placeholder: |
+        Example:
+        - Do not store secrets in values files.
+        - Support existing secrets.
+        - Use least-privilege service accounts.
+        - Support read-only root filesystem where possible.
+        - Avoid privileged containers.
+        - Allow resource limits and requests.
+        - Support image digest pinning later.
+        - Document required permissions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: observability_requirements
+    attributes:
+      label: "Observability Requirements"
+      description: |
+        Describe logs, metrics, traces, dashboards, alerts, health checks, probes, or Grafana Cloud integration needs.
+      placeholder: |
+        Example:
+        - Add readiness probes.
+        - Add liveness probes.
+        - Expose metrics endpoint if available.
+        - Support environment variables for Grafana Cloud / OpenTelemetry.
+        - Document logging expectations.
+    validations:
+      required: false
+
+  - type: textarea
+    id: upgrade_strategy
+    attributes:
+      label: "Upgrade Strategy"
+      description: |
+        Describe how self-hosted installations should upgrade.
+
+        Include image tags, chart versions, migrations, compatibility notes, and rollback expectations.
+      placeholder: |
+        Example:
+        - Upgrade by changing image tags and chart version.
+        - Run database migrations before rolling services.
+        - Document breaking changes.
+        - Support rollback to the previous chart and image tag when safe.
+    validations:
+      required: false
+
+  - type: textarea
+    id: rollback_plan
+    attributes:
+      label: "Rollback Plan"
+      description: |
+        Describe how to roll back if self-hosted deployment fails.
+
+        This is important for Helm, Kubernetes, migrations, image updates, and secret/config changes.
+      placeholder: |
+        Example:
+        - Use `helm rollback`.
+        - Revert image tag values.
+        - Restore previous Kubernetes Secret reference.
+        - Roll back migrations if safe.
+        - Restore backup if data migration fails.
+        - Document manual recovery steps.
+    validations:
+      required: false
+
+  - type: textarea
+    id: affected_files
+    attributes:
+      label: "Expected Files, Folders, Workflows, or Scripts Affected"
+      description: |
+        List likely files, folders, workflows, scripts, charts, manifests, or docs that may need changes.
+      placeholder: |
+        Example:
+        - charts/aerealith-ai/Chart.yaml
+        - charts/aerealith-ai/values.yaml
+        - charts/aerealith-ai/templates/**
+        - helm/**
+        - deploy/self-hosted/**
+        - deploy/kubernetes/**
+        - k8s/**
+        - kubernetes/**
+        - .github/workflows/publish-containers.yaml
+        - .github/scripts/docker/discover-images.js
+        - docs/deployment/self-hosted.md
+        - docs/deployment/helm.md
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation_plan
+    attributes:
+      label: "Implementation Plan"
+      description: |
+        Break the task into concrete implementation steps.
+
+        Use checklist items so progress can be tracked.
+      placeholder: |
+        - [ ] Define deployment scope.
+        - [ ] Identify required services and images.
+        - [ ] Define values file structure.
+        - [ ] Add chart or manifest files.
+        - [ ] Add secret references.
+        - [ ] Add storage configuration.
+        - [ ] Add ingress and service configuration.
+        - [ ] Add health checks.
+        - [ ] Add resource requests and limits.
+        - [ ] Validate rendered manifests.
+        - [ ] Document installation steps.
+        - [ ] Document upgrade and rollback steps.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: |
+        Define what must be true before this self-hosted task is complete.
+
+        These should be specific and verifiable.
+      placeholder: |
+        - [ ] The self-hosted deployment files exist in the expected location.
+        - [ ] Values are configurable and documented.
+        - [ ] Secrets are referenced, not committed.
+        - [ ] GHCR image references are configurable.
+        - [ ] Rendered manifests are valid.
+        - [ ] Security requirements are documented.
+        - [ ] Upgrade behavior is documented if applicable.
+        - [ ] Rollback behavior is documented if applicable.
+        - [ ] CI validation is added where appropriate.
+        - [ ] Documentation explains how to use the deployment.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "Validation Plan"
+      description: |
+        Explain how this self-hosted deployment task should be tested.
+
+        Include Helm rendering, Kubernetes validation, local testing, dry-run behavior, and smoke checks.
+      placeholder: |
+        Example:
+        Helm:
+        - Run `helm lint`.
+        - Run `helm template`.
+        - Validate generated manifests.
+
+        Kubernetes:
+        - Run server-side dry-run if cluster is available.
+        - Confirm deployments, services, secrets, and ingress render correctly.
+        - Confirm image references are valid.
+        - Confirm probes and resources are configured.
+
+        Smoke checks:
+        - Confirm frontend route responds.
+        - Confirm services start.
+        - Confirm database connection works.
+        - Confirm logs do not expose secrets.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure_modes
+    attributes:
+      label: "Expected Failure Modes"
+      description: |
+        Describe how deployment should fail safely.
+      placeholder: |
+        Example:
+        - Missing required values should fail during template rendering.
+        - Missing secret references should be documented clearly.
+        - Invalid image tag should fail deployment.
+        - Failed migrations should stop rollout.
+        - Services should not start with unsafe default secrets.
+        - Logs should not print secret values.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Dependencies, Prerequisites, or Blockers"
+      description: |
+        List anything required before this task can be completed.
+
+        Include GHCR images, Dockerfiles, secrets, release workflows, charts, docs, related issues, or architecture decisions.
+      placeholder: |
+        Example:
+        - Requires GHCR image publishing.
+        - Requires Dockerfiles for deployable apps.
+        - Requires release tag strategy.
+        - Requires secrets documentation.
+        - Requires architecture proposal for self-hosted service equivalents.
+        - Depends on #123.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or ADRs"
+      description: |
+        Link anything related.
+
+        Use references such as:
+        - Related to #123
+        - Depends on #456
+        - Blocks #789
+      placeholder: |
+        Related to #
+        Depends on #
+        Blocks #
+    validations:
+      required: false
+
+  - type: textarea
+    id: documentation
+    attributes:
+      label: "Documentation Updates"
+      description: |
+        Describe any self-hosted deployment docs, Helm docs, Kubernetes docs, runbooks, examples, or ADRs that should be updated.
+      placeholder: |
+        Example:
+        - Document required values.
+        - Document installation steps.
+        - Document secret setup.
+        - Document storage requirements.
+        - Document ingress/TLS configuration.
+        - Document upgrade process.
+        - Document rollback process.
+        - Document known limitations.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that would help with triage, implementation, validation, review, or rollback."
+      placeholder: |
+        Example:
+        This should stay separate from Cloudflare-hosted deployment.
+        This should not block hosted preview/staging/production workflows.
+        This may be implemented after GHCR publishing is stable.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm this self-hosted deployment task is ready for triage."
+      options:
+        - label: "I explained the self-hosted deployment goal."
+          required: true
+        - label: "I included configuration, security, or runtime expectations."
+          required: true
+        - label: "I included validation steps or enough context to define them."
+          required: true
+        - label: "I understand maintainers may adjust priority, area, milestone, labels, and release impact."
+          required: true

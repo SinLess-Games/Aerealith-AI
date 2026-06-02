@@ -1,126 +1,439 @@
 # .github/ISSUE_TEMPLATE/maintenance.yml
-name: 🧰 Maintenance Task
-description: Track refactors, dependency updates, or internal improvements.
+name: "🧰 Maintenance Task"
+description: "Track refactors, cleanup, dependency work, tooling updates, CI/CD improvements, internal reliability work, or technical debt for Aerealith AI."
 title: "[Maintenance]: "
 labels:
-  - type:chore
-  - status:todo
-  - needs-triage
+  - kind:maintenance
+  - status:triage
+  - no-release
 assignees:
   - Sinless777
+
 body:
   - type: markdown
     attributes:
       value: |
-        ## 🧱 Maintenance & Refactor Task
-        Use this template to document **technical debt, internal cleanups, dependency upgrades,**
-        or any non-feature improvements that improve system health and reliability.
+        # 🧰 Maintenance Task
 
-        These tasks keep Helix AI fast, secure, and maintainable. ⚙️
+        Use this form for **internal improvements** that make Aerealith AI easier to maintain, safer to operate, faster to build, easier to test, or cleaner to develop.
+
+        Maintenance work includes:
+
+        - Refactors and cleanup
+        - Dependency updates
+        - Tooling updates
+        - CI/CD improvements
+        - Repository automation
+        - Build performance improvements
+        - Test reliability improvements
+        - Security hardening
+        - Documentation cleanup
+        - Cloudflare deployment maintenance
+        - Docker, npm, GHCR, artifact, cache, or release pipeline improvements
+        - Future self-hosted Helm or Kubernetes preparation
+
+        This template walks through the task so it can be triaged, scoped, assigned, validated, and safely merged.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm this maintenance task is ready for triage."
+      options:
+        - label: "I searched existing issues and did not find a duplicate maintenance task."
+          required: true
+        - label: "This is maintenance, cleanup, refactor, tooling, dependency, CI/CD, security hardening, documentation cleanup, or internal reliability work."
+          required: true
+        - label: "I can explain why this task matters."
+          required: true
+        - label: "I included enough detail for someone else to understand the scope."
+          required: true
 
   - type: input
     id: summary
     attributes:
-      label: 🔖 Task Summary
-      description: A short, clear description of what needs to be done.
-      placeholder: Upgrade `next.js` to v15 and refactor API routes to use new server actions.
-    validations:
-      required: true
-
-  - type: textarea
-    id: motivation
-    attributes:
-      label: 💭 Motivation / Rationale
-      description: Why is this task important? What problem or technical debt does it address?
-      placeholder: |
-        - Improves stability of build pipeline
-        - Reduces CI time by caching node_modules
-        - Unblocks migration to Node 22 runtime
+      label: "Task Summary"
+      description: "Write one clear sentence describing the maintenance task."
+      placeholder: "Example: Refactor CI cache key generation to use human-readable cache names."
     validations:
       required: true
 
   - type: dropdown
-    id: category
+    id: maintenance_category
     attributes:
-      label: 🧩 Maintenance Category
-      description: Select the type of maintenance work.
+      label: "Maintenance Category"
+      description: "Choose the primary kind of maintenance work."
       multiple: false
       options:
-        - 🧱 Refactor / Cleanup
-        - 🔄 Dependency / Package Update
-        - 🧪 CI/CD or Tooling
-        - 🧰 Infrastructure / DevOps
-        - 🧩 Code Quality / Testing
-        - 🧠 Documentation or Comments
-    validations:
-      required: true
-
-  - type: textarea
-    id: plan
-    attributes:
-      label: 🗺️ Implementation Plan / Acceptance Criteria
-      description: List the key steps required to complete this task successfully.
-      placeholder: |
-        - [ ] Audit outdated dependencies using `pnpm outdated`
-        - [ ] Upgrade eslint and fix lint errors
-        - [ ] Validate CI workflows on main
-        - [ ] Verify no breaking changes in production build
+        - Refactor / cleanup
+        - Dependency / package update
+        - CI/CD or workflow improvement
+        - Repository management automation
+        - Build tooling improvement
+        - Test reliability improvement
+        - Code quality improvement
+        - Security hardening
+        - Cloudflare deployment maintenance
+        - Docker / GHCR maintenance
+        - npm publishing maintenance
+        - Artifact / checksum / SBOM maintenance
+        - Cache management
+        - Documentation cleanup
+        - Observability maintenance
+        - AI automation maintenance
+        - Self-hosted / Helm / Kubernetes preparation
+        - Other
     validations:
       required: true
 
   - type: dropdown
-    id: area
+    id: affected_area
     attributes:
-      label: 🏗️ Affected Area
-      description: Which system or component does this maintenance impact?
+      label: "Affected Area"
+      description: |
+        Select the main part of the repository or platform affected by this task.
+
+        Pick the closest match. Additional areas can be listed later.
       multiple: false
       options:
         - area:frontend
-        - area:backend
-        - area:infra
-        - area:database
-        - area:security
+        - area:connectors
+        - area:e2e
+        - area:engines
+        - area:integrations
+        - area:services
+        - area:libs
+        - area:ui
+        - area:config
+        - area:db
+        - area:flags
+        - area:github-actions
+        - area:repo-management
         - area:ci
+        - area:security
+        - area:dependencies
+        - area:cloudflare
+        - area:workers
+        - area:queues
+        - area:r2
+        - area:d1
+        - area:kv
+        - area:secrets
+        - area:docker
+        - area:ghcr
+        - area:npm
+        - area:artifacts
+        - area:cache
+        - area:observability
+        - area:ai
+        - area:openai
+        - area:self-hosted
+        - area:helm
+        - area:kubernetes
+        - area:docs
     validations:
       required: true
 
   - type: dropdown
     id: priority
     attributes:
-      label: ⚡ Priority Level
-      description: How urgent or impactful is this maintenance task?
+      label: "Priority"
+      description: |
+        Choose how important this task is.
+
+        Use Critical only when this blocks security, releases, deployments, CI, production, or core development.
+      multiple: false
       options:
-        - 🟥 Critical — must fix immediately
-        - 🟧 High — affects performance or build stability
-        - 🟨 Medium — normal maintenance priority
-        - 🟩 Low — routine housekeeping
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_impact
+    attributes:
+      label: "Release Impact"
+      description: |
+        Most maintenance work should be `no-release`.
+
+        Use a release label only if this task intentionally changes shipped behavior, release assets, npm packages, containers, or production behavior.
+      multiple: false
+      options:
+        - no-release
+        - release:patch
+        - release:minor
+        - release:major
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: "Motivation / Rationale"
+      description: |
+        Explain why this task should be done.
+
+        Describe the technical debt, maintenance burden, reliability problem, performance issue, security concern, workflow pain, or future blocker this task addresses.
+      placeholder: |
+        Example:
+        The current CI workflow uses scattered cache keys and duplicated setup steps.
+        This makes the workflow harder to maintain and makes cache behavior difficult to inspect.
+
+        This task will:
+        - Improve workflow readability
+        - Reduce duplicated CI logic
+        - Make cache names easier to understand
+        - Prepare the repo for reusable workflows
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_state
+    attributes:
+      label: "Current State"
+      description: |
+        Describe how things work today.
+
+        Include current files, workflows, commands, scripts, package behavior, or known pain points.
+      placeholder: |
+        Example:
+        Currently:
+        - `ci.yaml` creates cache keys inline.
+        - Docker cache names are not human-readable.
+        - Cypress and Playwright cache behavior is not centralized.
+        - There is no weekly cache cleanup workflow yet.
+    validations:
+      required: false
+
+  - type: textarea
+    id: desired_state
+    attributes:
+      label: "Desired State"
+      description: |
+        Describe what the repository, workflow, script, or system should look like after this task is complete.
+      placeholder: |
+        Example:
+        After this task:
+        - Cache keys should be generated by `.github/scripts/cache/build-cache-keys.js`.
+        - Cache names should clearly identify pnpm, Nx, Docker, Cypress, or Playwright.
+        - The weekly cache cleanup workflow should summarize deleted caches.
+        - CI should remain strict and deterministic.
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation_plan
+    attributes:
+      label: "Implementation Plan"
+      description: |
+        Break the task into clear implementation steps.
+
+        Use checklist items so progress can be tracked.
+      placeholder: |
+        - [ ] Review current workflow or script behavior.
+        - [ ] Identify duplicated or fragile logic.
+        - [ ] Refactor the logic into the correct `.github/scripts` utility.
+        - [ ] Update workflow usage.
+        - [ ] Add dry-run support if the task changes repository state.
+        - [ ] Add logging with `.github/scripts/utils/logger.js`.
+        - [ ] Validate locally where possible.
+        - [ ] Validate in GitHub Actions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: |
+        Define what must be true before this task can be considered complete.
+
+        These should be specific and verifiable.
+      placeholder: |
+        - [ ] The maintenance task is implemented.
+        - [ ] Existing behavior is preserved unless intentionally changed.
+        - [ ] All affected Nx targets pass.
+        - [ ] Formatting passes.
+        - [ ] Linting passes.
+        - [ ] Typechecking passes.
+        - [ ] Tests pass.
+        - [ ] Build passes.
+        - [ ] Security checks pass if relevant.
+        - [ ] Documentation or comments are updated if needed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected_files
+    attributes:
+      label: "Expected Files, Folders, or Systems Affected"
+      description: |
+        List likely files, folders, workflows, apps, libs, scripts, packages, or services affected by this task.
+
+        This helps with planning, ownership, labels, reviewers, and milestone routing.
+      placeholder: |
+        Example:
+        - .github/workflows/ci.yaml
+        - .github/workflows/cache-maintenance.yaml
+        - .github/scripts/cache/build-cache-keys.js
+        - .github/scripts/cache/cleanup-caches.js
+        - .github/scripts/utils/logger.js
+        - nx.json
+        - package.json
+    validations:
+      required: false
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "Validation Plan"
+      description: |
+        Explain how this maintenance work should be tested or verified.
+
+        Include commands, Nx targets, GitHub Actions workflows, dry-run mode, preview deployments, or manual checks.
+      placeholder: |
+        Example:
+        - Run `pnpm install`.
+        - Run the affected Nx lint target.
+        - Run the affected Nx test target.
+        - Run the affected Nx build target.
+        - Run the workflow in dry-run mode.
+        - Confirm generated logs and summaries are correct.
+        - Confirm no release is triggered.
+      render: shell
     validations:
       required: true
 
   - type: textarea
     id: risks
     attributes:
-      label: ⚠️ Risks & Mitigations
-      description: Highlight any risks, side effects, or dependent tasks that need monitoring.
+      label: "Risks, Side Effects, or Tradeoffs"
+      description: |
+        Describe anything that could break or behave differently.
+
+        Include compatibility concerns, migration concerns, CI risk, deployment risk, package publishing risk, security risk, or automation risk.
       placeholder: |
-        - Possible impact on existing API routes after Next.js upgrade
-        - Validate all env vars before deployment
-        - Rollback strategy: revert to previous minor version if CI fails
+        Example:
+        - Cache changes may temporarily reduce cache hit rates.
+        - Refactoring workflow scripts may affect PR validation.
+        - Dependency updates may introduce breaking changes.
+        - Automation must not push directly to main.
+        - Dependency PRs must not trigger releases.
+    validations:
+      required: false
+
+  - type: textarea
+    id: rollback_plan
+    attributes:
+      label: "Rollback Plan"
+      description: |
+        Describe how to undo this task if it causes problems.
+
+        This is especially important for workflows, dependencies, deployment, security, release, publishing, and automation changes.
+      placeholder: |
+        Example:
+        - Revert the workflow changes.
+        - Restore the previous package versions.
+        - Disable the affected automation workflow.
+        - Re-run CI on the previous known-good commit.
+        - Restore previous Cloudflare deployment configuration.
+    validations:
+      required: false
 
   - type: textarea
     id: dependencies
     attributes:
-      label: 🔗 Related Issues / Dependencies
-      description: Link related PRs, issues, or workflows that depend on or are impacted by this task.
+      label: "Dependencies, Prerequisites, or Blockers"
+      description: |
+        List anything that must happen first.
+
+        Include related issues, pull requests, secrets, package updates, workflow dependencies, approvals, or configuration requirements.
       placeholder: |
-        Related to #231 (ESLint upgrade)
-        Blocks #284 (Helix 0.5 release)
+        Example:
+        - Depends on .github/labels.yaml being synced.
+        - Depends on repo-management workflow existing.
+        - Requires PROJECTS_PAT for project automation.
+        - Blocks release workflow implementation.
+        - Related to #123.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: automation_safety
+    attributes:
+      label: "Automation Safety"
+      description: "Does this task affect automation that changes repository state?"
+      multiple: false
+      options:
+        - Does not affect repository-changing automation
+        - Affects repository-changing automation and needs dry-run support
+        - Affects release or publish automation
+        - Affects dependency auto-merge automation
+        - Affects OpenAI automation
+        - Affects security automation
+        - Unsure
+    validations:
+      required: true
 
   - type: textarea
-    id: notes
+    id: documentation
     attributes:
-      label: 🧠 Additional Notes
-      description: Include any follow-up steps, references, or notes from internal discussions.
+      label: "Documentation Updates"
+      description: |
+        Describe any documentation, comments, README updates, ADRs, or runbooks that should be updated.
       placeholder: |
-        - Ref: https://helixaibot.com/docs/contributing
-        - Consider adding Renovate configuration for automated dependency checks
+        Example:
+        - Update README workflow section.
+        - Add comments to the new script.
+        - Update Operations — Runbooks milestone notes.
+        - Add an ADR if the task changes architecture or release behavior.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or ADRs"
+      description: |
+        Link anything related.
+
+        Use references such as:
+        - Related to #123
+        - Depends on #456
+        - Blocks #789
+      placeholder: |
+        Related to #
+        Depends on #
+        Blocks #
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that would help with triage, implementation, review, or validation."
+      placeholder: |
+        Example:
+        This should be handled before the release workflow is enabled.
+        This should be safe to test in dry-run mode first.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm the maintenance task is ready for triage."
+      options:
+        - label: "I explained why this maintenance task matters."
+          required: true
+        - label: "I included a clear implementation plan or enough detail to create one."
+          required: true
+        - label: "I included validation steps or enough context to define them."
+          required: true
+        - label: "I understand maintainers may adjust priority, area, milestone, labels, and release impact."
+          required: true

@@ -1,49 +1,464 @@
+# .github/projects/kanban-board.yaml
 # ==========================================================
-# GitHub Project (Projects v2) Configuration
-# Kanban Board for Helix AI
-# Owner: Sinless777 / SinLess Games LLC
+# Aerealith AI GitHub Project Configuration
+# GitHub Projects v2 Kanban / Roadmap Source of Truth
+# ==========================================================
+# Purpose:
+#   Declarative configuration consumed by repository automation scripts.
+#
+# Used by:
+#   - .github/workflows/repo-management.yaml
+#   - .github/scripts/repo/sync-projects.js
+#   - .github/scripts/repo/assign-milestones.js
+#   - .github/scripts/repo/link-issues-prs.js
+#
+# Notes:
+#   - GitHub Projects v2 does not natively read this file.
+#   - This file is for your repo-management automation.
+#   - Keep field names aligned with repo-management scripts.
+#   - Keep label mappings aligned with .github/labels.yaml.
 # ==========================================================
 
 project:
-  name: "Helix AI Task Board"
-  description: "Central Kanban board for tracking Helix AI development across backend, frontend, infra, AI features, and IaC."
-  owner: "Sinless777" # GitHub username or org
-  public: true # set true if you want public visibility
+  name: "Aerealith AI Task Board"
+  description: "Central Kanban board for tracking Aerealith AI development across frontend, services, connectors, engines, integrations, Cloudflare, CI/CD, security, releases, publishing, AI automation, and future self-hosted deployment."
+  owner: "SinLess-Games"
+  repository: "Aerealith-AI"
+  public: true
 
 # ----------------------------------------------------------
-# Fields (equivalent to custom columns/attributes)
+# Project Behavior
+# ----------------------------------------------------------
+behavior:
+  auto_add:
+    enabled: true
+    issues: true
+    pull_requests: true
+
+  archive:
+    enabled: true
+    completed_after_days: 30
+
+  automation:
+    dry_run_supported: true
+    allow_project_creation: true
+    allow_field_creation: true
+    allow_view_creation: true
+    allow_item_updates: true
+    allow_item_archival: true
+
+  safety:
+    do_not_delete_project: true
+    do_not_delete_fields: true
+    do_not_delete_views: true
+    do_not_remove_items: true
+
+# ----------------------------------------------------------
+# Fields
 # ----------------------------------------------------------
 fields:
   - type: single_select
     name: Status
+    description: "Current workflow state."
     options:
-      - { name: "Todo", color: "gray" }
-      - { name: "In Progress", color: "blue" }
-      - { name: "Review", color: "purple" }
-      - { name: "Blocked", color: "red" }
-      - { name: "Done", color: "green" }
-      - { name: "Backlog", color: "grey" }
+      - { name: "Backlog", color: "GRAY" }
+      - { name: "Todo", color: "GRAY" }
+      - { name: "Ready", color: "GREEN" }
+      - { name: "In Progress", color: "BLUE" }
+      - { name: "Review", color: "PURPLE" }
+      - { name: "Blocked", color: "RED" }
+      - { name: "Done", color: "GREEN" }
 
   - type: single_select
     name: Priority
+    description: "Work priority."
     options:
-      - { name: "Critical", color: "red" }
-      - { name: "High", color: "orange" }
-      - { name: "Medium", color: "yellow" }
-      - { name: "Low", color: "gray" }
+      - { name: "Critical", color: "RED" }
+      - { name: "High", color: "ORANGE" }
+      - { name: "Medium", color: "YELLOW" }
+      - { name: "Low", color: "GRAY" }
+
+  - type: single_select
+    name: Severity
+    description: "Security, bug, or operational severity."
+    options:
+      - { name: "Critical", color: "RED" }
+      - { name: "High", color: "ORANGE" }
+      - { name: "Medium", color: "YELLOW" }
+      - { name: "Low", color: "GRAY" }
+      - { name: "None", color: "GRAY" }
+
+  - type: single_select
+    name: Type
+    description: "Primary work type."
+    options:
+      - { name: "Bug", color: "RED" }
+      - { name: "Feature", color: "GREEN" }
+      - { name: "Chore", color: "GRAY" }
+      - { name: "Maintenance", color: "GRAY" }
+      - { name: "Refactor", color: "PURPLE" }
+      - { name: "Security", color: "RED" }
+      - { name: "Documentation", color: "BLUE" }
+      - { name: "Test", color: "BLUE" }
+      - { name: "CI/CD", color: "GREEN" }
+      - { name: "Deployment", color: "BLUE" }
+      - { name: "Release", color: "ORANGE" }
 
   - type: single_select
     name: Area
+    description: "Primary repository area."
     options:
-      - { name: "Frontend", color: "blue" }
-      - { name: "Backend", color: "indigo" }
-      - { name: "Infra", color: "green" }
-      - { name: "Database", color: "yellow" }
-      - { name: "AI/ML", color: "purple" }
-      - { name: "Quality", color: "gray" }
+      - { name: "Frontend", color: "BLUE" }
+      - { name: "Connectors", color: "BLUE" }
+      - { name: "E2E", color: "BLUE" }
+      - { name: "Engines", color: "PURPLE" }
+      - { name: "Integrations", color: "BLUE" }
+      - { name: "Services", color: "BLUE" }
+      - { name: "Libraries", color: "PURPLE" }
+      - { name: "UI", color: "PURPLE" }
+      - { name: "Config", color: "GRAY" }
+      - { name: "Database", color: "YELLOW" }
+      - { name: "Security", color: "RED" }
+      - { name: "Dependencies", color: "BLUE" }
+      - { name: "GitHub Actions", color: "GRAY" }
+      - { name: "Repo Management", color: "PURPLE" }
+      - { name: "CI/CD", color: "GREEN" }
+      - { name: "Cloudflare", color: "ORANGE" }
+      - { name: "Docker", color: "BLUE" }
+      - { name: "GHCR", color: "GRAY" }
+      - { name: "NPM", color: "RED" }
+      - { name: "Artifacts", color: "PURPLE" }
+      - { name: "Cache", color: "GRAY" }
+      - { name: "Observability", color: "YELLOW" }
+      - { name: "AI Automation", color: "PURPLE" }
+      - { name: "Self Hosted", color: "BLUE" }
+      - { name: "Helm", color: "BLUE" }
+      - { name: "Kubernetes", color: "BLUE" }
+      - { name: "Documentation", color: "BLUE" }
+
+  - type: single_select
+    name: Environment
+    description: "Deployment or validation environment."
+    options:
+      - { name: "None", color: "GRAY" }
+      - { name: "Preview", color: "BLUE" }
+      - { name: "Staging", color: "YELLOW" }
+      - { name: "Production", color: "RED" }
+      - { name: "Self Hosted", color: "PURPLE" }
+
+  - type: single_select
+    name: Release Impact
+    description: "How this item affects release automation."
+    options:
+      - { name: "No Release", color: "GRAY" }
+      - { name: "Patch", color: "YELLOW" }
+      - { name: "Minor", color: "ORANGE" }
+      - { name: "Major", color: "RED" }
+      - { name: "Blocked", color: "RED" }
+
+  - type: single_select
+    name: Automation Source
+    description: "Automation system responsible for the item."
+    options:
+      - { name: "Human", color: "GRAY" }
+      - { name: "GitHub Actions", color: "GRAY" }
+      - { name: "Renovate", color: "BLUE" }
+      - { name: "Dependabot", color: "BLUE" }
+      - { name: "Mend", color: "BLUE" }
+      - { name: "OpenAI", color: "PURPLE" }
+
+  - type: single_select
+    name: Merge Policy
+    description: "Merge behavior hint for automation."
+    options:
+      - { name: "Manual", color: "GRAY" }
+      - { name: "Auto Merge Eligible", color: "GREEN" }
+      - { name: "Needs Maintainer Review", color: "YELLOW" }
+      - { name: "Needs Security Review", color: "ORANGE" }
+      - { name: "Do Not Merge", color: "RED" }
 
   - type: number
     name: "Story Points"
+    description: "Estimated complexity or effort."
+
+  - type: text
+    name: "Target Version"
+    description: "Target version such as V0.5.0 or V1.0.0."
+
+  - type: date
+    name: "Target Date"
+    description: "Expected completion, release, or review date."
+
+# ----------------------------------------------------------
+# Field Mapping Rules
+# ----------------------------------------------------------
+field_mappings:
+  labels:
+    # Status
+    status:triage:
+      Status: "Todo"
+
+    status:backlog:
+      Status: "Backlog"
+
+    status:ready:
+      Status: "Ready"
+
+    status:in-progress:
+      Status: "In Progress"
+
+    status:needs-review:
+      Status: "Review"
+      Merge Policy: "Needs Maintainer Review"
+
+    status:changes-requested:
+      Status: "Review"
+
+    status:blocked:
+      Status: "Blocked"
+
+    status:ready-to-merge:
+      Status: "Review"
+
+    status:merged:
+      Status: "Done"
+
+    # Priority
+    priority:critical:
+      Priority: "Critical"
+
+    priority:high:
+      Priority: "High"
+
+    priority:medium:
+      Priority: "Medium"
+
+    priority:low:
+      Priority: "Low"
+
+    # Severity
+    severity:critical:
+      Severity: "Critical"
+
+    severity:high:
+      Severity: "High"
+
+    severity:medium:
+      Severity: "Medium"
+
+    severity:low:
+      Severity: "Low"
+
+    # Type
+    kind:bug:
+      Type: "Bug"
+
+    kind:feature:
+      Type: "Feature"
+
+    kind:chore:
+      Type: "Chore"
+
+    kind:maintenance:
+      Type: "Maintenance"
+
+    kind:refactor:
+      Type: "Refactor"
+
+    kind:security:
+      Type: "Security"
+
+    kind:documentation:
+      Type: "Documentation"
+
+    kind:test:
+      Type: "Test"
+
+    kind:ci:
+      Type: "CI/CD"
+
+    kind:deployment:
+      Type: "Deployment"
+
+    kind:release:
+      Type: "Release"
+
+    # Areas
+    area:frontend:
+      Area: "Frontend"
+
+    area:connectors:
+      Area: "Connectors"
+
+    area:e2e:
+      Area: "E2E"
+
+    area:engines:
+      Area: "Engines"
+
+    area:integrations:
+      Area: "Integrations"
+
+    area:services:
+      Area: "Services"
+
+    area:libs:
+      Area: "Libraries"
+
+    area:ui:
+      Area: "UI"
+
+    area:config:
+      Area: "Config"
+
+    area:db:
+      Area: "Database"
+
+    area:security:
+      Area: "Security"
+
+    area:dependencies:
+      Area: "Dependencies"
+
+    area:github-actions:
+      Area: "GitHub Actions"
+
+    area:repo-management:
+      Area: "Repo Management"
+
+    area:ci:
+      Area: "CI/CD"
+
+    area:cloudflare:
+      Area: "Cloudflare"
+
+    area:docker:
+      Area: "Docker"
+
+    area:ghcr:
+      Area: "GHCR"
+
+    area:npm:
+      Area: "NPM"
+
+    area:artifacts:
+      Area: "Artifacts"
+
+    area:cache:
+      Area: "Cache"
+
+    area:observability:
+      Area: "Observability"
+
+    area:ai:
+      Area: "AI Automation"
+
+    area:openai:
+      Area: "AI Automation"
+
+    area:self-hosted:
+      Area: "Self Hosted"
+      Environment: "Self Hosted"
+
+    area:helm:
+      Area: "Helm"
+      Environment: "Self Hosted"
+
+    area:kubernetes:
+      Area: "Kubernetes"
+      Environment: "Self Hosted"
+
+    area:docs:
+      Area: "Documentation"
+
+    # Environment
+    preview:
+      Environment: "Preview"
+
+    staging:
+      Environment: "Staging"
+
+    production:
+      Environment: "Production"
+
+    # Release Impact
+    no-release:
+      Release Impact: "No Release"
+
+    release:patch:
+      Release Impact: "Patch"
+
+    release:minor:
+      Release Impact: "Minor"
+
+    release:major:
+      Release Impact: "Major"
+
+    do-not-merge:
+      Merge Policy: "Do Not Merge"
+
+    blocked-by-security:
+      Merge Policy: "Do Not Merge"
+      Status: "Blocked"
+
+    needs-maintainer-review:
+      Merge Policy: "Needs Maintainer Review"
+
+    needs-security-review:
+      Merge Policy: "Needs Security Review"
+
+    auto-merge:
+      Merge Policy: "Auto Merge Eligible"
+
+    # Automation Source
+    automation:github-actions:
+      Automation Source: "GitHub Actions"
+
+    automation:renovate:
+      Automation Source: "Renovate"
+
+    automation:dependabot:
+      Automation Source: "Dependabot"
+
+    automation:mend:
+      Automation Source: "Mend"
+
+    automation:openai:
+      Automation Source: "OpenAI"
+
+# ----------------------------------------------------------
+# Milestone Mapping Rules
+# ----------------------------------------------------------
+milestone_mappings:
+  "V0.1.0 — Foundation":
+    Target Version: "V0.1.0"
+
+  "V0.2.0 — Automation Core":
+    Target Version: "V0.2.0"
+
+  "V0.3.0 — CI/CD Expansion":
+    Target Version: "V0.3.0"
+
+  "V0.4.0 — Security Automation":
+    Target Version: "V0.4.0"
+
+  "V0.5.0 — Release Automation":
+    Target Version: "V0.5.0"
+
+  "V0.6.0 — Publishing Pipeline":
+    Target Version: "V0.6.0"
+
+  "V0.7.0 — Cloudflare Platform":
+    Target Version: "V0.7.0"
+
+  "V0.8.0 — AI Repository Assistant":
+    Target Version: "V0.8.0"
+
+  "V0.9.0 — Release Candidate":
+    Target Version: "V0.9.0"
+
+  "V1.0.0 — General Availability":
+    Target Version: "V1.0.0"
 
 # ----------------------------------------------------------
 # Views
@@ -51,29 +466,277 @@ fields:
 views:
   - name: "Kanban"
     layout: board
-    filters: ""
-    fields: ["Status", "Priority", "Area", "Story Points"]
     group_by: "Status"
+    sort_by:
+      - field: "Priority"
+        direction: "desc"
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Type
+      - Release Impact
+      - Story Points
+    filters: ""
 
-  - name: "By Priority"
+  - name: "Backlog"
+    layout: table
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Type
+      - Story Points
+      - Target Version
+    filters: 'Status = "Backlog" OR Status = "Todo"'
+
+  - name: "Ready for Work"
+    layout: table
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Type
+      - Story Points
+      - Target Version
+    filters: 'Status = "Ready"'
+
+  - name: "Blocked"
+    layout: table
+    fields:
+      - Status
+      - Priority
+      - Severity
+      - Area
+      - Type
+      - Merge Policy
+    filters: 'Status = "Blocked" OR Merge Policy = "Do Not Merge"'
+
+  - name: "Security"
+    layout: table
+    fields:
+      - Status
+      - Priority
+      - Severity
+      - Area
+      - Type
+      - Merge Policy
+      - Automation Source
+    filters: 'Area = "Security" OR Type = "Security" OR Severity != "None"'
+
+  - name: "Dependencies"
+    layout: table
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Type
+      - Automation Source
+      - Merge Policy
+      - Release Impact
+    filters: 'Area = "Dependencies" OR Automation Source = "Renovate" OR Automation Source = "Dependabot" OR Automation Source = "Mend"'
+
+  - name: "CI/CD"
+    layout: table
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Type
+      - Story Points
+      - Target Version
+    filters: 'Area = "CI/CD" OR Type = "CI/CD"'
+
+  - name: "Cloudflare"
     layout: board
-    group_by: "Priority"
-    fields: ["Status", "Priority", "Area"]
+    group_by: "Environment"
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Environment
+      - Type
+      - Story Points
+    filters: 'Area = "Cloudflare" OR Environment = "Preview" OR Environment = "Staging" OR Environment = "Production"'
 
-  - name: "Backend / Infra"
+  - name: "Publishing"
     layout: table
-    filters: 'Area = "Backend" OR Area = "Infra"'
-    fields: ["Status", "Area", "Priority", "Story Points"]
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Type
+      - Release Impact
+      - Target Version
+    filters: 'Area = "NPM" OR Area = "GHCR" OR Area = "Docker" OR Area = "Artifacts" OR Type = "Release"'
 
-  - name: "AI / ML Work"
+  - name: "Releases"
     layout: table
-    filters: 'Area = "AI/ML"'
-    fields: ["Status", "Priority"]
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Type
+      - Release Impact
+      - Target Version
+      - Target Date
+    filters: 'Release Impact = "Patch" OR Release Impact = "Minor" OR Release Impact = "Major" OR Type = "Release"'
 
-  - name: "All Issues"
+  - name: "AI Automation"
     layout: table
-    fields: ["Status", "Priority", "Area", "Story Points"]
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Type
+      - Automation Source
+      - Merge Policy
+    filters: 'Area = "AI Automation" OR Automation Source = "OpenAI"'
 
-  - name: "Helix AI Roadmap"
+  - name: "Self Hosted"
+    layout: table
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Environment
+      - Type
+      - Story Points
+      - Target Version
+    filters: 'Environment = "Self Hosted" OR Area = "Self Hosted" OR Area = "Helm" OR Area = "Kubernetes"'
+
+  - name: "Roadmap"
     layout: roadmap
-    fields: []
+    date_field: "Target Date"
+    fields:
+      - Status
+      - Priority
+      - Area
+      - Target Version
+      - Target Date
+    filters: ""
+
+  - name: "All Items"
+    layout: table
+    fields:
+      - Status
+      - Priority
+      - Severity
+      - Area
+      - Type
+      - Environment
+      - Release Impact
+      - Automation Source
+      - Merge Policy
+      - Story Points
+      - Target Version
+      - Target Date
+    filters: ""
+
+# ----------------------------------------------------------
+# Default Item Values
+# ----------------------------------------------------------
+defaults:
+  issue:
+    Status: "Backlog"
+    Priority: "Medium"
+    Severity: "None"
+    Type: "Chore"
+    Area: "Repo Management"
+    Environment: "None"
+    Release Impact: "No Release"
+    Automation Source: "Human"
+    Merge Policy: "Manual"
+
+  pull_request:
+    Status: "Review"
+    Priority: "Medium"
+    Severity: "None"
+    Type: "Chore"
+    Area: "Repo Management"
+    Environment: "None"
+    Release Impact: "No Release"
+    Automation Source: "Human"
+    Merge Policy: "Manual"
+
+  draft_pull_request:
+    Status: "In Progress"
+    Priority: "Medium"
+    Severity: "None"
+    Type: "Chore"
+    Area: "Repo Management"
+    Environment: "None"
+    Release Impact: "No Release"
+    Automation Source: "Human"
+    Merge Policy: "Manual"
+
+# ----------------------------------------------------------
+# Automation Rules
+# ----------------------------------------------------------
+automation_rules:
+  - name: "Mark closed issues as done"
+    when:
+      item_type: issue
+      state: closed
+    set:
+      Status: "Done"
+
+  - name: "Mark merged pull requests as done"
+    when:
+      item_type: pull_request
+      merged: true
+    set:
+      Status: "Done"
+
+  - name: "Mark open pull requests as review"
+    when:
+      item_type: pull_request
+      state: open
+      draft: false
+    set:
+      Status: "Review"
+
+  - name: "Mark draft pull requests as in progress"
+    when:
+      item_type: pull_request
+      state: open
+      draft: true
+    set:
+      Status: "In Progress"
+
+  - name: "Block do-not-merge items"
+    when:
+      labels:
+        - do-not-merge
+    set:
+      Status: "Blocked"
+      Merge Policy: "Do Not Merge"
+
+  - name: "Block security-blocked items"
+    when:
+      labels:
+        - blocked-by-security
+    set:
+      Status: "Blocked"
+      Merge Policy: "Do Not Merge"
+      Severity: "Critical"
+
+  - name: "Mark dependency auto-merge candidates"
+    when:
+      labels:
+        - dependencies
+        - auto-merge
+        - no-release
+    set:
+      Automation Source: "Renovate"
+      Merge Policy: "Auto Merge Eligible"
+      Release Impact: "No Release"
+
+  - name: "Mark OpenAI-created work for review"
+    when:
+      labels:
+        - automation:openai
+    set:
+      Automation Source: "OpenAI"
+      Merge Policy: "Needs Maintainer Review"
+      Status: "Review"

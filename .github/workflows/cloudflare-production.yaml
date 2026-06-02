@@ -1,0 +1,531 @@
+name: Aerealith AI Cloudflare Production
+
+run-name: >-
+  Cloudflare Production / ${{ github.event_name }} / ${{ github.ref_name || github.event.release.tag_name || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Cloudflare production mode to run."
+        required: true
+        default: "deploy"
+        type: choice
+        options:
+          - deploy
+          - discover-only
+          - migrations-only
+          - sync-only
+          - summarize-only
+      environment_name:
+        description: "GitHub/Cloudflare environment name."
+        required: false
+        default: "production"
+        type: string
+      run_cockroachdb_migrations:
+        description: "Run CockroachDB production migrations."
+        required: true
+        default: true
+        type: boolean
+      run_d1_migrations:
+        description: "Run Cloudflare D1 production migrations."
+        required: true
+        default: true
+        type: boolean
+      sync_kv:
+        description: "Sync Cloudflare KV production configuration."
+        required: true
+        default: true
+        type: boolean
+      sync_queues:
+        description: "Sync Cloudflare Queues production configuration."
+        required: true
+        default: true
+        type: boolean
+      sync_r2:
+        description: "Sync Cloudflare R2 production configuration."
+        required: true
+        default: true
+        type: boolean
+      sync_secrets:
+        description: "Sync Cloudflare production secrets."
+        required: true
+        default: false
+        type: boolean
+      dry_run:
+        description: "Evaluate without changing Cloudflare resources."
+        required: true
+        default: false
+        type: boolean
+
+  release:
+    types:
+      - published
+
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  deployments: write
+  id-token: write
+  packages: read
+  statuses: write
+
+concurrency:
+  group: cloudflare-production
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  CLOUDFLARE_ENVIRONMENT: production
+  CLOUDFLARE_DEPLOYMENT_STAGE: production
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+  CLOUDFLARE_OUTPUT_DIR: artifacts/cloudflare/production
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      environment_name: ${{ steps.context.outputs.environment_name }}
+      deployment_ref: ${{ steps.context.outputs.deployment_ref }}
+      release_tag: ${{ steps.context.outputs.release_tag }}
+      should_discover: ${{ steps.context.outputs.should_discover }}
+      should_run_cockroachdb_migrations: ${{ steps.context.outputs.should_run_cockroachdb_migrations }}
+      should_run_d1_migrations: ${{ steps.context.outputs.should_run_d1_migrations }}
+      should_sync_resources: ${{ steps.context.outputs.should_sync_resources }}
+      should_deploy: ${{ steps.context.outputs.should_deploy }}
+      should_summarize: ${{ steps.context.outputs.should_summarize }}
+
+    steps:
+      - name: Resolve Cloudflare production context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'deploy' }}
+          INPUT_ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name || 'production' }}
+          INPUT_RUN_COCKROACHDB_MIGRATIONS: ${{ github.event.inputs.run_cockroachdb_migrations || 'true' }}
+          INPUT_RUN_D1_MIGRATIONS: ${{ github.event.inputs.run_d1_migrations || 'true' }}
+          INPUT_SYNC_KV: ${{ github.event.inputs.sync_kv || 'true' }}
+          INPUT_SYNC_QUEUES: ${{ github.event.inputs.sync_queues || 'true' }}
+          INPUT_SYNC_R2: ${{ github.event.inputs.sync_r2 || 'true' }}
+          INPUT_SYNC_SECRETS: ${{ github.event.inputs.sync_secrets || 'false' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          REF_NAME: ${{ github.ref_name || '' }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-deploy}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+          environment_name="${INPUT_ENVIRONMENT_NAME:-production}"
+          release_tag="${RELEASE_TAG:-}"
+          deployment_ref="${release_tag:-${REF_NAME:-manual}}"
+
+          should_discover="false"
+          should_run_cockroachdb_migrations="false"
+          should_run_d1_migrations="false"
+          should_sync_resources="false"
+          should_deploy="false"
+          should_summarize="true"
+
+          case "$mode" in
+            deploy)
+              should_discover="true"
+              should_deploy="true"
+
+              if [[ "${INPUT_RUN_COCKROACHDB_MIGRATIONS:-true}" == "true" ]]; then
+                should_run_cockroachdb_migrations="true"
+              fi
+
+              if [[ "${INPUT_RUN_D1_MIGRATIONS:-true}" == "true" ]]; then
+                should_run_d1_migrations="true"
+              fi
+
+              if [[ "${INPUT_SYNC_KV:-true}" == "true" || "${INPUT_SYNC_QUEUES:-true}" == "true" || "${INPUT_SYNC_R2:-true}" == "true" || "${INPUT_SYNC_SECRETS:-false}" == "true" ]]; then
+                should_sync_resources="true"
+              fi
+              ;;
+            discover-only)
+              should_discover="true"
+              ;;
+            migrations-only)
+              should_discover="true"
+
+              if [[ "${INPUT_RUN_COCKROACHDB_MIGRATIONS:-true}" == "true" ]]; then
+                should_run_cockroachdb_migrations="true"
+              fi
+
+              if [[ "${INPUT_RUN_D1_MIGRATIONS:-true}" == "true" ]]; then
+                should_run_d1_migrations="true"
+              fi
+              ;;
+            sync-only)
+              should_discover="true"
+              should_sync_resources="true"
+              ;;
+            summarize-only)
+              should_summarize="true"
+              ;;
+            *)
+              echo "::error::Unsupported Cloudflare production mode: $mode"
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "mode=$mode"
+            echo "dry_run=$dry_run"
+            echo "environment_name=$environment_name"
+            echo "deployment_ref=$deployment_ref"
+            echo "release_tag=$release_tag"
+            echo "should_discover=$should_discover"
+            echo "should_run_cockroachdb_migrations=$should_run_cockroachdb_migrations"
+            echo "should_run_d1_migrations=$should_run_d1_migrations"
+            echo "should_sync_resources=$should_sync_resources"
+            echo "should_deploy=$should_deploy"
+            echo "should_summarize=$should_summarize"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Cloudflare Production"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Mode | \`$mode\` |"
+            echo "| Dry run | \`$dry_run\` |"
+            echo "| Environment | \`$environment_name\` |"
+            echo "| Deployment ref | \`${deployment_ref:-none}\` |"
+            echo "| Release tag | \`${release_tag:-none}\` |"
+            echo "| Discover | \`$should_discover\` |"
+            echo "| CockroachDB migrations | \`$should_run_cockroachdb_migrations\` |"
+            echo "| D1 migrations | \`$should_run_d1_migrations\` |"
+            echo "| Resource sync | \`$should_sync_resources\` |"
+            echo "| Deploy | \`$should_deploy\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  cloudflare-production:
+    name: Deploy Cloudflare production
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+
+    if: >-
+      needs.preflight.outputs.should_discover == 'true' ||
+      needs.preflight.outputs.should_run_cockroachdb_migrations == 'true' ||
+      needs.preflight.outputs.should_run_d1_migrations == 'true' ||
+      needs.preflight.outputs.should_sync_resources == 'true' ||
+      needs.preflight.outputs.should_deploy == 'true'
+
+    environment:
+      name: ${{ needs.preflight.outputs.environment_name }}
+      url: ${{ steps.deploy.outputs.cloudflare_production_url || steps.deploy.outputs.production_url || steps.deploy.outputs.deployment_url || '' }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+      CLOUDFLARE_ENVIRONMENT: ${{ needs.preflight.outputs.environment_name }}
+      CLOUDFLARE_DEPLOYMENT_STAGE: production
+      CLOUDFLARE_PRODUCTION_REF: ${{ needs.preflight.outputs.deployment_ref }}
+
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      COCKROACH_DATABASE_URL: ${{ secrets.COCKROACH_DATABASE_URL }}
+      COCKROACHDB_DATABASE_URL: ${{ secrets.COCKROACHDB_DATABASE_URL }}
+
+      CLOUDFLARE_SYNC_KV: ${{ github.event.inputs.sync_kv || 'true' }}
+      CLOUDFLARE_SYNC_QUEUES: ${{ github.event.inputs.sync_queues || 'true' }}
+      CLOUDFLARE_SYNC_R2: ${{ github.event.inputs.sync_r2 || 'true' }}
+      CLOUDFLARE_SYNC_SECRETS: ${{ github.event.inputs.sync_secrets || 'false' }}
+
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      CLOUDFLARE_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack
+        run: |
+          set -euo pipefail
+          corepack enable
+
+      - name: Install dependencies
+        if: hashFiles('pnpm-lock.yaml') != ''
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+
+      - name: Prepare Cloudflare output directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$CLOUDFLARE_OUTPUT_DIR"
+
+      - name: Validate production credentials
+        if: >-
+          needs.preflight.outputs.should_run_cockroachdb_migrations == 'true' ||
+          needs.preflight.outputs.should_run_d1_migrations == 'true' ||
+          needs.preflight.outputs.should_sync_resources == 'true' ||
+          needs.preflight.outputs.should_deploy == 'true'
+        run: |
+          set -euo pipefail
+
+          missing=()
+
+          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+            missing+=("CLOUDFLARE_API_TOKEN")
+          fi
+
+          if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+            missing+=("CLOUDFLARE_ACCOUNT_ID")
+          fi
+
+          if [[ "${{ needs.preflight.outputs.should_run_cockroachdb_migrations }}" == "true" ]]; then
+            if [[ -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
+              missing+=("COCKROACH_DATABASE_URL or COCKROACHDB_DATABASE_URL or DATABASE_URL")
+            fi
+          fi
+
+          if [[ "${#missing[@]}" -gt 0 ]]; then
+            printf '::error::Missing required production secret(s): %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: Discover Cloudflare production deployments
+        id: discover
+        if: needs.preflight.outputs.should_discover == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/discover-deployments.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/discover-deployments.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/discover-deployments.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage production \
+            --ref "$CLOUDFLARE_PRODUCTION_REF" \
+            --output "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.md"
+
+      - name: Run CockroachDB production migrations
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/databases/run-cockroachdb-migrations.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/databases/run-cockroachdb-migrations.js"
+            exit 0
+          fi
+
+          node ".github/scripts/databases/run-cockroachdb-migrations.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage production \
+            --output "$CLOUDFLARE_OUTPUT_DIR/cockroachdb-migrations.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/cockroachdb-migrations.md"
+
+      - name: Run D1 production migrations
+        if: needs.preflight.outputs.should_run_d1_migrations == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/databases/run-d1-migrations.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/databases/run-d1-migrations.js"
+            exit 0
+          fi
+
+          node ".github/scripts/databases/run-d1-migrations.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage production \
+            --output "$CLOUDFLARE_OUTPUT_DIR/d1-migrations.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/d1-migrations.md"
+
+      - name: Sync Cloudflare KV
+        if: needs.preflight.outputs.should_sync_resources == 'true' && env.CLOUDFLARE_SYNC_KV == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/sync-kv.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/sync-kv.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/sync-kv.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage production \
+            --output "$CLOUDFLARE_OUTPUT_DIR/sync-kv.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/sync-kv.md"
+
+      - name: Sync Cloudflare Queues
+        if: needs.preflight.outputs.should_sync_resources == 'true' && env.CLOUDFLARE_SYNC_QUEUES == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/sync-queues.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/sync-queues.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/sync-queues.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage production \
+            --output "$CLOUDFLARE_OUTPUT_DIR/sync-queues.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/sync-queues.md"
+
+      - name: Sync Cloudflare R2
+        if: needs.preflight.outputs.should_sync_resources == 'true' && env.CLOUDFLARE_SYNC_R2 == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/sync-r2.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/sync-r2.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/sync-r2.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage production \
+            --output "$CLOUDFLARE_OUTPUT_DIR/sync-r2.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/sync-r2.md"
+
+      - name: Sync Cloudflare secrets
+        if: needs.preflight.outputs.should_sync_resources == 'true' && env.CLOUDFLARE_SYNC_SECRETS == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/sync-secrets.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/sync-secrets.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/sync-secrets.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage production \
+            --output "$CLOUDFLARE_OUTPUT_DIR/sync-secrets.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/sync-secrets.md"
+
+      - name: Deploy Cloudflare production
+        id: deploy
+        if: needs.preflight.outputs.should_deploy == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/deploy-production.js" ]]; then
+            echo "::error::Missing script: .github/scripts/cloudflare/deploy-production.js"
+            exit 1
+          fi
+
+          node ".github/scripts/cloudflare/deploy-production.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage production \
+            --ref "$CLOUDFLARE_PRODUCTION_REF" \
+            --output "$CLOUDFLARE_OUTPUT_DIR/deploy-production.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/deploy-production.md"
+
+          production_url="$(node -e '
+            const fs = require("node:fs");
+            const file = process.argv[1];
+            if (!fs.existsSync(file)) process.exit(0);
+            const data = JSON.parse(fs.readFileSync(file, "utf8"));
+            const url =
+              data.production_url ||
+              data.deployment_url ||
+              data.url ||
+              data.cloudflare?.production_url ||
+              data.cloudflare?.deployment_url ||
+              "";
+            if (url) console.log(url);
+          ' "$CLOUDFLARE_OUTPUT_DIR/deploy-production.json")"
+
+          if [[ -n "$production_url" ]]; then
+            echo "cloudflare_production_url=$production_url" >> "$GITHUB_OUTPUT"
+            echo "production_url=$production_url" >> "$GITHUB_OUTPUT"
+            echo "deployment_url=$production_url" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write Cloudflare production job summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Cloudflare Production Output"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            if [[ -d "$CLOUDFLARE_OUTPUT_DIR" ]]; then
+              while IFS= read -r file; do
+                size="$(wc -c < "$file" | xargs)"
+                echo "| \`$file\` | \`$size\` bytes |"
+              done < <(find "$CLOUDFLARE_OUTPUT_DIR" -type f | sort)
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Cloudflare production artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-production-${{ github.run_id }}
+          path: |
+            artifacts/cloudflare/production/**
+          if-no-files-found: ignore
+          retention-days: 30
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+      - cloudflare-production
+
+    if: always()
+
+    steps:
+      - name: Write final Cloudflare production summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Cloudflare Production Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Cloudflare production | \`${{ needs.cloudflare-production.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| Environment | \`${{ needs.preflight.outputs.environment_name }}\` |"
+            echo "| Deployment ref | \`${{ needs.preflight.outputs.deployment_ref || 'none' }}\` |"
+            echo "| Release tag | \`${{ needs.preflight.outputs.release_tag || 'none' }}\` |"
+            echo "| CockroachDB migrations | \`${{ needs.preflight.outputs.should_run_cockroachdb_migrations }}\` |"
+            echo "| D1 migrations | \`${{ needs.preflight.outputs.should_run_d1_migrations }}\` |"
+            echo "| Resource sync | \`${{ needs.preflight.outputs.should_sync_resources }}\` |"
+            echo "| Deploy | \`${{ needs.preflight.outputs.should_deploy }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

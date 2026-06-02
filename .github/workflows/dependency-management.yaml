@@ -1,0 +1,691 @@
+name: Aerealith AI Dependency Management
+
+run-name: >-
+  Dependency Management / ${{ github.event_name }} / ${{ github.head_ref || github.ref_name || 'scheduled' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Dependency management mode to run."
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - audit
+          - outdated
+          - validate-packages
+          - dependency-review
+          - summarize-only
+      audit_level:
+        description: "Minimum pnpm audit level."
+        required: true
+        default: "high"
+        type: choice
+        options:
+          - low
+          - moderate
+          - high
+          - critical
+      fail_on_audit:
+        description: "Fail when pnpm audit reports vulnerabilities at or above audit_level."
+        required: true
+        default: true
+        type: boolean
+      run_dependency_review:
+        description: "Run GitHub dependency review on pull requests."
+        required: true
+        default: true
+        type: boolean
+      run_package_validation:
+        description: "Run local package discovery and validation scripts."
+        required: true
+        default: true
+        type: boolean
+      run_security_summary:
+        description: "Run dependency and unified security summary scripts."
+        required: true
+        default: true
+        type: boolean
+      dry_run:
+        description: "Evaluate without making repository changes."
+        required: true
+        default: false
+        type: boolean
+
+  pull_request:
+    branches:
+      - main
+      - develop
+      - staging
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "apps/**/package.json"
+      - "libs/**/package.json"
+      - "packages/**/package.json"
+      - ".github/dependabot.yml"
+      - ".github/dependabot.yaml"
+      - "renovate.json"
+      - "renovate.json5"
+      - ".renovaterc"
+      - ".renovaterc.json"
+      - ".github/workflows/dependency-management.yaml"
+
+  push:
+    branches:
+      - main
+      - develop
+      - staging
+      - "release/**"
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "apps/**/package.json"
+      - "libs/**/package.json"
+      - "packages/**/package.json"
+      - ".github/dependabot.yml"
+      - ".github/dependabot.yaml"
+      - "renovate.json"
+      - "renovate.json5"
+      - ".renovaterc"
+      - ".renovaterc.json"
+      - ".github/workflows/dependency-management.yaml"
+
+  schedule:
+    - cron: "19 12 * * 2"
+
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  pull-requests: read
+  security-events: read
+
+concurrency:
+  group: >-
+    dependency-management-${{ github.event.pull_request.number || github.ref_name || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  CI: "true"
+  NX_DAEMON: "false"
+  NEXT_TELEMETRY_DISABLED: "1"
+  DEPENDENCY_OUTPUT_DIR: artifacts/dependencies
+  SECURITY_OUTPUT_DIR: artifacts/security
+  PACKAGE_OUTPUT_DIR: artifacts/packages
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      audit_level: ${{ steps.context.outputs.audit_level }}
+      fail_on_audit: ${{ steps.context.outputs.fail_on_audit }}
+      run_dependency_review: ${{ steps.context.outputs.run_dependency_review }}
+      run_package_validation: ${{ steps.context.outputs.run_package_validation }}
+      run_security_summary: ${{ steps.context.outputs.run_security_summary }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      should_run_audit: ${{ steps.context.outputs.should_run_audit }}
+      should_run_outdated: ${{ steps.context.outputs.should_run_outdated }}
+      should_run_dependency_review: ${{ steps.context.outputs.should_run_dependency_review }}
+      should_run_package_validation: ${{ steps.context.outputs.should_run_package_validation }}
+      should_run_security_summary: ${{ steps.context.outputs.should_run_security_summary }}
+
+    steps:
+      - name: Resolve dependency management context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'all' }}
+          INPUT_AUDIT_LEVEL: ${{ github.event.inputs.audit_level || 'high' }}
+          INPUT_FAIL_ON_AUDIT: ${{ github.event.inputs.fail_on_audit || 'true' }}
+          INPUT_RUN_DEPENDENCY_REVIEW: ${{ github.event.inputs.run_dependency_review || 'true' }}
+          INPUT_RUN_PACKAGE_VALIDATION: ${{ github.event.inputs.run_package_validation || 'true' }}
+          INPUT_RUN_SECURITY_SUMMARY: ${{ github.event.inputs.run_security_summary || 'true' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-all}"
+          audit_level="${INPUT_AUDIT_LEVEL:-high}"
+          fail_on_audit="${INPUT_FAIL_ON_AUDIT:-true}"
+          run_dependency_review="${INPUT_RUN_DEPENDENCY_REVIEW:-true}"
+          run_package_validation="${INPUT_RUN_PACKAGE_VALIDATION:-true}"
+          run_security_summary="${INPUT_RUN_SECURITY_SUMMARY:-true}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+
+          should_run_audit="false"
+          should_run_outdated="false"
+          should_run_dependency_review="false"
+          should_run_package_validation="false"
+          should_run_security_summary="false"
+
+          case "$mode" in
+            all)
+              should_run_audit="true"
+              should_run_outdated="true"
+              should_run_dependency_review="$run_dependency_review"
+              should_run_package_validation="$run_package_validation"
+              should_run_security_summary="$run_security_summary"
+              ;;
+            audit)
+              should_run_audit="true"
+              should_run_security_summary="$run_security_summary"
+              ;;
+            outdated)
+              should_run_outdated="true"
+              should_run_security_summary="$run_security_summary"
+              ;;
+            validate-packages)
+              should_run_package_validation="true"
+              should_run_security_summary="$run_security_summary"
+              ;;
+            dependency-review)
+              should_run_dependency_review="$run_dependency_review"
+              should_run_security_summary="$run_security_summary"
+              ;;
+            summarize-only)
+              should_run_security_summary="true"
+              ;;
+            *)
+              echo "::error::Unsupported dependency management mode: $mode"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            should_run_dependency_review="false"
+          fi
+
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            mode="all"
+            should_run_audit="true"
+            should_run_outdated="true"
+            should_run_dependency_review="false"
+            should_run_package_validation="true"
+            should_run_security_summary="true"
+          fi
+
+          case "$audit_level" in
+            low|moderate|high|critical)
+              ;;
+            *)
+              echo "::error::Unsupported audit level: $audit_level"
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "mode=$mode"
+            echo "audit_level=$audit_level"
+            echo "fail_on_audit=$fail_on_audit"
+            echo "run_dependency_review=$run_dependency_review"
+            echo "run_package_validation=$run_package_validation"
+            echo "run_security_summary=$run_security_summary"
+            echo "dry_run=$dry_run"
+            echo "should_run_audit=$should_run_audit"
+            echo "should_run_outdated=$should_run_outdated"
+            echo "should_run_dependency_review=$should_run_dependency_review"
+            echo "should_run_package_validation=$should_run_package_validation"
+            echo "should_run_security_summary=$should_run_security_summary"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Dependency Management"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Mode | \`$mode\` |"
+            echo "| Audit level | \`$audit_level\` |"
+            echo "| Fail on audit | \`$fail_on_audit\` |"
+            echo "| Dependency review | \`$should_run_dependency_review\` |"
+            echo "| Package validation | \`$should_run_package_validation\` |"
+            echo "| Security summary | \`$should_run_security_summary\` |"
+            echo "| Dry run | \`$dry_run\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - preflight
+
+    if: needs.preflight.outputs.should_run_dependency_review == 'true'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: ${{ needs.preflight.outputs.audit_level }}
+          comment-summary-in-pr: false
+          warn-only: ${{ needs.preflight.outputs.fail_on_audit != 'true' }}
+
+  dependency-management:
+    name: Dependency Management
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - preflight
+      - dependency-review
+
+    if: always()
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      AUDIT_LEVEL: ${{ needs.preflight.outputs.audit_level }}
+      FAIL_ON_AUDIT: ${{ needs.preflight.outputs.fail_on_audit }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Enable Corepack
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          corepack prepare "$PACKAGE_MANAGER" --activate
+
+          pnpm --version
+
+      - name: Prepare output directories
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$DEPENDENCY_OUTPUT_DIR"
+          mkdir -p "$SECURITY_OUTPUT_DIR"
+          mkdir -p "$PACKAGE_OUTPUT_DIR"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create dependency inventory
+        run: |
+          set -euo pipefail
+
+          pnpm list --recursive --depth=0 --json > "$DEPENDENCY_OUTPUT_DIR/pnpm-workspace-packages.json" || true
+          pnpm list --recursive --prod --depth=20 --json > "$DEPENDENCY_OUTPUT_DIR/pnpm-production-dependencies.json" || true
+          pnpm list --recursive --dev --depth=20 --json > "$DEPENDENCY_OUTPUT_DIR/pnpm-development-dependencies.json" || true
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const outputDir = process.env.DEPENDENCY_OUTPUT_DIR || "artifacts/dependencies";
+
+          function readJson(file, fallback) {
+            try {
+              return JSON.parse(fs.readFileSync(file, "utf8"));
+            } catch {
+              return fallback;
+            }
+          }
+
+          function walk(dir, entries = []) {
+            if (!fs.existsSync(dir)) return entries;
+
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (
+                entry.name === ".git" ||
+                entry.name === "node_modules" ||
+                entry.name === ".next" ||
+                entry.name === ".nx" ||
+                entry.name === "dist" ||
+                entry.name === "coverage" ||
+                entry.name === "artifacts"
+              ) {
+                continue;
+              }
+
+              const fullPath = path.join(dir, entry.name);
+
+              if (entry.isDirectory()) {
+                walk(fullPath, entries);
+                continue;
+              }
+
+              if (entry.isFile() && entry.name === "package.json") {
+                entries.push(fullPath);
+              }
+            }
+
+            return entries;
+          }
+
+          const packages = walk(process.cwd())
+            .map((file) => {
+              const pkg = readJson(file, {});
+              return {
+                path: path.relative(process.cwd(), file).split(path.sep).join("/"),
+                name: pkg.name || "",
+                version: pkg.version || "",
+                private: Boolean(pkg.private),
+                package_manager: pkg.packageManager || "",
+                dependencies: Object.keys(pkg.dependencies || {}).length,
+                dev_dependencies: Object.keys(pkg.devDependencies || {}).length,
+                peer_dependencies: Object.keys(pkg.peerDependencies || {}).length,
+                optional_dependencies: Object.keys(pkg.optionalDependencies || {}).length,
+                scripts: Object.keys(pkg.scripts || {}).sort(),
+              };
+            })
+            .sort((left, right) => left.path.localeCompare(right.path));
+
+          const report = {
+            schema_version: 1,
+            type: "dependency-inventory",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            package_count: packages.length,
+            packages,
+            created_at: new Date().toISOString(),
+          };
+
+          fs.mkdirSync(outputDir, { recursive: true });
+          fs.writeFileSync(path.join(outputDir, "dependency-inventory.json"), `${JSON.stringify(report, null, 2)}\n`);
+
+          const lines = [
+            "# Aerealith AI Dependency Inventory",
+            "",
+            `Generated: \`${report.created_at}\``,
+            "",
+            `- Packages: \`${packages.length}\``,
+            "",
+            "| Package | Version | Private | Path |",
+            "|---|---|---|---|",
+            ...packages.map((pkg) => `| \`${pkg.name || "unnamed"}\` | \`${pkg.version || "none"}\` | \`${pkg.private ? "true" : "false"}\` | \`${pkg.path}\` |`),
+            "",
+          ];
+
+          fs.writeFileSync(path.join(outputDir, "dependency-inventory.md"), `${lines.join("\n").trim()}\n`);
+          NODE
+
+      - name: Audit dependencies
+        id: audit
+        if: needs.preflight.outputs.should_run_audit == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          audit_file="$SECURITY_OUTPUT_DIR/pnpm-audit.json"
+
+          set +e
+          pnpm audit --prod --audit-level="$AUDIT_LEVEL" --json > "$audit_file"
+          audit_status=$?
+          set -e
+
+          echo "audit_status=$audit_status" >> "$GITHUB_OUTPUT"
+
+          if [[ "$audit_status" -ne 0 ]]; then
+            echo "::warning::pnpm audit reported vulnerabilities at or above level: $AUDIT_LEVEL"
+
+            if [[ "$FAIL_ON_AUDIT" == "true" ]]; then
+              exit "$audit_status"
+            fi
+          fi
+
+      - name: Check outdated dependencies
+        if: needs.preflight.outputs.should_run_outdated == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          set +e
+          pnpm outdated --recursive --format=json > "$DEPENDENCY_OUTPUT_DIR/pnpm-outdated.json"
+          outdated_status=$?
+          set -e
+
+          if [[ "$outdated_status" -ne 0 ]]; then
+            echo "::notice::pnpm outdated returned status $outdated_status. This usually means outdated packages were found."
+          fi
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const outputDir = process.env.DEPENDENCY_OUTPUT_DIR || "artifacts/dependencies";
+          const file = path.join(outputDir, "pnpm-outdated.json");
+
+          let raw = "";
+          let data = null;
+
+          try {
+            raw = fs.readFileSync(file, "utf8").trim();
+            data = raw ? JSON.parse(raw) : null;
+          } catch {
+            data = null;
+          }
+
+          const rows = Array.isArray(data)
+            ? data
+            : data && typeof data === "object"
+              ? Object.entries(data).map(([name, value]) => ({ name, ...(value || {}) }))
+              : [];
+
+          const report = {
+            schema_version: 1,
+            type: "dependency-outdated-summary",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            outdated_count: rows.length,
+            outdated: rows,
+            created_at: new Date().toISOString(),
+          };
+
+          fs.writeFileSync(path.join(outputDir, "pnpm-outdated-summary.json"), `${JSON.stringify(report, null, 2)}\n`);
+
+          const lines = [
+            "# Aerealith AI Outdated Dependencies",
+            "",
+            `Generated: \`${report.created_at}\``,
+            "",
+            `- Outdated dependencies: \`${rows.length}\``,
+            "",
+          ];
+
+          if (rows.length) {
+            lines.push("| Package | Current | Wanted | Latest |");
+            lines.push("|---|---|---|---|");
+
+            for (const item of rows.slice(0, 100)) {
+              lines.push(`| \`${item.name || item.packageName || "unknown"}\` | \`${item.current || ""}\` | \`${item.wanted || ""}\` | \`${item.latest || ""}\` |`);
+            }
+
+            if (rows.length > 100) {
+              lines.push(`| ... | ... | ... | \`${rows.length - 100} more omitted\` |`);
+            }
+          }
+
+          fs.writeFileSync(path.join(outputDir, "pnpm-outdated-summary.md"), `${lines.join("\n").trim()}\n`);
+          NODE
+
+      - name: Validate package metadata
+        if: needs.preflight.outputs.should_run_package_validation == 'true'
+        run: |
+          set -euo pipefail
+
+          run_optional() {
+            local file="$1"
+            shift || true
+
+            if [[ ! -f "$file" ]]; then
+              echo "::notice::Skipping missing script: $file"
+              return 0
+            fi
+
+            echo "::group::$file"
+            node "$file" "$@"
+            echo "::endgroup::"
+          }
+
+          run_optional ".github/scripts/npm/discover-packages.js" \
+            --output "$PACKAGE_OUTPUT_DIR/discover-packages.json" \
+            --summary "$PACKAGE_OUTPUT_DIR/discover-packages.md"
+
+          run_optional ".github/scripts/npm/validate-packages.js" \
+            --output "$PACKAGE_OUTPUT_DIR/validate-packages.json" \
+            --summary "$PACKAGE_OUTPUT_DIR/validate-packages.md"
+
+          run_optional ".github/scripts/npm/summarize-packages.js" \
+            --output "$PACKAGE_OUTPUT_DIR/summarize-packages.json" \
+            --summary "$PACKAGE_OUTPUT_DIR/summarize-packages.md"
+
+      - name: Summarize dependency security
+        if: always() && needs.preflight.outputs.should_run_security_summary == 'true'
+        run: |
+          set -euo pipefail
+
+          run_optional_summary() {
+            local file="$1"
+            shift || true
+
+            if [[ ! -f "$file" ]]; then
+              echo "::notice::Skipping missing script: $file"
+              return 0
+            fi
+
+            echo "::group::$file"
+            if ! node "$file" "$@"; then
+              echo "::warning::Summary script reported a non-zero exit: $file"
+            fi
+            echo "::endgroup::"
+          }
+
+          run_optional_summary ".github/scripts/security/summarize-dependencies.js" \
+            --report-file "$SECURITY_OUTPUT_DIR/pnpm-audit.json" \
+            --input-dir "$DEPENDENCY_OUTPUT_DIR" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-dependencies.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-dependencies.md" \
+            --no-fail-on-error
+
+          run_optional_summary ".github/scripts/security/summarize-security.js" \
+            --input-dir "$SECURITY_OUTPUT_DIR" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-security.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-security.md" \
+            --no-fail-on-error
+
+      - name: Write dependency management output summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Dependency Management Output"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            for dir in "$DEPENDENCY_OUTPUT_DIR" "$SECURITY_OUTPUT_DIR" "$PACKAGE_OUTPUT_DIR"; do
+              if [[ -d "$dir" ]]; then
+                while IFS= read -r file; do
+                  size="$(wc -c < "$file" | xargs)"
+                  echo "| \`$file\` | \`$size\` bytes |"
+                done < <(find "$dir" -type f | sort)
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload dependency management artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-management-${{ github.run_id }}
+          path: |
+            artifacts/dependencies/**
+            artifacts/security/**
+            artifacts/packages/**
+          if-no-files-found: ignore
+          retention-days: 21
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - preflight
+      - dependency-review
+      - dependency-management
+
+    if: always()
+
+    steps:
+      - name: Write final dependency management summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Dependency Management Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Dependency review | \`${{ needs.dependency-review.result }}\` |"
+            echo "| Dependency management | \`${{ needs.dependency-management.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| Audit level | \`${{ needs.preflight.outputs.audit_level }}\` |"
+            echo "| Fail on audit | \`${{ needs.preflight.outputs.fail_on_audit }}\` |"
+            echo "| Dependency review | \`${{ needs.preflight.outputs.should_run_dependency_review }}\` |"
+            echo "| Package validation | \`${{ needs.preflight.outputs.should_run_package_validation }}\` |"
+            echo "| Security summary | \`${{ needs.preflight.outputs.should_run_security_summary }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce dependency management result
+        run: |
+          set -euo pipefail
+
+          check_optional_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
+
+          check_optional_job "Dependency review" "${{ needs.dependency-review.result }}"
+          check_optional_job "Dependency management" "${{ needs.dependency-management.result }}"
+
+          echo "Dependency management workflow completed."

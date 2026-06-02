@@ -1,0 +1,917 @@
+name: Aerealith AI Dependency Auto Merge
+
+run-name: >-
+  Dependency Auto Merge / ${{ github.event_name }} / ${{ github.event.pull_request.number || github.event.workflow_run.id || github.ref_name || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Auto-merge mode to run."
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - evaluate-only
+          - approve-only
+          - enable-auto-merge
+          - merge-now
+          - summarize-only
+      pull_request_number:
+        description: "Optional pull request number. Leave empty to scan open dependency PRs."
+        required: false
+        default: ""
+        type: string
+      allowed_authors:
+        description: "Comma-separated bot authors allowed for dependency auto-merge."
+        required: false
+        default: "dependabot[bot],renovate[bot]"
+        type: string
+      required_label:
+        description: "Optional label required before auto-merge."
+        required: false
+        default: ""
+        type: string
+      blocked_labels:
+        description: "Comma-separated labels that block auto-merge."
+        required: false
+        default: "do-not-merge,blocked,hold,manual-review,security-review"
+        type: string
+      allow_major:
+        description: "Allow major dependency updates."
+        required: true
+        default: false
+        type: boolean
+      allow_workflow_updates:
+        description: "Allow dependency PRs that modify .github workflow/action files."
+        required: true
+        default: false
+        type: boolean
+      approve:
+        description: "Approve eligible dependency PRs."
+        required: true
+        default: true
+        type: boolean
+      enable_auto_merge:
+        description: "Enable GitHub auto-merge for eligible dependency PRs."
+        required: true
+        default: true
+        type: boolean
+      merge_method:
+        description: "Merge method to use."
+        required: true
+        default: "squash"
+        type: choice
+        options:
+          - squash
+          - merge
+          - rebase
+      delete_branch:
+        description: "Delete branch after merge when supported."
+        required: true
+        default: true
+        type: boolean
+      add_labels:
+        description: "Comma-separated labels to add to eligible PRs when they exist."
+        required: false
+        default: "dependencies,auto-merge"
+        type: string
+      dry_run:
+        description: "Evaluate without approving or enabling merge."
+        required: true
+        default: false
+        type: boolean
+      fail_on_blocked:
+        description: "Fail the workflow if an evaluated PR is blocked."
+        required: true
+        default: false
+        type: boolean
+
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+
+  workflow_run:
+    workflows:
+      - Continuous Integration
+      - CI
+      - Aerealith AI CodeQL
+      - Aerealith AI Branch Policy
+    types:
+      - completed
+
+  schedule:
+    - cron: "31 12 * * *"
+
+permissions:
+  actions: read
+  checks: read
+  contents: write
+  issues: write
+  pull-requests: write
+  statuses: read
+
+concurrency:
+  group: >-
+    dependency-auto-merge-${{ github.event.pull_request.number || github.event.workflow_run.id || github.ref_name || github.run_id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  FORCE_COLOR: "1"
+  DEPENDENCY_AUTO_MERGE_OUTPUT_DIR: artifacts/dependency-auto-merge
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      pull_request_number: ${{ steps.context.outputs.pull_request_number }}
+      allowed_authors: ${{ steps.context.outputs.allowed_authors }}
+      required_label: ${{ steps.context.outputs.required_label }}
+      blocked_labels: ${{ steps.context.outputs.blocked_labels }}
+      allow_major: ${{ steps.context.outputs.allow_major }}
+      allow_workflow_updates: ${{ steps.context.outputs.allow_workflow_updates }}
+      approve: ${{ steps.context.outputs.approve }}
+      enable_auto_merge: ${{ steps.context.outputs.enable_auto_merge }}
+      merge_method: ${{ steps.context.outputs.merge_method }}
+      delete_branch: ${{ steps.context.outputs.delete_branch }}
+      add_labels: ${{ steps.context.outputs.add_labels }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      fail_on_blocked: ${{ steps.context.outputs.fail_on_blocked }}
+      should_collect_prs: ${{ steps.context.outputs.should_collect_prs }}
+
+    steps:
+      - name: Resolve dependency auto-merge context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'auto' }}
+          INPUT_PULL_REQUEST_NUMBER: ${{ github.event.inputs.pull_request_number || '' }}
+          INPUT_ALLOWED_AUTHORS: ${{ github.event.inputs.allowed_authors || 'dependabot[bot],renovate[bot]' }}
+          INPUT_REQUIRED_LABEL: ${{ github.event.inputs.required_label || '' }}
+          INPUT_BLOCKED_LABELS: ${{ github.event.inputs.blocked_labels || 'do-not-merge,blocked,hold,manual-review,security-review' }}
+          INPUT_ALLOW_MAJOR: ${{ github.event.inputs.allow_major || 'false' }}
+          INPUT_ALLOW_WORKFLOW_UPDATES: ${{ github.event.inputs.allow_workflow_updates || 'false' }}
+          INPUT_APPROVE: ${{ github.event.inputs.approve || 'true' }}
+          INPUT_ENABLE_AUTO_MERGE: ${{ github.event.inputs.enable_auto_merge || 'true' }}
+          INPUT_MERGE_METHOD: ${{ github.event.inputs.merge_method || 'squash' }}
+          INPUT_DELETE_BRANCH: ${{ github.event.inputs.delete_branch || 'true' }}
+          INPUT_ADD_LABELS: ${{ github.event.inputs.add_labels || 'dependencies,auto-merge' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          INPUT_FAIL_ON_BLOCKED: ${{ github.event.inputs.fail_on_blocked || 'false' }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          WORKFLOW_RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion || '' }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-auto}"
+          pull_request_number="${INPUT_PULL_REQUEST_NUMBER:-${EVENT_PR_NUMBER:-}}"
+          allowed_authors="${INPUT_ALLOWED_AUTHORS:-dependabot[bot],renovate[bot]}"
+          required_label="${INPUT_REQUIRED_LABEL:-}"
+          blocked_labels="${INPUT_BLOCKED_LABELS:-do-not-merge,blocked,hold,manual-review,security-review}"
+          allow_major="${INPUT_ALLOW_MAJOR:-false}"
+          allow_workflow_updates="${INPUT_ALLOW_WORKFLOW_UPDATES:-false}"
+          approve="${INPUT_APPROVE:-true}"
+          enable_auto_merge="${INPUT_ENABLE_AUTO_MERGE:-true}"
+          merge_method="${INPUT_MERGE_METHOD:-squash}"
+          delete_branch="${INPUT_DELETE_BRANCH:-true}"
+          add_labels="${INPUT_ADD_LABELS:-dependencies,auto-merge}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+          fail_on_blocked="${INPUT_FAIL_ON_BLOCKED:-false}"
+
+          should_collect_prs="true"
+
+          if [[ "$mode" == "summarize-only" ]]; then
+            should_collect_prs="false"
+          fi
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_run" && "${WORKFLOW_RUN_CONCLUSION:-}" != "success" ]]; then
+            echo "::notice::Source workflow conclusion was '${WORKFLOW_RUN_CONCLUSION:-unknown}'. Dependency auto-merge will not process PRs."
+            should_collect_prs="false"
+          fi
+
+          case "$merge_method" in
+            squash|merge|rebase)
+              ;;
+            *)
+              echo "::error::Unsupported merge method: $merge_method"
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "mode=$mode"
+            echo "pull_request_number=$pull_request_number"
+            echo "allowed_authors=$allowed_authors"
+            echo "required_label=$required_label"
+            echo "blocked_labels=$blocked_labels"
+            echo "allow_major=$allow_major"
+            echo "allow_workflow_updates=$allow_workflow_updates"
+            echo "approve=$approve"
+            echo "enable_auto_merge=$enable_auto_merge"
+            echo "merge_method=$merge_method"
+            echo "delete_branch=$delete_branch"
+            echo "add_labels=$add_labels"
+            echo "dry_run=$dry_run"
+            echo "fail_on_blocked=$fail_on_blocked"
+            echo "should_collect_prs=$should_collect_prs"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Dependency Auto Merge"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`${EVENT_NAME}\` |"
+            echo "| Mode | \`${mode}\` |"
+            echo "| Pull request | \`${pull_request_number:-auto}\` |"
+            echo "| Allowed authors | \`${allowed_authors}\` |"
+            echo "| Required label | \`${required_label:-none}\` |"
+            echo "| Blocked labels | \`${blocked_labels}\` |"
+            echo "| Allow major | \`${allow_major}\` |"
+            echo "| Allow workflow updates | \`${allow_workflow_updates}\` |"
+            echo "| Approve | \`${approve}\` |"
+            echo "| Enable auto-merge | \`${enable_auto_merge}\` |"
+            echo "| Merge method | \`${merge_method}\` |"
+            echo "| Delete branch | \`${delete_branch}\` |"
+            echo "| Dry run | \`${dry_run}\` |"
+            echo "| Collect PRs | \`${should_collect_prs}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  collect-prs:
+    name: Collect dependency PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - preflight
+
+    if: needs.preflight.outputs.should_collect_prs == 'true'
+
+    outputs:
+      matrix: ${{ steps.collect.outputs.matrix }}
+      has_prs: ${{ steps.collect.outputs.has_prs }}
+      pr_count: ${{ steps.collect.outputs.pr_count }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REQUESTED_PR_NUMBER: ${{ needs.preflight.outputs.pull_request_number }}
+      ALLOWED_AUTHORS: ${{ needs.preflight.outputs.allowed_authors }}
+
+    steps:
+      - name: Collect PR candidates
+        id: collect
+        run: |
+          set -euo pipefail
+
+          prs_file="$RUNNER_TEMP/dependency-prs.json"
+
+          if [[ -n "${REQUESTED_PR_NUMBER:-}" ]]; then
+            printf '[{"number":%s}]\n' "$REQUESTED_PR_NUMBER" > "$prs_file"
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_run" ]]; then
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${{ github.event.workflow_run.id }}/pulls" \
+              --jq '[.[] | {number: .number}]' > "$prs_file"
+          else
+            gh pr list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state open \
+              --limit 100 \
+              --json number,title,author,labels,headRefName \
+              > "$prs_file"
+          fi
+
+          PRS_FILE="$prs_file" node <<'NODE'
+          const fs = require("node:fs");
+
+          const prsFile = process.env.PRS_FILE;
+          const outputFile = process.env.GITHUB_OUTPUT;
+          const eventName = process.env.GITHUB_EVENT_NAME || "";
+          const allowedAuthors = new Set(
+            String(process.env.ALLOWED_AUTHORS || "dependabot[bot],renovate[bot]")
+              .split(",")
+              .map((item) => item.trim().toLowerCase())
+              .filter(Boolean),
+          );
+
+          const dependencyLabels = new Set([
+            "dependencies",
+            "dependency",
+            "dependabot",
+            "renovate",
+            "github-actions",
+            "deps",
+          ]);
+
+          let prs = [];
+
+          try {
+            prs = JSON.parse(fs.readFileSync(prsFile, "utf8"));
+          } catch {
+            prs = [];
+          }
+
+          if (!Array.isArray(prs)) {
+            prs = [];
+          }
+
+          const include = [];
+
+          for (const pr of prs) {
+            const number = Number(pr.number);
+
+            if (!Number.isInteger(number) || number <= 0) {
+              continue;
+            }
+
+            if (eventName === "pull_request_target" || eventName === "workflow_run" || process.env.REQUESTED_PR_NUMBER) {
+              include.push({ number });
+              continue;
+            }
+
+            const author = String(pr.author?.login || "").toLowerCase();
+            const labels = Array.isArray(pr.labels)
+              ? pr.labels.map((label) => String(label.name || label).toLowerCase())
+              : [];
+            const title = String(pr.title || "").toLowerCase();
+            const branch = String(pr.headRefName || "").toLowerCase();
+
+            const hasDependencySignal =
+              allowedAuthors.has(author) ||
+              labels.some((label) => dependencyLabels.has(label)) ||
+              branch.includes("dependabot/") ||
+              branch.includes("renovate/") ||
+              branch.includes("deps/") ||
+              title.includes("dependabot") ||
+              title.includes("renovate") ||
+              title.includes("bump ") ||
+              title.includes("update ");
+
+            if (hasDependencySignal) {
+              include.push({ number });
+            }
+          }
+
+          const unique = Array.from(
+            new Map(include.map((item) => [item.number, item])).values(),
+          ).sort((left, right) => left.number - right.number);
+
+          fs.appendFileSync(
+            outputFile,
+            [
+              `has_prs=${unique.length > 0 ? "true" : "false"}`,
+              `pr_count=${unique.length}`,
+              `matrix=${JSON.stringify({ include: unique })}`,
+              "",
+            ].join("\n"),
+          );
+          NODE
+
+      - name: Write PR collection summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Dependency PR Collection"
+            echo ""
+            echo "- PR count: \`${{ steps.collect.outputs.pr_count }}\`"
+            echo "- Has PRs: \`${{ steps.collect.outputs.has_prs }}\`"
+            echo ""
+            echo "\`\`\`json"
+            echo '${{ steps.collect.outputs.matrix }}' | python -m json.tool
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  process-dependency-pr:
+    name: Dependency PR ${{ matrix.number }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs:
+      - preflight
+      - collect-prs
+
+    if: needs.collect-prs.outputs.has_prs == 'true'
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.collect-prs.outputs.matrix) }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PR_NUMBER: ${{ matrix.number }}
+      MODE: ${{ needs.preflight.outputs.mode }}
+      ALLOWED_AUTHORS: ${{ needs.preflight.outputs.allowed_authors }}
+      REQUIRED_LABEL: ${{ needs.preflight.outputs.required_label }}
+      BLOCKED_LABELS: ${{ needs.preflight.outputs.blocked_labels }}
+      ALLOW_MAJOR: ${{ needs.preflight.outputs.allow_major }}
+      ALLOW_WORKFLOW_UPDATES: ${{ needs.preflight.outputs.allow_workflow_updates }}
+      APPROVE: ${{ needs.preflight.outputs.approve }}
+      ENABLE_AUTO_MERGE: ${{ needs.preflight.outputs.enable_auto_merge }}
+      MERGE_METHOD: ${{ needs.preflight.outputs.merge_method }}
+      DELETE_BRANCH: ${{ needs.preflight.outputs.delete_branch }}
+      ADD_LABELS: ${{ needs.preflight.outputs.add_labels }}
+      DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      FAIL_ON_BLOCKED: ${{ needs.preflight.outputs.fail_on_blocked }}
+
+    steps:
+      - name: Prepare output directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$DEPENDENCY_AUTO_MERGE_OUTPUT_DIR"
+
+      - name: Read pull request
+        run: |
+          set -euo pipefail
+
+          gh pr view "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json number,title,body,author,baseRefName,headRefName,headRepository,headRepositoryOwner,isCrossRepository,isDraft,labels,files,additions,deletions,changedFiles,mergeStateStatus,mergeable,reviewDecision,autoMergeRequest,state,url,updatedAt,statusCheckRollup \
+            > "$DEPENDENCY_AUTO_MERGE_OUTPUT_DIR/pr-${PR_NUMBER}.json"
+
+      - name: Evaluate dependency PR
+        id: evaluate
+        run: |
+          set -euo pipefail
+
+          PR_FILE="$DEPENDENCY_AUTO_MERGE_OUTPUT_DIR/pr-${PR_NUMBER}.json"
+          EVALUATION_FILE="$DEPENDENCY_AUTO_MERGE_OUTPUT_DIR/pr-${PR_NUMBER}-evaluation.json"
+          SUMMARY_FILE="$DEPENDENCY_AUTO_MERGE_OUTPUT_DIR/pr-${PR_NUMBER}-evaluation.md"
+
+          PR_FILE="$PR_FILE" EVALUATION_FILE="$EVALUATION_FILE" SUMMARY_FILE="$SUMMARY_FILE" node <<'NODE'
+          const fs = require("node:fs");
+
+          const pr = JSON.parse(fs.readFileSync(process.env.PR_FILE, "utf8"));
+
+          function list(value) {
+            return String(value || "")
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean);
+          }
+
+          function lowerList(value) {
+            return list(value).map((item) => item.toLowerCase());
+          }
+
+          function bool(value) {
+            return ["true", "1", "yes", "on"].includes(String(value || "").toLowerCase());
+          }
+
+          function matchesAny(value, patterns) {
+            return patterns.some((pattern) => pattern.test(value));
+          }
+
+          const allowedAuthors = new Set(lowerList(process.env.ALLOWED_AUTHORS || "dependabot[bot],renovate[bot]"));
+          const blockedLabels = new Set(lowerList(process.env.BLOCKED_LABELS || ""));
+          const requiredLabel = String(process.env.REQUIRED_LABEL || "").trim().toLowerCase();
+          const allowMajor = bool(process.env.ALLOW_MAJOR);
+          const allowWorkflowUpdates = bool(process.env.ALLOW_WORKFLOW_UPDATES);
+
+          const dependencyLabels = new Set([
+            "dependencies",
+            "dependency",
+            "dependabot",
+            "renovate",
+            "github-actions",
+            "deps",
+            "npm",
+            "pnpm",
+            "yarn",
+          ]);
+
+          const majorLabels = new Set([
+            "semver-major",
+            "major",
+            "version: major",
+            "dependencies: major",
+          ]);
+
+          const packageFilePatterns = [
+            /(^|\/)package\.json$/,
+            /(^|\/)package-lock\.json$/,
+            /(^|\/)npm-shrinkwrap\.json$/,
+            /(^|\/)pnpm-lock\.yaml$/,
+            /(^|\/)pnpm-workspace\.yaml$/,
+            /(^|\/)yarn\.lock$/,
+            /(^|\/)bun\.lockb$/,
+            /(^|\/)bun\.lock$/,
+            /(^|\/)renovate\.json$/,
+            /(^|\/)renovate\.json5$/,
+            /^\.github\/dependabot\.ya?ml$/,
+            /(^|\/)requirements(?:-[A-Za-z0-9_.-]+)?\.txt$/,
+            /(^|\/)pyproject\.toml$/,
+            /(^|\/)poetry\.lock$/,
+            /(^|\/)Pipfile$/,
+            /(^|\/)Pipfile\.lock$/,
+            /(^|\/)go\.mod$/,
+            /(^|\/)go\.sum$/,
+            /(^|\/)Cargo\.toml$/,
+            /(^|\/)Cargo\.lock$/,
+            /(^|\/)composer\.json$/,
+            /(^|\/)composer\.lock$/,
+            /(^|\/)Gemfile$/,
+            /(^|\/)Gemfile\.lock$/,
+            /(^|\/)pom\.xml$/,
+            /(^|\/)build\.gradle$/,
+            /(^|\/)build\.gradle\.kts$/,
+            /(^|\/)gradle\.lockfile$/,
+          ];
+
+          const workflowFilePatterns = [
+            /^\.github\/workflows\/.+\.ya?ml$/,
+            /^\.github\/actions\/.+/,
+          ];
+
+          const author = String(pr.author?.login || "").toLowerCase();
+          const labels = Array.isArray(pr.labels)
+            ? pr.labels.map((label) => String(label.name || label).toLowerCase())
+            : [];
+
+          const files = Array.isArray(pr.files)
+            ? pr.files.map((file) => String(file.path || file).replace(/\\/g, "/"))
+            : [];
+
+          const title = String(pr.title || "");
+          const titleLower = title.toLowerCase();
+          const branchLower = String(pr.headRefName || "").toLowerCase();
+
+          const dependencySignal =
+            allowedAuthors.has(author) ||
+            labels.some((label) => dependencyLabels.has(label)) ||
+            branchLower.includes("dependabot/") ||
+            branchLower.includes("renovate/") ||
+            branchLower.includes("deps/") ||
+            titleLower.includes("dependabot") ||
+            titleLower.includes("renovate") ||
+            titleLower.startsWith("bump ") ||
+            titleLower.startsWith("update ");
+
+          const blockedByLabel = labels.filter((label) => blockedLabels.has(label));
+          const missingRequiredLabel = requiredLabel && !labels.includes(requiredLabel);
+
+          const majorSignal =
+            labels.some((label) => majorLabels.has(label)) ||
+            /\bmajor\b/i.test(title) ||
+            /semver-major/i.test(title) ||
+            branchLower.includes("major");
+
+          const workflowFiles = files.filter((file) => matchesAny(file, workflowFilePatterns));
+          const disallowedFiles = files.filter((file) => {
+            if (matchesAny(file, packageFilePatterns)) {
+              return false;
+            }
+
+            if (allowWorkflowUpdates && matchesAny(file, workflowFilePatterns)) {
+              return false;
+            }
+
+            return true;
+          });
+
+          const reasons = [];
+
+          if (!dependencySignal) {
+            reasons.push("PR does not match dependency automation signals.");
+          }
+
+          if (pr.state && pr.state !== "OPEN") {
+            reasons.push(`PR state is ${pr.state}.`);
+          }
+
+          if (pr.isDraft) {
+            reasons.push("PR is a draft.");
+          }
+
+          if (pr.isCrossRepository) {
+            reasons.push("PR comes from a fork or cross-repository source.");
+          }
+
+          if (blockedByLabel.length) {
+            reasons.push(`Blocked label(s): ${blockedByLabel.join(", ")}.`);
+          }
+
+          if (missingRequiredLabel) {
+            reasons.push(`Required label is missing: ${requiredLabel}.`);
+          }
+
+          if (majorSignal && !allowMajor) {
+            reasons.push("Major dependency update is not allowed.");
+          }
+
+          if (workflowFiles.length && !allowWorkflowUpdates) {
+            reasons.push("Workflow/action file updates are not allowed by default.");
+          }
+
+          if (disallowedFiles.length) {
+            reasons.push(`Non-dependency file(s) changed: ${disallowedFiles.join(", ")}.`);
+          }
+
+          const eligible = reasons.length === 0;
+
+          const evaluation = {
+            schema_version: 1,
+            type: "dependency-auto-merge-evaluation",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            pull_request: {
+              number: pr.number,
+              title: pr.title,
+              url: pr.url,
+              author,
+              base_ref: pr.baseRefName,
+              head_ref: pr.headRefName,
+              state: pr.state,
+              draft: Boolean(pr.isDraft),
+              cross_repository: Boolean(pr.isCrossRepository),
+              merge_state_status: pr.mergeStateStatus || "",
+              mergeable: pr.mergeable || "",
+              review_decision: pr.reviewDecision || "",
+              changed_files: pr.changedFiles || files.length,
+              additions: pr.additions || 0,
+              deletions: pr.deletions || 0,
+            },
+            signals: {
+              dependency_signal: dependencySignal,
+              major_signal: majorSignal,
+              allowed_author: allowedAuthors.has(author),
+              labels,
+              blocked_labels: blockedByLabel,
+              required_label: requiredLabel,
+              workflow_files: workflowFiles,
+              disallowed_files: disallowedFiles,
+            },
+            policy: {
+              allow_major: allowMajor,
+              allow_workflow_updates: allowWorkflowUpdates,
+              required_label: requiredLabel,
+            },
+            eligible,
+            reasons,
+            created_at: new Date().toISOString(),
+          };
+
+          fs.writeFileSync(process.env.EVALUATION_FILE, `${JSON.stringify(evaluation, null, 2)}\n`);
+
+          const icon = eligible ? "✅" : "⚠️";
+          const lines = [
+            `# Dependency Auto Merge Evaluation`,
+            "",
+            `Generated: \`${evaluation.created_at}\``,
+            "",
+            "## Status",
+            "",
+            `- Eligible: ${icon} \`${eligible ? "true" : "false"}\``,
+            `- PR: \`#${pr.number}\``,
+            `- Title: ${pr.title}`,
+            `- Author: \`${author || "unknown"}\``,
+            `- Base: \`${pr.baseRefName || "unknown"}\``,
+            `- Head: \`${pr.headRefName || "unknown"}\``,
+            `- Merge state: \`${pr.mergeStateStatus || "unknown"}\``,
+            `- Review decision: \`${pr.reviewDecision || "unknown"}\``,
+            "",
+            "## Signals",
+            "",
+            `- Dependency signal: \`${dependencySignal ? "true" : "false"}\``,
+            `- Major signal: \`${majorSignal ? "true" : "false"}\``,
+            `- Workflow files changed: \`${workflowFiles.length}\``,
+            `- Disallowed files changed: \`${disallowedFiles.length}\``,
+            "",
+            "## Reasons",
+            "",
+            ...(reasons.length ? reasons.map((reason) => `- ${reason}`) : ["- None."]),
+            "",
+          ];
+
+          fs.writeFileSync(process.env.SUMMARY_FILE, `${lines.join("\n").trim()}\n`);
+
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            [
+              `eligible=${eligible ? "true" : "false"}`,
+              `blocked=${eligible ? "false" : "true"}`,
+              `reason=${reasons.join(" ") || "eligible"}`,
+              `evaluation_file=${process.env.EVALUATION_FILE}`,
+              `summary_file=${process.env.SUMMARY_FILE}`,
+              "",
+            ].join("\n"),
+          );
+          NODE
+
+          cat "$SUMMARY_FILE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Add labels
+        if: steps.evaluate.outputs.eligible == 'true' && env.DRY_RUN != 'true' && env.ADD_LABELS != ''
+        run: |
+          set -euo pipefail
+
+          IFS=',' read -ra labels <<< "$ADD_LABELS"
+
+          for raw_label in "${labels[@]}"; do
+            label="$(printf '%s' "$raw_label" | xargs)"
+
+            if [[ -z "$label" ]]; then
+              continue
+            fi
+
+            if ! gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label "$label"; then
+              echo "::warning::Unable to add label '$label'. It may not exist."
+            fi
+          done
+
+      - name: Approve eligible PR
+        if: >-
+          steps.evaluate.outputs.eligible == 'true' &&
+          env.DRY_RUN != 'true' &&
+          env.APPROVE == 'true' &&
+          (env.MODE == 'auto' || env.MODE == 'approve-only' || env.MODE == 'enable-auto-merge' || env.MODE == 'merge-now')
+        run: |
+          set -euo pipefail
+
+          set +e
+          gh pr review "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --approve \
+            --body "Approved by Aerealith AI dependency auto-merge after dependency-only policy evaluation."
+
+          status=$?
+          set -e
+
+          if [[ "$status" -ne 0 ]]; then
+            echo "::warning::Unable to approve PR #$PR_NUMBER. It may already be approved or the token may not be allowed to approve it."
+          fi
+
+      - name: Enable auto-merge
+        if: >-
+          steps.evaluate.outputs.eligible == 'true' &&
+          env.DRY_RUN != 'true' &&
+          env.ENABLE_AUTO_MERGE == 'true' &&
+          (env.MODE == 'auto' || env.MODE == 'enable-auto-merge')
+        run: |
+          set -euo pipefail
+
+          merge_args=()
+
+          case "$MERGE_METHOD" in
+            squash)
+              merge_args+=(--squash)
+              ;;
+            merge)
+              merge_args+=(--merge)
+              ;;
+            rebase)
+              merge_args+=(--rebase)
+              ;;
+            *)
+              echo "::error::Unsupported merge method: $MERGE_METHOD"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$DELETE_BRANCH" == "true" ]]; then
+            merge_args+=(--delete-branch)
+          fi
+
+          gh pr merge "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --auto \
+            "${merge_args[@]}"
+
+      - name: Merge now
+        if: >-
+          steps.evaluate.outputs.eligible == 'true' &&
+          env.DRY_RUN != 'true' &&
+          env.MODE == 'merge-now'
+        run: |
+          set -euo pipefail
+
+          merge_args=()
+
+          case "$MERGE_METHOD" in
+            squash)
+              merge_args+=(--squash)
+              ;;
+            merge)
+              merge_args+=(--merge)
+              ;;
+            rebase)
+              merge_args+=(--rebase)
+              ;;
+            *)
+              echo "::error::Unsupported merge method: $MERGE_METHOD"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$DELETE_BRANCH" == "true" ]]; then
+            merge_args+=(--delete-branch)
+          fi
+
+          gh pr merge "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            "${merge_args[@]}"
+
+      - name: Dry-run action summary
+        if: steps.evaluate.outputs.eligible == 'true' && env.DRY_RUN == 'true'
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Dry Run"
+            echo ""
+            echo "PR #$PR_NUMBER is eligible, but dry-run mode is enabled."
+            echo ""
+            echo "Requested mode: \`$MODE\`"
+            echo "Approve: \`$APPROVE\`"
+            echo "Enable auto-merge: \`$ENABLE_AUTO_MERGE\`"
+            echo "Merge method: \`$MERGE_METHOD\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce blocked result
+        if: steps.evaluate.outputs.eligible != 'true' && env.FAIL_ON_BLOCKED == 'true'
+        run: |
+          set -euo pipefail
+          echo "::error::Dependency PR #$PR_NUMBER is blocked: ${{ steps.evaluate.outputs.reason }}"
+          exit 1
+
+      - name: Upload dependency auto-merge artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: dependency-auto-merge-pr-${{ matrix.number }}-${{ github.run_id }}
+          path: |
+            artifacts/dependency-auto-merge/pr-${{ matrix.number }}*.json
+            artifacts/dependency-auto-merge/pr-${{ matrix.number }}*.md
+          if-no-files-found: ignore
+          retention-days: 14
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - preflight
+      - collect-prs
+      - process-dependency-pr
+
+    if: always()
+
+    steps:
+      - name: Write final dependency auto-merge summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Dependency Auto Merge Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Collect PRs | \`${{ needs.collect-prs.result }}\` |"
+            echo "| Process PRs | \`${{ needs.process-dependency-pr.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| PR count | \`${{ needs.collect-prs.outputs.pr_count || '0' }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| Allow major | \`${{ needs.preflight.outputs.allow_major }}\` |"
+            echo "| Allow workflow updates | \`${{ needs.preflight.outputs.allow_workflow_updates }}\` |"
+            echo "| Merge method | \`${{ needs.preflight.outputs.merge_method }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce workflow result
+        run: |
+          set -euo pipefail
+
+          check_optional_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
+
+          check_optional_job "Collect PRs" "${{ needs.collect-prs.result }}"
+          check_optional_job "Process PRs" "${{ needs.process-dependency-pr.result }}"
+
+          echo "Dependency auto-merge workflow completed."

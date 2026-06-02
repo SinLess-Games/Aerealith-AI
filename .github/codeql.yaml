@@ -1,31 +1,34 @@
 # .github/codeql.yaml
 # =============================================================================
-# Helix AI CodeQL Config
+# Aerealith AI CodeQL Configuration
 # -----------------------------------------------------------------------------
 # Used by:
-#   - .github/workflows/codeQL.yaml
+#   - .github/workflows/codeql.yaml
+#   - .github/workflows/security.yaml
 #
 # Purpose:
-#   Configure GitHub CodeQL advanced setup for the Helix AI Nx monorepo.
+#   Configure GitHub CodeQL advanced setup for the Aerealith AI Nx monorepo.
 #
 # Notes:
-#   - Keep workflow triggers in .github/workflows/codeQL.yaml.
-#   - Keep analyzed source paths here.
-#   - JavaScript and TypeScript are both analyzed through CodeQL's
-#     javascript-typescript language.
+#   - Workflow triggers belong in .github/workflows/codeql.yaml.
+#   - This file controls query suites, analyzed paths, ignored paths, and filters.
+#   - JavaScript and TypeScript are analyzed through CodeQL's javascript-typescript
+#     language in the workflow.
+#   - Keep this strict enough for security gates, but avoid noisy generated,
+#     vendored, build, cache, and test-output paths.
 # =============================================================================
 
-name: "Helix AI CodeQL Config"
+name: "Aerealith AI CodeQL Config"
 
 # Keep GitHub's default security queries enabled.
-# This file adds security-and-quality on top of the default suite.
 disable-default-queries: false
 
-# Run the built-in security-and-quality query suite.
+# Add stronger query coverage on top of the default security suite.
 queries:
+  - uses: security-extended
   - uses: security-and-quality
 
-# Limit CodeQL analysis to real source/config areas in this monorepo.
+# Analyze real source, automation, and tooling code.
 paths:
   - "apps"
   - "libs"
@@ -34,35 +37,67 @@ paths:
   - ".github/actions"
   - ".github/scripts"
 
-# Exclude generated, vendored, build, cache, docs, and test artifact paths.
+# Exclude generated, vendored, build, cache, docs, public assets, and test outputs.
 paths-ignore:
+  # Dependency/vendor folders
   - "**/node_modules/**"
+  - "**/.pnpm/**"
+
+  # Framework/build outputs
   - "**/.next/**"
   - "**/.open-next/**"
   - "**/.wrangler/**"
   - "**/dist/**"
   - "**/out/**"
   - "**/build/**"
+  - "**/.output/**"
+  - "**/.vercel/**"
+
+  # Test and coverage outputs
   - "**/coverage/**"
+  - "**/.nyc_output/**"
+  - "**/test-results/**"
+  - "**/playwright-report/**"
+  - "**/cypress/videos/**"
+  - "**/cypress/screenshots/**"
+
+  # Caches and temporary files
   - "**/.cache/**"
   - "**/.nx/**"
+  - "**/.turbo/**"
   - "**/tmp/**"
+  - "**/temp/**"
+
+  # Generated files
   - "**/*.generated.*"
   - "**/*.gen.*"
   - "**/*.d.ts"
+  - "**/generated/**"
+  - "**/.generated/**"
+
+  # Test source files
   - "**/*.spec.ts"
   - "**/*.spec.tsx"
   - "**/*.test.ts"
   - "**/*.test.tsx"
+  - "**/*.cy.ts"
+  - "**/*.cy.tsx"
+  - "**/*.e2e.ts"
+  - "**/*.e2e.tsx"
   - "**/__tests__/**"
   - "**/__mocks__/**"
+
+  # Documentation and static design/public assets
   - "docs/**"
   - "Docs/**"
   - "design-assets/**"
   - "apps/frontend/public/**"
+
+  # Workflow YAML is handled by workflow/security tooling, not JS/TS CodeQL.
   - ".github/workflows/**"
 
-# Exclude noisy low-value queries.
+# Exclude only specific noisy low-value JavaScript/TypeScript quality queries.
+# Security-relevant findings should remain enabled.
 query-filters:
   - exclude:
       id: js/useless-assignment-to-local
@@ -70,12 +105,7 @@ query-filters:
   - exclude:
       id: js/redundant-assignment
 
-  - exclude:
-      problem.severity:
-        - recommendation
-
 # Use the standard JavaScript/TypeScript query pack.
-# The nested map format is valid for custom config files.
 packs:
   javascript:
     - codeql/javascript-queries

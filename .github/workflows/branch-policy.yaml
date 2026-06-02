@@ -1,0 +1,375 @@
+name: Aerealith AI Branch Policy
+
+run-name: >-
+  Branch Policy / ${{ github.event_name }} / ${{ github.head_ref || github.ref_name || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Branch policy mode to run."
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - branch-name
+          - pr-rules
+          - summarize-only
+      branch_name:
+        description: "Optional branch name override for manual validation."
+        required: false
+        type: string
+      pull_request_number:
+        description: "Optional pull request number override for manual validation."
+        required: false
+        type: string
+      dry_run:
+        description: "Evaluate policy without creating or updating repository artifacts."
+        required: true
+        default: false
+        type: boolean
+      fail_on_violation:
+        description: "Fail the workflow when branch or pull request policy violations are found."
+        required: true
+        default: true
+        type: boolean
+
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+      - converted_to_draft
+      - labeled
+      - unlabeled
+
+  create:
+  delete:
+
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  issues: write
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: >-
+    branch-policy-${{ github.event.pull_request.number || github.event.ref || github.head_ref || github.ref_name || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+  BRANCH_POLICY_MODE: ${{ github.event.inputs.mode || 'all' }}
+  BRANCH_POLICY_FAIL_ON_VIOLATION: ${{ github.event.inputs.fail_on_violation || 'true' }}
+  BRANCH_POLICY_BRANCH_NAME: ${{ github.event.inputs.branch_name || github.head_ref || github.event.ref || github.ref_name || '' }}
+  BRANCH_POLICY_PULL_REQUEST_NUMBER: ${{ github.event.inputs.pull_request_number || github.event.pull_request.number || '' }}
+  BRANCH_POLICY_OUTPUT_DIR: artifacts/branch-policy
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      fail_on_violation: ${{ steps.context.outputs.fail_on_violation }}
+      branch_name: ${{ steps.context.outputs.branch_name }}
+      pull_request_number: ${{ steps.context.outputs.pull_request_number }}
+      should_run_branch_name: ${{ steps.context.outputs.should_run_branch_name }}
+      should_run_pr_rules: ${{ steps.context.outputs.should_run_pr_rules }}
+      should_run_summary: ${{ steps.context.outputs.should_run_summary }}
+
+    steps:
+      - name: Resolve branch policy context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'all' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          INPUT_FAIL_ON_VIOLATION: ${{ github.event.inputs.fail_on_violation || 'true' }}
+          INPUT_BRANCH_NAME: ${{ github.event.inputs.branch_name || '' }}
+          INPUT_PULL_REQUEST_NUMBER: ${{ github.event.inputs.pull_request_number || '' }}
+          EVENT_REF: ${{ github.event.ref || '' }}
+          EVENT_REF_TYPE: ${{ github.event.ref_type || '' }}
+          HEAD_REF: ${{ github.head_ref || '' }}
+          REF_NAME: ${{ github.ref_name || '' }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-all}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+          fail_on_violation="${INPUT_FAIL_ON_VIOLATION:-true}"
+
+          branch_name="${INPUT_BRANCH_NAME:-}"
+          pull_request_number="${INPUT_PULL_REQUEST_NUMBER:-}"
+
+          if [[ -z "$branch_name" ]]; then
+            branch_name="${HEAD_REF:-${EVENT_REF:-${REF_NAME:-}}}"
+          fi
+
+          if [[ -z "$pull_request_number" ]]; then
+            pull_request_number="${PR_NUMBER:-}"
+          fi
+
+          should_run_branch_name="false"
+          should_run_pr_rules="false"
+          should_run_summary="true"
+
+          case "$mode" in
+            all)
+              should_run_branch_name="true"
+              should_run_pr_rules="true"
+              ;;
+            branch-name)
+              should_run_branch_name="true"
+              ;;
+            pr-rules)
+              should_run_pr_rules="true"
+              ;;
+            summarize-only)
+              should_run_summary="true"
+              ;;
+            *)
+              echo "::error::Unsupported branch policy mode: $mode"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$EVENT_NAME" == "create" || "$EVENT_NAME" == "delete" ]]; then
+            should_run_pr_rules="false"
+          fi
+
+          if [[ "$EVENT_NAME" == "pull_request_target" ]]; then
+            should_run_branch_name="true"
+            should_run_pr_rules="true"
+          fi
+
+          {
+            echo "mode=$mode"
+            echo "dry_run=$dry_run"
+            echo "fail_on_violation=$fail_on_violation"
+            echo "branch_name=$branch_name"
+            echo "pull_request_number=$pull_request_number"
+            echo "should_run_branch_name=$should_run_branch_name"
+            echo "should_run_pr_rules=$should_run_pr_rules"
+            echo "should_run_summary=$should_run_summary"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Branch Policy"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Mode | \`$mode\` |"
+            echo "| Dry run | \`$dry_run\` |"
+            echo "| Fail on violation | \`$fail_on_violation\` |"
+            echo "| Branch name | \`${branch_name:-none}\` |"
+            echo "| Pull request | \`${pull_request_number:-none}\` |"
+            echo "| Run branch-name policy | \`$should_run_branch_name\` |"
+            echo "| Run PR rules policy | \`$should_run_pr_rules\` |"
+            echo "| Run summary | \`$should_run_summary\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  branch-policy:
+    name: Validate branch policy
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      BRANCH_POLICY_MODE: ${{ needs.preflight.outputs.mode }}
+      BRANCH_POLICY_FAIL_ON_VIOLATION: ${{ needs.preflight.outputs.fail_on_violation }}
+      BRANCH_POLICY_BRANCH_NAME: ${{ needs.preflight.outputs.branch_name }}
+      BRANCH_POLICY_PULL_REQUEST_NUMBER: ${{ needs.preflight.outputs.pull_request_number }}
+
+    steps:
+      - name: Checkout repository automation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Prepare branch policy output directory
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$BRANCH_POLICY_OUTPUT_DIR"
+
+      - name: Enforce branch name
+        id: branch_name
+        if: needs.preflight.outputs.should_run_branch_name == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/enforce-branch-name.js" ]]; then
+            echo "::warning::Missing script: .github/scripts/repo/enforce-branch-name.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/enforce-branch-name.js"
+
+      - name: Enforce pull request rules
+        id: pr_rules
+        if: needs.preflight.outputs.should_run_pr_rules == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/enforce-pr-rules.js" ]]; then
+            echo "::warning::Missing script: .github/scripts/repo/enforce-pr-rules.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/enforce-pr-rules.js"
+
+      - name: Summarize repository policy
+        id: summary
+        if: always() && needs.preflight.outputs.should_run_summary == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/summarize-repo-management.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/repo/summarize-repo-management.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/summarize-repo-management.js"
+
+      - name: Write branch policy result
+        if: always()
+        env:
+          BRANCH_NAME_RESULT: ${{ steps.branch_name.outcome || 'skipped' }}
+          PR_RULES_RESULT: ${{ steps.pr_rules.outcome || 'skipped' }}
+          SUMMARY_RESULT: ${{ steps.summary.outcome || 'skipped' }}
+        run: |
+          set -euo pipefail
+
+          status="passed"
+
+          if [[ "$BRANCH_NAME_RESULT" == "failure" || "$PR_RULES_RESULT" == "failure" || "$SUMMARY_RESULT" == "failure" ]]; then
+            status="failed"
+          elif [[ "$BRANCH_NAME_RESULT" == "cancelled" || "$PR_RULES_RESULT" == "cancelled" || "$SUMMARY_RESULT" == "cancelled" ]]; then
+            status="cancelled"
+          fi
+
+          cat > "$BRANCH_POLICY_OUTPUT_DIR/branch-policy.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "branch-policy",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "event_name": "$GITHUB_EVENT_NAME",
+            "mode": "$BRANCH_POLICY_MODE",
+            "dry_run": "$PROJECT_SYNC_DRY_RUN",
+            "fail_on_violation": "$BRANCH_POLICY_FAIL_ON_VIOLATION",
+            "branch_name": "$BRANCH_POLICY_BRANCH_NAME",
+            "pull_request_number": "$BRANCH_POLICY_PULL_REQUEST_NUMBER",
+            "status": "$status",
+            "ok": $([[ "$status" == "passed" ]] && echo "true" || echo "false"),
+            "checks": {
+              "branch_name": "$BRANCH_NAME_RESULT",
+              "pull_request_rules": "$PR_RULES_RESULT",
+              "summary": "$SUMMARY_RESULT"
+            },
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          {
+            echo "# Aerealith AI Branch Policy"
+            echo ""
+            echo "Generated: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo ""
+            echo "## Status"
+            echo ""
+            echo "- Status: \`$status\`"
+            echo "- Branch name: \`${BRANCH_POLICY_BRANCH_NAME:-none}\`"
+            echo "- Pull request: \`${BRANCH_POLICY_PULL_REQUEST_NUMBER:-none}\`"
+            echo "- Dry run: \`$PROJECT_SYNC_DRY_RUN\`"
+            echo ""
+            echo "## Checks"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Branch name | \`$BRANCH_NAME_RESULT\` |"
+            echo "| Pull request rules | \`$PR_RULES_RESULT\` |"
+            echo "| Summary | \`$SUMMARY_RESULT\` |"
+          } > "$BRANCH_POLICY_OUTPUT_DIR/branch-policy.md"
+
+          cat "$BRANCH_POLICY_OUTPUT_DIR/branch-policy.md" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$status" != "passed" && "$BRANCH_POLICY_FAIL_ON_VIOLATION" == "true" ]]; then
+            exit 1
+          fi
+
+      - name: Upload branch policy artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-policy-${{ github.run_id }}
+          path: |
+            artifacts/branch-policy/**
+            artifacts/repo/**
+            artifacts/repository/**
+            artifacts/issues/**
+            artifacts/pull-requests/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+      - branch-policy
+
+    if: always()
+
+    steps:
+      - name: Write final branch policy summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Branch Policy Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Branch policy | \`${{ needs.branch-policy.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| Fail on violation | \`${{ needs.preflight.outputs.fail_on_violation }}\` |"
+            echo "| Branch name | \`${{ needs.preflight.outputs.branch_name || 'none' }}\` |"
+            echo "| Pull request | \`${{ needs.preflight.outputs.pull_request_number || 'none' }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

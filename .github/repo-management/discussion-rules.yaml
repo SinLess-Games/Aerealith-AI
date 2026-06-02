@@ -1,0 +1,732 @@
+# .github/repo-management/discussion-rules.yaml
+# =============================================================================
+# Aerealith AI Discussion Rules
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Source-of-truth configuration for GitHub Discussions routing, release
+#   announcements, changelog publishing, AI-generated discussion drafts,
+#   discussion category policy, and discussion safety rules.
+#
+# Used by:
+#   - .github/workflows/ai-repo-assistant.yaml
+#   - .github/workflows/release.yaml
+#   - .github/workflows/repo-management.yaml
+#   - .github/scripts/release/post-discussion-announcement.js
+#   - .github/scripts/ai/discussion-announcement.js
+#   - .github/scripts/ai/build-changelog-draft.js
+#   - .github/scripts/repo/summarize-repo-management.js
+#
+# Current GitHub Discussion categories:
+#   - Announcements
+#   - General
+#   - Ideas
+#   - Polls
+#   - Q&A
+#   - Show and tell
+#
+# Release policy:
+#   - Release announcements are posted to Announcements.
+#   - Dependency-only PRs must not generate release announcements.
+#   - no-release PRs must not generate release announcements.
+#   - Security dependency PRs must not generate release announcements.
+#   - AI-generated announcement text must be reviewable and auditable.
+# =============================================================================
+
+version: 1
+
+repository:
+  owner: SinLess-Games
+  name: Aerealith-AI
+  default_branch: main
+  discussions_enabled: true
+
+# -----------------------------------------------------------------------------
+# GitHub Discussion Categories
+# -----------------------------------------------------------------------------
+categories:
+  announcements:
+    name: Announcements
+    purpose: Official release notes, changelogs, platform updates, important project notices, and maintainer-approved announcements.
+    allow_automation_posts: true
+    allow_openai_drafts: true
+    require_maintainer_review_for_ai: true
+    default_for_release_announcements: true
+    labels:
+      - release
+      - kind:release
+      - automation:openai
+
+  general:
+    name: General
+    purpose: General project discussion, broad planning, questions that are not support requests, and community conversation.
+    allow_automation_posts: false
+    allow_openai_drafts: false
+    require_maintainer_review_for_ai: true
+    labels:
+      - discussion
+
+  ideas:
+    name: Ideas
+    purpose: Early ideas, feature concepts, roadmap discussion, experiments, and future planning.
+    allow_automation_posts: false
+    allow_openai_drafts: true
+    require_maintainer_review_for_ai: true
+    labels:
+      - discussion
+      - kind:feature
+
+  polls:
+    name: Polls
+    purpose: Community polls, preference checks, design direction feedback, and lightweight decision gathering.
+    allow_automation_posts: false
+    allow_openai_drafts: false
+    require_maintainer_review_for_ai: true
+    labels:
+      - discussion
+
+  q_and_a:
+    name: Q&A
+    purpose: Questions, support requests, troubleshooting, usage help, setup guidance, and community answers.
+    allow_automation_posts: false
+    allow_openai_drafts: false
+    require_maintainer_review_for_ai: true
+    labels:
+      - question
+
+  show_and_tell:
+    name: Show and tell
+    purpose: User projects, demos, screenshots, implementations, examples, integrations, and community showcases.
+    allow_automation_posts: false
+    allow_openai_drafts: false
+    require_maintainer_review_for_ai: true
+    labels:
+      - discussion
+
+# -----------------------------------------------------------------------------
+# Default Routing
+# -----------------------------------------------------------------------------
+routing:
+  default_category: General
+
+  release_announcements:
+    category: Announcements
+    enabled: true
+    create_discussion: true
+    update_existing_discussion: false
+    pin_discussion: false
+    lock_discussion: false
+
+  changelogs:
+    category: Announcements
+    enabled: true
+    create_discussion: true
+    include_full_changelog_link: true
+    include_github_release_link: true
+    include_artifact_links: true
+    include_sbom_notes: true
+    include_attestation_notes: true
+
+  feature_ideas:
+    category: Ideas
+    enabled: true
+    automation_create_discussion: false
+
+  questions:
+    category: Q&A
+    enabled: true
+    automation_create_discussion: false
+
+  community_updates:
+    category: General
+    enabled: true
+    automation_create_discussion: false
+
+  demos:
+    category: Show and tell
+    enabled: true
+    automation_create_discussion: false
+
+# -----------------------------------------------------------------------------
+# Release Announcement Rules
+# -----------------------------------------------------------------------------
+release_announcements:
+  enabled: true
+  category: Announcements
+
+  trigger:
+    allowed_events:
+      - release
+      - workflow_dispatch
+
+    allowed_refs:
+      - "^refs/tags/V[0-9]+\\.[0-9]+\\.[0-9]+$"
+
+    allowed_branches:
+      - main
+
+  release_source:
+    require_release_tag: true
+    tag_pattern: "^V[0-9]+\\.[0-9]+\\.[0-9]+$"
+    require_merged_pr_on_main: true
+    require_release_label: true
+
+    valid_release_labels:
+      - release:major
+      - release:minor
+      - release:patch
+
+    require_exactly_one_release_label: true
+
+  blockers:
+    labels:
+      - no-release
+      - dependencies
+      - security:dependency
+      - do-not-merge
+      - blocked-by-security
+      - status:blocked
+
+    authors:
+      - renovate[bot]
+      - dependabot[bot]
+      - mend[bot]
+
+    branch_patterns:
+      - "^renovate/.+$"
+      - "^dependabot/.+$"
+      - "^mend/.+$"
+
+  title:
+    format: "Aerealith AI {version}"
+    examples:
+      - "Aerealith AI V0.5.0"
+      - "Aerealith AI V1.0.0"
+
+  labels:
+    add:
+      - release
+      - kind:release
+      - status:merged
+
+  milestone:
+    use_release_version_milestone: true
+    fallback: V0.5.0 — Release Automation
+
+# -----------------------------------------------------------------------------
+# Changelog Content Rules
+# -----------------------------------------------------------------------------
+changelog:
+  enabled: true
+
+  source:
+    include_merged_pull_requests: true
+    include_linked_issues: true
+    include_commit_summaries: false
+    include_dependency_prs: false
+    include_no_release_prs: false
+    include_security_dependency_prs: false
+
+  grouping:
+    enabled: true
+    order:
+      - Breaking Changes
+      - Features
+      - Fixes
+      - Security
+      - Performance
+      - CI/CD
+      - Cloudflare
+      - Publishing
+      - Documentation
+      - Maintenance
+      - Internal
+
+  label_mapping:
+    release:major: Breaking Changes
+    breaking-change: Breaking Changes
+
+    kind:feature: Features
+    kind:bug: Fixes
+    kind:security: Security
+    kind:ci: CI/CD
+    kind:deployment: Cloudflare
+    kind:release: Publishing
+    kind:documentation: Documentation
+    kind:maintenance: Maintenance
+    kind:chore: Maintenance
+    kind:refactor: Internal
+    kind:test: CI/CD
+
+    area:cloudflare: Cloudflare
+    area:workers: Cloudflare
+    area:queues: Cloudflare
+    area:r2: Cloudflare
+    area:d1: Cloudflare
+    area:kv: Cloudflare
+    area:secrets: Security
+
+    area:npm: Publishing
+    area:ghcr: Publishing
+    area:docker: Publishing
+    area:artifacts: Publishing
+
+  required_sections:
+    - Summary
+    - Highlights
+    - Changes
+    - Validation
+    - Release Evidence
+
+  optional_sections:
+    - Breaking Changes
+    - Migration Notes
+    - Known Issues
+    - Rollback Notes
+    - Contributors
+
+  exclude_labels:
+    - no-release
+    - dependencies
+    - security:dependency
+    - automation:renovate
+    - automation:dependabot
+    - automation:mend
+
+  include_labels:
+    release_labels:
+      - release:major
+      - release:minor
+      - release:patch
+
+# -----------------------------------------------------------------------------
+# Announcement Template
+# -----------------------------------------------------------------------------
+templates:
+  release_announcement:
+    title: "Aerealith AI {version}"
+
+    body: |
+      ## Aerealith AI {version}
+
+      {summary}
+
+      ### Highlights
+
+      {highlights}
+
+      ### Changes
+
+      {changes}
+
+      ### Validation
+
+      {validation}
+
+      ### Release Evidence
+
+      {release_evidence}
+
+      ### Links
+
+      - GitHub Release: {github_release_url}
+      - Full Changelog: {full_changelog_url}
+      - Commit: {commit_url}
+
+      ---
+
+      This announcement was prepared from the release workflow and posted to the **Announcements** discussion category.
+
+  release_announcement_with_known_issues:
+    title: "Aerealith AI {version}"
+
+    body: |
+      ## Aerealith AI {version}
+
+      {summary}
+
+      ### Highlights
+
+      {highlights}
+
+      ### Changes
+
+      {changes}
+
+      ### Known Issues
+
+      {known_issues}
+
+      ### Validation
+
+      {validation}
+
+      ### Release Evidence
+
+      {release_evidence}
+
+      ### Links
+
+      - GitHub Release: {github_release_url}
+      - Full Changelog: {full_changelog_url}
+      - Commit: {commit_url}
+
+      ---
+
+      This announcement was prepared from the release workflow and posted to the **Announcements** discussion category.
+
+# -----------------------------------------------------------------------------
+# Release Evidence
+# -----------------------------------------------------------------------------
+release_evidence:
+  enabled: true
+
+  include:
+    github_release: true
+    tag: true
+    commit_sha: true
+    merged_prs: true
+    checksums: true
+    artifact_manifest: true
+    sbom: true
+    attestations: true
+    npm_packages: true
+    ghcr_images: true
+    cloudflare_deployment: true
+
+  artifacts:
+    expected:
+      - SHA256SUMS
+      - SHA512SUMS
+      - artifact-manifest.json
+      - SBOM SPDX JSON
+
+  attestations:
+    required_on_release: true
+    required_on_publish: true
+    mention_in_announcement: true
+
+  retention_note:
+    include: true
+    text: "Release artifacts are retained according to the release artifact retention policy."
+
+# -----------------------------------------------------------------------------
+# AI Discussion Drafting Rules
+# -----------------------------------------------------------------------------
+openai:
+  enabled: true
+  default_mode: draft
+
+  model:
+    variable: OPENAI_MODEL
+    default: gpt-5.5
+
+  allowed_actions:
+    read_pr_metadata: true
+    read_issue_metadata: true
+    read_labels: true
+    read_milestones: true
+    read_release_metadata: true
+    read_changelog: true
+    draft_discussion_body: true
+    draft_discussion_title: true
+    post_discussion: true
+    update_discussion: false
+    delete_discussion: false
+    lock_discussion: false
+    pin_discussion: false
+
+  write_mode:
+    enabled: true
+    allowed_events:
+      - release
+      - workflow_dispatch
+    allowed_branches:
+      - main
+    allowed_categories:
+      - Announcements
+
+  review:
+    require_maintainer_review_for_drafts: false
+    require_maintainer_review_for_non_release_posts: true
+    require_maintainer_review_for_security_content: true
+    label_ai_generated_items: true
+
+  labels:
+    ai_generated:
+      - automation:openai
+    needs_review:
+      - automation:needs-review
+      - needs-maintainer-review
+
+  prompts:
+    release_announcement: .github/scripts/ai/prompts/release-announcement.md
+    changelog: .github/scripts/ai/prompts/changelog.md
+
+  safety:
+    do_not_invent_changes: true
+    do_not_include_unreleased_private_work: true
+    do_not_include_secrets: true
+    do_not_include_private_user_data: true
+    do_not_publish_security_details_before_fix: true
+    do_not_post_to_unapproved_categories: true
+    do_not_post_for_dependency_only_releases: true
+    do_not_post_for_no_release_changes: true
+    redact_sensitive_values: true
+    require_source_pr_links: true
+    require_uncertainty_notes: true
+
+# -----------------------------------------------------------------------------
+# Discussion Safety Policy
+# -----------------------------------------------------------------------------
+safety:
+  dry_run_supported: true
+  debug_supported: true
+
+  require_discussions_enabled: true
+  require_category_exists: true
+  fail_if_category_missing: true
+
+  do_not_post_blank_discussion: true
+  do_not_post_duplicate_release_announcement: true
+  do_not_post_on_failed_release: true
+  do_not_post_on_failed_security_gate: true
+  do_not_post_on_dependency_release_skip: true
+
+  redact_secrets: true
+  redact_private_data: true
+
+  forbidden_content_patterns:
+    - "ghp_[A-Za-z0-9_]+"
+    - "github_pat_[A-Za-z0-9_]+"
+    - "sk-[A-Za-z0-9_-]+"
+    - "Bearer [A-Za-z0-9._-]+"
+    - "-----BEGIN [A-Z ]+PRIVATE KEY-----"
+    - "CLOUDFLARE_API_TOKEN"
+    - "NPM_ACCESS_TOKEN"
+    - "OPENAI_API_KEY"
+    - "SONAR_TOKEN"
+    - "MEND_API_KEY"
+
+  blocked_labels:
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked
+
+  release_blocking_labels:
+    - no-release
+    - dependencies
+    - security:dependency
+
+# -----------------------------------------------------------------------------
+# Permissions
+# -----------------------------------------------------------------------------
+permissions:
+  required_github_token_permissions:
+    release_announcement:
+      contents: read
+      pull-requests: read
+      issues: read
+      discussions: write
+
+    changelog_draft:
+      contents: read
+      pull-requests: read
+      issues: read
+      discussions: read
+
+  required_secrets:
+    openai:
+      - OPENAI_API_KEY
+
+  optional_variables:
+    - OPENAI_MODEL
+    - DISCUSSION_CATEGORY
+    - DEFAULT_BRANCH
+
+  recommended_variables:
+    DISCUSSION_CATEGORY: Announcements
+    DEFAULT_BRANCH: main
+    OPENAI_MODEL: gpt-5.5
+
+# -----------------------------------------------------------------------------
+# Discussion Posting Rules
+# -----------------------------------------------------------------------------
+posting:
+  release_announcements:
+    enabled: true
+    category: Announcements
+    mode: create
+    duplicate_detection: true
+
+    duplicate_match:
+      by_title: true
+      by_tag: true
+      by_release_url: true
+
+    comment_footer:
+      start: "<!-- aerealith-release-announcement:start -->"
+      end: "<!-- aerealith-release-announcement:end -->"
+
+  dry_run:
+    print_title: true
+    print_body: true
+    print_category: true
+    create_discussion: false
+
+  failure_behavior:
+    fail_release_if_discussion_post_fails: false
+    create_workflow_warning_if_post_fails: true
+    add_workflow_summary_if_post_fails: true
+
+# -----------------------------------------------------------------------------
+# Category Routing by Label
+# -----------------------------------------------------------------------------
+label_routing:
+  release:
+    category: Announcements
+
+  kind:release:
+    category: Announcements
+
+  release:major:
+    category: Announcements
+
+  release:minor:
+    category: Announcements
+
+  release:patch:
+    category: Announcements
+
+  kind:feature:
+    category: Ideas
+
+  discussion:
+    category: General
+
+  question:
+    category: Q&A
+
+# -----------------------------------------------------------------------------
+# Category Routing by Milestone
+# -----------------------------------------------------------------------------
+milestone_routing:
+  "V0.5.0 — Release Automation":
+    category: Announcements
+
+  "V0.6.0 — Publishing Pipeline":
+    category: Announcements
+
+  "V1.0.0 — General Availability":
+    category: Announcements
+
+  "AI Automation — Changelogs":
+    category: Announcements
+
+# -----------------------------------------------------------------------------
+# Workflow Summary
+# -----------------------------------------------------------------------------
+reporting:
+  add_workflow_summary: true
+  add_release_summary: true
+  add_discussion_url_to_summary: true
+  add_discussion_url_to_github_release: false
+
+  summary:
+    include_category: true
+    include_title: true
+    include_discussion_url: true
+    include_release_tag: true
+    include_release_url: true
+    include_changelog_source: true
+    include_ai_model: true
+    include_dry_run: true
+    include_skipped_reason: true
+
+# -----------------------------------------------------------------------------
+# Enforcement
+# -----------------------------------------------------------------------------
+enforcement:
+  on_discussions_disabled:
+    action: fail
+    message: |
+      GitHub Discussions are not enabled for this repository.
+
+  on_missing_category:
+    action: fail
+    message: |
+      Required GitHub Discussions category was not found.
+
+  on_release_without_announcement_category:
+    action: fail
+    message: |
+      Release announcements require the Announcements discussion category.
+
+  on_duplicate_release_announcement:
+    action: skip
+    message: |
+      A release announcement already exists for this version.
+
+  on_no_release_label:
+    action: skip
+    message: |
+      Discussion announcement skipped because this release source has no release label.
+
+  on_release_blocking_label:
+    action: skip
+    message: |
+      Discussion announcement skipped because the source PR has a release-blocking label.
+
+  on_dependency_source:
+    action: skip
+    message: |
+      Discussion announcement skipped because dependency automation must not create release announcements.
+
+  on_security_gate_failed:
+    action: fail
+    message: |
+      Discussion announcement blocked because the release security gate failed.
+
+  on_secret_detected:
+    action: fail
+    message: |
+      Possible secret detected in discussion content. Refusing to post.
+
+  on_openai_failure:
+    action: fail
+    message: |
+      OpenAI discussion draft generation failed.
+
+  on_post_failure:
+    action: warn
+    message: |
+      Release was created, but the discussion announcement could not be posted.
+
+# -----------------------------------------------------------------------------
+# Local Testing Fixtures
+# -----------------------------------------------------------------------------
+fixtures:
+  enabled: true
+
+  sample_release:
+    version: V0.5.0
+    category: Announcements
+    title: Aerealith AI V0.5.0
+
+  sample_labels:
+    releasable:
+      - release:minor
+      - kind:feature
+      - area:ci
+
+    non_releasable:
+      - dependencies
+      - no-release
+      - automation:renovate
+
+  sample_categories:
+    - Announcements
+    - General
+    - Ideas
+    - Polls
+    - Q&A
+    - Show and tell

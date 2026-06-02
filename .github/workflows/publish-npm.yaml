@@ -1,0 +1,573 @@
+name: Aerealith AI Publish NPM Packages
+
+run-name: >-
+  Publish NPM / ${{ github.event_name }} / ${{ github.ref_name || github.event.release.tag_name || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "NPM publishing mode to run."
+        required: true
+        default: "publish"
+        type: choice
+        options:
+          - publish
+          - pack-only
+          - validate-only
+          - discover-only
+          - summarize-only
+      npm_tag:
+        description: "NPM dist-tag to publish with."
+        required: true
+        default: "latest"
+        type: string
+      access:
+        description: "NPM package access level."
+        required: true
+        default: "public"
+        type: choice
+        options:
+          - public
+          - restricted
+      registry_url:
+        description: "NPM registry URL."
+        required: true
+        default: "https://registry.npmjs.org"
+        type: string
+      provenance:
+        description: "Publish with npm provenance when supported."
+        required: true
+        default: true
+        type: boolean
+      run_validation:
+        description: "Validate package metadata before packing or publishing."
+        required: true
+        default: true
+        type: boolean
+      create_sbom:
+        description: "Create package SBOM artifacts when the script is available."
+        required: true
+        default: true
+        type: boolean
+      create_checksums:
+        description: "Create checksum artifacts when the script is available."
+        required: true
+        default: true
+        type: boolean
+      dry_run:
+        description: "Evaluate without publishing packages."
+        required: true
+        default: false
+        type: boolean
+
+  release:
+    types:
+      - published
+
+  push:
+    tags:
+      - "v*.*.*"
+      - "v*.*.*-*"
+
+permissions:
+  actions: read
+  attestations: write
+  checks: write
+  contents: read
+  id-token: write
+  packages: write
+  security-events: read
+
+concurrency:
+  group: >-
+    publish-npm-${{ github.event.release.tag_name || github.ref_name || github.run_id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  CI: "true"
+  NX_DAEMON: "false"
+  NEXT_TELEMETRY_DISABLED: "1"
+  NPM_OUTPUT_DIR: artifacts/npm
+  PACKAGE_OUTPUT_DIR: artifacts/packages
+  ARTIFACT_OUTPUT_DIR: artifacts/npm-artifacts
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      npm_tag: ${{ steps.context.outputs.npm_tag }}
+      access: ${{ steps.context.outputs.access }}
+      registry_url: ${{ steps.context.outputs.registry_url }}
+      provenance: ${{ steps.context.outputs.provenance }}
+      run_validation: ${{ steps.context.outputs.run_validation }}
+      create_sbom: ${{ steps.context.outputs.create_sbom }}
+      create_checksums: ${{ steps.context.outputs.create_checksums }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      publish_enabled: ${{ steps.context.outputs.publish_enabled }}
+      should_discover: ${{ steps.context.outputs.should_discover }}
+      should_validate: ${{ steps.context.outputs.should_validate }}
+      should_pack: ${{ steps.context.outputs.should_pack }}
+      should_publish: ${{ steps.context.outputs.should_publish }}
+      should_summarize: ${{ steps.context.outputs.should_summarize }}
+
+    steps:
+      - name: Resolve NPM publishing context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'publish' }}
+          INPUT_NPM_TAG: ${{ github.event.inputs.npm_tag || 'latest' }}
+          INPUT_ACCESS: ${{ github.event.inputs.access || 'public' }}
+          INPUT_REGISTRY_URL: ${{ github.event.inputs.registry_url || 'https://registry.npmjs.org' }}
+          INPUT_PROVENANCE: ${{ github.event.inputs.provenance || 'true' }}
+          INPUT_RUN_VALIDATION: ${{ github.event.inputs.run_validation || 'true' }}
+          INPUT_CREATE_SBOM: ${{ github.event.inputs.create_sbom || 'true' }}
+          INPUT_CREATE_CHECKSUMS: ${{ github.event.inputs.create_checksums || 'true' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-publish}"
+          npm_tag="${INPUT_NPM_TAG:-latest}"
+          access="${INPUT_ACCESS:-public}"
+          registry_url="${INPUT_REGISTRY_URL:-https://registry.npmjs.org}"
+          provenance="${INPUT_PROVENANCE:-true}"
+          run_validation="${INPUT_RUN_VALIDATION:-true}"
+          create_sbom="${INPUT_CREATE_SBOM:-true}"
+          create_checksums="${INPUT_CREATE_CHECKSUMS:-true}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+
+          should_discover="false"
+          should_validate="false"
+          should_pack="false"
+          should_publish="false"
+          should_summarize="true"
+          publish_enabled="false"
+
+          case "$mode" in
+            publish)
+              should_discover="true"
+              should_validate="$run_validation"
+              should_pack="true"
+              should_publish="true"
+              ;;
+            pack-only)
+              should_discover="true"
+              should_validate="$run_validation"
+              should_pack="true"
+              ;;
+            validate-only)
+              should_discover="true"
+              should_validate="true"
+              ;;
+            discover-only)
+              should_discover="true"
+              ;;
+            summarize-only)
+              should_summarize="true"
+              ;;
+            *)
+              echo "::error::Unsupported NPM publishing mode: $mode"
+              exit 1
+              ;;
+          esac
+
+          case "$access" in
+            public|restricted)
+              ;;
+            *)
+              echo "::error::Unsupported NPM access value: $access"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$dry_run" == "true" ]]; then
+            should_publish="false"
+          fi
+
+          if [[ "$should_publish" == "true" ]]; then
+            publish_enabled="true"
+          fi
+
+          {
+            echo "mode=$mode"
+            echo "npm_tag=$npm_tag"
+            echo "access=$access"
+            echo "registry_url=$registry_url"
+            echo "provenance=$provenance"
+            echo "run_validation=$run_validation"
+            echo "create_sbom=$create_sbom"
+            echo "create_checksums=$create_checksums"
+            echo "dry_run=$dry_run"
+            echo "publish_enabled=$publish_enabled"
+            echo "should_discover=$should_discover"
+            echo "should_validate=$should_validate"
+            echo "should_pack=$should_pack"
+            echo "should_publish=$should_publish"
+            echo "should_summarize=$should_summarize"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Publish NPM Packages"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Mode | \`$mode\` |"
+            echo "| NPM tag | \`$npm_tag\` |"
+            echo "| Access | \`$access\` |"
+            echo "| Registry | \`$registry_url\` |"
+            echo "| Provenance | \`$provenance\` |"
+            echo "| Validation | \`$should_validate\` |"
+            echo "| Pack | \`$should_pack\` |"
+            echo "| Publish | \`$should_publish\` |"
+            echo "| Dry run | \`$dry_run\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-npm:
+    name: Publish NPM packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs:
+      - preflight
+
+    if: >-
+      needs.preflight.outputs.should_discover == 'true' ||
+      needs.preflight.outputs.should_validate == 'true' ||
+      needs.preflight.outputs.should_pack == 'true' ||
+      needs.preflight.outputs.should_publish == 'true' ||
+      needs.preflight.outputs.should_summarize == 'true'
+
+    environment:
+      name: npm
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NPM_CONFIG_REGISTRY: ${{ needs.preflight.outputs.registry_url }}
+      NPM_CONFIG_PROVENANCE: ${{ needs.preflight.outputs.provenance }}
+      NPM_PUBLISH_TAG: ${{ needs.preflight.outputs.npm_tag }}
+      NPM_PUBLISH_ACCESS: ${{ needs.preflight.outputs.access }}
+      NPM_PUBLISH_PROVENANCE: ${{ needs.preflight.outputs.provenance }}
+      NPM_PUBLISH_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+          registry-url: ${{ needs.preflight.outputs.registry_url }}
+
+      - name: Enable Corepack
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          corepack prepare "$PACKAGE_MANAGER" --activate
+
+          pnpm --version
+
+      - name: Prepare output directories
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$NPM_OUTPUT_DIR"
+          mkdir -p "$PACKAGE_OUTPUT_DIR"
+          mkdir -p "$ARTIFACT_OUTPUT_DIR"
+
+      - name: Configure NPM authentication
+        if: needs.preflight.outputs.should_publish == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "::error::NPM_TOKEN is required to publish packages."
+            exit 1
+          fi
+
+          registry_host="$(node -e 'const value = process.argv[1]; const url = new URL(value); console.log(url.host);' "$NPM_CONFIG_REGISTRY")"
+
+          {
+            echo "registry=$NPM_CONFIG_REGISTRY"
+            echo "//$registry_host/:_authToken=\${NODE_AUTH_TOKEN}"
+          } > "$HOME/.npmrc"
+
+          npm whoami --registry "$NPM_CONFIG_REGISTRY" || {
+            echo "::warning::npm whoami failed. Publishing may still work with automation tokens, but token validation did not pass."
+          }
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Discover publishable packages
+        if: needs.preflight.outputs.should_discover == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/npm/discover-packages.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/npm/discover-packages.js"
+            exit 0
+          fi
+
+          node ".github/scripts/npm/discover-packages.js" \
+            --output "$PACKAGE_OUTPUT_DIR/discover-packages.json" \
+            --summary "$PACKAGE_OUTPUT_DIR/discover-packages.md"
+
+      - name: Validate packages
+        if: needs.preflight.outputs.should_validate == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/npm/validate-packages.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/npm/validate-packages.js"
+            exit 0
+          fi
+
+          node ".github/scripts/npm/validate-packages.js" \
+            --output "$PACKAGE_OUTPUT_DIR/validate-packages.json" \
+            --summary "$PACKAGE_OUTPUT_DIR/validate-packages.md"
+
+      - name: Build publishable packages
+        if: needs.preflight.outputs.should_pack == 'true' || needs.preflight.outputs.should_publish == 'true'
+        run: |
+          set -euo pipefail
+
+          if pnpm exec nx show projects --with-target=build >/tmp/build-projects.txt 2>/dev/null && [[ -s /tmp/build-projects.txt ]]; then
+            pnpm exec nx run-many \
+              --target=build \
+              --all \
+              --parallel=3
+          elif pnpm run | grep -qE '^  build$|^build'; then
+            pnpm run build
+          else
+            echo "::notice::No build target or build script detected."
+          fi
+
+      - name: Pack packages
+        if: needs.preflight.outputs.should_pack == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/npm/pack-packages.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/npm/pack-packages.js"
+            exit 0
+          fi
+
+          node ".github/scripts/npm/pack-packages.js" \
+            --output "$PACKAGE_OUTPUT_DIR/pack-packages.json" \
+            --summary "$PACKAGE_OUTPUT_DIR/pack-packages.md"
+
+      - name: Publish packages
+        if: needs.preflight.outputs.should_publish == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/npm/publish-packages.js" ]]; then
+            echo "::error::Missing script: .github/scripts/npm/publish-packages.js"
+            exit 1
+          fi
+
+          node ".github/scripts/npm/publish-packages.js" \
+            --tag "$NPM_PUBLISH_TAG" \
+            --access "$NPM_PUBLISH_ACCESS" \
+            --registry "$NPM_CONFIG_REGISTRY" \
+            --provenance "$NPM_PUBLISH_PROVENANCE" \
+            --output "$PACKAGE_OUTPUT_DIR/publish-packages.json" \
+            --summary "$PACKAGE_OUTPUT_DIR/publish-packages.md"
+
+      - name: Create package SBOM
+        if: needs.preflight.outputs.create_sbom == 'true' && needs.preflight.outputs.mode != 'discover-only'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/artifacts/create-sbom.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/artifacts/create-sbom.js"
+            exit 0
+          fi
+
+          node ".github/scripts/artifacts/create-sbom.js" \
+            --input "$PACKAGE_OUTPUT_DIR" \
+            --output "$ARTIFACT_OUTPUT_DIR/npm-sbom.json" \
+            --summary "$ARTIFACT_OUTPUT_DIR/npm-sbom.md"
+
+      - name: Create package checksums
+        if: needs.preflight.outputs.create_checksums == 'true' && needs.preflight.outputs.mode != 'discover-only'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/artifacts/create-checksums.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/artifacts/create-checksums.js"
+            exit 0
+          fi
+
+          node ".github/scripts/artifacts/create-checksums.js" \
+            --input "$PACKAGE_OUTPUT_DIR" \
+            --output "$ARTIFACT_OUTPUT_DIR/npm-checksums.json" \
+            --summary "$ARTIFACT_OUTPUT_DIR/npm-checksums.md" \
+            --sha256 "$ARTIFACT_OUTPUT_DIR/SHA256SUMS" \
+            --sha512 "$ARTIFACT_OUTPUT_DIR/SHA512SUMS"
+
+      - name: Summarize packages
+        if: always() && needs.preflight.outputs.should_summarize == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/npm/summarize-packages.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/npm/summarize-packages.js"
+            exit 0
+          fi
+
+          node ".github/scripts/npm/summarize-packages.js" \
+            --output "$PACKAGE_OUTPUT_DIR/summarize-packages.json" \
+            --summary "$PACKAGE_OUTPUT_DIR/summarize-packages.md"
+
+      - name: Write NPM publish report
+        if: always()
+        run: |
+          set -euo pipefail
+
+          report_file="$NPM_OUTPUT_DIR/publish-npm.json"
+          summary_file="$NPM_OUTPUT_DIR/publish-npm.md"
+
+          cat > "$report_file" <<JSON
+          {
+            "schema_version": 1,
+            "type": "publish-npm",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "event_name": "$GITHUB_EVENT_NAME",
+            "ref": "$GITHUB_REF",
+            "sha": "$GITHUB_SHA",
+            "mode": "${{ needs.preflight.outputs.mode }}",
+            "npm_tag": "${{ needs.preflight.outputs.npm_tag }}",
+            "access": "${{ needs.preflight.outputs.access }}",
+            "registry_url": "${{ needs.preflight.outputs.registry_url }}",
+            "provenance": "${{ needs.preflight.outputs.provenance }}",
+            "dry_run": "${{ needs.preflight.outputs.dry_run }}",
+            "publish_enabled": "${{ needs.preflight.outputs.publish_enabled }}",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          {
+            echo "# Aerealith AI Publish NPM Packages"
+            echo ""
+            echo "Generated: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo ""
+            echo "## Status"
+            echo ""
+            echo "- Mode: \`${{ needs.preflight.outputs.mode }}\`"
+            echo "- NPM tag: \`${{ needs.preflight.outputs.npm_tag }}\`"
+            echo "- Access: \`${{ needs.preflight.outputs.access }}\`"
+            echo "- Registry: \`${{ needs.preflight.outputs.registry_url }}\`"
+            echo "- Provenance: \`${{ needs.preflight.outputs.provenance }}\`"
+            echo "- Publish enabled: \`${{ needs.preflight.outputs.publish_enabled }}\`"
+            echo "- Dry run: \`${{ needs.preflight.outputs.dry_run }}\`"
+            echo ""
+            echo "## Output Files"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            for dir in "$NPM_OUTPUT_DIR" "$PACKAGE_OUTPUT_DIR" "$ARTIFACT_OUTPUT_DIR"; do
+              if [[ -d "$dir" ]]; then
+                while IFS= read -r file; do
+                  size="$(wc -c < "$file" | xargs)"
+                  echo "| \`$file\` | \`$size\` bytes |"
+                done < <(find "$dir" -type f | sort)
+              fi
+            done
+          } > "$summary_file"
+
+          cat "$summary_file" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload NPM package artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: npm-packages-${{ github.run_id }}
+          path: |
+            artifacts/npm/**
+            artifacts/packages/**
+            artifacts/npm-artifacts/**
+            *.tgz
+            apps/**/*.tgz
+            libs/**/*.tgz
+            packages/**/*.tgz
+          if-no-files-found: ignore
+          retention-days: 30
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - preflight
+      - publish-npm
+
+    if: always()
+
+    steps:
+      - name: Write final NPM publishing summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Publish NPM Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Publish NPM | \`${{ needs.publish-npm.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| NPM tag | \`${{ needs.preflight.outputs.npm_tag }}\` |"
+            echo "| Access | \`${{ needs.preflight.outputs.access }}\` |"
+            echo "| Registry | \`${{ needs.preflight.outputs.registry_url }}\` |"
+            echo "| Provenance | \`${{ needs.preflight.outputs.provenance }}\` |"
+            echo "| Publish enabled | \`${{ needs.preflight.outputs.publish_enabled }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce NPM publishing result
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ needs.publish-npm.result }}" != "success" ]]; then
+            echo "::error::Publish NPM job failed with result: ${{ needs.publish-npm.result }}"
+            exit 1
+          fi
+
+          echo "NPM publishing workflow completed."

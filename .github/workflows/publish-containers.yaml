@@ -1,0 +1,734 @@
+name: Aerealith AI Publish Containers
+
+run-name: >-
+  Publish Containers / ${{ github.event_name }} / ${{ github.ref_name || github.event.release.tag_name || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Container publishing mode to run."
+        required: true
+        default: "publish"
+        type: choice
+        options:
+          - publish
+          - build-only
+          - discover-only
+          - summarize-only
+      registry:
+        description: "Container registry target."
+        required: true
+        default: "ghcr"
+        type: choice
+        options:
+          - ghcr
+          - dockerhub
+          - both
+      image_namespace:
+        description: "Optional image namespace override. Defaults to repository owner."
+        required: false
+        default: ""
+        type: string
+      platforms:
+        description: "Comma-separated target platforms."
+        required: true
+        default: "linux/amd64"
+        type: string
+      push_latest:
+        description: "Push latest tag for default branch builds."
+        required: true
+        default: true
+        type: boolean
+      create_sbom:
+        description: "Create SBOM metadata during Docker build."
+        required: true
+        default: true
+        type: boolean
+      create_provenance:
+        description: "Create provenance metadata during Docker build."
+        required: true
+        default: true
+        type: boolean
+      dry_run:
+        description: "Build and summarize without pushing images."
+        required: true
+        default: false
+        type: boolean
+
+  push:
+    branches:
+      - main
+      - staging
+      - develop
+      - "release/**"
+    tags:
+      - "v*.*.*"
+      - "v*.*.*-*"
+
+  release:
+    types:
+      - published
+
+permissions:
+  actions: read
+  attestations: write
+  checks: write
+  contents: read
+  id-token: write
+  packages: write
+  security-events: read
+
+concurrency:
+  group: >-
+    publish-containers-${{ github.event.release.tag_name || github.ref_name || github.run_id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  REGISTRY_GHCR: ghcr.io
+  REGISTRY_DOCKERHUB: docker.io
+  CONTAINER_OUTPUT_DIR: artifacts/docker
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      registry: ${{ steps.context.outputs.registry }}
+      image_namespace: ${{ steps.context.outputs.image_namespace }}
+      platforms: ${{ steps.context.outputs.platforms }}
+      push_latest: ${{ steps.context.outputs.push_latest }}
+      create_sbom: ${{ steps.context.outputs.create_sbom }}
+      create_provenance: ${{ steps.context.outputs.create_provenance }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      publish_enabled: ${{ steps.context.outputs.publish_enabled }}
+      should_discover: ${{ steps.context.outputs.should_discover }}
+      should_build: ${{ steps.context.outputs.should_build }}
+      should_publish: ${{ steps.context.outputs.should_publish }}
+      should_summarize: ${{ steps.context.outputs.should_summarize }}
+
+    steps:
+      - name: Resolve container publishing context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'publish' }}
+          INPUT_REGISTRY: ${{ github.event.inputs.registry || 'ghcr' }}
+          INPUT_IMAGE_NAMESPACE: ${{ github.event.inputs.image_namespace || '' }}
+          INPUT_PLATFORMS: ${{ github.event.inputs.platforms || 'linux/amd64' }}
+          INPUT_PUSH_LATEST: ${{ github.event.inputs.push_latest || 'true' }}
+          INPUT_CREATE_SBOM: ${{ github.event.inputs.create_sbom || 'true' }}
+          INPUT_CREATE_PROVENANCE: ${{ github.event.inputs.create_provenance || 'true' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-publish}"
+          registry="${INPUT_REGISTRY:-ghcr}"
+          image_namespace="${INPUT_IMAGE_NAMESPACE:-}"
+          platforms="${INPUT_PLATFORMS:-linux/amd64}"
+          push_latest="${INPUT_PUSH_LATEST:-true}"
+          create_sbom="${INPUT_CREATE_SBOM:-true}"
+          create_provenance="${INPUT_CREATE_PROVENANCE:-true}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+
+          if [[ -z "$image_namespace" ]]; then
+            image_namespace="${GITHUB_REPOSITORY_OWNER}"
+          fi
+
+          image_namespace="$(printf '%s' "$image_namespace" | tr '[:upper:]' '[:lower:]')"
+
+          should_discover="false"
+          should_build="false"
+          should_publish="false"
+          should_summarize="true"
+          publish_enabled="false"
+
+          case "$mode" in
+            publish)
+              should_discover="true"
+              should_build="true"
+              should_publish="true"
+              ;;
+            build-only)
+              should_discover="true"
+              should_build="true"
+              should_publish="false"
+              ;;
+            discover-only)
+              should_discover="true"
+              ;;
+            summarize-only)
+              should_summarize="true"
+              ;;
+            *)
+              echo "::error::Unsupported container publishing mode: $mode"
+              exit 1
+              ;;
+          esac
+
+          case "$registry" in
+            ghcr|dockerhub|both)
+              ;;
+            *)
+              echo "::error::Unsupported registry: $registry"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$dry_run" == "true" ]]; then
+            should_publish="false"
+          fi
+
+          if [[ "$should_publish" == "true" ]]; then
+            publish_enabled="true"
+          fi
+
+          {
+            echo "mode=$mode"
+            echo "registry=$registry"
+            echo "image_namespace=$image_namespace"
+            echo "platforms=$platforms"
+            echo "push_latest=$push_latest"
+            echo "create_sbom=$create_sbom"
+            echo "create_provenance=$create_provenance"
+            echo "dry_run=$dry_run"
+            echo "publish_enabled=$publish_enabled"
+            echo "should_discover=$should_discover"
+            echo "should_build=$should_build"
+            echo "should_publish=$should_publish"
+            echo "should_summarize=$should_summarize"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Publish Containers"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Mode | \`$mode\` |"
+            echo "| Registry | \`$registry\` |"
+            echo "| Image namespace | \`$image_namespace\` |"
+            echo "| Platforms | \`$platforms\` |"
+            echo "| Push latest | \`$push_latest\` |"
+            echo "| SBOM | \`$create_sbom\` |"
+            echo "| Provenance | \`$create_provenance\` |"
+            echo "| Dry run | \`$dry_run\` |"
+            echo "| Publish enabled | \`$publish_enabled\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  discover-images:
+    name: Discover container images
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - preflight
+
+    if: needs.preflight.outputs.should_discover == 'true'
+
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      has_images: ${{ steps.matrix.outputs.has_images }}
+      image_count: ${{ steps.matrix.outputs.image_count }}
+
+    env:
+      IMAGE_NAMESPACE: ${{ needs.preflight.outputs.image_namespace }}
+      CONTAINER_PLATFORMS: ${{ needs.preflight.outputs.platforms }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Prepare Docker output directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$CONTAINER_OUTPUT_DIR"
+
+      - name: Run local image discovery script
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/docker/discover-images.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/docker/discover-images.js"
+            exit 0
+          fi
+
+          node ".github/scripts/docker/discover-images.js" \
+            --output "$CONTAINER_OUTPUT_DIR/discover-images.json" \
+            --summary "$CONTAINER_OUTPUT_DIR/discover-images.md"
+
+      - name: Resolve image matrix
+        id: matrix
+        run: |
+          set -euo pipefail
+
+          python <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          workspace = Path.cwd()
+          repository = os.environ["GITHUB_REPOSITORY"].lower()
+          owner, repo = repository.split("/", 1)
+          image_namespace = os.environ.get("IMAGE_NAMESPACE", owner).lower()
+          platforms = os.environ.get("CONTAINER_PLATFORMS", "linux/amd64")
+
+          output_dir = Path(os.environ.get("CONTAINER_OUTPUT_DIR", "artifacts/docker"))
+          discovery_file = output_dir / "discover-images.json"
+
+          ignored_parts = {
+              ".git",
+              ".github",
+              ".next",
+              ".nx",
+              ".turbo",
+              "artifacts",
+              "coverage",
+              "dist",
+              "node_modules",
+              "out-tsc",
+              "test-output",
+          }
+
+          def slugify(value: str) -> str:
+              value = value.lower()
+              value = re.sub(r"[^a-z0-9]+", "-", value)
+              value = value.strip("-")
+              return value or "root"
+
+          def normalize_entry(entry):
+              dockerfile = entry.get("dockerfile") or entry.get("file") or entry.get("path") or "Dockerfile"
+              context = entry.get("context") or str(Path(dockerfile).parent)
+              if context in ("", "."):
+                  context = "."
+
+              name = entry.get("name") or entry.get("image_name") or slugify(Path(dockerfile).parent.as_posix())
+              if name in ("", "."):
+                  name = "root"
+
+              image_suffix = slugify(name)
+              base_name = repo if image_suffix == "root" else f"{repo}-{image_suffix}"
+
+              return {
+                  "name": image_suffix,
+                  "context": context,
+                  "dockerfile": dockerfile,
+                  "platforms": entry.get("platforms") or platforms,
+                  "ghcr_image": f"ghcr.io/{owner}/{base_name}",
+                  "dockerhub_image": f"docker.io/{image_namespace}/{base_name}",
+              }
+
+          entries = []
+
+          if discovery_file.exists():
+              try:
+                  data = json.loads(discovery_file.read_text())
+                  raw_entries = (
+                      data.get("images")
+                      or data.get("docker_images")
+                      or data.get("container_images")
+                      or data.get("discoveries")
+                      or []
+                  )
+
+                  if isinstance(raw_entries, list):
+                      for item in raw_entries:
+                          if isinstance(item, dict):
+                              entries.append(normalize_entry(item))
+              except Exception:
+                  entries = []
+
+          if not entries:
+              for dockerfile in sorted(workspace.rglob("Dockerfile*")):
+                  relative = dockerfile.relative_to(workspace)
+
+                  if any(part in ignored_parts for part in relative.parts):
+                      continue
+
+                  if not dockerfile.is_file():
+                      continue
+
+                  context = "." if dockerfile.parent == workspace else dockerfile.parent.relative_to(workspace).as_posix()
+                  context_slug = "root" if context == "." else slugify(context)
+
+                  if dockerfile.name == "Dockerfile":
+                      image_suffix = context_slug
+                  else:
+                      image_suffix = slugify(f"{context_slug}-{dockerfile.name}")
+
+                  base_name = repo if image_suffix == "root" else f"{repo}-{image_suffix}"
+
+                  entries.append(
+                      {
+                          "name": image_suffix,
+                          "context": context,
+                          "dockerfile": relative.as_posix(),
+                          "platforms": platforms,
+                          "ghcr_image": f"ghcr.io/{owner}/{base_name}",
+                          "dockerhub_image": f"docker.io/{image_namespace}/{base_name}",
+                      }
+                  )
+
+          unique = []
+          seen = set()
+
+          for entry in entries:
+              key = (entry["dockerfile"], entry["context"])
+              if key in seen:
+                  continue
+              seen.add(key)
+              unique.append(entry)
+
+          unique.sort(key=lambda item: item["dockerfile"])
+
+          matrix = {"include": unique}
+
+          print(f"has_images={'true' if unique else 'false'}")
+          print(f"image_count={len(unique)}")
+          print("matrix=" + json.dumps(matrix, separators=(",", ":")))
+          PY
+
+      - name: Write image discovery summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Container Image Discovery"
+            echo ""
+            echo "- Has images: \`${{ steps.matrix.outputs.has_images }}\`"
+            echo "- Image count: \`${{ steps.matrix.outputs.image_count }}\`"
+            echo ""
+            echo "\`\`\`json"
+            echo '${{ steps.matrix.outputs.matrix }}' | python -m json.tool
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload discovery artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-discovery-${{ github.run_id }}
+          path: |
+            artifacts/docker/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  publish-images:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs:
+      - preflight
+      - discover-images
+
+    if: >-
+      needs.preflight.outputs.should_build == 'true' &&
+      needs.discover-images.outputs.has_images == 'true'
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover-images.outputs.matrix) }}
+
+    env:
+      REGISTRY_TARGET: ${{ needs.preflight.outputs.registry }}
+      PUBLISH_ENABLED: ${{ needs.preflight.outputs.should_publish }}
+      PUSH_LATEST: ${{ needs.preflight.outputs.push_latest }}
+      CREATE_SBOM: ${{ needs.preflight.outputs.create_sbom }}
+      CREATE_PROVENANCE: ${{ needs.preflight.outputs.create_provenance }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        if: >-
+          env.PUBLISH_ENABLED == 'true' &&
+          (env.REGISTRY_TARGET == 'ghcr' || env.REGISTRY_TARGET == 'both')
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Login to Docker Hub
+        if: >-
+          env.PUBLISH_ENABLED == 'true' &&
+          (env.REGISTRY_TARGET == 'dockerhub' || env.REGISTRY_TARGET == 'both')
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_DOCKERHUB }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Resolve image list
+        id: images
+        run: |
+          set -euo pipefail
+
+          images=()
+
+          if [[ "$REGISTRY_TARGET" == "ghcr" || "$REGISTRY_TARGET" == "both" ]]; then
+            images+=("${{ matrix.ghcr_image }}")
+          fi
+
+          if [[ "$REGISTRY_TARGET" == "dockerhub" || "$REGISTRY_TARGET" == "both" ]]; then
+            images+=("${{ matrix.dockerhub_image }}")
+          fi
+
+          {
+            echo "images<<EOF"
+            printf '%s\n' "${images[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.images.outputs.images }}
+          flavor: |
+            latest=${{ env.PUSH_LATEST }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=Aerealith AI ${{ matrix.name }}
+            org.opencontainers.image.description=Aerealith AI container image built from ${{ matrix.dockerfile }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and optionally publish image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ matrix.platforms }}
+          push: ${{ env.PUBLISH_ENABLED == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          provenance: ${{ env.CREATE_PROVENANCE == 'true' }}
+          sbom: ${{ env.CREATE_SBOM == 'true' }}
+
+      - name: Write image build report
+        if: always()
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$CONTAINER_OUTPUT_DIR/images"
+
+          report_file="$CONTAINER_OUTPUT_DIR/images/${{ matrix.name }}.json"
+          summary_file="$CONTAINER_OUTPUT_DIR/images/${{ matrix.name }}.md"
+
+          cat > "$report_file" <<JSON
+          {
+            "schema_version": 1,
+            "type": "container-image-build",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "image": {
+              "name": "${{ matrix.name }}",
+              "context": "${{ matrix.context }}",
+              "dockerfile": "${{ matrix.dockerfile }}",
+              "platforms": "${{ matrix.platforms }}",
+              "ghcr_image": "${{ matrix.ghcr_image }}",
+              "dockerhub_image": "${{ matrix.dockerhub_image }}",
+              "digest": "${{ steps.build.outputs.digest || '' }}",
+              "metadata": ${{ steps.build.outputs.metadata || '{}' }}
+            },
+            "publish_enabled": ${{ env.PUBLISH_ENABLED == 'true' && 'true' || 'false' }},
+            "registry_target": "$REGISTRY_TARGET",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          {
+            echo "# Aerealith AI Container Image"
+            echo ""
+            echo "Generated: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo ""
+            echo "## Image"
+            echo ""
+            echo "- Name: \`${{ matrix.name }}\`"
+            echo "- Dockerfile: \`${{ matrix.dockerfile }}\`"
+            echo "- Context: \`${{ matrix.context }}\`"
+            echo "- Platforms: \`${{ matrix.platforms }}\`"
+            echo "- Registry target: \`$REGISTRY_TARGET\`"
+            echo "- Published: \`$PUBLISH_ENABLED\`"
+            echo "- Digest: \`${{ steps.build.outputs.digest || 'none' }}\`"
+            echo ""
+            echo "## Tags"
+            echo ""
+            echo "\`\`\`txt"
+            cat <<'TAGS'
+          ${{ steps.meta.outputs.tags }}
+          TAGS
+            echo "\`\`\`"
+          } > "$summary_file"
+
+      - name: Upload image report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-image-${{ matrix.name }}-${{ github.run_id }}
+          path: |
+            artifacts/docker/images/${{ matrix.name }}.*
+          if-no-files-found: ignore
+          retention-days: 30
+
+  summarize:
+    name: Summarize containers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs:
+      - preflight
+      - discover-images
+      - publish-images
+
+    if: always() && needs.preflight.outputs.should_summarize == 'true'
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download container artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/downloaded-container-artifacts
+          pattern: container-*
+          merge-multiple: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Prepare Docker summary directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$CONTAINER_OUTPUT_DIR"
+
+      - name: Run local Docker summary script
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/docker/summarize-images.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/docker/summarize-images.js"
+            exit 0
+          fi
+
+          node ".github/scripts/docker/summarize-images.js" \
+            --input-dir "artifacts/downloaded-container-artifacts" \
+            --output "$CONTAINER_OUTPUT_DIR/summarize-images.json" \
+            --summary "$CONTAINER_OUTPUT_DIR/summarize-images.md" \
+            --no-fail-on-error
+
+      - name: Write container publishing summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Container Publishing Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Discover images | \`${{ needs.discover-images.result }}\` |"
+            echo "| Publish images | \`${{ needs.publish-images.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| Registry | \`${{ needs.preflight.outputs.registry }}\` |"
+            echo "| Image count | \`${{ needs.discover-images.outputs.image_count || '0' }}\` |"
+            echo "| Publish enabled | \`${{ needs.preflight.outputs.publish_enabled }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo ""
+            echo "## Output Files"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            for dir in "$CONTAINER_OUTPUT_DIR" artifacts/downloaded-container-artifacts; do
+              if [[ -d "$dir" ]]; then
+                while IFS= read -r file; do
+                  size="$(wc -c < "$file" | xargs)"
+                  echo "| \`$file\` | \`$size\` bytes |"
+                done < <(find "$dir" -type f | sort)
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload container summary artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-summary-${{ github.run_id }}
+          path: |
+            artifacts/docker/**
+            artifacts/downloaded-container-artifacts/**
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Enforce container publishing result
+        run: |
+          set -euo pipefail
+
+          check_optional_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
+
+          check_optional_job "Discover images" "${{ needs.discover-images.result }}"
+          check_optional_job "Publish images" "${{ needs.publish-images.result }}"
+
+          echo "Container publishing workflow completed."

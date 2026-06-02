@@ -1,0 +1,638 @@
+# .github/ISSUE_TEMPLATE/ci-cd-task.yml
+name: "⚙️ CI/CD Task"
+description: "Track CI, test automation, build validation, caching, artifacts, security gates, deployment validation, or workflow improvements for Aerealith AI."
+title: "[CI/CD]: "
+labels:
+  - kind:ci
+  - area:ci
+  - status:triage
+  - no-release
+assignees:
+  - Sinless777
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # ⚙️ CI/CD Task
+
+        Use this template for work related to **GitHub Actions, Nx targets, pnpm setup, test automation, build validation, Docker validation, cache management, artifact handling, security gates, release validation, or deployment workflow behavior**.
+
+        This template is meant to walk through the task thoroughly so it can be triaged, scoped, implemented, validated, and safely merged.
+
+        CI/CD work should be treated carefully because it can affect:
+
+        - Pull request validation
+        - Main branch protection
+        - Release eligibility
+        - Dependency auto-merge
+        - Security gates
+        - Cloudflare deployments
+        - npm publishing
+        - GHCR container publishing
+        - Build artifacts, checksums, SBOMs, and attestations
+        - Developer workflow reliability
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm this CI/CD task is ready for triage."
+      options:
+        - label: "I searched existing issues and did not find a duplicate CI/CD task."
+          required: true
+        - label: "I can explain what workflow, job, script, target, or validation behavior this affects."
+          required: true
+        - label: "I included enough detail for someone else to understand the expected outcome."
+          required: true
+        - label: "I understand CI/CD changes must preserve strict pull request validation before merging to main."
+          required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: "Task Summary"
+      description: "Write one clear sentence describing the CI/CD task."
+      placeholder: "Example: Add Nx target detection for Jest, Cypress, Playwright, and e2e tests."
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: "Objective"
+      description: |
+        Explain what this task should accomplish.
+
+        Focus on the expected workflow behavior after the task is complete.
+      placeholder: |
+        Example:
+        The CI workflow should automatically detect which test frameworks exist in the affected projects and run the correct Nx targets in the correct order before allowing a pull request to merge into main.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ci_category
+    attributes:
+      label: "CI/CD Category"
+      description: "Choose the primary category for this task."
+      multiple: false
+      options:
+        - GitHub Actions workflow
+        - Reusable workflow
+        - Nx target execution
+        - pnpm / Node setup
+        - Format validation
+        - Lint validation
+        - Typecheck validation
+        - Unit test validation
+        - Integration test validation
+        - E2E test validation
+        - Jest detection
+        - Vitest detection
+        - Cypress detection
+        - Playwright detection
+        - Docker build validation
+        - Cloudflare deployment validation
+        - Security gate integration
+        - Dependency auto-merge validation
+        - Release eligibility validation
+        - npm publishing validation
+        - GHCR publishing validation
+        - Artifact generation
+        - Checksum generation
+        - SBOM generation
+        - Attestation workflow
+        - Cache management
+        - Workflow summary / reporting
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: "Affected Area"
+      description: "Select the main repository or platform area affected by this CI/CD task."
+      multiple: false
+      options:
+        - area:ci
+        - area:github-actions
+        - area:repo-management
+        - area:frontend
+        - area:connectors
+        - area:e2e
+        - area:engines
+        - area:integrations
+        - area:services
+        - area:libs
+        - area:security
+        - area:dependencies
+        - area:cloudflare
+        - area:workers
+        - area:queues
+        - area:r2
+        - area:d1
+        - area:kv
+        - area:docker
+        - area:ghcr
+        - area:npm
+        - area:artifacts
+        - area:cache
+        - area:observability
+        - area:ai
+        - area:openai
+        - area:self-hosted
+        - area:helm
+        - area:kubernetes
+        - area:docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: workflow_scope
+    attributes:
+      label: "Workflow Scope"
+      description: "Choose where this CI/CD task applies."
+      multiple: false
+      options:
+        - Pull request validation
+        - Push to main validation
+        - Scheduled main branch security check
+        - Manual workflow dispatch
+        - Dependency auto-merge
+        - Release workflow
+        - npm publishing workflow
+        - GHCR container publishing workflow
+        - Cloudflare preview deployment
+        - Cloudflare staging deployment
+        - Cloudflare production deployment
+        - Cache maintenance workflow
+        - Artifact / checksum workflow
+        - Attestation workflow
+        - Repository management workflow
+        - Multiple workflows
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      description: |
+        Choose the urgency or impact level.
+
+        Use Critical when this blocks merging, releases, security checks, deployments, or production validation.
+      multiple: false
+      options:
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_impact
+    attributes:
+      label: "Release Impact"
+      description: |
+        Most CI/CD tasks should be `no-release`.
+
+        Use a release label only if this intentionally changes shipped behavior, production deployment behavior, release artifacts, npm packages, or containers.
+      multiple: false
+      options:
+        - no-release
+        - release:patch
+        - release:minor
+        - release:major
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: "Current Behavior"
+      description: |
+        Describe how the workflow, job, script, target, or validation currently works.
+
+        Include what is missing, broken, duplicated, slow, unreliable, unclear, or unsafe.
+      placeholder: |
+        Example:
+        Currently, CI runs a generic test command and does not distinguish between Jest, Cypress, Playwright, or Nx e2e targets.
+
+        This means:
+        - Some tests may not run.
+        - Browser tests may run at the wrong time.
+        - Failure output is harder to understand.
+        - Affected-project validation is not precise enough.
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired_behavior
+    attributes:
+      label: "Desired Behavior"
+      description: |
+        Describe exactly how CI/CD should behave after this task is complete.
+      placeholder: |
+        Example:
+        CI should:
+        1. Install dependencies with pnpm 10.23.0.
+        2. Use Node.js 24.15.0.
+        3. Restore pnpm and Nx caches.
+        4. Detect affected Nx projects.
+        5. Detect available test frameworks.
+        6. Run formatting, linting, typechecking, tests, e2e, build, and Docker validation in order.
+        7. Generate artifacts, hashes, and workflow summaries.
+        8. Block merging if any required validation fails.
+    validations:
+      required: true
+
+  - type: textarea
+    id: required_order
+    attributes:
+      label: "Required Execution Order"
+      description: |
+        Define the order the workflow should follow.
+
+        This is especially important for strict PR validation and release safety.
+      placeholder: |
+        Recommended order:
+        1. Checkout
+        2. Setup pnpm
+        3. Setup Node.js
+        4. Restore caches
+        5. Install dependencies
+        6. Detect affected projects
+        7. Detect test frameworks
+        8. Format check
+        9. Lint
+        10. Typecheck
+        11. Unit tests
+        12. Integration tests
+        13. E2E tests
+        14. Build
+        15. Docker build validation
+        16. Security gate
+        17. Artifact collection
+        18. Checksums / manifest
+        19. Upload artifacts
+        20. Workflow summary
+    validations:
+      required: false
+
+  - type: textarea
+    id: affected_files
+    attributes:
+      label: "Expected Files, Folders, Workflows, or Scripts Affected"
+      description: |
+        List likely files, folders, workflows, scripts, project configs, or targets that may need changes.
+      placeholder: |
+        Example:
+        - .github/workflows/ci.yaml
+        - .github/workflows/security.yaml
+        - .github/scripts/ci/detect-test-frameworks.js
+        - .github/scripts/ci/run-nx-targets.js
+        - .github/scripts/cache/build-cache-keys.js
+        - .github/scripts/artifacts/hash-artifacts.js
+        - nx.json
+        - package.json
+        - pnpm-lock.yaml
+        - apps/e2e/**
+        - **/project.json
+    validations:
+      required: false
+
+  - type: textarea
+    id: nx_targets
+    attributes:
+      label: "Nx Targets Involved"
+      description: |
+        List the Nx targets this task should run, detect, modify, or validate.
+
+        Use the actual target names when known.
+      placeholder: |
+        Example:
+        - format
+        - lint
+        - typecheck
+        - test
+        - e2e
+        - build
+        - docker-build
+        - deploy
+    validations:
+      required: false
+
+  - type: textarea
+    id: test_frameworks
+    attributes:
+      label: "Test Frameworks or Test Types Involved"
+      description: |
+        Select or list which test frameworks this task should support.
+
+        Include detection rules if known.
+      placeholder: |
+        Example:
+        This task should support:
+        - Jest
+        - Vitest
+        - Cypress
+        - Playwright
+        - Nx e2e projects
+        - Integration tests
+        - Unit tests
+
+        Detection hints:
+        - `jest.config.*`
+        - `vitest.config.*`
+        - `cypress.config.*`
+        - `playwright.config.*`
+        - `apps/e2e/**`
+        - project.json targets
+    validations:
+      required: false
+
+  - type: textarea
+    id: cache_requirements
+    attributes:
+      label: "Cache Requirements"
+      description: |
+        Describe any caching behavior needed.
+
+        Cache names should be human-readable and safe to clean up on a weekly schedule.
+      placeholder: |
+        Example:
+        Required caches:
+        - pnpm store
+        - Nx cache
+        - Docker BuildKit cache
+        - Cypress cache
+        - Playwright browsers
+
+        Example readable names:
+        - pnpm-store-linux-node24-main
+        - nx-cache-linux-main
+        - docker-buildx-frontend-main
+        - cypress-cache-linux-node24
+        - playwright-browsers-linux-node24
+    validations:
+      required: false
+
+  - type: textarea
+    id: artifact_requirements
+    attributes:
+      label: "Artifact, Hash, or Report Requirements"
+      description: |
+        Describe artifacts, reports, checksums, manifests, SBOMs, summaries, or retention requirements.
+      placeholder: |
+        Example:
+        The workflow should generate:
+        - SHA256SUMS
+        - SHA512SUMS
+        - artifact-manifest.json
+        - SBOM SPDX JSON when applicable
+        - test reports when available
+        - build artifacts when available
+
+        Retention:
+        - PR artifacts: 7 days
+        - main artifacts: 14-30 days
+        - release artifacts: 90+ days
+        - security reports: 30-90 days
+    validations:
+      required: false
+
+  - type: textarea
+    id: security_requirements
+    attributes:
+      label: "Security, Permissions, or Branch Protection Requirements"
+      description: |
+        Describe any security gates, workflow permissions, branch protection checks, or sensitive behavior.
+
+        CI/CD workflows should use least-privilege permissions.
+      placeholder: |
+        Example:
+        - Pull requests must pass formatting, linting, typechecking, tests, builds, and security checks before merge.
+        - Security gates should block critical and high vulnerabilities.
+        - Release and publish jobs require attestations only on release/publish jobs.
+        - Workflows should not expose secrets to untrusted pull requests.
+        - Dependency PRs must not trigger releases.
+    validations:
+      required: false
+
+  - type: textarea
+    id: inputs_outputs
+    attributes:
+      label: "Workflow Inputs, Outputs, or Data Contract"
+      description: |
+        Describe any workflow inputs, outputs, matrix values, JSON files, job outputs, environment variables, or script contracts.
+      placeholder: |
+        Example:
+        Inputs:
+        - DRY_RUN
+        - DEBUG_PROJECT_SYNC
+        - NODE_VERSION
+        - PNPM_VERSION
+
+        Outputs:
+        - affected_projects
+        - detected_test_frameworks
+        - detected_dockerfiles
+        - artifact_manifest_path
+        - checksum_paths
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation_plan
+    attributes:
+      label: "Implementation Plan"
+      description: |
+        Break the task into concrete implementation steps.
+
+        Use checklist items so progress can be tracked.
+      placeholder: |
+        - [ ] Review current workflow behavior.
+        - [ ] Identify the Nx targets involved.
+        - [ ] Add or update detection script.
+        - [ ] Add or update workflow steps.
+        - [ ] Add readable cache keys.
+        - [ ] Add artifact or summary output if needed.
+        - [ ] Add dry-run support if repository state can change.
+        - [ ] Validate pull request behavior.
+        - [ ] Validate main branch behavior.
+        - [ ] Confirm dependency PRs do not trigger releases.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: |
+        Define what must be true before this CI/CD task is complete.
+
+        These should be specific and verifiable.
+      placeholder: |
+        - [ ] The workflow or script is implemented.
+        - [ ] The workflow uses Node.js 24.15.0.
+        - [ ] The workflow uses pnpm 10.23.0.
+        - [ ] Required Nx targets run in the correct order.
+        - [ ] Test framework detection works as expected.
+        - [ ] Dockerfile detection works if applicable.
+        - [ ] Caches use human-readable names.
+        - [ ] Build artifacts are uploaded when applicable.
+        - [ ] SHA256SUMS and SHA512SUMS are generated when applicable.
+        - [ ] artifact-manifest.json is generated when applicable.
+        - [ ] Security checks pass.
+        - [ ] Dependency PRs do not trigger releases.
+        - [ ] The workflow fails safely with clear error messages.
+        - [ ] Workflow summaries explain what happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "Validation Plan"
+      description: |
+        Explain how this task should be tested.
+
+        Include commands, workflow events, dry-run behavior, and expected results.
+      placeholder: |
+        Example:
+        Local validation:
+        - Run `pnpm install`.
+        - Run affected Nx lint targets.
+        - Run affected Nx test targets.
+        - Run affected Nx build targets.
+
+        Workflow validation:
+        - Open a test pull request.
+        - Confirm CI detects affected projects.
+        - Confirm test framework detection is correct.
+        - Confirm failing checks block merge.
+        - Confirm dependency PRs receive no-release behavior.
+        - Confirm release jobs do not run unless release labels are present on a merged PR to main.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure_modes
+    attributes:
+      label: "Expected Failure Modes"
+      description: |
+        Describe how the workflow should fail when something goes wrong.
+
+        Good CI/CD tasks should fail clearly and safely.
+      placeholder: |
+        Example:
+        - If pnpm install fails, the workflow should stop immediately.
+        - If an Nx target does not exist, the detection step should skip it or fail with a clear message depending on policy.
+        - If security checks fail, the PR must not be mergeable.
+        - If artifacts cannot be hashed, the workflow should fail before release or publishing.
+        - If Cloudflare credentials are missing, deployment jobs should fail before mutation.
+    validations:
+      required: false
+
+  - type: textarea
+    id: rollback_plan
+    attributes:
+      label: "Rollback Plan"
+      description: |
+        Describe how to undo or disable this CI/CD change if it breaks the repository workflow.
+
+        This is especially important for CI, security, release, publish, and deployment workflows.
+      placeholder: |
+        Example:
+        - Revert the workflow change.
+        - Disable the affected workflow temporarily.
+        - Revert the script update.
+        - Remove the new required status check from branch protection if it blocks all PRs.
+        - Restore the previous cache key strategy.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Dependencies, Prerequisites, or Blockers"
+      description: |
+        List anything that must exist before this task can be completed.
+
+        Include secrets, variables, labels, workflows, scripts, branch protection settings, project settings, or related issues.
+      placeholder: |
+        Example:
+        - Requires labels to be synced.
+        - Requires `.github/scripts/utils/logger.js`.
+        - Requires `NX_ACCESS_TOKEN` for Nx Cloud.
+        - Requires `CLOUDFLARE_API_TOKEN` for deployment workflows.
+        - Requires branch protection required checks to be updated.
+        - Depends on #123.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or ADRs"
+      description: |
+        Link anything related.
+
+        Use references such as:
+        - Related to #123
+        - Depends on #456
+        - Blocks #789
+      placeholder: |
+        Related to #
+        Depends on #
+        Blocks #
+    validations:
+      required: false
+
+  - type: textarea
+    id: documentation
+    attributes:
+      label: "Documentation Updates"
+      description: |
+        Describe any workflow documentation, README updates, runbooks, comments, or ADRs that should be updated.
+      placeholder: |
+        Example:
+        - Update README CI section.
+        - Add a runbook for failed release workflows.
+        - Document required branch protection checks.
+        - Document required secrets and variables.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that would help with triage, implementation, review, or validation."
+      placeholder: |
+        Example:
+        This should be implemented before enabling dependency auto-merge.
+        This should be tested with a branch that changes frontend, services, and e2e projects.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm the CI/CD task is ready for triage."
+      options:
+        - label: "I explained the CI/CD behavior that needs to be added, changed, or fixed."
+          required: true
+        - label: "I included implementation steps or enough detail to create them."
+          required: true
+        - label: "I included validation steps or enough context to define them."
+          required: true
+        - label: "I understand maintainers may adjust priority, area, milestone, labels, and release impact."
+          required: true

@@ -1,0 +1,634 @@
+# .github/ISSUE_TEMPLATE/ai-automation-task.yml
+name: "🧠 AI Automation Task"
+description: "Track OpenAI-powered automation, changelog drafting, issue/PR creation, triage, prompts, permissions, safeguards, or AI workflow behavior for Aerealith AI."
+title: "[AI Automation]: "
+labels:
+  - automation:openai
+  - area:ai
+  - automation:needs-review
+  - status:triage
+  - no-release
+assignees:
+  - Sinless777
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🧠 AI Automation Task
+
+        Use this template for work related to **OpenAI-powered repository automation** in Aerealith AI.
+
+        This includes:
+
+        - AI-generated changelog drafts
+        - AI-generated release announcements
+        - AI-created issues
+        - AI-created pull requests
+        - AI-assisted issue and PR linking
+        - AI-assisted security triage
+        - AI-generated summaries
+        - Prompt design and prompt updates
+        - OpenAI client implementation
+        - AI workflow permissions
+        - AI dry-run behavior
+        - AI safety rules
+        - GitHub Discussions announcements
+        - Repo-management intelligence
+
+        AI automation must be treated carefully because it can create repository changes, comments, issues, pull requests, summaries, and public-facing release notes.
+
+        Core safety rules:
+
+        - AI automation must not push directly to `main`
+        - AI-generated work should be reviewable
+        - AI-created issues and PRs should be clearly labeled
+        - AI should not expose secrets or sensitive data
+        - AI must respect `no-release`, `dependencies`, and `security:dependency`
+        - AI should support dry-run mode wherever repository state can change
+        - AI output should be auditable and traceable
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm this AI automation task is ready for triage."
+      options:
+        - label: "I searched existing issues and did not find a duplicate AI automation task."
+          required: true
+        - label: "I identified what the AI automation is allowed to read, draft, create, update, or comment on."
+          required: true
+        - label: "I included safety expectations or review requirements."
+          required: true
+        - label: "I removed or redacted secrets, tokens, private keys, private user data, and sensitive information."
+          required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: "AI Automation Task Summary"
+      description: "Write one clear sentence describing the AI automation task."
+      placeholder: "Example: Add OpenAI-powered changelog drafting for release-labeled merged pull requests."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: automation_type
+    attributes:
+      label: "AI Automation Type"
+      description: "Choose the primary type of AI automation work."
+      multiple: false
+      options:
+        - Changelog drafting
+        - Release announcement drafting
+        - GitHub Discussions posting
+        - Issue creation from pull request
+        - Pull request creation from issue
+        - Issue and PR linking
+        - PR description drafting
+        - Issue triage
+        - Security triage
+        - Dependency update summarization
+        - Label suggestion
+        - Milestone suggestion
+        - Reviewer / assignee suggestion
+        - Prompt design
+        - Prompt update
+        - OpenAI client implementation
+        - AI workflow implementation
+        - AI safety / permission policy
+        - AI dry-run behavior
+        - AI audit logging
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: "Affected Area"
+      description: "Select the closest repository or platform area."
+      multiple: false
+      options:
+        - area:ai
+        - area:openai
+        - area:repo-management
+        - area:github-actions
+        - area:ci
+        - area:security
+        - area:dependencies
+        - area:artifacts
+        - area:cloudflare
+        - area:npm
+        - area:ghcr
+        - area:docker
+        - area:docs
+        - area:frontend
+        - area:services
+        - area:connectors
+        - area:integrations
+        - area:engines
+        - area:libs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: write_permissions
+    attributes:
+      label: "Repository Write Behavior"
+      description: |
+        Choose what this AI automation is expected to do.
+
+        Prefer draft/review behavior unless the action is trusted, auditable, and guarded by workflow permissions.
+      multiple: false
+      options:
+        - Read-only analysis
+        - Draft only, no repository changes
+        - Comment on issues or pull requests
+        - Create issues
+        - Create draft pull requests
+        - Create normal pull requests
+        - Update generated files on an automation branch
+        - Post GitHub Discussions announcements
+        - Multiple write actions
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: review_requirement
+    attributes:
+      label: "Human Review Requirement"
+      description: "Choose how much human review is required before AI output is acted on."
+      multiple: false
+      options:
+        - Always require maintainer review
+        - Require maintainer review for write actions only
+        - Require security review
+        - Require release manager review
+        - No review required after checks pass
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      description: |
+        Choose the urgency or impact level.
+
+        Use Critical only when this blocks releases, security automation, repo-management, CI/CD, or a major milestone.
+      multiple: false
+      options:
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_impact
+    attributes:
+      label: "Release Impact"
+      description: |
+        Most AI automation work should be `no-release`.
+
+        Use a release label only if this intentionally changes shipped behavior, release-facing automation, or public-facing outputs.
+      multiple: false
+      options:
+        - no-release
+        - release:patch
+        - release:minor
+        - release:major
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: "Objective"
+      description: |
+        Explain what this AI automation task should accomplish.
+
+        Focus on the final behavior or output.
+      placeholder: |
+        Example:
+        Implement OpenAI-powered changelog drafting so merged PRs with release labels can be summarized into release notes grouped by type and area.
+
+        The generated changelog should exclude dependency-only PRs and no-release work.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: "Current Behavior"
+      description: |
+        Describe how this process works today.
+
+        Include what is manual, missing, inconsistent, risky, or incomplete.
+      placeholder: |
+        Example:
+        Changelogs are currently written manually from merged pull requests.
+        There is no automated grouping by labels, no AI-generated draft, and no automated Announcements discussion post.
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired_behavior
+    attributes:
+      label: "Desired Behavior"
+      description: |
+        Describe exactly how the AI automation should behave after this task is complete.
+      placeholder: |
+        Example:
+        When a qualifying release is created:
+        1. Collect merged PRs since the previous release.
+        2. Exclude PRs labeled `no-release`, `dependencies`, or `security:dependency`.
+        3. Send sanitized PR metadata to OpenAI.
+        4. Generate a changelog draft grouped by type and area.
+        5. Create a release announcement draft.
+        6. Post the approved announcement to the Announcements discussion category.
+    validations:
+      required: true
+
+  - type: textarea
+    id: allowed_inputs
+    attributes:
+      label: "Allowed Inputs"
+      description: |
+        List what the AI automation is allowed to read.
+
+        Include GitHub event data, PR titles, issue bodies, labels, diffs, commit messages, workflow logs, security findings, or release metadata.
+
+        Do not include secrets.
+      placeholder: |
+        Example:
+        The AI may read:
+        - PR title
+        - PR body
+        - PR labels
+        - PR changed file list
+        - linked issue titles and bodies
+        - commit messages
+        - release version
+        - previous changelog
+        - sanitized security summaries
+
+        The AI must not read:
+        - secrets
+        - tokens
+        - private keys
+        - production data
+        - raw private user data
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_outputs
+    attributes:
+      label: "Expected Outputs"
+      description: |
+        List what the AI automation should produce.
+
+        Include comments, files, issues, pull requests, summaries, discussion posts, labels, milestones, or structured JSON.
+      placeholder: |
+        Example:
+        Expected outputs:
+        - changelog draft
+        - release announcement draft
+        - issue summary
+        - PR-to-issue link suggestion
+        - security triage summary
+        - GitHub comment explaining what was done
+        - JSON summary for workflow logs
+    validations:
+      required: true
+
+  - type: textarea
+    id: must_not_do
+    attributes:
+      label: "Must Not Do"
+      description: |
+        List actions the AI automation must never perform.
+
+        This is one of the most important sections for safety.
+      placeholder: |
+        Example:
+        AI automation must not:
+        - Push directly to `main`
+        - Merge pull requests
+        - Approve pull requests
+        - Publish npm packages
+        - Push GHCR images
+        - Deploy production
+        - Reveal secrets
+        - Include private user data in summaries
+        - Create releases from dependency-only PRs
+        - Override `do-not-merge`
+        - Remove security labels
+    validations:
+      required: true
+
+  - type: textarea
+    id: prompt_requirements
+    attributes:
+      label: "Prompt Requirements"
+      description: |
+        Describe prompt behavior, required instructions, formatting, output structure, or refusal rules.
+
+        Include prompt file paths if known.
+      placeholder: |
+        Example:
+        Prompt files:
+        - .github/scripts/ai/prompts/changelog.md
+        - .github/scripts/ai/prompts/release-announcement.md
+
+        Requirements:
+        - Output must be concise but detailed.
+        - Output must group changes by area.
+        - Output must cite PR numbers.
+        - Output must not invent changes.
+        - Output must mark uncertain items clearly.
+        - Output must ignore no-release dependency changes.
+    validations:
+      required: false
+
+  - type: textarea
+    id: safety_requirements
+    attributes:
+      label: "Safety, Privacy, and Security Requirements"
+      description: |
+        Describe required safeguards.
+
+        Include least-privilege permissions, secret handling, data minimization, redaction, dry-run behavior, approval gates, and audit logging.
+      placeholder: |
+        Example:
+        - Use least-privilege GitHub token permissions.
+        - Do not expose secrets to untrusted pull requests.
+        - Redact tokens and private data before sending content to OpenAI.
+        - Support `DRY_RUN=true`.
+        - Require maintainer review for AI-created PRs.
+        - Label AI-created work with `automation:openai` and `automation:needs-review`.
+        - Log the action summary without logging sensitive content.
+    validations:
+      required: true
+
+  - type: textarea
+    id: permissions
+    attributes:
+      label: "Required Permissions, Secrets, or Variables"
+      description: |
+        List required GitHub permissions, secrets, repository variables, and environment variables.
+
+        Do not include secret values.
+      placeholder: |
+        Example:
+        Permissions:
+        - contents: read
+        - issues: write
+        - pull-requests: write
+        - discussions: write
+
+        Secrets:
+        - OPENAI_API_KEY
+        - PROJECTS_PAT if GitHub Projects access is needed
+
+        Variables:
+        - OPENAI_MODEL
+        - DEFAULT_BRANCH
+        - DISCUSSION_CATEGORY
+    validations:
+      required: false
+
+  - type: textarea
+    id: trigger_rules
+    attributes:
+      label: "Trigger Rules"
+      description: |
+        Describe when this AI automation should run.
+
+        Include event names, trusted branches, schedules, workflow dispatch, or release events.
+      placeholder: |
+        Example:
+        Allowed triggers:
+        - workflow_dispatch
+        - push to main
+        - release created
+        - scheduled security triage
+        - pull_request only in read-only suggestion mode
+
+        Not allowed:
+        - write actions on untrusted pull requests
+        - production deployment triggers
+    validations:
+      required: false
+
+  - type: textarea
+    id: affected_files
+    attributes:
+      label: "Expected Files, Folders, Workflows, or Scripts Affected"
+      description: |
+        List likely files, folders, workflows, prompts, scripts, or configs that may change.
+      placeholder: |
+        Example:
+        - .github/workflows/ai-repo-assistant.yaml
+        - .github/scripts/ai/openai-client.js
+        - .github/scripts/ai/build-changelog-draft.js
+        - .github/scripts/ai/create-issue-from-pr.js
+        - .github/scripts/ai/create-pr-from-issue.js
+        - .github/scripts/ai/link-pr-to-issue.js
+        - .github/scripts/ai/security-triage.js
+        - .github/scripts/ai/discussion-announcement.js
+        - .github/scripts/ai/prompts/changelog.md
+        - .github/scripts/ai/prompts/release-announcement.md
+        - .github/repo-management/rules.yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation_plan
+    attributes:
+      label: "Implementation Plan"
+      description: |
+        Break the AI automation task into concrete implementation steps.
+
+        Use checklist items so progress can be tracked.
+      placeholder: |
+        - [ ] Define allowed inputs and outputs.
+        - [ ] Create or update the prompt file.
+        - [ ] Implement OpenAI client wrapper.
+        - [ ] Add input sanitization.
+        - [ ] Add dry-run mode.
+        - [ ] Add structured logging.
+        - [ ] Add GitHub Actions workflow integration.
+        - [ ] Add labels for AI-created work.
+        - [ ] Add maintainer review gate for write actions.
+        - [ ] Add workflow summary output.
+        - [ ] Validate with safe sample data.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: |
+        Define what must be true before this AI automation task is complete.
+
+        These should be specific and verifiable.
+      placeholder: |
+        - [ ] AI automation only runs on approved triggers.
+        - [ ] AI automation supports dry-run mode where repository state can change.
+        - [ ] AI-created work is labeled `automation:openai`.
+        - [ ] AI-created work requiring review is labeled `automation:needs-review`.
+        - [ ] AI does not push directly to `main`.
+        - [ ] AI does not merge pull requests.
+        - [ ] AI does not expose secrets.
+        - [ ] AI output is logged or summarized in an auditable way.
+        - [ ] Prompt output is deterministic enough for review.
+        - [ ] Errors are clear and actionable.
+        - [ ] CI and security checks pass.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "Validation Plan"
+      description: |
+        Explain how this AI automation should be tested.
+
+        Include dry-runs, sample issues, sample PRs, safe fixtures, expected outputs, and failure cases.
+      placeholder: |
+        Example:
+        - Run in `DRY_RUN=true`.
+        - Test with a PR that has a linked issue.
+        - Test with a PR that has no linked issue.
+        - Test with a dependency PR.
+        - Test with a `no-release` PR.
+        - Test with a release-labeled PR.
+        - Confirm AI does not include dependency-only changes in release notes.
+        - Confirm AI-created issue text is labeled for review.
+        - Confirm no secrets are sent or logged.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure_modes
+    attributes:
+      label: "Expected Failure Modes"
+      description: |
+        Describe how AI automation should fail safely.
+      placeholder: |
+        Example:
+        - Missing OPENAI_API_KEY should fail before calling OpenAI.
+        - Invalid OpenAI response should fail with a clear error.
+        - Missing GitHub permissions should fail before mutation.
+        - If confidence is low, create a suggestion instead of making a change.
+        - If dry-run is enabled, do not create issues, PRs, comments, or discussions.
+        - If content contains possible secrets, block the request and log a redacted warning.
+    validations:
+      required: false
+
+  - type: textarea
+    id: rollback_plan
+    attributes:
+      label: "Rollback or Disable Plan"
+      description: |
+        Describe how to disable or roll back this AI automation if it behaves incorrectly.
+      placeholder: |
+        Example:
+        - Disable the ai-repo-assistant workflow.
+        - Revert the prompt change.
+        - Revert the OpenAI client change.
+        - Remove generated issue or PR labels if needed.
+        - Close incorrect AI-created issues with an explanation.
+        - Disable write mode and return to suggestion mode.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Dependencies, Prerequisites, or Blockers"
+      description: |
+        List anything required before this task can be completed.
+
+        Include secrets, permissions, labels, workflows, scripts, prompts, packages, or related issues.
+      placeholder: |
+        Example:
+        - Requires OPENAI_API_KEY.
+        - Requires labels to be synced.
+        - Requires `.github/scripts/utils/logger.js`.
+        - Requires `.github/scripts/utils/github.js`.
+        - Requires repo-management workflow.
+        - Requires Announcements discussion category for release posts.
+        - Depends on #123.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or ADRs"
+      description: |
+        Link anything related.
+
+        Use references such as:
+        - Related to #123
+        - Depends on #456
+        - Blocks #789
+      placeholder: |
+        Related to #
+        Depends on #
+        Blocks #
+    validations:
+      required: false
+
+  - type: textarea
+    id: documentation
+    attributes:
+      label: "Documentation Updates"
+      description: |
+        Describe any documentation, comments, prompt docs, runbooks, or ADRs that should be updated.
+      placeholder: |
+        Example:
+        - Document OpenAI automation permissions.
+        - Document dry-run mode.
+        - Document what AI can and cannot change.
+        - Document review requirements.
+        - Document prompt file behavior.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that would help with triage, implementation, validation, review, or rollback."
+      placeholder: |
+        Example:
+        This should start in suggestion mode before write mode is enabled.
+        This should not run on untrusted pull requests with write permissions.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm this AI automation task is ready for triage."
+      options:
+        - label: "I explained what the AI automation should do."
+          required: true
+        - label: "I explained what the AI automation must not do."
+          required: true
+        - label: "I included safety, permission, and validation expectations."
+          required: true
+        - label: "I understand maintainers may adjust priority, area, milestone, labels, release impact, and review requirements."
+          required: true

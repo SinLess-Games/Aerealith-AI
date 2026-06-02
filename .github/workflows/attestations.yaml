@@ -1,0 +1,996 @@
+name: Aerealith AI Artifact Attestations
+
+run-name: >-
+  Attestations / ${{ github.event_name }} / ${{ github.ref_name || github.head_ref || github.event.workflow_run.head_branch || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Optional GitHub Actions run ID to download artifacts from."
+        required: false
+        type: string
+      artifact_name:
+        description: "Optional artifact name filter. Leave empty to download all artifacts."
+        required: false
+        type: string
+      artifact_paths:
+        description: "Comma-separated local artifact paths/globs to stage before attesting."
+        required: false
+        default: ".outputs/attestations/input,artifacts,dist"
+        type: string
+      subject_paths:
+        description: "Comma-separated subject paths/globs to attest. Leave empty to attest all staged files."
+        required: false
+        default: ""
+        type: string
+      sbom_path:
+        description: "Optional SPDX or CycloneDX JSON SBOM path to attest."
+        required: false
+        default: ""
+        type: string
+      container_subject_name:
+        description: "Optional fully-qualified container image name without tag, such as ghcr.io/org/image."
+        required: false
+        default: ""
+        type: string
+      container_subject_digest:
+        description: "Optional container image digest, such as sha256:abc123."
+        required: false
+        default: ""
+        type: string
+      push_to_registry:
+        description: "Push container attestations to the registry when container subject inputs are provided."
+        required: true
+        default: true
+        type: boolean
+      create_storage_record:
+        description: "Create artifact metadata storage records for pushed container attestations."
+        required: true
+        default: true
+        type: boolean
+      create_manifest:
+        description: "Create artifact manifest when the script is available."
+        required: true
+        default: true
+        type: boolean
+      create_checksums:
+        description: "Create checksum reports when the script is available."
+        required: true
+        default: true
+        type: boolean
+      create_sbom:
+        description: "Create SBOM when the script is available."
+        required: true
+        default: true
+        type: boolean
+      attest_file_provenance:
+        description: "Generate provenance attestation for file artifacts."
+        required: true
+        default: true
+        type: boolean
+      attest_file_sbom:
+        description: "Generate SBOM attestation for file artifacts when an SBOM is available."
+        required: true
+        default: true
+        type: boolean
+      attest_container_provenance:
+        description: "Generate provenance attestation for the container image when subject name and digest are provided."
+        required: true
+        default: true
+        type: boolean
+      attest_container_sbom:
+        description: "Generate SBOM attestation for the container image when subject name, digest, and SBOM are available."
+        required: true
+        default: true
+        type: boolean
+      verify_after_attest:
+        description: "Verify attestations after generation."
+        required: true
+        default: true
+        type: boolean
+      fail_on_verify_error:
+        description: "Fail the workflow if attestation verification fails."
+        required: true
+        default: true
+        type: boolean
+      max_verify_subjects:
+        description: "Maximum file subjects to verify in this workflow run."
+        required: true
+        default: "50"
+        type: string
+      dry_run:
+        description: "Evaluate without generating attestations."
+        required: true
+        default: false
+        type: boolean
+
+  workflow_run:
+    workflows:
+      - Aerealith AI CI
+      - Aerealith AI Release
+      - Aerealith AI Artifact Hashes
+    types:
+      - completed
+
+permissions:
+  actions: read
+  attestations: write
+  artifact-metadata: write
+  checks: write
+  contents: read
+  id-token: write
+  packages: write
+
+concurrency:
+  group: >-
+    attestations-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+  ATTESTATION_INPUT_DIR: ".outputs/attestations/input"
+  ATTESTATION_OUTPUT_DIR: "artifacts/attestations"
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+
+    outputs:
+      source_run_id: ${{ steps.context.outputs.source_run_id }}
+      artifact_name: ${{ steps.context.outputs.artifact_name }}
+      artifact_paths: ${{ steps.context.outputs.artifact_paths }}
+      subject_paths: ${{ steps.context.outputs.subject_paths }}
+      sbom_path: ${{ steps.context.outputs.sbom_path }}
+      container_subject_name: ${{ steps.context.outputs.container_subject_name }}
+      container_subject_digest: ${{ steps.context.outputs.container_subject_digest }}
+      push_to_registry: ${{ steps.context.outputs.push_to_registry }}
+      create_storage_record: ${{ steps.context.outputs.create_storage_record }}
+      create_manifest: ${{ steps.context.outputs.create_manifest }}
+      create_checksums: ${{ steps.context.outputs.create_checksums }}
+      create_sbom: ${{ steps.context.outputs.create_sbom }}
+      attest_file_provenance: ${{ steps.context.outputs.attest_file_provenance }}
+      attest_file_sbom: ${{ steps.context.outputs.attest_file_sbom }}
+      attest_container_provenance: ${{ steps.context.outputs.attest_container_provenance }}
+      attest_container_sbom: ${{ steps.context.outputs.attest_container_sbom }}
+      verify_after_attest: ${{ steps.context.outputs.verify_after_attest }}
+      fail_on_verify_error: ${{ steps.context.outputs.fail_on_verify_error }}
+      max_verify_subjects: ${{ steps.context.outputs.max_verify_subjects }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      should_download_artifacts: ${{ steps.context.outputs.should_download_artifacts }}
+      has_container_subject: ${{ steps.context.outputs.has_container_subject }}
+
+    steps:
+      - name: Resolve attestation context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_SOURCE_RUN_ID: ${{ github.event.inputs.source_run_id || '' }}
+          INPUT_ARTIFACT_NAME: ${{ github.event.inputs.artifact_name || '' }}
+          INPUT_ARTIFACT_PATHS: ${{ github.event.inputs.artifact_paths || '.outputs/attestations/input,artifacts,dist' }}
+          INPUT_SUBJECT_PATHS: ${{ github.event.inputs.subject_paths || '' }}
+          INPUT_SBOM_PATH: ${{ github.event.inputs.sbom_path || '' }}
+          INPUT_CONTAINER_SUBJECT_NAME: ${{ github.event.inputs.container_subject_name || '' }}
+          INPUT_CONTAINER_SUBJECT_DIGEST: ${{ github.event.inputs.container_subject_digest || '' }}
+          INPUT_PUSH_TO_REGISTRY: ${{ github.event.inputs.push_to_registry || 'true' }}
+          INPUT_CREATE_STORAGE_RECORD: ${{ github.event.inputs.create_storage_record || 'true' }}
+          INPUT_CREATE_MANIFEST: ${{ github.event.inputs.create_manifest || 'true' }}
+          INPUT_CREATE_CHECKSUMS: ${{ github.event.inputs.create_checksums || 'true' }}
+          INPUT_CREATE_SBOM: ${{ github.event.inputs.create_sbom || 'true' }}
+          INPUT_ATTEST_FILE_PROVENANCE: ${{ github.event.inputs.attest_file_provenance || 'true' }}
+          INPUT_ATTEST_FILE_SBOM: ${{ github.event.inputs.attest_file_sbom || 'true' }}
+          INPUT_ATTEST_CONTAINER_PROVENANCE: ${{ github.event.inputs.attest_container_provenance || 'true' }}
+          INPUT_ATTEST_CONTAINER_SBOM: ${{ github.event.inputs.attest_container_sbom || 'true' }}
+          INPUT_VERIFY_AFTER_ATTEST: ${{ github.event.inputs.verify_after_attest || 'true' }}
+          INPUT_FAIL_ON_VERIFY_ERROR: ${{ github.event.inputs.fail_on_verify_error || 'true' }}
+          INPUT_MAX_VERIFY_SUBJECTS: ${{ github.event.inputs.max_verify_subjects || '50' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+        run: |
+          set -euo pipefail
+
+          source_run_id="${INPUT_SOURCE_RUN_ID:-}"
+          artifact_name="${INPUT_ARTIFACT_NAME:-}"
+          artifact_paths="${INPUT_ARTIFACT_PATHS:-.outputs/attestations/input,artifacts,dist}"
+          subject_paths="${INPUT_SUBJECT_PATHS:-}"
+          sbom_path="${INPUT_SBOM_PATH:-}"
+          container_subject_name="${INPUT_CONTAINER_SUBJECT_NAME:-}"
+          container_subject_digest="${INPUT_CONTAINER_SUBJECT_DIGEST:-}"
+          push_to_registry="${INPUT_PUSH_TO_REGISTRY:-true}"
+          create_storage_record="${INPUT_CREATE_STORAGE_RECORD:-true}"
+          create_manifest="${INPUT_CREATE_MANIFEST:-true}"
+          create_checksums="${INPUT_CREATE_CHECKSUMS:-true}"
+          create_sbom="${INPUT_CREATE_SBOM:-true}"
+          attest_file_provenance="${INPUT_ATTEST_FILE_PROVENANCE:-true}"
+          attest_file_sbom="${INPUT_ATTEST_FILE_SBOM:-true}"
+          attest_container_provenance="${INPUT_ATTEST_CONTAINER_PROVENANCE:-true}"
+          attest_container_sbom="${INPUT_ATTEST_CONTAINER_SBOM:-true}"
+          verify_after_attest="${INPUT_VERIFY_AFTER_ATTEST:-true}"
+          fail_on_verify_error="${INPUT_FAIL_ON_VERIFY_ERROR:-true}"
+          max_verify_subjects="${INPUT_MAX_VERIFY_SUBJECTS:-50}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+
+          if [[ "$EVENT_NAME" == "workflow_run" && -n "${WORKFLOW_RUN_ID:-}" ]]; then
+            source_run_id="$WORKFLOW_RUN_ID"
+          fi
+
+          should_download_artifacts="false"
+          if [[ -n "$source_run_id" ]]; then
+            should_download_artifacts="true"
+          fi
+
+          has_container_subject="false"
+          if [[ -n "$container_subject_name" && -n "$container_subject_digest" ]]; then
+            has_container_subject="true"
+          fi
+
+          {
+            echo "source_run_id=$source_run_id"
+            echo "artifact_name=$artifact_name"
+            echo "artifact_paths=$artifact_paths"
+            echo "subject_paths=$subject_paths"
+            echo "sbom_path=$sbom_path"
+            echo "container_subject_name=$container_subject_name"
+            echo "container_subject_digest=$container_subject_digest"
+            echo "push_to_registry=$push_to_registry"
+            echo "create_storage_record=$create_storage_record"
+            echo "create_manifest=$create_manifest"
+            echo "create_checksums=$create_checksums"
+            echo "create_sbom=$create_sbom"
+            echo "attest_file_provenance=$attest_file_provenance"
+            echo "attest_file_sbom=$attest_file_sbom"
+            echo "attest_container_provenance=$attest_container_provenance"
+            echo "attest_container_sbom=$attest_container_sbom"
+            echo "verify_after_attest=$verify_after_attest"
+            echo "fail_on_verify_error=$fail_on_verify_error"
+            echo "max_verify_subjects=$max_verify_subjects"
+            echo "dry_run=$dry_run"
+            echo "should_download_artifacts=$should_download_artifacts"
+            echo "has_container_subject=$has_container_subject"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Artifact Attestations"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Source run ID | \`${source_run_id:-none}\` |"
+            echo "| Artifact name filter | \`${artifact_name:-none}\` |"
+            echo "| Artifact paths | \`$artifact_paths\` |"
+            echo "| Subject paths | \`${subject_paths:-auto}\` |"
+            echo "| SBOM path | \`${sbom_path:-auto}\` |"
+            echo "| Container subject name | \`${container_subject_name:-none}\` |"
+            echo "| Container subject digest | \`${container_subject_digest:-none}\` |"
+            echo "| Push to registry | \`$push_to_registry\` |"
+            echo "| Create storage record | \`$create_storage_record\` |"
+            echo "| Create manifest | \`$create_manifest\` |"
+            echo "| Create checksums | \`$create_checksums\` |"
+            echo "| Create SBOM | \`$create_sbom\` |"
+            echo "| Attest file provenance | \`$attest_file_provenance\` |"
+            echo "| Attest file SBOM | \`$attest_file_sbom\` |"
+            echo "| Attest container provenance | \`$attest_container_provenance\` |"
+            echo "| Attest container SBOM | \`$attest_container_sbom\` |"
+            echo "| Verify after attest | \`$verify_after_attest\` |"
+            echo "| Fail on verify error | \`$fail_on_verify_error\` |"
+            echo "| Dry run | \`$dry_run\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  attestations:
+    name: Generate attestations
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      ATTESTATION_SOURCE_RUN_ID: ${{ needs.preflight.outputs.source_run_id }}
+      ATTESTATION_ARTIFACT_NAME: ${{ needs.preflight.outputs.artifact_name }}
+      ATTESTATION_ARTIFACT_PATHS: ${{ needs.preflight.outputs.artifact_paths }}
+      ATTESTATION_SUBJECT_PATHS: ${{ needs.preflight.outputs.subject_paths }}
+      ATTESTATION_SBOM_PATH: ${{ needs.preflight.outputs.sbom_path }}
+      ATTESTATION_CONTAINER_SUBJECT_NAME: ${{ needs.preflight.outputs.container_subject_name }}
+      ATTESTATION_CONTAINER_SUBJECT_DIGEST: ${{ needs.preflight.outputs.container_subject_digest }}
+      ATTESTATION_PUSH_TO_REGISTRY: ${{ needs.preflight.outputs.push_to_registry }}
+      ATTESTATION_CREATE_STORAGE_RECORD: ${{ needs.preflight.outputs.create_storage_record }}
+      ATTESTATION_VERIFY_AFTER_ATTEST: ${{ needs.preflight.outputs.verify_after_attest }}
+      ATTESTATION_FAIL_ON_VERIFY_ERROR: ${{ needs.preflight.outputs.fail_on_verify_error }}
+      ATTESTATION_MAX_VERIFY_SUBJECTS: ${{ needs.preflight.outputs.max_verify_subjects }}
+
+    steps:
+      - name: Checkout repository automation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Prepare attestation directories
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$ATTESTATION_INPUT_DIR"
+          mkdir -p "$ATTESTATION_OUTPUT_DIR"
+          mkdir -p "$ATTESTATION_OUTPUT_DIR/bundles"
+          mkdir -p "$ATTESTATION_OUTPUT_DIR/subjects"
+
+      - name: Download artifacts from source run
+        if: needs.preflight.outputs.should_download_artifacts == 'true'
+        env:
+          SOURCE_RUN_ID: ${{ needs.preflight.outputs.source_run_id }}
+          ARTIFACT_NAME: ${{ needs.preflight.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+
+          echo "Downloading artifacts from run: $SOURCE_RUN_ID"
+
+          if [[ -n "${ARTIFACT_NAME:-}" ]]; then
+            gh run download "$SOURCE_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "$ARTIFACT_NAME" \
+              --dir "$ATTESTATION_INPUT_DIR"
+          else
+            gh run download "$SOURCE_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --dir "$ATTESTATION_INPUT_DIR"
+          fi
+
+          find "$ATTESTATION_INPUT_DIR" -type f | sort | sed 's#^#Downloaded: #'
+
+      - name: Stage local artifact paths
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$ATTESTATION_INPUT_DIR/local"
+
+          IFS=',' read -ra paths <<< "${ATTESTATION_ARTIFACT_PATHS:-}"
+
+          for raw_path in "${paths[@]}"; do
+            artifact_path="$(printf '%s' "$raw_path" | xargs)"
+
+            if [[ -z "$artifact_path" ]]; then
+              continue
+            fi
+
+            if [[ "$artifact_path" == "$ATTESTATION_INPUT_DIR"* ]]; then
+              continue
+            fi
+
+            if [[ "$artifact_path" == "$ATTESTATION_OUTPUT_DIR"* ]]; then
+              continue
+            fi
+
+            shopt -s nullglob globstar
+            matches=( $artifact_path )
+            shopt -u nullglob globstar
+
+            if [[ "${#matches[@]}" -eq 0 ]]; then
+              echo "::notice::No local artifacts matched: $artifact_path"
+              continue
+            fi
+
+            for match in "${matches[@]}"; do
+              if [[ ! -e "$match" ]]; then
+                continue
+              fi
+
+              if [[ "$match" == "$ATTESTATION_OUTPUT_DIR"* ]]; then
+                continue
+              fi
+
+              destination="$ATTESTATION_INPUT_DIR/local/$match"
+              mkdir -p "$(dirname "$destination")"
+
+              if [[ -d "$match" ]]; then
+                mkdir -p "$destination"
+                rsync -a \
+                  --exclude '.git' \
+                  --exclude 'node_modules' \
+                  --exclude '.nx' \
+                  --exclude '.turbo' \
+                  --exclude '.next/cache' \
+                  "$match/" "$destination/"
+              else
+                cp "$match" "$destination"
+              fi
+            done
+          done
+
+          file_count="$(find "$ATTESTATION_INPUT_DIR" -type f | wc -l | xargs)"
+          echo "Prepared $file_count file(s) for attestation."
+
+      - name: Create attestation support artifacts
+        run: |
+          set -euo pipefail
+
+          run_optional() {
+            local file="$1"
+            shift || true
+
+            if [[ ! -f "$file" ]]; then
+              echo "::notice::Skipping missing script: $file"
+              return 0
+            fi
+
+            echo "::group::$file"
+            node "$file" "$@"
+            echo "::endgroup::"
+          }
+
+          if [[ "${{ needs.preflight.outputs.create_manifest }}" == "true" ]]; then
+            run_optional ".github/scripts/artifacts/create-artifact-manifest.js" \
+              --input "$ATTESTATION_INPUT_DIR" \
+              --output "$ATTESTATION_OUTPUT_DIR/artifact-manifest.json" \
+              --summary "$ATTESTATION_OUTPUT_DIR/artifact-manifest.md"
+          fi
+
+          if [[ "${{ needs.preflight.outputs.create_checksums }}" == "true" ]]; then
+            run_optional ".github/scripts/artifacts/create-checksums.js" \
+              --input "$ATTESTATION_INPUT_DIR" \
+              --output "$ATTESTATION_OUTPUT_DIR/checksums.json" \
+              --summary "$ATTESTATION_OUTPUT_DIR/checksums.md" \
+              --sha256 "$ATTESTATION_OUTPUT_DIR/SHA256SUMS" \
+              --sha512 "$ATTESTATION_OUTPUT_DIR/SHA512SUMS"
+          fi
+
+          if [[ "${{ needs.preflight.outputs.create_sbom }}" == "true" ]]; then
+            run_optional ".github/scripts/artifacts/create-sbom.js" \
+              --input "$ATTESTATION_INPUT_DIR" \
+              --output "$ATTESTATION_OUTPUT_DIR/sbom.json" \
+              --summary "$ATTESTATION_OUTPUT_DIR/sbom.md"
+          fi
+
+      - name: Resolve file attestation subjects
+        id: subjects
+        run: |
+          set -euo pipefail
+
+          subjects_file="$ATTESTATION_OUTPUT_DIR/subjects/subjects.txt"
+          checksums_file="$ATTESTATION_OUTPUT_DIR/subjects/SHA256SUMS"
+
+          : > "$subjects_file"
+          : > "$checksums_file"
+
+          if [[ -n "${ATTESTATION_SUBJECT_PATHS:-}" ]]; then
+            IFS=',' read -ra specs <<< "$ATTESTATION_SUBJECT_PATHS"
+          else
+            specs=("$ATTESTATION_INPUT_DIR/**/*")
+          fi
+
+          for raw_spec in "${specs[@]}"; do
+            subject_spec="$(printf '%s' "$raw_spec" | xargs)"
+
+            if [[ -z "$subject_spec" ]]; then
+              continue
+            fi
+
+            shopt -s nullglob globstar
+            matches=( $subject_spec )
+            shopt -u nullglob globstar
+
+            if [[ "${#matches[@]}" -eq 0 ]]; then
+              echo "::notice::No subject files matched: $subject_spec"
+              continue
+            fi
+
+            for match in "${matches[@]}"; do
+              if [[ ! -f "$match" ]]; then
+                continue
+              fi
+
+              if [[ "$match" == "$ATTESTATION_OUTPUT_DIR"* ]]; then
+                continue
+              fi
+
+              relative_path="$(realpath --relative-to="$GITHUB_WORKSPACE" "$match")"
+              printf '%s\n' "$relative_path" >> "$subjects_file"
+            done
+          done
+
+          sort -u "$subjects_file" -o "$subjects_file"
+
+          subject_count="$(wc -l < "$subjects_file" | xargs)"
+
+          if [[ "$subject_count" -gt 1024 ]]; then
+            echo "::error::actions/attest supports up to 1024 subjects per attestation. Found $subject_count."
+            exit 1
+          fi
+
+          if [[ "$subject_count" -gt 0 ]]; then
+            while IFS= read -r subject; do
+              sha256sum "$subject" >> "$checksums_file"
+            done < "$subjects_file"
+          fi
+
+          has_file_subjects="false"
+          if [[ "$subject_count" -gt 0 ]]; then
+            has_file_subjects="true"
+          fi
+
+          {
+            echo "has_file_subjects=$has_file_subjects"
+            echo "subject_count=$subject_count"
+            echo "subjects_file=$subjects_file"
+            echo "subject_checksums=$checksums_file"
+            echo "subject_paths<<EOF"
+            cat "$subjects_file"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## File Attestation Subjects"
+            echo ""
+            echo "- Subject count: \`$subject_count\`"
+            echo "- Checksums file: \`$checksums_file\`"
+            echo ""
+            if [[ "$subject_count" -gt 0 ]]; then
+              echo "| Subject |"
+              echo "|---|"
+              head -100 "$subjects_file" | while IFS= read -r subject; do
+                echo "| \`$subject\` |"
+              done
+
+              if [[ "$subject_count" -gt 100 ]]; then
+                echo "| \`...and $((subject_count - 100)) more subject(s)\` |"
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resolve SBOM path
+        id: sbom
+        run: |
+          set -euo pipefail
+
+          sbom_path="${ATTESTATION_SBOM_PATH:-}"
+
+          if [[ -n "$sbom_path" && ! -f "$sbom_path" ]]; then
+            echo "::warning::Configured SBOM path does not exist: $sbom_path"
+            sbom_path=""
+          fi
+
+          if [[ -z "$sbom_path" && -f "$ATTESTATION_OUTPUT_DIR/sbom.json" ]]; then
+            sbom_path="$ATTESTATION_OUTPUT_DIR/sbom.json"
+          fi
+
+          if [[ -z "$sbom_path" ]]; then
+            while IFS= read -r candidate; do
+              sbom_path="$candidate"
+              break
+            done < <(find "$ATTESTATION_INPUT_DIR" "$ATTESTATION_OUTPUT_DIR" -type f \( -iname '*sbom*.json' -o -iname '*.spdx.json' -o -iname '*.cdx.json' -o -iname '*cyclonedx*.json' \) | sort)
+          fi
+
+          has_sbom="false"
+          if [[ -n "$sbom_path" && -f "$sbom_path" ]]; then
+            has_sbom="true"
+          fi
+
+          {
+            echo "has_sbom=$has_sbom"
+            echo "sbom_path=$sbom_path"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## SBOM Attestation Input"
+            echo ""
+            echo "- Has SBOM: \`$has_sbom\`"
+            echo "- SBOM path: \`${sbom_path:-none}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create attestation subject inventory
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const crypto = require("node:crypto");
+          const path = require("node:path");
+
+          const inputDir = process.env.ATTESTATION_INPUT_DIR;
+          const outputDir = process.env.ATTESTATION_OUTPUT_DIR;
+          const subjectsFile = path.join(outputDir, "subjects", "subjects.txt");
+          const checksumsFile = path.join(outputDir, "subjects", "SHA256SUMS");
+          const outputFile = path.join(outputDir, "attestation-subjects.json");
+
+          const subjects = fs.existsSync(subjectsFile)
+            ? fs.readFileSync(subjectsFile, "utf8").split(/\r?\n/).filter(Boolean)
+            : [];
+
+          const checksums = new Map();
+
+          if (fs.existsSync(checksumsFile)) {
+            for (const line of fs.readFileSync(checksumsFile, "utf8").split(/\r?\n/)) {
+              const match = line.match(/^([a-fA-F0-9]{64})\s+\*?(.*)$/);
+              if (match) {
+                checksums.set(match[2].trim(), match[1].toLowerCase());
+              }
+            }
+          }
+
+          const items = subjects.map((subject) => {
+            const stat = fs.statSync(subject);
+            return {
+              path: subject,
+              size_bytes: stat.size,
+              sha256: checksums.get(subject) || crypto.createHash("sha256").update(fs.readFileSync(subject)).digest("hex"),
+            };
+          });
+
+          const report = {
+            schema_version: 1,
+            type: "artifact-attestation-subjects",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            source_run_id: process.env.ATTESTATION_SOURCE_RUN_ID || "",
+            input_dir: inputDir,
+            output_dir: outputDir,
+            subject_count: items.length,
+            subjects: items,
+            created_at: new Date().toISOString(),
+          };
+
+          fs.mkdirSync(outputDir, { recursive: true });
+          fs.writeFileSync(outputFile, `${JSON.stringify(report, null, 2)}\n`);
+          NODE
+
+      - name: Generate file provenance attestation
+        id: attest_file_provenance
+        if: >-
+          needs.preflight.outputs.dry_run != 'true' &&
+          needs.preflight.outputs.attest_file_provenance == 'true' &&
+          steps.subjects.outputs.has_file_subjects == 'true'
+        uses: actions/attest@v4
+        with:
+          subject-checksums: ${{ steps.subjects.outputs.subject_checksums }}
+          show-summary: true
+
+      - name: Generate file SBOM attestation
+        id: attest_file_sbom
+        if: >-
+          needs.preflight.outputs.dry_run != 'true' &&
+          needs.preflight.outputs.attest_file_sbom == 'true' &&
+          steps.subjects.outputs.has_file_subjects == 'true' &&
+          steps.sbom.outputs.has_sbom == 'true'
+        uses: actions/attest@v4
+        with:
+          subject-checksums: ${{ steps.subjects.outputs.subject_checksums }}
+          sbom-path: ${{ steps.sbom.outputs.sbom_path }}
+          show-summary: true
+
+      - name: Generate container provenance attestation
+        id: attest_container_provenance
+        if: >-
+          needs.preflight.outputs.dry_run != 'true' &&
+          needs.preflight.outputs.attest_container_provenance == 'true' &&
+          needs.preflight.outputs.has_container_subject == 'true'
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ needs.preflight.outputs.container_subject_name }}
+          subject-digest: ${{ needs.preflight.outputs.container_subject_digest }}
+          push-to-registry: ${{ needs.preflight.outputs.push_to_registry }}
+          create-storage-record: ${{ needs.preflight.outputs.create_storage_record }}
+          show-summary: true
+
+      - name: Generate container SBOM attestation
+        id: attest_container_sbom
+        if: >-
+          needs.preflight.outputs.dry_run != 'true' &&
+          needs.preflight.outputs.attest_container_sbom == 'true' &&
+          needs.preflight.outputs.has_container_subject == 'true' &&
+          steps.sbom.outputs.has_sbom == 'true'
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ needs.preflight.outputs.container_subject_name }}
+          subject-digest: ${{ needs.preflight.outputs.container_subject_digest }}
+          sbom-path: ${{ steps.sbom.outputs.sbom_path }}
+          push-to-registry: ${{ needs.preflight.outputs.push_to_registry }}
+          create-storage-record: ${{ needs.preflight.outputs.create_storage_record }}
+          show-summary: true
+
+      - name: Collect attestation bundles
+        if: always()
+        env:
+          FILE_PROVENANCE_BUNDLE: ${{ steps.attest_file_provenance.outputs.bundle-path || '' }}
+          FILE_SBOM_BUNDLE: ${{ steps.attest_file_sbom.outputs.bundle-path || '' }}
+          CONTAINER_PROVENANCE_BUNDLE: ${{ steps.attest_container_provenance.outputs.bundle-path || '' }}
+          CONTAINER_SBOM_BUNDLE: ${{ steps.attest_container_sbom.outputs.bundle-path || '' }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$ATTESTATION_OUTPUT_DIR/bundles"
+
+          copy_bundle() {
+            local source="$1"
+            local destination="$2"
+
+            if [[ -n "$source" && -f "$source" ]]; then
+              cp "$source" "$ATTESTATION_OUTPUT_DIR/bundles/$destination"
+              echo "Copied attestation bundle: $destination"
+            fi
+          }
+
+          copy_bundle "$FILE_PROVENANCE_BUNDLE" "file-provenance.attestation.json"
+          copy_bundle "$FILE_SBOM_BUNDLE" "file-sbom.attestation.json"
+          copy_bundle "$CONTAINER_PROVENANCE_BUNDLE" "container-provenance.attestation.json"
+          copy_bundle "$CONTAINER_SBOM_BUNDLE" "container-sbom.attestation.json"
+
+          if [[ -f "$RUNNER_TEMP/created_attestation_paths.txt" ]]; then
+            cp "$RUNNER_TEMP/created_attestation_paths.txt" "$ATTESTATION_OUTPUT_DIR/created-attestation-paths.txt"
+
+            index=0
+            while IFS= read -r bundle; do
+              if [[ -f "$bundle" ]]; then
+                index="$((index + 1))"
+                cp "$bundle" "$ATTESTATION_OUTPUT_DIR/bundles/generated-$index.attestation.json"
+              fi
+            done < "$RUNNER_TEMP/created_attestation_paths.txt"
+          fi
+
+      - name: Verify generated attestations
+        if: >-
+          needs.preflight.outputs.dry_run != 'true' &&
+          needs.preflight.outputs.verify_after_attest == 'true'
+        run: |
+          set -euo pipefail
+
+          verify_log="$ATTESTATION_OUTPUT_DIR/verification.log"
+          verify_json="$ATTESTATION_OUTPUT_DIR/verification.jsonl"
+          : > "$verify_log"
+          : > "$verify_json"
+
+          status=0
+          max_subjects="${ATTESTATION_MAX_VERIFY_SUBJECTS:-50}"
+
+          verify_with_retry() {
+            local target="$1"
+            local attempt=1
+
+            while [[ "$attempt" -le 3 ]]; do
+              echo "Verifying: $target (attempt $attempt)" | tee -a "$verify_log"
+
+              if gh attestation verify "$target" \
+                --repo "$GITHUB_REPOSITORY" \
+                --format json >> "$verify_json" 2>> "$verify_log"; then
+                return 0
+              fi
+
+              sleep 5
+              attempt="$((attempt + 1))"
+            done
+
+            echo "::warning::Unable to verify attestation target: $target"
+            return 1
+          }
+
+          if [[ "${{ steps.subjects.outputs.has_file_subjects }}" == "true" ]]; then
+            verified_count=0
+
+            while IFS= read -r subject; do
+              if [[ -z "$subject" ]]; then
+                continue
+              fi
+
+              if [[ "$verified_count" -ge "$max_subjects" ]]; then
+                echo "::notice::Reached max file attestation verification count: $max_subjects"
+                break
+              fi
+
+              if ! verify_with_retry "$subject"; then
+                status=1
+              fi
+
+              verified_count="$((verified_count + 1))"
+            done < "${{ steps.subjects.outputs.subjects_file }}"
+          fi
+
+          if [[ "${{ needs.preflight.outputs.has_container_subject }}" == "true" ]]; then
+            container_target="oci://${ATTESTATION_CONTAINER_SUBJECT_NAME}@${ATTESTATION_CONTAINER_SUBJECT_DIGEST}"
+
+            if ! verify_with_retry "$container_target"; then
+              status=1
+            fi
+          fi
+
+          if [[ "$status" -ne 0 && "$ATTESTATION_FAIL_ON_VERIFY_ERROR" == "true" ]]; then
+            exit "$status"
+          fi
+
+          if [[ "$status" -ne 0 ]]; then
+            echo "::warning::Attestation verification failed, but fail_on_verify_error is false."
+          fi
+
+      - name: Write attestation report
+        if: always()
+        env:
+          FILE_PROVENANCE_URL: ${{ steps.attest_file_provenance.outputs.attestation-url || '' }}
+          FILE_SBOM_URL: ${{ steps.attest_file_sbom.outputs.attestation-url || '' }}
+          CONTAINER_PROVENANCE_URL: ${{ steps.attest_container_provenance.outputs.attestation-url || '' }}
+          CONTAINER_SBOM_URL: ${{ steps.attest_container_sbom.outputs.attestation-url || '' }}
+          FILE_PROVENANCE_ID: ${{ steps.attest_file_provenance.outputs.attestation-id || '' }}
+          FILE_SBOM_ID: ${{ steps.attest_file_sbom.outputs.attestation-id || '' }}
+          CONTAINER_PROVENANCE_ID: ${{ steps.attest_container_provenance.outputs.attestation-id || '' }}
+          CONTAINER_SBOM_ID: ${{ steps.attest_container_sbom.outputs.attestation-id || '' }}
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const outputDir = process.env.ATTESTATION_OUTPUT_DIR;
+          const subjectsFile = path.join(outputDir, "subjects", "subjects.txt");
+
+          const subjects = fs.existsSync(subjectsFile)
+            ? fs.readFileSync(subjectsFile, "utf8").split(/\r?\n/).filter(Boolean)
+            : [];
+
+          const bundlesDir = path.join(outputDir, "bundles");
+          const bundles = fs.existsSync(bundlesDir)
+            ? fs.readdirSync(bundlesDir).filter((file) => file.endsWith(".json")).sort().map((file) => path.join(bundlesDir, file))
+            : [];
+
+          const attestations = [
+            {
+              name: "file-provenance",
+              id: process.env.FILE_PROVENANCE_ID || "",
+              url: process.env.FILE_PROVENANCE_URL || "",
+            },
+            {
+              name: "file-sbom",
+              id: process.env.FILE_SBOM_ID || "",
+              url: process.env.FILE_SBOM_URL || "",
+            },
+            {
+              name: "container-provenance",
+              id: process.env.CONTAINER_PROVENANCE_ID || "",
+              url: process.env.CONTAINER_PROVENANCE_URL || "",
+            },
+            {
+              name: "container-sbom",
+              id: process.env.CONTAINER_SBOM_ID || "",
+              url: process.env.CONTAINER_SBOM_URL || "",
+            },
+          ].filter((item) => item.id || item.url);
+
+          const report = {
+            schema_version: 1,
+            type: "artifact-attestations",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            source_run_id: process.env.ATTESTATION_SOURCE_RUN_ID || "",
+            dry_run: process.env.PROJECT_SYNC_DRY_RUN === "true",
+            file_subject_count: subjects.length,
+            file_subjects: subjects,
+            container_subject: {
+              name: process.env.ATTESTATION_CONTAINER_SUBJECT_NAME || "",
+              digest: process.env.ATTESTATION_CONTAINER_SUBJECT_DIGEST || "",
+              push_to_registry: process.env.ATTESTATION_PUSH_TO_REGISTRY === "true",
+              create_storage_record: process.env.ATTESTATION_CREATE_STORAGE_RECORD === "true",
+            },
+            attestations,
+            bundles,
+            created_at: new Date().toISOString(),
+          };
+
+          fs.mkdirSync(outputDir, { recursive: true });
+          fs.writeFileSync(path.join(outputDir, "attestations.json"), `${JSON.stringify(report, null, 2)}\n`);
+
+          const lines = [
+            "# Aerealith AI Artifact Attestations",
+            "",
+            `Generated: \`${report.created_at}\``,
+            "",
+            "## Status",
+            "",
+            `- Dry run: \`${report.dry_run ? "true" : "false"}\``,
+            `- File subjects: \`${report.file_subject_count}\``,
+            `- Container subject: \`${report.container_subject.name && report.container_subject.digest ? "true" : "false"}\``,
+            `- Attestations: \`${report.attestations.length}\``,
+            `- Bundles: \`${report.bundles.length}\``,
+            "",
+            "## Attestations",
+            "",
+            "| Name | ID | URL |",
+            "|---|---|---|",
+            ...report.attestations.map((item) => `| \`${item.name}\` | \`${item.id || "n/a"}\` | ${item.url || "n/a"} |`),
+            "",
+            "## Bundles",
+            "",
+            "| Bundle |",
+            "|---|",
+            ...report.bundles.map((bundle) => `| \`${bundle}\` |`),
+            "",
+          ];
+
+          fs.writeFileSync(path.join(outputDir, "attestations.md"), `${lines.join("\n").trim()}\n`);
+          NODE
+
+      - name: Write attestation job summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Attestation Output"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            if [[ -d "$ATTESTATION_OUTPUT_DIR" ]]; then
+              while IFS= read -r file; do
+                size="$(wc -c < "$file" | xargs)"
+                echo "| \`$file\` | \`$size\` bytes |"
+              done < <(find "$ATTESTATION_OUTPUT_DIR" -type f | sort)
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload attestation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: attestations-${{ github.run_id }}
+          path: |
+            artifacts/attestations/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload staged attestation input snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: attestation-input-${{ github.run_id }}
+          path: |
+            .outputs/attestations/input/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+      - attestations
+
+    if: always()
+
+    steps:
+      - name: Write final attestation summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Artifact Attestations Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Attestations | \`${{ needs.attestations.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Source run ID | \`${{ needs.preflight.outputs.source_run_id || 'none' }}\` |"
+            echo "| Artifact name filter | \`${{ needs.preflight.outputs.artifact_name || 'none' }}\` |"
+            echo "| File provenance | \`${{ needs.preflight.outputs.attest_file_provenance }}\` |"
+            echo "| File SBOM | \`${{ needs.preflight.outputs.attest_file_sbom }}\` |"
+            echo "| Container provenance | \`${{ needs.preflight.outputs.attest_container_provenance }}\` |"
+            echo "| Container SBOM | \`${{ needs.preflight.outputs.attest_container_sbom }}\` |"
+            echo "| Verify after attest | \`${{ needs.preflight.outputs.verify_after_attest }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

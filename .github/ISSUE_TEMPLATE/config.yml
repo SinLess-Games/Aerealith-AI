@@ -1,12 +1,36 @@
 # .github/ISSUE_TEMPLATE/config.yml
+# =============================================================================
+# Aerealith AI Issue Template Configuration
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Configure issue template behavior and external contact links.
+#
+# Notes:
+#   - Blank issues are disabled so contributors are guided through structured
+#     templates.
+#   - Questions and general support should go to Discussions.
+#   - Security reports should use SECURITY.md or the security template.
+# =============================================================================
+
 blank_issues_enabled: false
+
 contact_links:
-  - name: Helix AI Documentation
-    url: https://github.com/Sinless777/Helix
-    about: Review the Helix AI docs and readme before creating a new issue.
-  - name: Community Discussions & Support
-    url: https://github.com/Sinless777/Helix/discussions
-    about: For questions, suggestions, or general help — not bugs or features.
-  - name: Security Disclosure
-    url: https://github.com/Sinless777/Helix/blob/main/SECURITY.md
-    about: Report security issues or suspected vulnerabilities here (confidentially documented).
+  - name: "Aerealith AI Repository"
+    url: "https://github.com/SinLess-Games/Aerealith-AI"
+    about: "Review the repository, README, and project files before creating a new issue."
+
+  - name: "Aerealith AI Documentation"
+    url: "https://github.com/SinLess-Games/Aerealith-AI/tree/main/docs"
+    about: "Review the project documentation, setup guides, workflow notes, and architecture docs before opening an issue."
+
+  - name: "Community Discussions & Support"
+    url: "https://github.com/SinLess-Games/Aerealith-AI/discussions"
+    about: "Use Discussions for questions, ideas, support, planning, and general conversation that is not a bug, task, or security report."
+
+  - name: "Security Policy"
+    url: "https://github.com/SinLess-Games/Aerealith-AI/blob/main/SECURITY.md"
+    about: "Read the security policy before reporting vulnerabilities, suspected exposures, or sensitive security concerns."
+
+  - name: "Private Security Advisory"
+    url: "https://github.com/SinLess-Games/Aerealith-AI/security/advisories/new"
+    about: "Use this for sensitive vulnerability disclosure when private reporting is enabled for the repository."

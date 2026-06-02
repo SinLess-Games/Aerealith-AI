@@ -1,0 +1,496 @@
+name: Aerealith AI Repository Assistant
+
+run-name: >-
+  Aerie Repo Assistant / ${{ github.event_name }} / ${{ github.ref_name || github.head_ref || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Assistant mode to run."
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - all
+          - repo-management
+          - ai
+          - security
+          - summarize-only
+      dry_run:
+        description: "Evaluate actions without writing changes."
+        required: true
+        default: false
+        type: boolean
+      use_ai:
+        description: "Use OpenAI-backed assistant actions when available."
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - "true"
+          - "false"
+      run_repo_management:
+        description: "Run labels, milestones, assignees, reviewers, PR rules, and linking."
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - "true"
+          - "false"
+      run_security_triage:
+        description: "Run AI-assisted security triage."
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - "true"
+          - "false"
+
+  issues:
+    types:
+      - opened
+      - edited
+      - labeled
+      - unlabeled
+      - assigned
+      - reopened
+      - transferred
+
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+      - converted_to_draft
+      - review_requested
+      - review_request_removed
+
+  issue_comment:
+    types:
+      - created
+      - edited
+
+  pull_request_review_comment:
+    types:
+      - created
+      - edited
+
+  schedule:
+    - cron: "17 11 * * 1"
+
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  discussions: write
+  issues: write
+  pull-requests: write
+  repository-projects: write
+  security-events: read
+
+concurrency:
+  group: >-
+    ai-repo-assistant-${{ github.event.pull_request.number || github.event.issue.number || github.ref_name || github.run_id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+  AI_REPO_ASSISTANT_MODE: ${{ github.event.inputs.mode || 'auto' }}
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      should_run_repo_management: ${{ steps.context.outputs.should_run_repo_management }}
+      should_run_ai: ${{ steps.context.outputs.should_run_ai }}
+      should_run_security_triage: ${{ steps.context.outputs.should_run_security_triage }}
+      should_run_security_summary: ${{ steps.context.outputs.should_run_security_summary }}
+
+    steps:
+      - name: Resolve assistant context
+        id: context
+        env:
+          INPUT_MODE: ${{ github.event.inputs.mode || 'auto' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          INPUT_USE_AI: ${{ github.event.inputs.use_ai || 'auto' }}
+          INPUT_REPO_MANAGEMENT: ${{ github.event.inputs.run_repo_management || 'auto' }}
+          INPUT_SECURITY_TRIAGE: ${{ github.event.inputs.run_security_triage || 'auto' }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-auto}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+          event_name="${GITHUB_EVENT_NAME}"
+
+          comment_body="$(jq -r '.comment.body // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+          issue_title="$(jq -r '.issue.title // .pull_request.title // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+          issue_body="$(jq -r '.issue.body // .pull_request.body // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+          labels="$(jq -r '[.issue.labels[]?.name, .pull_request.labels[]?.name] | join(" ")' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+
+          searchable_text="$comment_body $issue_title $issue_body $labels"
+
+          has_ai_trigger="false"
+          if printf '%s' "$searchable_text" | grep -Eiq '(^|[[:space:]])(/aerie|/ai|/repo-assistant|@aerie|@aerealith|repo assistant)([[:space:]]|$)'; then
+            has_ai_trigger="true"
+          fi
+
+          has_security_signal="false"
+          if printf '%s' "$searchable_text" | grep -Eiq '(security|vulnerability|vulnerabilities|cve-[0-9]{4}-[0-9]+|cwe-[0-9]+|secret|secrets|credential|codeql|dependabot|container scan|sonarqube|sonarcloud)'; then
+            has_security_signal="true"
+          fi
+
+          should_run_repo_management="false"
+          should_run_ai="false"
+          should_run_security_triage="false"
+          should_run_security_summary="false"
+
+          case "$mode" in
+            all)
+              should_run_repo_management="true"
+              should_run_ai="true"
+              should_run_security_triage="true"
+              should_run_security_summary="true"
+              ;;
+            repo-management)
+              should_run_repo_management="true"
+              ;;
+            ai)
+              should_run_ai="true"
+              ;;
+            security)
+              should_run_security_triage="true"
+              should_run_security_summary="true"
+              ;;
+            summarize-only)
+              should_run_security_summary="true"
+              ;;
+            auto|*)
+              case "$event_name" in
+                issues|pull_request_target)
+                  should_run_repo_management="true"
+                  ;;
+                issue_comment|pull_request_review_comment)
+                  if [[ "$has_ai_trigger" == "true" ]]; then
+                    should_run_ai="true"
+                  fi
+                  ;;
+                schedule)
+                  should_run_security_summary="true"
+                  ;;
+                workflow_dispatch)
+                  should_run_repo_management="true"
+                  should_run_security_summary="true"
+                  ;;
+              esac
+
+              if [[ "$has_security_signal" == "true" ]]; then
+                should_run_security_triage="true"
+                should_run_security_summary="true"
+              fi
+              ;;
+          esac
+
+          case "${INPUT_REPO_MANAGEMENT:-auto}" in
+            true) should_run_repo_management="true" ;;
+            false) should_run_repo_management="false" ;;
+          esac
+
+          case "${INPUT_USE_AI:-auto}" in
+            true) should_run_ai="true" ;;
+            false) should_run_ai="false" ;;
+          esac
+
+          case "${INPUT_SECURITY_TRIAGE:-auto}" in
+            true)
+              should_run_security_triage="true"
+              should_run_security_summary="true"
+              ;;
+            false)
+              should_run_security_triage="false"
+              ;;
+          esac
+
+          {
+            echo "mode=$mode"
+            echo "dry_run=$dry_run"
+            echo "should_run_repo_management=$should_run_repo_management"
+            echo "should_run_ai=$should_run_ai"
+            echo "should_run_security_triage=$should_run_security_triage"
+            echo "should_run_security_summary=$should_run_security_summary"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Repository Assistant"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`$mode\` |"
+            echo "| Dry run | \`$dry_run\` |"
+            echo "| Repo management | \`$should_run_repo_management\` |"
+            echo "| AI assistant | \`$should_run_ai\` |"
+            echo "| Security triage | \`$should_run_security_triage\` |"
+            echo "| Security summary | \`$should_run_security_summary\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  repo-management:
+    name: Repository management
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+
+    if: needs.preflight.outputs.should_run_repo_management == 'true'
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+
+    steps:
+      - name: Checkout repository automation
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Run repository assistant scripts
+        run: |
+          set -euo pipefail
+
+          run_if_present() {
+            local file="$1"
+            shift || true
+
+            if [[ ! -f "$file" ]]; then
+              echo "::notice::Skipping missing script: $file"
+              return 0
+            fi
+
+            echo "::group::$file"
+            node "$file" "$@"
+            local status=$?
+            echo "::endgroup::"
+
+            return "$status"
+          }
+
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request_target" ]]; then
+            run_if_present ".github/scripts/repo/enforce-branch-name.js"
+            run_if_present ".github/scripts/repo/enforce-pr-rules.js"
+          fi
+
+          run_if_present ".github/scripts/repo/assign-labels.js"
+          run_if_present ".github/scripts/repo/assign-milestones.js"
+          run_if_present ".github/scripts/repo/assign-assignees.js"
+
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request_target" ]]; then
+            run_if_present ".github/scripts/repo/assign-reviewers.js"
+          fi
+
+          run_if_present ".github/scripts/repo/link-issues-prs.js"
+          run_if_present ".github/scripts/repo/summarize-repo-management.js"
+
+      - name: Upload repository management artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-management-${{ github.run_id }}
+          path: |
+            artifacts/repo/**
+            artifacts/repository/**
+            artifacts/issues/**
+            artifacts/pull-requests/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  ai-assistant:
+    name: AI assistant
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+
+    if: >-
+      needs.preflight.outputs.should_run_ai == 'true' ||
+      needs.preflight.outputs.should_run_security_triage == 'true'
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AI_REPO_ASSISTANT_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+
+    steps:
+      - name: Checkout repository automation
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Link pull requests to issues
+        if: needs.preflight.outputs.should_run_ai == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ -f ".github/scripts/ai/link-pr-to-issue.js" ]]; then
+            node ".github/scripts/ai/link-pr-to-issue.js"
+          else
+            echo "::notice::Skipping missing script: .github/scripts/ai/link-pr-to-issue.js"
+          fi
+
+      - name: Run AI security triage
+        if: needs.preflight.outputs.should_run_security_triage == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/ai/security-triage.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/ai/security-triage.js"
+            exit 0
+          fi
+
+          if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+            echo "::notice::OPENAI_API_KEY is not configured. Skipping AI-backed security triage."
+            exit 0
+          fi
+
+          node ".github/scripts/ai/security-triage.js"
+
+      - name: Upload AI assistant artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-assistant-${{ github.run_id }}
+          path: |
+            artifacts/ai/**
+            artifacts/security/**
+            artifacts/repo/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  security-summary:
+    name: Security summary
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+      - repo-management
+      - ai-assistant
+
+    if: >-
+      always() &&
+      needs.preflight.outputs.should_run_security_summary == 'true'
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
+      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+
+    steps:
+      - name: Checkout repository automation
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Generate security summaries
+        run: |
+          set -euo pipefail
+
+          run_optional() {
+            local file="$1"
+            shift || true
+
+            if [[ ! -f "$file" ]]; then
+              echo "::notice::Skipping missing script: $file"
+              return 0
+            fi
+
+            echo "::group::$file"
+            if ! node "$file" "$@"; then
+              echo "::warning::Security summary script reported a non-zero exit: $file"
+            fi
+            echo "::endgroup::"
+          }
+
+          run_optional ".github/scripts/security/summarize-codeql.js" --no-fail-on-error
+          run_optional ".github/scripts/security/summarize-container-scan.js" --no-fail-on-error
+          run_optional ".github/scripts/security/summarize-dependencies.js" --no-fail-on-error
+          run_optional ".github/scripts/security/summarize-secrets-scan.js" --no-fail-on-error
+          run_optional ".github/scripts/security/summarize-sonarqube.js" --no-fail-on-error
+          run_optional ".github/scripts/security/summarize-security.js" --no-fail-on-error
+
+      - name: Upload security summary artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-summary-${{ github.run_id }}
+          path: |
+            artifacts/security/**
+          if-no-files-found: ignore
+          retention-days: 30
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+      - repo-management
+      - ai-assistant
+      - security-summary
+
+    if: always()
+
+    steps:
+      - name: Write final assistant summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Repository Assistant Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Repository management | \`${{ needs.repo-management.result }}\` |"
+            echo "| AI assistant | \`${{ needs.ai-assistant.result }}\` |"
+            echo "| Security summary | \`${{ needs.security-summary.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| Repo management requested | \`${{ needs.preflight.outputs.should_run_repo_management }}\` |"
+            echo "| AI requested | \`${{ needs.preflight.outputs.should_run_ai }}\` |"
+            echo "| Security triage requested | \`${{ needs.preflight.outputs.should_run_security_triage }}\` |"
+            echo "| Security summary requested | \`${{ needs.preflight.outputs.should_run_security_summary }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

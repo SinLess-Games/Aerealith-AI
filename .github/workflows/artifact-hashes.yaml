@@ -1,0 +1,477 @@
+name: Aerealith AI Artifact Hashes
+
+run-name: >-
+  Artifact Hashes / ${{ github.event_name }} / ${{ github.ref_name || github.head_ref || github.event.workflow_run.head_branch || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Optional GitHub Actions run ID to download artifacts from."
+        required: false
+        type: string
+      artifact_name:
+        description: "Optional artifact name filter. Leave empty to download all artifacts."
+        required: false
+        type: string
+      artifact_paths:
+        description: "Comma-separated local artifact paths/globs to hash after download."
+        required: false
+        default: ".outputs/artifact-hashes/input,artifacts,input,dist"
+        type: string
+      verify_only:
+        description: "Only verify existing checksums instead of creating new ones."
+        required: true
+        default: false
+        type: boolean
+      create_manifest:
+        description: "Create artifact manifest."
+        required: true
+        default: true
+        type: boolean
+      create_checksums:
+        description: "Create checksums."
+        required: true
+        default: true
+        type: boolean
+      create_sbom:
+        description: "Create SBOM when the script is available."
+        required: true
+        default: true
+        type: boolean
+      fail_on_verify_error:
+        description: "Fail the workflow if verification fails."
+        required: true
+        default: true
+        type: boolean
+      dry_run:
+        description: "Evaluate without writing generated outputs."
+        required: true
+        default: false
+        type: boolean
+
+  workflow_run:
+    workflows:
+      - Aerealith AI CI
+      - Aerealith AI Release
+      - Aerealith AI Repository Assistant
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  checks: write
+  security-events: read
+
+concurrency:
+  group: >-
+    artifact-hashes-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+  ARTIFACT_HASH_INPUT_DIR: ".outputs/artifact-hashes/input"
+  ARTIFACT_HASH_OUTPUT_DIR: "artifacts/artifact-hashes"
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+
+    outputs:
+      source_run_id: ${{ steps.context.outputs.source_run_id }}
+      artifact_name: ${{ steps.context.outputs.artifact_name }}
+      artifact_paths: ${{ steps.context.outputs.artifact_paths }}
+      verify_only: ${{ steps.context.outputs.verify_only }}
+      create_manifest: ${{ steps.context.outputs.create_manifest }}
+      create_checksums: ${{ steps.context.outputs.create_checksums }}
+      create_sbom: ${{ steps.context.outputs.create_sbom }}
+      fail_on_verify_error: ${{ steps.context.outputs.fail_on_verify_error }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      should_download_artifacts: ${{ steps.context.outputs.should_download_artifacts }}
+
+    steps:
+      - name: Resolve artifact hash context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_SOURCE_RUN_ID: ${{ github.event.inputs.source_run_id || '' }}
+          INPUT_ARTIFACT_NAME: ${{ github.event.inputs.artifact_name || '' }}
+          INPUT_ARTIFACT_PATHS: ${{ github.event.inputs.artifact_paths || '.outputs/artifact-hashes/input,artifacts,input,dist' }}
+          INPUT_VERIFY_ONLY: ${{ github.event.inputs.verify_only || 'false' }}
+          INPUT_CREATE_MANIFEST: ${{ github.event.inputs.create_manifest || 'true' }}
+          INPUT_CREATE_CHECKSUMS: ${{ github.event.inputs.create_checksums || 'true' }}
+          INPUT_CREATE_SBOM: ${{ github.event.inputs.create_sbom || 'true' }}
+          INPUT_FAIL_ON_VERIFY_ERROR: ${{ github.event.inputs.fail_on_verify_error || 'true' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+        run: |
+          set -euo pipefail
+
+          source_run_id="${INPUT_SOURCE_RUN_ID:-}"
+          artifact_name="${INPUT_ARTIFACT_NAME:-}"
+          artifact_paths="${INPUT_ARTIFACT_PATHS:-.outputs/artifact-hashes/input,artifacts,input,dist}"
+          verify_only="${INPUT_VERIFY_ONLY:-false}"
+          create_manifest="${INPUT_CREATE_MANIFEST:-true}"
+          create_checksums="${INPUT_CREATE_CHECKSUMS:-true}"
+          create_sbom="${INPUT_CREATE_SBOM:-true}"
+          fail_on_verify_error="${INPUT_FAIL_ON_VERIFY_ERROR:-true}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+
+          if [[ "$EVENT_NAME" == "workflow_run" && -n "${WORKFLOW_RUN_ID:-}" ]]; then
+            source_run_id="$WORKFLOW_RUN_ID"
+          fi
+
+          should_download_artifacts="false"
+          if [[ -n "$source_run_id" ]]; then
+            should_download_artifacts="true"
+          fi
+
+          {
+            echo "source_run_id=$source_run_id"
+            echo "artifact_name=$artifact_name"
+            echo "artifact_paths=$artifact_paths"
+            echo "verify_only=$verify_only"
+            echo "create_manifest=$create_manifest"
+            echo "create_checksums=$create_checksums"
+            echo "create_sbom=$create_sbom"
+            echo "fail_on_verify_error=$fail_on_verify_error"
+            echo "dry_run=$dry_run"
+            echo "should_download_artifacts=$should_download_artifacts"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Artifact Hashes"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Source run ID | \`${source_run_id:-none}\` |"
+            echo "| Artifact name filter | \`${artifact_name:-none}\` |"
+            echo "| Artifact paths | \`$artifact_paths\` |"
+            echo "| Verify only | \`$verify_only\` |"
+            echo "| Create manifest | \`$create_manifest\` |"
+            echo "| Create checksums | \`$create_checksums\` |"
+            echo "| Create SBOM | \`$create_sbom\` |"
+            echo "| Fail on verify error | \`$fail_on_verify_error\` |"
+            echo "| Dry run | \`$dry_run\` |"
+            echo "| Download artifacts | \`$should_download_artifacts\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  artifact-hashes:
+    name: Generate artifact hashes
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      ARTIFACT_HASH_SOURCE_RUN_ID: ${{ needs.preflight.outputs.source_run_id }}
+      ARTIFACT_HASH_ARTIFACT_NAME: ${{ needs.preflight.outputs.artifact_name }}
+      ARTIFACT_HASH_PATHS: ${{ needs.preflight.outputs.artifact_paths }}
+      ARTIFACT_HASH_VERIFY_ONLY: ${{ needs.preflight.outputs.verify_only }}
+      ARTIFACT_HASH_CREATE_MANIFEST: ${{ needs.preflight.outputs.create_manifest }}
+      ARTIFACT_HASH_CREATE_CHECKSUMS: ${{ needs.preflight.outputs.create_checksums }}
+      ARTIFACT_HASH_CREATE_SBOM: ${{ needs.preflight.outputs.create_sbom }}
+      ARTIFACT_HASH_FAIL_ON_VERIFY_ERROR: ${{ needs.preflight.outputs.fail_on_verify_error }}
+
+    steps:
+      - name: Checkout repository automation
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Prepare artifact directories
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$ARTIFACT_HASH_INPUT_DIR"
+          mkdir -p "$ARTIFACT_HASH_OUTPUT_DIR"
+
+      - name: Download artifacts from source run
+        if: needs.preflight.outputs.should_download_artifacts == 'true'
+        env:
+          SOURCE_RUN_ID: ${{ needs.preflight.outputs.source_run_id }}
+          ARTIFACT_NAME: ${{ needs.preflight.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+
+          echo "Downloading artifacts from run: $SOURCE_RUN_ID"
+
+          if [[ -n "${ARTIFACT_NAME:-}" ]]; then
+            gh run download "$SOURCE_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "$ARTIFACT_NAME" \
+              --dir "$ARTIFACT_HASH_INPUT_DIR"
+          else
+            gh run download "$SOURCE_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --dir "$ARTIFACT_HASH_INPUT_DIR"
+          fi
+
+          find "$ARTIFACT_HASH_INPUT_DIR" -type f | sort | sed 's#^#Downloaded: #'
+
+      - name: Stage local artifact paths
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$ARTIFACT_HASH_INPUT_DIR/local"
+
+          IFS=',' read -ra paths <<< "${ARTIFACT_HASH_PATHS:-}"
+
+          for raw_path in "${paths[@]}"; do
+            artifact_path="$(printf '%s' "$raw_path" | xargs)"
+
+            if [[ -z "$artifact_path" ]]; then
+              continue
+            fi
+
+            if [[ "$artifact_path" == "$ARTIFACT_HASH_INPUT_DIR"* ]]; then
+              continue
+            fi
+
+            shopt -s nullglob globstar
+            matches=( $artifact_path )
+            shopt -u nullglob globstar
+
+            if [[ "${#matches[@]}" -eq 0 ]]; then
+              echo "::notice::No local artifacts matched: $artifact_path"
+              continue
+            fi
+
+            for match in "${matches[@]}"; do
+              if [[ ! -e "$match" ]]; then
+                continue
+              fi
+
+              if [[ "$match" == "$ARTIFACT_HASH_OUTPUT_DIR"* ]]; then
+                continue
+              fi
+
+              destination="$ARTIFACT_HASH_INPUT_DIR/local/$match"
+              mkdir -p "$(dirname "$destination")"
+
+              if [[ -d "$match" ]]; then
+                mkdir -p "$destination"
+                rsync -a \
+                  --exclude '.git' \
+                  --exclude 'node_modules' \
+                  --exclude '.nx' \
+                  --exclude '.turbo' \
+                  --exclude '.next/cache' \
+                  "$match/" "$destination/"
+              else
+                cp "$match" "$destination"
+              fi
+            done
+          done
+
+          file_count="$(find "$ARTIFACT_HASH_INPUT_DIR" -type f | wc -l | xargs)"
+          echo "Prepared $file_count file(s) for hashing."
+
+          if [[ "$file_count" == "0" ]]; then
+            echo "::warning::No artifact files were found to hash."
+          fi
+
+      - name: Verify existing artifact hashes
+        if: needs.preflight.outputs.verify_only == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/artifacts/verify-artifacts.js" ]]; then
+            echo "::warning::Missing script: .github/scripts/artifacts/verify-artifacts.js"
+            exit 0
+          fi
+
+          set +e
+          node ".github/scripts/artifacts/verify-artifacts.js" \
+            --input "$ARTIFACT_HASH_INPUT_DIR" \
+            --output "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.json" \
+            --summary "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.md"
+
+          status=$?
+          set -e
+
+          if [[ "$status" -ne 0 && "$ARTIFACT_HASH_FAIL_ON_VERIFY_ERROR" == "true" ]]; then
+            exit "$status"
+          fi
+
+          if [[ "$status" -ne 0 ]]; then
+            echo "::warning::Artifact verification failed, but fail_on_verify_error is false."
+          fi
+
+      - name: Create artifact manifest
+        if: needs.preflight.outputs.verify_only != 'true' && needs.preflight.outputs.create_manifest == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/artifacts/create-artifact-manifest.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/artifacts/create-artifact-manifest.js"
+            exit 0
+          fi
+
+          node ".github/scripts/artifacts/create-artifact-manifest.js" \
+            --input "$ARTIFACT_HASH_INPUT_DIR" \
+            --output "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.json" \
+            --summary "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.md"
+
+      - name: Create artifact checksums
+        if: needs.preflight.outputs.verify_only != 'true' && needs.preflight.outputs.create_checksums == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/artifacts/create-checksums.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/artifacts/create-checksums.js"
+            exit 0
+          fi
+
+          node ".github/scripts/artifacts/create-checksums.js" \
+            --input "$ARTIFACT_HASH_INPUT_DIR" \
+            --output "$ARTIFACT_HASH_OUTPUT_DIR/checksums.json" \
+            --summary "$ARTIFACT_HASH_OUTPUT_DIR/checksums.md" \
+            --sha256 "$ARTIFACT_HASH_OUTPUT_DIR/SHA256SUMS" \
+            --sha512 "$ARTIFACT_HASH_OUTPUT_DIR/SHA512SUMS"
+
+      - name: Hash artifacts
+        if: needs.preflight.outputs.verify_only != 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/artifacts/hash-artifacts.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/artifacts/hash-artifacts.js"
+            exit 0
+          fi
+
+          node ".github/scripts/artifacts/hash-artifacts.js" \
+            --input "$ARTIFACT_HASH_INPUT_DIR" \
+            --output "$ARTIFACT_HASH_OUTPUT_DIR/hash-artifacts.json" \
+            --summary "$ARTIFACT_HASH_OUTPUT_DIR/hash-artifacts.md"
+
+      - name: Create artifact SBOM
+        if: needs.preflight.outputs.verify_only != 'true' && needs.preflight.outputs.create_sbom == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/artifacts/create-sbom.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/artifacts/create-sbom.js"
+            exit 0
+          fi
+
+          node ".github/scripts/artifacts/create-sbom.js" \
+            --input "$ARTIFACT_HASH_INPUT_DIR" \
+            --output "$ARTIFACT_HASH_OUTPUT_DIR/sbom.json" \
+            --summary "$ARTIFACT_HASH_OUTPUT_DIR/sbom.md"
+
+      - name: Verify generated artifact hashes
+        if: needs.preflight.outputs.verify_only != 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/artifacts/verify-artifacts.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/artifacts/verify-artifacts.js"
+            exit 0
+          fi
+
+          set +e
+          node ".github/scripts/artifacts/verify-artifacts.js" \
+            --input "$ARTIFACT_HASH_INPUT_DIR" \
+            --checksums "$ARTIFACT_HASH_OUTPUT_DIR/checksums.json" \
+            --output "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.json" \
+            --summary "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.md"
+
+          status=$?
+          set -e
+
+          if [[ "$status" -ne 0 && "$ARTIFACT_HASH_FAIL_ON_VERIFY_ERROR" == "true" ]]; then
+            exit "$status"
+          fi
+
+          if [[ "$status" -ne 0 ]]; then
+            echo "::warning::Artifact verification failed, but fail_on_verify_error is false."
+          fi
+
+      - name: Write artifact hash job summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Artifact Hash Output"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            if [[ -d "$ARTIFACT_HASH_OUTPUT_DIR" ]]; then
+              while IFS= read -r file; do
+                size="$(wc -c < "$file" | xargs)"
+                echo "| \`$file\` | \`$size\` bytes |"
+              done < <(find "$ARTIFACT_HASH_OUTPUT_DIR" -type f | sort)
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifact hash reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-hashes-${{ github.run_id }}
+          path: |
+            artifacts/artifact-hashes/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload staged artifact input snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-hash-input-${{ github.run_id }}
+          path: |
+            .outputs/artifact-hashes/input/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+      - artifact-hashes
+
+    if: always()
+
+    steps:
+      - name: Write final artifact hash summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Artifact Hashes Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Artifact hashes | \`${{ needs.artifact-hashes.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Source run ID | \`${{ needs.preflight.outputs.source_run_id || 'none' }}\` |"
+            echo "| Artifact name filter | \`${{ needs.preflight.outputs.artifact_name || 'none' }}\` |"
+            echo "| Verify only | \`${{ needs.preflight.outputs.verify_only }}\` |"
+            echo "| Create manifest | \`${{ needs.preflight.outputs.create_manifest }}\` |"
+            echo "| Create checksums | \`${{ needs.preflight.outputs.create_checksums }}\` |"
+            echo "| Create SBOM | \`${{ needs.preflight.outputs.create_sbom }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

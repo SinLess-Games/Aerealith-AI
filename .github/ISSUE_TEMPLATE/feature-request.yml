@@ -1,130 +1,425 @@
 # .github/ISSUE_TEMPLATE/feature-request.yml
-name: 🌟 Feature Request
-description: Suggest a new idea, enhancement, or improvement for Helix AI.
+name: "🌟 Feature Request"
+description: "Suggest a new feature, enhancement, workflow improvement, platform capability, or user-facing improvement for Aerealith AI."
 title: "[Feature]: "
 labels:
-  - type:feature
-  - status:todo
-  - needs-triage
+  - kind:feature
+  - status:triage
 assignees:
   - Sinless777
+
 body:
   - type: markdown
     attributes:
       value: |
-        ## 💡 Feature Request Template
-        Thank you for sharing your idea to improve **Helix AI**!  
-        The more context and clarity you provide, the better we can evaluate and plan it.
+        # 🌟 Feature Request
+
+        Thank you for helping shape **Aerealith AI**.
+
+        This form will walk you through the details needed to understand, evaluate, prioritize, and plan the feature.
+
+        A strong feature request explains:
+
+        - What problem or need exists
+        - Who benefits from the feature
+        - What the feature should do
+        - How it should behave
+        - What systems it may affect
+        - What success looks like
+        - Whether it belongs in the hosted platform, developer tooling, repo automation, Cloudflare deployment, publishing, security, or future self-hosted support
+
+        Try to describe the desired outcome more than the exact implementation.  
+        Implementation details are welcome, but the problem and value matter most.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm the feature request is ready for review."
+      options:
+        - label: "I searched existing issues and did not find a duplicate feature request."
+          required: true
+        - label: "I can explain the problem or opportunity this feature addresses."
+          required: true
+        - label: "I can describe the expected behavior or user flow."
+          required: true
+        - label: "I included enough context for this to be triaged and planned."
+          required: true
 
   - type: input
     id: summary
     attributes:
-      label: 🔖 Summary
-      description: A concise one-sentence description of the feature.
-      placeholder: e.g. "Add voice command support for the Helix assistant"
+      label: "Summary"
+      description: "Write one clear sentence describing the feature."
+      placeholder: "Example: Add automated release notes to the Announcements discussion category."
     validations:
       required: true
 
   - type: textarea
     id: problem
     attributes:
-      label: 🚩 Problem Statement
-      description: What problem does this feature aim to solve? Why is it important?
+      label: "Problem or Opportunity"
+      description: |
+        Explain the problem this feature solves or the opportunity it creates.
+
+        Good problem statements describe the current limitation, pain point, missing workflow, or user need.
       placeholder: |
-        It’s difficult to interact with Helix while multitasking; voice input would help hands-free users.
+        Example:
+        Release information is currently scattered across pull requests, commits, and workflow logs.
+        This makes it difficult for users and maintainers to understand what changed in each release.
+    validations:
+      required: true
+
+  - type: textarea
+    id: audience
+    attributes:
+      label: "Who benefits from this?"
+      description: |
+        Describe the people, systems, or workflows that benefit from this feature.
+
+        Think about users, maintainers, developers, administrators, contributors, hosted deployments, self-hosted deployments, or automation systems.
+      placeholder: |
+        Example:
+        - End users need clearer release information.
+        - Maintainers need less manual changelog work.
+        - Automation should be able to summarize merged PRs and post announcements.
     validations:
       required: true
 
   - type: textarea
     id: motivation
     attributes:
-      label: 💭 Motivation / Value
-      description: Describe how this feature benefits users or the Helix ecosystem.
+      label: "Motivation and Value"
+      description: |
+        Explain why this feature matters.
+
+        Include practical benefits such as reduced manual work, better security, improved accessibility, better developer experience, improved reliability, faster releases, better user control, or stronger automation.
       placeholder: |
-        This will improve accessibility and allow faster interactions during live sessions or coding.
+        Example:
+        This reduces manual release work, makes the project easier to follow, and gives users a clear history of meaningful changes.
     validations:
       required: true
 
   - type: textarea
-    id: solution
+    id: proposed_solution
     attributes:
-      label: 🧩 Proposed Solution
-      description: Describe how the feature should work. What’s the expected user flow or outcome?
+      label: "Proposed Solution"
+      description: |
+        Describe how the feature should work.
+
+        Include the expected behavior, workflow, commands, UI flow, automation behavior, API behavior, or deployment behavior.
       placeholder: |
-        When users say "Hey Helix", the assistant activates and listens for commands.
-        It should support basic voice queries and confirmation prompts.
+        Example:
+        When a pull request with `release:minor` is merged into `main`, the release workflow should:
+        1. Determine the next V-prefixed version.
+        2. Build the changelog from merged PRs.
+        3. Create a GitHub Release.
+        4. Publish release artifacts.
+        5. Post a summary to the Announcements discussion category.
     validations:
       required: true
 
   - type: textarea
-    id: alternatives
+    id: user_flow
     attributes:
-      label: 🔁 Alternatives Considered
-      description: Have you tried other solutions or workarounds? Why aren’t they sufficient?
+      label: "User Flow or Workflow"
+      description: |
+        Walk through how someone would use this feature from start to finish.
+
+        This can be a UI flow, CLI flow, GitHub workflow, API flow, deployment flow, or automation flow.
       placeholder: |
-        I considered using an external voice-to-text plugin, but it lacks integration with Helix’s AI engine.
+        Example:
+        1. Maintainer opens a feature PR.
+        2. Maintainer applies `release:minor`.
+        3. CI validates tests, linting, formatting, builds, and security.
+        4. PR merges into `main`.
+        5. Release automation creates the release and announcement.
+        6. Users see the release notes in GitHub Discussions.
+    validations:
+      required: false
 
   - type: dropdown
-    id: area
+    id: affected_area
     attributes:
-      label: 🏗️ Affected Area
-      description: Which system area or component does this feature impact?
+      label: "Affected Area"
+      description: |
+        Select the primary area affected by this feature.
+
+        Pick the closest match. Additional areas can be listed later.
       multiple: false
       options:
         - area:frontend
-        - area:backend
-        - area:infra
-        - area:ai
+        - area:connectors
+        - area:e2e
+        - area:engines
+        - area:integrations
+        - area:services
+        - area:libs
+        - area:ui
+        - area:config
+        - area:db
+        - area:flags
+        - area:github-actions
+        - area:repo-management
+        - area:ci
         - area:security
-        - area:database
+        - area:dependencies
+        - area:cloudflare
+        - area:workers
+        - area:queues
+        - area:r2
+        - area:d1
+        - area:kv
+        - area:secrets
+        - area:docker
+        - area:ghcr
+        - area:npm
+        - area:artifacts
+        - area:cache
+        - area:observability
+        - area:ai
+        - area:openai
+        - area:self-hosted
+        - area:helm
+        - area:kubernetes
+        - area:docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature_type
+    attributes:
+      label: "Feature Type"
+      description: "Choose the kind of feature being requested."
+      multiple: false
+      options:
+        - User-facing feature
+        - Developer experience improvement
+        - Repository automation
+        - CI/CD improvement
+        - Security improvement
+        - Cloudflare deployment improvement
+        - Dependency management improvement
+        - Release or publishing improvement
+        - Observability improvement
+        - AI automation improvement
+        - Documentation improvement
+        - Self-hosted deployment support
+        - Internal refactor needed for future work
+        - Other
     validations:
       required: true
 
   - type: dropdown
     id: priority
     attributes:
-      label: ⚡ Priority Level
-      description: How urgent or impactful is this feature request?
+      label: "Priority"
+      description: |
+        Choose the urgency or impact level.
+
+        Critical should be used only when the feature blocks a major project goal, release, security requirement, or core workflow.
+      multiple: false
       options:
-        - 🟥 Critical — must-have for next release
-        - 🟧 High — significant value or blocker for other work
-        - 🟨 Medium — useful enhancement
-        - 🟩 Low — nice-to-have or exploratory
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_impact
+    attributes:
+      label: "Expected Release Impact"
+      description: |
+        Choose how this feature should affect release planning.
+
+        This does not automatically create a release. Maintainers will confirm release labels separately.
+      multiple: false
+      options:
+        - no-release
+        - release:patch
+        - release:minor
+        - release:major
+        - Unsure
     validations:
       required: true
 
   - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: |
+        Define what must be true for this feature to be considered complete.
+
+        Use clear checklist-style items when possible.
+      placeholder: |
+        Example:
+        - [ ] The workflow detects merged PRs with release labels.
+        - [ ] Dependency-only PRs do not create releases.
+        - [ ] A changelog is generated automatically.
+        - [ ] A GitHub Release is created with the correct V-prefixed tag.
+        - [ ] The release summary is posted to the Announcements discussion category.
+        - [ ] Tests, linting, formatting, builds, and security checks pass.
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical_scope
+    attributes:
+      label: "Technical Scope"
+      description: |
+        List the files, systems, apps, packages, workflows, services, or integrations that may need to change.
+
+        This does not need to be perfect. It is a planning aid.
+      placeholder: |
+        Example:
+        - .github/workflows/release.yaml
+        - .github/scripts/release/build-changelog.js
+        - .github/scripts/release/post-discussion-announcement.js
+        - .github/repo-management/release-rules.yaml
+        - GitHub Discussions Announcements category
+    validations:
+      required: false
+
+  - type: textarea
     id: dependencies
     attributes:
-      label: 🔗 Related Components / Dependencies
-      description: Mention any systems, APIs, or packages that might be affected or need changes.
+      label: "Dependencies, Prerequisites, or Blockers"
+      description: |
+        List anything that must exist before this feature can be built.
+
+        Include related issues, APIs, secrets, workflows, infrastructure, packages, design decisions, or external services.
       placeholder: |
-        - Affects: Discord bot command processor
-        - Depends on: WebSocket gateway
-        - Impacts: permission management and memory modules
+        Example:
+        - Requires PROJECTS_PAT for project automation.
+        - Requires OPENAI_API_KEY for changelog drafting.
+        - Requires release labels to exist in .github/labels.yaml.
+        - Depends on repo-management workflow being implemented first.
+    validations:
+      required: false
 
   - type: textarea
-    id: metrics
+    id: alternatives
     attributes:
-      label: 📊 Success Criteria / KPIs
-      description: Define how success will be measured for this feature.
+      label: "Alternatives Considered"
+      description: |
+        Describe other approaches and why they are less ideal.
+
+        This helps with architecture decisions and avoids repeating earlier discussions.
       placeholder: |
-        - 90% accuracy in command recognition
-        - <200ms response time for voice-triggered actions
-        - Increased user engagement in analytics
+        Example:
+        Alternative: manually write release notes for every release.
+        Downside: slower, inconsistent, and easier to forget.
+    validations:
+      required: false
 
   - type: textarea
-    id: additional
+    id: risks
     attributes:
-      label: 🧠 Additional Context
-      description: Include design sketches, references, mockups, or any helpful details.
-      placeholder: |
-        Example UI mockup: https://helixaibot.com/voice-concept
-        Related discussion: #112
+      label: "Risks, Tradeoffs, or Security Considerations"
+      description: |
+        Describe possible risks or downsides.
 
-  - type: markdown
+        Include security, privacy, deployment, cost, data, automation, compatibility, user experience, or operational concerns.
+      placeholder: |
+        Example:
+        - AI-generated changelogs may need human review before publishing.
+        - Automation must not push directly to main.
+        - Release workflows must not run for dependency-only PRs.
+    validations:
+      required: false
+
+  - type: textarea
+    id: success_metrics
     attributes:
-      value: |
-        ---
-        🧩 **Tip:** Features tagged as `type:feature` will be reviewed during milestone planning.
-        High-impact ideas may be grouped into upcoming Helix AI releases or marketplace expansions.
+      label: "Success Criteria or Metrics"
+      description: |
+        Explain how success will be measured.
+
+        This can be technical, operational, user-facing, or process-focused.
+      placeholder: |
+        Example:
+        - Changelog generation requires no manual copying.
+        - Release notes are posted within five minutes of release creation.
+        - No release is created from Renovate, Dependabot, or Mend PRs.
+        - Maintainers can trace every release note back to a merged PR.
+    validations:
+      required: false
+
+  - type: textarea
+    id: mockups_references
+    attributes:
+      label: "Mockups, References, Examples, or Prior Art"
+      description: |
+        Add links, screenshots, examples, diagrams, API references, UI sketches, or related discussions.
+
+        Drag and drop images if useful.
+      placeholder: |
+        Example:
+        - Related issue: #123
+        - Related PR: #456
+        - Similar workflow:
+        - Screenshot or mockup:
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation_notes
+    attributes:
+      label: "Implementation Notes"
+      description: |
+        Optional technical notes for whoever implements this.
+
+        Include suggested files, commands, Nx targets, package names, workflow events, or data structures.
+      placeholder: |
+        Example:
+        Suggested behavior:
+        - Use labels on merged PRs to determine release type.
+        - Ignore `no-release`, `dependencies`, and `security:dependency`.
+        - Use OpenAI only to draft release notes, not to push directly to main.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or ADRs"
+      description: |
+        Link anything that may be related.
+
+        Use references such as:
+        - Related to #123
+        - Depends on #456
+        - Blocks #789
+      placeholder: |
+        Related to #
+        Depends on #
+        Blocks #
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that would help with triage, design, planning, or implementation."
+      placeholder: |
+        Example:
+        This should be part of the V0.5.0 Release Automation milestone.
+        This should be safe for local development and GitHub Actions.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm the request is ready for planning."
+      options:
+        - label: "I explained the problem, proposed behavior, and expected value."
+          required: true
+        - label: "I included acceptance criteria or enough detail to create them."
+          required: true
+        - label: "I understand maintainers may adjust priority, area, milestone, and release impact."
+          required: true

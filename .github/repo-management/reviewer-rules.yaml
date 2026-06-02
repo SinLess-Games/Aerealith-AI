@@ -1,0 +1,1553 @@
+# .github/repo-management/reviewer-rules.yaml
+# =============================================================================
+# Aerealith AI Reviewer Rules
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Source-of-truth reviewer routing, review requirements, CODEOWNERS alignment,
+#   team reviewer support, security review routing, release review routing,
+#   dependency review policy, AI automation review policy, and automation safety.
+#
+# Used by:
+#   - .github/CODEOWNERS
+#   - .github/assignees.yaml
+#   - .github/workflows/repo-management.yaml
+#   - .github/workflows/branch-policy.yaml
+#   - .github/workflows/dependency-auto-merge.yaml
+#   - .github/scripts/repo/assign-reviewers.js
+#   - .github/scripts/repo/enforce-pr-rules.js
+#   - .github/scripts/repo/assign-labels.js
+#   - .github/scripts/repo/assign-milestones.js
+#   - .github/scripts/security/run-policy-gate.js
+#
+# Notes:
+#   - User reviewers must be GitHub usernames without "@".
+#   - Team reviewers must use "owner/team-slug" format.
+#   - GitHub issue assignees cannot be teams, but PR reviewers can be users or teams.
+#   - If GitHub rejects a reviewer or team, automation should warn and continue
+#     unless the rule is marked required.
+#   - Reviewers should not be requested from the PR author.
+#   - Bots should not be requested as reviewers.
+#   - This file routes review requests. Branch protection remains the final gate.
+# =============================================================================
+
+version: 1
+
+repository:
+  owner: SinLess-Games
+  name: Aerealith-AI
+  default_branch: main
+
+# -----------------------------------------------------------------------------
+# Global Review Policy
+# -----------------------------------------------------------------------------
+policy:
+  enabled: true
+  dry_run_supported: true
+  debug_supported: true
+
+  request_reviewers_on_pull_request_opened: true
+  request_reviewers_on_pull_request_ready_for_review: true
+  request_reviewers_on_pull_request_synchronize: false
+  request_reviewers_on_label_change: true
+  request_reviewers_on_milestone_change: false
+
+  remove_reviewers_when_no_longer_matching: false
+  rerequest_review_after_changes_requested: true
+  rerequest_review_after_security_label_added: true
+  rerequest_review_after_release_label_added: true
+
+  skip_draft_pull_requests: true
+  review_draft_pull_requests_if_security_related: true
+  review_draft_pull_requests_if_release_related: true
+
+  do_not_request_pr_author_as_reviewer: true
+  do_not_request_bot_reviewers: true
+  do_not_request_duplicate_reviewers: true
+  do_not_request_reviewers_on_closed_prs: true
+  do_not_request_reviewers_on_merged_prs: true
+
+  max_user_reviewers: 5
+  max_team_reviewers: 3
+
+  default_review_required: true
+  default_review_count: 1
+
+  security_review_required: true
+  release_review_required: true
+  architecture_review_required: true
+  production_review_required: true
+  ai_automation_review_required: true
+
+  dependency_patch_review_required: false
+  dependency_minor_review_required: false
+  dependency_major_review_required: true
+  dependency_security_patch_review_required: false
+
+  codeowners_are_authoritative: true
+  reviewer_rules_extend_codeowners: true
+
+# -----------------------------------------------------------------------------
+# Known Users, Teams, and Bots
+# -----------------------------------------------------------------------------
+actors:
+  maintainers:
+    - Sinless777
+
+  security_reviewers:
+    - Sinless777
+
+  release_reviewers:
+    - Sinless777
+
+  architecture_reviewers:
+    - Sinless777
+
+  cloudflare_reviewers:
+    - Sinless777
+
+  dependency_reviewers:
+    - Sinless777
+
+  ai_reviewers:
+    - Sinless777
+
+  documentation_reviewers:
+    - Sinless777
+
+  automation_accounts:
+    - github-actions[bot]
+    - dependabot[bot]
+    - renovate[bot]
+    - mend[bot]
+    - github-copilot[bot]
+
+  optional_team_reviewers:
+    platform: []
+    security: []
+    release: []
+    cloudflare: []
+    dependencies: []
+    ai: []
+    docs: []
+
+# -----------------------------------------------------------------------------
+# Reviewer Groups
+# -----------------------------------------------------------------------------
+reviewer_groups:
+  default:
+    description: Default fallback reviewer group.
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    required: true
+    review_count: 1
+
+  maintainers:
+    description: Maintainer review group.
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    required: true
+    review_count: 1
+
+  security:
+    description: Security-sensitive review group.
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    required: true
+    review_count: 1
+    labels:
+      - needs-security-review
+
+  release:
+    description: Release and publishing review group.
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    required: true
+    review_count: 1
+    labels:
+      - needs-maintainer-review
+
+  architecture:
+    description: Architecture and ADR review group.
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    required: true
+    review_count: 1
+    labels:
+      - needs-architecture-review
+
+  cloudflare:
+    description: Cloudflare deployment review group.
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    required: true
+    review_count: 1
+
+  dependencies:
+    description: Dependency update review group.
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    required: false
+    review_count: 1
+
+  ai_automation:
+    description: OpenAI automation and AI-generated repository change review group.
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    required: true
+    review_count: 1
+    labels:
+      - automation:needs-review
+
+  documentation:
+    description: Documentation review group.
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    required: false
+    review_count: 1
+
+# -----------------------------------------------------------------------------
+# Default Reviewer Behavior
+# -----------------------------------------------------------------------------
+defaults:
+  pull_request:
+    reviewer_group: default
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    review_count: 1
+    labels:
+      - needs-maintainer-review
+
+  draft_pull_request:
+    reviewer_group: default
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    review_count: 1
+    request_review: false
+
+  dependency_pull_request:
+    reviewer_group: dependencies
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    review_count: 0
+    request_review: false
+    labels:
+      - dependencies
+      - no-release
+
+  security_dependency_pull_request:
+    reviewer_group: security
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    review_count: 0
+    request_review: false
+    labels:
+      - security:dependency
+      - dependencies
+      - no-release
+
+  release_pull_request:
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    review_count: 1
+    request_review: true
+    labels:
+      - needs-maintainer-review
+
+  unknown:
+    reviewer_group: default
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    review_count: 1
+    request_review: true
+
+# -----------------------------------------------------------------------------
+# Label-Based Reviewer Routing
+# -----------------------------------------------------------------------------
+label_routing:
+  # ---------------------------------------------------------------------------
+  # Review control labels
+  # ---------------------------------------------------------------------------
+  needs-maintainer-review:
+    reviewer_group: maintainers
+    priority: 90
+    required: true
+    request_review: true
+
+  needs-security-review:
+    reviewer_group: security
+    priority: 100
+    required: true
+    request_review: true
+
+  needs-architecture-review:
+    reviewer_group: architecture
+    priority: 95
+    required: true
+    request_review: true
+
+  automation:needs-review:
+    reviewer_group: ai_automation
+    priority: 95
+    required: true
+    request_review: true
+
+  do-not-merge:
+    reviewer_group: maintainers
+    priority: 100
+    required: true
+    request_review: true
+
+  blocked-by-security:
+    reviewer_group: security
+    priority: 100
+    required: true
+    request_review: true
+
+  # ---------------------------------------------------------------------------
+  # Security
+  # ---------------------------------------------------------------------------
+  kind:security:
+    reviewer_group: security
+    priority: 95
+    required: true
+    request_review: true
+
+  area:security:
+    reviewer_group: security
+    priority: 95
+    required: true
+    request_review: true
+
+  area:secrets:
+    reviewer_group: security
+    priority: 100
+    required: true
+    request_review: true
+
+  security:dependency:
+    reviewer_group: security
+    priority: 95
+    required: false
+    request_review: false
+
+  severity:critical:
+    reviewer_group: security
+    priority: 100
+    required: true
+    request_review: true
+
+  severity:high:
+    reviewer_group: security
+    priority: 95
+    required: true
+    request_review: true
+
+  # ---------------------------------------------------------------------------
+  # Release and publishing
+  # ---------------------------------------------------------------------------
+  release:
+    reviewer_group: release
+    priority: 90
+    required: true
+    request_review: true
+
+  kind:release:
+    reviewer_group: release
+    priority: 90
+    required: true
+    request_review: true
+
+  release:major:
+    reviewer_group: release
+    priority: 100
+    required: true
+    request_review: true
+
+  release:minor:
+    reviewer_group: release
+    priority: 95
+    required: true
+    request_review: true
+
+  release:patch:
+    reviewer_group: release
+    priority: 90
+    required: true
+    request_review: true
+
+  breaking-change:
+    reviewer_group: architecture
+    priority: 100
+    required: true
+    request_review: true
+
+  publishing:
+    reviewer_group: release
+    priority: 90
+    required: true
+    request_review: true
+
+  area:npm:
+    reviewer_group: release
+    priority: 90
+    required: true
+    request_review: true
+
+  area:ghcr:
+    reviewer_group: release
+    priority: 90
+    required: true
+    request_review: true
+
+  area:docker:
+    reviewer_group: release
+    priority: 80
+    required: false
+    request_review: true
+
+  sbom:
+    reviewer_group: security
+    priority: 90
+    required: true
+    request_review: true
+
+  attestations:
+    reviewer_group: security
+    priority: 90
+    required: true
+    request_review: true
+
+  checksums:
+    reviewer_group: release
+    priority: 75
+    required: false
+    request_review: true
+
+  # ---------------------------------------------------------------------------
+  # Cloudflare and deployments
+  # ---------------------------------------------------------------------------
+  deployment:
+    reviewer_group: cloudflare
+    priority: 80
+    required: false
+    request_review: true
+
+  kind:deployment:
+    reviewer_group: cloudflare
+    priority: 80
+    required: false
+    request_review: true
+
+  cloudflare:
+    reviewer_group: cloudflare
+    priority: 85
+    required: false
+    request_review: true
+
+  area:cloudflare:
+    reviewer_group: cloudflare
+    priority: 85
+    required: false
+    request_review: true
+
+  preview:
+    reviewer_group: cloudflare
+    priority: 75
+    required: false
+    request_review: false
+
+  staging:
+    reviewer_group: cloudflare
+    priority: 85
+    required: true
+    request_review: true
+
+  production:
+    reviewer_group: cloudflare
+    priority: 100
+    required: true
+    request_review: true
+
+  area:workers:
+    reviewer_group: cloudflare
+    priority: 75
+    required: false
+    request_review: true
+
+  area:queues:
+    reviewer_group: cloudflare
+    priority: 75
+    required: false
+    request_review: true
+
+  area:r2:
+    reviewer_group: cloudflare
+    priority: 75
+    required: false
+    request_review: true
+
+  area:d1:
+    reviewer_group: cloudflare
+    priority: 80
+    required: false
+    request_review: true
+
+  area:kv:
+    reviewer_group: cloudflare
+    priority: 75
+    required: false
+    request_review: true
+
+  # ---------------------------------------------------------------------------
+  # Dependencies
+  # ---------------------------------------------------------------------------
+  dependencies:
+    reviewer_group: dependencies
+    priority: 70
+    required: false
+    request_review: false
+
+  area:dependencies:
+    reviewer_group: dependencies
+    priority: 70
+    required: false
+    request_review: false
+
+  renovate:
+    reviewer_group: dependencies
+    priority: 70
+    required: false
+    request_review: false
+
+  dependabot:
+    reviewer_group: dependencies
+    priority: 70
+    required: false
+    request_review: false
+
+  mend:
+    reviewer_group: dependencies
+    priority: 80
+    required: false
+    request_review: false
+
+  actions-update:
+    reviewer_group: dependencies
+    priority: 75
+    required: false
+    request_review: false
+
+  lockfile:
+    reviewer_group: dependencies
+    priority: 60
+    required: false
+    request_review: false
+
+  # ---------------------------------------------------------------------------
+  # AI automation
+  # ---------------------------------------------------------------------------
+  area:ai:
+    reviewer_group: ai_automation
+    priority: 85
+    required: true
+    request_review: true
+
+  area:openai:
+    reviewer_group: ai_automation
+    priority: 90
+    required: true
+    request_review: true
+
+  automation:openai:
+    reviewer_group: ai_automation
+    priority: 95
+    required: true
+    request_review: true
+
+  # ---------------------------------------------------------------------------
+  # Architecture and documentation
+  # ---------------------------------------------------------------------------
+  discussion:
+    reviewer_group: maintainers
+    priority: 50
+    required: false
+    request_review: false
+
+  kind:documentation:
+    reviewer_group: documentation
+    priority: 60
+    required: false
+    request_review: false
+
+  area:docs:
+    reviewer_group: documentation
+    priority: 60
+    required: false
+    request_review: false
+
+  # ---------------------------------------------------------------------------
+  # Self-hosted
+  # ---------------------------------------------------------------------------
+  area:self-hosted:
+    reviewer_group: architecture
+    priority: 85
+    required: true
+    request_review: true
+
+  area:helm:
+    reviewer_group: architecture
+    priority: 90
+    required: true
+    request_review: true
+
+  area:kubernetes:
+    reviewer_group: architecture
+    priority: 90
+    required: true
+    request_review: true
+
+# -----------------------------------------------------------------------------
+# Path-Based Reviewer Routing
+# -----------------------------------------------------------------------------
+path_routing:
+  # ---------------------------------------------------------------------------
+  # Apps
+  # ---------------------------------------------------------------------------
+  "apps/frontend/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 50
+
+  "apps/connectors/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 50
+
+  "apps/e2e/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 50
+
+  "apps/engines/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 50
+
+  "apps/integrations/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 50
+
+  "apps/services/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 50
+
+  # ---------------------------------------------------------------------------
+  # Libraries
+  # ---------------------------------------------------------------------------
+  "libs/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 45
+
+  "libs/ui/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 55
+
+  "libs/config/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 55
+
+  "libs/env/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 55
+
+  "libs/db/**":
+    reviewer_group: security
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 80
+    required: true
+
+  "libs/database/**":
+    reviewer_group: security
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 80
+    required: true
+
+  "libs/flags/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 60
+
+  # ---------------------------------------------------------------------------
+  # GitHub and repo management
+  # ---------------------------------------------------------------------------
+  ".github/CODEOWNERS":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 100
+    required: true
+
+  ".github/assignees.yaml":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  ".github/labels.yaml":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  ".github/milestones.yaml":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  ".github/labeler.yaml":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 90
+    required: true
+
+  ".github/projects/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 85
+
+  ".github/repo-management/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 90
+    required: true
+
+  ".github/scripts/repo/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 85
+
+  ".github/scripts/utils/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 75
+
+  # ---------------------------------------------------------------------------
+  # CI/CD and workflows
+  # ---------------------------------------------------------------------------
+  ".github/workflows/**":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 80
+    required: true
+
+  ".github/workflows/ci.yaml":
+    reviewer_group: maintainers
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  ".github/workflows/security.yaml":
+    reviewer_group: security
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 100
+    required: true
+
+  ".github/workflows/codeql.yaml":
+    reviewer_group: security
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 100
+    required: true
+
+  ".github/workflows/dependency-review.yaml":
+    reviewer_group: security
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  ".github/workflows/dependency-auto-merge.yaml":
+    reviewer_group: security
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  ".github/workflows/release.yaml":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 100
+    required: true
+
+  ".github/workflows/publish-npm.yaml":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 100
+    required: true
+
+  ".github/workflows/publish-containers.yaml":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 100
+    required: true
+
+  ".github/workflows/attestations.yaml":
+    reviewer_group: security
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 100
+    required: true
+
+  # ---------------------------------------------------------------------------
+  # Cloudflare
+  # ---------------------------------------------------------------------------
+  ".github/workflows/wrangler-deploy.yaml":
+    reviewer_group: cloudflare
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  ".github/workflows/cloudflare-preview.yaml":
+    reviewer_group: cloudflare
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 85
+
+  ".github/workflows/cloudflare-staging.yaml":
+    reviewer_group: cloudflare
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  ".github/workflows/cloudflare-production.yaml":
+    reviewer_group: cloudflare
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 100
+    required: true
+
+  ".github/scripts/cloudflare/**":
+    reviewer_group: cloudflare
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 85
+
+  "**/wrangler.toml":
+    reviewer_group: cloudflare
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 80
+
+  "**/wrangler.jsonc":
+    reviewer_group: cloudflare
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 80
+
+  "**/open-next.config.ts":
+    reviewer_group: cloudflare
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 75
+
+  "**/cloudflare-env.d.ts":
+    reviewer_group: cloudflare
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 75
+
+  "**/worker-configuration.d.ts":
+    reviewer_group: cloudflare
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 75
+
+  # ---------------------------------------------------------------------------
+  # Release, publishing, artifacts
+  # ---------------------------------------------------------------------------
+  ".github/scripts/release/**":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  ".github/scripts/npm/**":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 90
+    required: true
+
+  ".github/scripts/docker/**":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 90
+    required: true
+
+  ".github/scripts/artifacts/**":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 85
+
+  "Dockerfile":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 80
+
+  "**/Dockerfile":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 80
+
+  "**/Dockerfile.*":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 80
+
+  ".npmrc":
+    reviewer_group: release
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 90
+    required: true
+
+  "package.json":
+    reviewer_group: dependencies
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 75
+
+  "**/package.json":
+    reviewer_group: dependencies
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 70
+
+  "pnpm-lock.yaml":
+    reviewer_group: dependencies
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 60
+    request_review: false
+
+  # ---------------------------------------------------------------------------
+  # AI automation
+  # ---------------------------------------------------------------------------
+  ".github/workflows/ai-repo-assistant.yaml":
+    reviewer_group: ai_automation
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 100
+    required: true
+
+  ".github/scripts/ai/**":
+    reviewer_group: ai_automation
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  ".github/scripts/ai/prompts/**":
+    reviewer_group: ai_automation
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 90
+    required: true
+
+  # ---------------------------------------------------------------------------
+  # Self-hosted
+  # ---------------------------------------------------------------------------
+  "charts/**":
+    reviewer_group: architecture
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  "helm/**":
+    reviewer_group: architecture
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  "kubernetes/**":
+    reviewer_group: architecture
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  "k8s/**":
+    reviewer_group: architecture
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  "deploy/self-hosted/**":
+    reviewer_group: architecture
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 90
+    required: true
+
+  "deploy/kubernetes/**":
+    reviewer_group: architecture
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 90
+    required: true
+
+  # ---------------------------------------------------------------------------
+  # Documentation
+  # ---------------------------------------------------------------------------
+  "docs/**":
+    reviewer_group: documentation
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 50
+    request_review: false
+
+  "Docs/**":
+    reviewer_group: documentation
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 50
+    request_review: false
+
+  "docs/adrs/**":
+    reviewer_group: architecture
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 95
+    required: true
+
+  "SECURITY.md":
+    reviewer_group: security
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    priority: 100
+    required: true
+
+# -----------------------------------------------------------------------------
+# Branch-Based Reviewer Routing
+# -----------------------------------------------------------------------------
+branch_routing:
+  "^security/[0-9]+-[a-z0-9][a-z0-9-]*[a-z0-9]$":
+    reviewer_group: security
+    priority: 100
+    required: true
+
+  "^hotfix/[0-9]+-[a-z0-9][a-z0-9-]*[a-z0-9]$":
+    reviewer_group: security
+    priority: 95
+    required: true
+
+  "^release/V[0-9]+\\.[0-9]+\\.[0-9]+$":
+    reviewer_group: release
+    priority: 100
+    required: true
+
+  "^deploy/[0-9]+-[a-z0-9][a-z0-9-]*[a-z0-9]$":
+    reviewer_group: cloudflare
+    priority: 85
+    required: true
+
+  "^deployment/[0-9]+-[a-z0-9][a-z0-9-]*[a-z0-9]$":
+    reviewer_group: cloudflare
+    priority: 85
+    required: true
+
+  "^ai/.+$":
+    reviewer_group: ai_automation
+    priority: 95
+    required: true
+
+  "^openai/.+$":
+    reviewer_group: ai_automation
+    priority: 95
+    required: true
+
+  "^renovate/.+$":
+    reviewer_group: dependencies
+    priority: 70
+    required: false
+    request_review: false
+
+  "^dependabot/.+$":
+    reviewer_group: dependencies
+    priority: 70
+    required: false
+    request_review: false
+
+  "^mend/.+$":
+    reviewer_group: dependencies
+    priority: 80
+    required: false
+    request_review: false
+
+# -----------------------------------------------------------------------------
+# Title-Based Reviewer Routing
+# -----------------------------------------------------------------------------
+title_routing:
+  "^\\[Security\\]:":
+    reviewer_group: security
+    priority: 100
+    required: true
+
+  "^\\[Release\\]:":
+    reviewer_group: release
+    priority: 95
+    required: true
+
+  "^\\[Cloudflare\\]:":
+    reviewer_group: cloudflare
+    priority: 90
+    required: true
+
+  "^\\[AI Automation\\]:":
+    reviewer_group: ai_automation
+    priority: 95
+    required: true
+
+  "^\\[Architecture\\]:":
+    reviewer_group: architecture
+    priority: 95
+    required: true
+
+  "^\\[Self-Hosted\\]:":
+    reviewer_group: architecture
+    priority: 90
+    required: true
+
+  "^\\[Docs\\]:":
+    reviewer_group: documentation
+    priority: 60
+    required: false
+
+  "^\\[CI/CD\\]:":
+    reviewer_group: maintainers
+    priority: 80
+    required: true
+
+# -----------------------------------------------------------------------------
+# Dependency Review Policy
+# -----------------------------------------------------------------------------
+dependency_review:
+  enabled: true
+
+  authors:
+    - renovate[bot]
+    - dependabot[bot]
+    - mend[bot]
+
+  default:
+    request_review: false
+    required: false
+    labels:
+      - dependencies
+      - no-release
+
+  patch:
+    request_review: false
+    required: false
+    auto_merge_allowed: true
+
+  minor:
+    request_review: false
+    required: false
+    auto_merge_allowed: true
+
+  major:
+    request_review: true
+    required: true
+    reviewer_group: dependencies
+    labels:
+      - needs-maintainer-review
+      - status:needs-review
+    auto_merge_allowed: false
+
+  security_patch:
+    request_review: false
+    required: false
+    reviewer_group: security
+    labels:
+      - security:dependency
+      - auto-merge
+      - no-release
+    auto_merge_allowed: true
+
+  require_review_if_files_changed:
+    - ".github/**"
+    - "nx.json"
+    - "tsconfig.base.json"
+    - "package.json"
+    - "pnpm-workspace.yaml"
+    - "**/wrangler.toml"
+    - "**/wrangler.jsonc"
+    - "**/Dockerfile"
+    - "**/Dockerfile.*"
+
+  block_auto_merge_if_review_requested: true
+  block_auto_merge_if_changes_requested: true
+
+# -----------------------------------------------------------------------------
+# Required Review Gates
+# -----------------------------------------------------------------------------
+review_gates:
+  default:
+    required_approvals: 1
+    dismiss_stale_reviews: true
+    require_code_owner_review: true
+
+  security:
+    labels:
+      - kind:security
+      - area:security
+      - needs-security-review
+      - blocked-by-security
+      - area:secrets
+    required_approvals: 1
+    require_security_review: true
+    dismiss_stale_reviews: true
+
+  release:
+    labels:
+      - release
+      - kind:release
+      - release:major
+      - release:minor
+      - release:patch
+      - publishing
+    required_approvals: 1
+    require_release_review: true
+    dismiss_stale_reviews: true
+
+  production:
+    labels:
+      - production
+    required_approvals: 1
+    require_environment_approval: true
+    require_cloudflare_review: true
+    dismiss_stale_reviews: true
+
+  architecture:
+    labels:
+      - needs-architecture-review
+      - breaking-change
+      - area:self-hosted
+      - area:helm
+      - area:kubernetes
+    required_approvals: 1
+    require_architecture_review: true
+    dismiss_stale_reviews: true
+
+  ai_automation:
+    labels:
+      - automation:openai
+      - area:ai
+      - area:openai
+      - automation:needs-review
+    required_approvals: 1
+    require_ai_review: true
+    dismiss_stale_reviews: true
+
+# -----------------------------------------------------------------------------
+# Review Request Conflict Resolution
+# -----------------------------------------------------------------------------
+conflict_resolution:
+  enabled: true
+
+  strategy: highest_priority_then_union
+
+  # Highest-priority rule controls required status and review gate.
+  # Reviewer lists are merged up to max_user_reviewers / max_team_reviewers.
+  merge_reviewers_from_matching_rules: true
+  merge_team_reviewers_from_matching_rules: true
+
+  tie_breaker_order:
+    - blocked_security
+    - security
+    - release
+    - production
+    - architecture
+    - ai_automation
+    - exact_path
+    - label
+    - branch
+    - title
+    - default
+
+  protected_review_groups:
+    - security
+    - release
+    - architecture
+    - ai_automation
+    - cloudflare
+
+  never_downgrade_required_review: true
+  never_remove_security_review: true
+  never_remove_release_review: true
+  never_remove_architecture_review: true
+
+# -----------------------------------------------------------------------------
+# Status Label Handling
+# -----------------------------------------------------------------------------
+status_label_behavior:
+  add_needs_review_when_review_requested: true
+  remove_needs_review_when_approved: false
+  add_ready_to_merge_when_approved_and_checks_pass: true
+  do_not_modify_status_if_blocked: true
+
+  review_requested_labels:
+    - status:needs-review
+
+  approved_labels:
+    - approved
+
+  ready_to_merge_labels:
+    - status:ready-to-merge
+
+  blocked_labels:
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked
+
+# -----------------------------------------------------------------------------
+# Reporting
+# -----------------------------------------------------------------------------
+reporting:
+  add_pr_comment_on_review_request: false
+  add_pr_comment_on_required_review_missing: true
+  add_workflow_summary: true
+
+  comment_footer:
+    start: "<!-- reviewer-routing:start -->"
+    end: "<!-- reviewer-routing:end -->"
+
+  summary:
+    include_pr_number: true
+    include_pr_author: true
+    include_branch: true
+    include_base_branch: true
+    include_matched_rules: true
+    include_reviewers: true
+    include_team_reviewers: true
+    include_required_review_groups: true
+    include_required_approval_count: true
+    include_dry_run: true
+    include_skipped_reason: true
+
+# -----------------------------------------------------------------------------
+# Enforcement
+# -----------------------------------------------------------------------------
+enforcement:
+  on_missing_reviewer_config:
+    action: fail
+    message: |
+      Reviewer rules configuration is missing or invalid.
+
+  on_unknown_reviewer:
+    action: warn
+    message: |
+      GitHub rejected one or more requested reviewers. Check usernames and repository permissions.
+
+  on_unknown_team_reviewer:
+    action: warn
+    message: |
+      GitHub rejected one or more requested team reviewers. Check team slug, visibility, and repository permissions.
+
+  on_pr_author_selected_as_reviewer:
+    action: skip_reviewer
+    message: |
+      The pull request author cannot be requested as a reviewer.
+
+  on_bot_selected_as_reviewer:
+    action: skip_reviewer
+    message: |
+      Bot accounts should not be requested as reviewers.
+
+  on_security_review_missing:
+    action: fail
+    message: |
+      Security-sensitive changes require security review before merge.
+
+  on_release_review_missing:
+    action: fail
+    message: |
+      Release-related changes require release review before merge.
+
+  on_architecture_review_missing:
+    action: fail
+    message: |
+      Architecture-sensitive changes require architecture review before merge.
+
+  on_ai_review_missing:
+    action: fail
+    message: |
+      OpenAI automation changes require AI automation review before merge.
+
+  on_production_review_missing:
+    action: fail
+    message: |
+      Production deployment changes require deployment review before merge.
+
+# -----------------------------------------------------------------------------
+# Safety
+# -----------------------------------------------------------------------------
+safety:
+  dry_run_supported: true
+  debug_supported: true
+
+  do_not_merge_pull_requests: true
+  do_not_approve_pull_requests: true
+  do_not_dismiss_reviews: true
+  do_not_remove_codeowner_reviewers: true
+  do_not_request_review_from_pr_author: true
+  do_not_request_review_from_bots: true
+
+  do_not_auto_merge_if_required_review_missing: true
+  do_not_auto_merge_if_changes_requested: true
+  do_not_auto_merge_if_review_pending_for_required_group: true
+
+  protected_labels:
+    - do-not-merge
+    - blocked-by-security
+    - needs-security-review
+    - needs-maintainer-review
+    - needs-architecture-review
+    - automation:needs-review
+    - release:major
+    - release:minor
+    - release:patch
+
+  required_review_labels:
+    - needs-maintainer-review
+    - needs-security-review
+    - needs-architecture-review
+    - automation:needs-review

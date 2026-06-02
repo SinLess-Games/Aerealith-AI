@@ -1,0 +1,635 @@
+name: Aerealith AI Repository Management
+
+run-name: >-
+  Repo Management / ${{ github.event_name }} / ${{ github.event.pull_request.number || github.event.issue.number || github.ref_name || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Repository management mode to run."
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - all
+          - sync-only
+          - assign-only
+          - policy-only
+          - link-only
+          - summarize-only
+      dry_run:
+        description: "Evaluate without writing repository changes."
+        required: true
+        default: false
+        type: boolean
+      fail_on_policy_violation:
+        description: "Fail workflow when branch or PR policy violations are found."
+        required: true
+        default: true
+        type: boolean
+      sync_labels:
+        description: "Sync labels from .github/labels.yaml."
+        required: true
+        default: true
+        type: boolean
+      sync_milestones:
+        description: "Sync milestones from .github/milestones.yaml."
+        required: true
+        default: true
+        type: boolean
+      sync_projects:
+        description: "Sync repository projects when configured."
+        required: true
+        default: false
+        type: boolean
+      assign_labels:
+        description: "Assign labels to issues and pull requests."
+        required: true
+        default: true
+        type: boolean
+      assign_milestones:
+        description: "Assign milestones to issues and pull requests."
+        required: true
+        default: true
+        type: boolean
+      assign_assignees:
+        description: "Assign default owners when configured."
+        required: true
+        default: true
+        type: boolean
+      assign_reviewers:
+        description: "Assign pull request reviewers when configured."
+        required: true
+        default: true
+        type: boolean
+      link_issues_prs:
+        description: "Link pull requests to related issues."
+        required: true
+        default: true
+        type: boolean
+
+  push:
+    branches:
+      - main
+      - develop
+      - staging
+    paths:
+      - ".github/labels.yaml"
+      - ".github/milestones.yaml"
+      - ".github/projects.yaml"
+      - ".github/repo-management.yaml"
+      - ".github/scripts/repo/**"
+      - ".github/workflows/repo-management.yaml"
+
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+      - labeled
+      - unlabeled
+      - assigned
+      - unassigned
+      - transferred
+
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+      - converted_to_draft
+      - labeled
+      - unlabeled
+      - assigned
+      - unassigned
+      - review_requested
+      - review_request_removed
+
+  label:
+    types:
+      - created
+      - edited
+      - deleted
+
+  milestone:
+    types:
+      - created
+      - edited
+      - opened
+      - closed
+      - deleted
+
+  schedule:
+    - cron: "13 11 * * 1"
+
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  issues: write
+  pull-requests: write
+  repository-projects: write
+  statuses: write
+
+concurrency:
+  group: >-
+    repo-management-${{ github.event.pull_request.number || github.event.issue.number || github.event.label.name || github.event.milestone.number || github.ref_name || github.run_id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  REPO_MANAGEMENT_OUTPUT_DIR: artifacts/repo
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      fail_on_policy_violation: ${{ steps.context.outputs.fail_on_policy_violation }}
+      should_sync_labels: ${{ steps.context.outputs.should_sync_labels }}
+      should_sync_milestones: ${{ steps.context.outputs.should_sync_milestones }}
+      should_sync_projects: ${{ steps.context.outputs.should_sync_projects }}
+      should_assign_labels: ${{ steps.context.outputs.should_assign_labels }}
+      should_assign_milestones: ${{ steps.context.outputs.should_assign_milestones }}
+      should_assign_assignees: ${{ steps.context.outputs.should_assign_assignees }}
+      should_assign_reviewers: ${{ steps.context.outputs.should_assign_reviewers }}
+      should_enforce_branch_name: ${{ steps.context.outputs.should_enforce_branch_name }}
+      should_enforce_pr_rules: ${{ steps.context.outputs.should_enforce_pr_rules }}
+      should_link_issues_prs: ${{ steps.context.outputs.should_link_issues_prs }}
+      should_summarize: ${{ steps.context.outputs.should_summarize }}
+
+    steps:
+      - name: Resolve repository management context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'auto' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          INPUT_FAIL_ON_POLICY_VIOLATION: ${{ github.event.inputs.fail_on_policy_violation || 'true' }}
+          INPUT_SYNC_LABELS: ${{ github.event.inputs.sync_labels || 'true' }}
+          INPUT_SYNC_MILESTONES: ${{ github.event.inputs.sync_milestones || 'true' }}
+          INPUT_SYNC_PROJECTS: ${{ github.event.inputs.sync_projects || 'false' }}
+          INPUT_ASSIGN_LABELS: ${{ github.event.inputs.assign_labels || 'true' }}
+          INPUT_ASSIGN_MILESTONES: ${{ github.event.inputs.assign_milestones || 'true' }}
+          INPUT_ASSIGN_ASSIGNEES: ${{ github.event.inputs.assign_assignees || 'true' }}
+          INPUT_ASSIGN_REVIEWERS: ${{ github.event.inputs.assign_reviewers || 'true' }}
+          INPUT_LINK_ISSUES_PRS: ${{ github.event.inputs.link_issues_prs || 'true' }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-auto}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+          fail_on_policy_violation="${INPUT_FAIL_ON_POLICY_VIOLATION:-true}"
+
+          should_sync_labels="false"
+          should_sync_milestones="false"
+          should_sync_projects="false"
+          should_assign_labels="false"
+          should_assign_milestones="false"
+          should_assign_assignees="false"
+          should_assign_reviewers="false"
+          should_enforce_branch_name="false"
+          should_enforce_pr_rules="false"
+          should_link_issues_prs="false"
+          should_summarize="true"
+
+          case "$mode" in
+            all)
+              should_sync_labels="$INPUT_SYNC_LABELS"
+              should_sync_milestones="$INPUT_SYNC_MILESTONES"
+              should_sync_projects="$INPUT_SYNC_PROJECTS"
+              should_assign_labels="$INPUT_ASSIGN_LABELS"
+              should_assign_milestones="$INPUT_ASSIGN_MILESTONES"
+              should_assign_assignees="$INPUT_ASSIGN_ASSIGNEES"
+              should_assign_reviewers="$INPUT_ASSIGN_REVIEWERS"
+              should_enforce_branch_name="true"
+              should_enforce_pr_rules="true"
+              should_link_issues_prs="$INPUT_LINK_ISSUES_PRS"
+              ;;
+            sync-only)
+              should_sync_labels="$INPUT_SYNC_LABELS"
+              should_sync_milestones="$INPUT_SYNC_MILESTONES"
+              should_sync_projects="$INPUT_SYNC_PROJECTS"
+              ;;
+            assign-only)
+              should_assign_labels="$INPUT_ASSIGN_LABELS"
+              should_assign_milestones="$INPUT_ASSIGN_MILESTONES"
+              should_assign_assignees="$INPUT_ASSIGN_ASSIGNEES"
+              should_assign_reviewers="$INPUT_ASSIGN_REVIEWERS"
+              ;;
+            policy-only)
+              should_enforce_branch_name="true"
+              should_enforce_pr_rules="true"
+              ;;
+            link-only)
+              should_link_issues_prs="$INPUT_LINK_ISSUES_PRS"
+              ;;
+            summarize-only)
+              should_summarize="true"
+              ;;
+            auto)
+              case "$EVENT_NAME" in
+                push|schedule|label|milestone)
+                  should_sync_labels="$INPUT_SYNC_LABELS"
+                  should_sync_milestones="$INPUT_SYNC_MILESTONES"
+                  should_sync_projects="$INPUT_SYNC_PROJECTS"
+                  ;;
+                issues)
+                  should_assign_labels="$INPUT_ASSIGN_LABELS"
+                  should_assign_milestones="$INPUT_ASSIGN_MILESTONES"
+                  should_assign_assignees="$INPUT_ASSIGN_ASSIGNEES"
+                  should_link_issues_prs="$INPUT_LINK_ISSUES_PRS"
+                  ;;
+                pull_request_target)
+                  should_assign_labels="$INPUT_ASSIGN_LABELS"
+                  should_assign_milestones="$INPUT_ASSIGN_MILESTONES"
+                  should_assign_assignees="$INPUT_ASSIGN_ASSIGNEES"
+                  should_assign_reviewers="$INPUT_ASSIGN_REVIEWERS"
+                  should_enforce_branch_name="true"
+                  should_enforce_pr_rules="true"
+                  should_link_issues_prs="$INPUT_LINK_ISSUES_PRS"
+                  ;;
+              esac
+              ;;
+            *)
+              echo "::error::Unsupported repository management mode: $mode"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$EVENT_NAME" != "pull_request_target" ]]; then
+            should_assign_reviewers="false"
+            should_enforce_branch_name="false"
+            should_enforce_pr_rules="false"
+          fi
+
+          {
+            echo "mode=$mode"
+            echo "dry_run=$dry_run"
+            echo "fail_on_policy_violation=$fail_on_policy_violation"
+            echo "should_sync_labels=$should_sync_labels"
+            echo "should_sync_milestones=$should_sync_milestones"
+            echo "should_sync_projects=$should_sync_projects"
+            echo "should_assign_labels=$should_assign_labels"
+            echo "should_assign_milestones=$should_assign_milestones"
+            echo "should_assign_assignees=$should_assign_assignees"
+            echo "should_assign_reviewers=$should_assign_reviewers"
+            echo "should_enforce_branch_name=$should_enforce_branch_name"
+            echo "should_enforce_pr_rules=$should_enforce_pr_rules"
+            echo "should_link_issues_prs=$should_link_issues_prs"
+            echo "should_summarize=$should_summarize"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Repository Management"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Mode | \`$mode\` |"
+            echo "| Dry run | \`$dry_run\` |"
+            echo "| Fail on policy violation | \`$fail_on_policy_violation\` |"
+            echo "| Sync labels | \`$should_sync_labels\` |"
+            echo "| Sync milestones | \`$should_sync_milestones\` |"
+            echo "| Sync projects | \`$should_sync_projects\` |"
+            echo "| Assign labels | \`$should_assign_labels\` |"
+            echo "| Assign milestones | \`$should_assign_milestones\` |"
+            echo "| Assign assignees | \`$should_assign_assignees\` |"
+            echo "| Assign reviewers | \`$should_assign_reviewers\` |"
+            echo "| Enforce branch name | \`$should_enforce_branch_name\` |"
+            echo "| Enforce PR rules | \`$should_enforce_pr_rules\` |"
+            echo "| Link issues/PRs | \`$should_link_issues_prs\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  repo-management:
+    name: Repository Management
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - preflight
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      REPO_MANAGEMENT_FAIL_ON_POLICY_VIOLATION: ${{ needs.preflight.outputs.fail_on_policy_violation }}
+
+    steps:
+      - name: Checkout repository automation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Prepare repository management output directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$REPO_MANAGEMENT_OUTPUT_DIR"
+
+      - name: Sync repository labels
+        if: needs.preflight.outputs.should_sync_labels == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/sync-labels.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/repo/sync-labels.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/sync-labels.js"
+
+      - name: Sync repository milestones
+        if: needs.preflight.outputs.should_sync_milestones == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/sync-milestones.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/repo/sync-milestones.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/sync-milestones.js"
+
+      - name: Sync repository projects
+        if: needs.preflight.outputs.should_sync_projects == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/sync-projects.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/repo/sync-projects.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/sync-projects.js"
+
+      - name: Enforce branch name
+        id: enforce_branch_name
+        if: needs.preflight.outputs.should_enforce_branch_name == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/enforce-branch-name.js" ]]; then
+            echo "::warning::Missing script: .github/scripts/repo/enforce-branch-name.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/enforce-branch-name.js"
+
+      - name: Enforce pull request rules
+        id: enforce_pr_rules
+        if: needs.preflight.outputs.should_enforce_pr_rules == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/enforce-pr-rules.js" ]]; then
+            echo "::warning::Missing script: .github/scripts/repo/enforce-pr-rules.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/enforce-pr-rules.js"
+
+      - name: Assign labels
+        if: needs.preflight.outputs.should_assign_labels == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/assign-labels.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/repo/assign-labels.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/assign-labels.js"
+
+      - name: Assign milestones
+        if: needs.preflight.outputs.should_assign_milestones == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/assign-milestones.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/repo/assign-milestones.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/assign-milestones.js"
+
+      - name: Assign assignees
+        if: needs.preflight.outputs.should_assign_assignees == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/assign-assignees.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/repo/assign-assignees.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/assign-assignees.js"
+
+      - name: Assign reviewers
+        if: needs.preflight.outputs.should_assign_reviewers == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/assign-reviewers.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/repo/assign-reviewers.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/assign-reviewers.js"
+
+      - name: Link issues and pull requests
+        if: needs.preflight.outputs.should_link_issues_prs == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/link-issues-prs.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/repo/link-issues-prs.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/link-issues-prs.js"
+
+      - name: Summarize repository management
+        if: always() && needs.preflight.outputs.should_summarize == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/repo/summarize-repo-management.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/repo/summarize-repo-management.js"
+            exit 0
+          fi
+
+          node ".github/scripts/repo/summarize-repo-management.js" || true
+
+      - name: Write repository management result
+        if: always()
+        env:
+          ENFORCE_BRANCH_NAME_RESULT: ${{ steps.enforce_branch_name.outcome || 'skipped' }}
+          ENFORCE_PR_RULES_RESULT: ${{ steps.enforce_pr_rules.outcome || 'skipped' }}
+        run: |
+          set -euo pipefail
+
+          status="passed"
+
+          if [[ "$ENFORCE_BRANCH_NAME_RESULT" == "failure" || "$ENFORCE_PR_RULES_RESULT" == "failure" ]]; then
+            status="failed"
+          elif [[ "$ENFORCE_BRANCH_NAME_RESULT" == "cancelled" || "$ENFORCE_PR_RULES_RESULT" == "cancelled" ]]; then
+            status="cancelled"
+          fi
+
+          cat > "$REPO_MANAGEMENT_OUTPUT_DIR/repo-management.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "repo-management",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "event_name": "$GITHUB_EVENT_NAME",
+            "dry_run": "$PROJECT_SYNC_DRY_RUN",
+            "status": "$status",
+            "ok": $([[ "$status" == "passed" ]] && echo "true" || echo "false"),
+            "policy": {
+              "fail_on_policy_violation": "$REPO_MANAGEMENT_FAIL_ON_POLICY_VIOLATION",
+              "branch_name": "$ENFORCE_BRANCH_NAME_RESULT",
+              "pull_request_rules": "$ENFORCE_PR_RULES_RESULT"
+            },
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          {
+            echo "# Aerealith AI Repository Management"
+            echo ""
+            echo "Generated: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo ""
+            echo "## Status"
+            echo ""
+            echo "- Status: \`$status\`"
+            echo "- Dry run: \`$PROJECT_SYNC_DRY_RUN\`"
+            echo ""
+            echo "## Policy Checks"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Branch name | \`$ENFORCE_BRANCH_NAME_RESULT\` |"
+            echo "| Pull request rules | \`$ENFORCE_PR_RULES_RESULT\` |"
+          } > "$REPO_MANAGEMENT_OUTPUT_DIR/repo-management.md"
+
+          cat "$REPO_MANAGEMENT_OUTPUT_DIR/repo-management.md" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$status" != "passed" && "$REPO_MANAGEMENT_FAIL_ON_POLICY_VIOLATION" == "true" ]]; then
+            exit 1
+          fi
+
+      - name: Write repository management output summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Repository Management Output Files"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            for dir in artifacts/repo artifacts/repository artifacts/issues artifacts/pull-requests; do
+              if [[ -d "$dir" ]]; then
+                while IFS= read -r file; do
+                  size="$(wc -c < "$file" | xargs)"
+                  echo "| \`$file\` | \`$size\` bytes |"
+                done < <(find "$dir" -type f | sort)
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload repository management artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-management-${{ github.run_id }}
+          path: |
+            artifacts/repo/**
+            artifacts/repository/**
+            artifacts/issues/**
+            artifacts/pull-requests/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - preflight
+      - repo-management
+
+    if: always()
+
+    steps:
+      - name: Write final repository management summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Repository Management Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Repository management | \`${{ needs.repo-management.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| Sync labels | \`${{ needs.preflight.outputs.should_sync_labels }}\` |"
+            echo "| Sync milestones | \`${{ needs.preflight.outputs.should_sync_milestones }}\` |"
+            echo "| Sync projects | \`${{ needs.preflight.outputs.should_sync_projects }}\` |"
+            echo "| Assign labels | \`${{ needs.preflight.outputs.should_assign_labels }}\` |"
+            echo "| Assign milestones | \`${{ needs.preflight.outputs.should_assign_milestones }}\` |"
+            echo "| Assign assignees | \`${{ needs.preflight.outputs.should_assign_assignees }}\` |"
+            echo "| Assign reviewers | \`${{ needs.preflight.outputs.should_assign_reviewers }}\` |"
+            echo "| Link issues/PRs | \`${{ needs.preflight.outputs.should_link_issues_prs }}\` |"
+            echo "| Enforce branch name | \`${{ needs.preflight.outputs.should_enforce_branch_name }}\` |"
+            echo "| Enforce PR rules | \`${{ needs.preflight.outputs.should_enforce_pr_rules }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce repository management result
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ needs.preflight.result }}" != "success" ]]; then
+            echo "::error::Preflight failed with result: ${{ needs.preflight.result }}"
+            exit 1
+          fi
+
+          if [[ "${{ needs.repo-management.result }}" != "success" ]]; then
+            echo "::error::Repository management failed with result: ${{ needs.repo-management.result }}"
+            exit 1
+          fi
+
+          echo "Repository management workflow completed."

@@ -1,6 +1,6 @@
 # .github/milestones.yaml
 # ==========================================================
-# 🧭 Helix AI Milestones Configuration
+# Aerealith AI Milestones Configuration
 # Managed by sync-milestones workflow
 # ==========================================================
 # Each milestone entry:
@@ -10,227 +10,527 @@
 # ==========================================================
 
 # ----------------------------------------------------------
-# 🚀 Release Train
+# Release Train
 # ----------------------------------------------------------
-- title: 🧬 v0.1.0 — MVP
+- title: "V0.1.0 — Foundation"
   description: |
-    The **Minimum Viable Product** milestone for Helix AI.
-    - Core architecture using Next.js, Cloudflare Workers, and Nx
-    - Authentication foundation
-    - Discord bot base with command framework
-    - Continuous Integration and automated testing setup
-    - Initial API routes for AI inference
+    Initial foundation milestone for Aerealith AI.
+
+    - Establish the Nx and pnpm monorepo workflow baseline
+    - Stabilize the frontend, libraries, services, connectors, integrations, and engines structure
+    - Build the initial GitHub Actions CI workflow
+    - Add strict linting, formatting, typechecking, testing, and build validation
+    - Prepare baseline Cloudflare deployment support
+    - Establish repository management source-of-truth files
   state: open
 
-- title: ⚙️ v0.2.0 — Beta
+- title: "V0.2.0 — Automation Core"
   description: |
-    Beta release introducing Helix's assistant and modular Discord bot integrations.
-    - DynoBot / ProBot feature parity
-    - Ticket system and moderation tools
-    - Observability stack with Grafana, Loki, Prometheus, and OpenTelemetry
-    - Persistent memory system and RBAC layer
-    - Early access onboarding
+    Core automation milestone for repository and workflow management.
+
+    - Sync labels, milestones, assignees, reviewers, and project metadata
+    - Enforce branch naming rules
+    - Link issues and pull requests automatically
+    - Assign issues and pull requests to milestones
+    - Add dry-run support to all automation scripts
+    - Add workflow-safe logging and structured summaries
   state: open
 
-- title: 🧩 v0.3.0 — Core Expansion
+- title: "V0.3.0 — CI/CD Expansion"
   description: |
-    Feature expansion and deeper integration milestone.
-    - Advanced plugin runtime
-    - Hybrid inference routing
-    - RBAC/ABAC hybrid with tenant awareness
-    - GitHub and Discord OAuth linking
-    - Enhanced monitoring and audit logging
+    Expansion milestone for full CI/CD coverage across the monorepo.
+
+    - Detect affected Nx projects
+    - Detect Jest, Cypress, Playwright, and e2e test targets
+    - Run Nx targets in the correct validation order
+    - Detect Dockerfiles and validate container builds
+    - Generate build artifacts, checksums, and artifact manifests
+    - Add readable cache keys for pnpm, Nx, Docker, Cypress, and Playwright
   state: open
 
-- title: 💸 v0.4.0 — Marketplace & Billing
+- title: "V0.4.0 — Security Automation"
   description: |
-    Launch of Helix Marketplace and subscription system.
-    - Stripe and PayPal integration for tiers and entitlements
-    - Plugin publishing flow and sandboxing
-    - Per-tenant billing and usage metrics
-    - CI/CD enhancements and versioning system
+    Strict automated security milestone for pull requests and main branch checks.
+
+    - Add CodeQL scanning
+    - Add SonarQube Cloud quality gates
+    - Add dependency review and vulnerability policy gates
+    - Add container scanning for Docker builds
+    - Add secret scanning-compatible workflow checks
+    - Create security issues from actionable findings
+    - Assign security labels, assignees, and milestones automatically
   state: open
 
-- title: 📊 v0.5.0 — Analytics & Memory
+- title: "V0.5.0 — Release Automation"
   description: |
-    Empowering users with insight and continuity.
-    - Grafana dashboards with per-user analytics
-    - Long-term memory management and pruning
-    - Event-based triggers for automations
-    - Improved vector search and embedding control
+    Release automation milestone for controlled main-branch releases.
+
+    - Release only from merged pull requests on main
+    - Require release labels: release:major, release:minor, or release:patch
+    - Block dependency-only and no-release pull requests from creating releases
+    - Generate V-prefixed release tags such as V1.2.3
+    - Generate changelogs from merged pull requests
+    - Create GitHub Releases
+    - Post release announcements to the Announcements discussion category
   state: open
 
-- title: 🧠 v0.6.0 — Hybrid Intelligence
+- title: "V0.6.0 — Publishing Pipeline"
   description: |
-    Transition into distributed AI orchestration.
-    - Multi-agent cognition model
-    - Node federation with vector memory syncing
-    - Air-gapped deployment support
-    - Advanced audit logging with signed append-only logs
+    Publishing milestone for npm packages, GHCR containers, and release assets.
+
+    - Publish npm packages only when package.json has private set to false
+    - Build and publish every detected Dockerfile to GHCR
+    - Use image tags for release channels such as alpha, beta, test, and release
+    - Generate SHA256SUMS and SHA512SUMS
+    - Generate artifact-manifest.json
+    - Generate SBOM files in SPDX JSON format
+    - Generate attestations only on release and publish jobs
   state: open
 
-- title: 🧪 v0.9.0 — Release Candidate
+- title: "V0.7.0 — Cloudflare Platform"
   description: |
-    Final release stabilization and performance optimization.
-    - Load and stress testing
-    - CI pipeline hardening
-    - UI/UX polish and accessibility improvements
-    - Documentation and deployment templates
+    Cloudflare deployment milestone for hosted Aerealith AI environments.
+
+    - Deploy preview environments from pull requests
+    - Deploy staging automatically from main
+    - Deploy production from release tags with approval
+    - Support Cloudflare Workers
+    - Support Cloudflare Queues
+    - Support Cloudflare R2
+    - Support Cloudflare D1
+    - Support Cloudflare KV
+    - Support Cloudflare Secrets Store
+    - Validate Wrangler deployment workflows
   state: open
 
-- title: 🌐 v1.0.0 — General Availability
+- title: "V0.8.0 — AI Repository Assistant"
   description: |
-    Official **Helix AI 1.0 GA release**.
-    - Public API documentation and SDKs
-    - Enterprise onboarding and SSO
-    - SLA metrics and uptime guarantees
-    - Security review and final compliance pass
+    OpenAI-powered repository assistant milestone.
+
+    - Generate changelog drafts from merged pull requests
+    - Create issues from pull requests when no related issue exists
+    - Link pull requests to existing issues when a strong match exists
+    - Create pull requests from approved automation issues
+    - Draft security triage summaries
+    - Draft release announcements
+    - Ensure AI automation never pushes directly to main
   state: open
 
-# ----------------------------------------------------------
-# 🛡️ Security & Compliance
-# ----------------------------------------------------------
-- title: 🧰 Security — Hardening & Audits
+- title: "V0.9.0 — Release Candidate"
   description: |
-    Continuous security baseline and compliance initiative.
-    - CIS and NIST benchmark alignment
-    - Secrets scanning and key rotation
-    - SAST, CodeQL, DAST, and dependency vulnerability monitoring
-    - Security regression test suite
+    Release candidate milestone for stabilization and final hardening.
+
+    - Complete strict CI and security gate validation
+    - Harden release and publishing workflows
+    - Validate rollback procedures
+    - Validate cache cleanup and artifact retention
+    - Complete documentation for contributors and maintainers
+    - Confirm production deployment approval flow
+    - Run full release rehearsal before general availability
   state: open
 
-- title: 🔒 Security — Patches & CVE Triage
+- title: "V1.0.0 — General Availability"
   description: |
-    Ongoing vulnerability management and CVE remediation cycle.
-    - CVE scanning and triage
-    - Patch management automation
-    - Renovate and Dependabot integration for security fixes
-    - Recurring reporting and audit documentation
-  state: open
+    General availability milestone for the first stable Aerealith AI release.
 
-# ----------------------------------------------------------
-# ♻️ Dependency / Renovate Cycles
-# ----------------------------------------------------------
-- title: 🧩 Renovate — Weekly Dependency Updates
-  description: |
-    Automated dependency management milestone.
-    - Automatically merge safe patch/minor updates when policy allows
-    - Group updates by ecosystem
-    - Maintain stable CI pipelines and test coverage
-  state: open
-
-- title: 📦 Renovate — Monthly Rollup
-  description: |
-    Consolidated review and merge of outstanding dependency PRs.
-    - Combine deferred updates into controlled review batches
-    - Manual validation of lockfile and changelogs
-    - Re-run integration tests before merge
-  state: open
-
-- title: 🚀 Renovate — Major Upgrade Program
-  description: |
-    Managed major version upgrades.
-    - Framework migrations
-    - Breaking change documentation
-    - Canary releases and rollback verification
-    - Scheduled review cycle
-  state: open
-
-# ----------------------------------------------------------
-# 🗂️ Planning / Backlog
-# ----------------------------------------------------------
-- title: 🗃️ Backlog
-  description: |
-    Repository for future ideas, deferred features, and exploratory work.
-    - Capture long-term ideas and deferred roadmap items
-    - Convert into scoped milestones once prioritized
+    - Production-ready hosted deployment
+    - Stable npm package publishing
+    - Stable GHCR container publishing
+    - Documented release process
+    - Documented security process
+    - Documented deployment process
+    - Verified changelog and announcement automation
+    - Final compliance and operational readiness review
   state: open
 
 # ----------------------------------------------------------
-# ☁️ Cloudflare / Frontend
+# Repository Management
 # ----------------------------------------------------------
-- title: ☁️ Cloudflare Setup
+- title: "Repo Management — Labels"
   description: |
-    Cloudflare setup and deployment milestone for Helix AI.
-    - OpenNext configuration
-    - Wrangler configuration
-    - Cloudflare Workers deployment
-    - Route and domain setup for helixaibot.com
-    - Preview, rollback, and production deployment validation
+    Source-of-truth label management milestone.
+
+    - Sync labels from .github/labels.yaml
+    - Create missing labels
+    - Update changed labels
+    - Delete unmanaged labels
+    - Keep release, dependency, security, automation, area, priority, and status labels consistent
   state: open
 
-- title: 🎨 Frontend
+- title: "Repo Management — Milestones"
   description: |
-    Frontend application and UI milestone.
-    - Next.js app router pages
-    - Shared UI integration
-    - Theme and background support
-    - Layout, hero, about, contact, and marketing pages
-    - Responsive and accessibility improvements
+    Source-of-truth milestone management milestone.
+
+    - Sync milestones from .github/milestones.yaml
+    - Create missing milestones
+    - Update milestone descriptions and states
+    - Avoid destructive milestone deletion
+    - Keep release, security, dependency, and operations milestones consistent
   state: open
 
-# ----------------------------------------------------------
-# 🤖 Automation / CI / Release
-# ----------------------------------------------------------
-- title: 🤖 Agentic Workflows
+- title: "Repo Management — Issues & Pull Requests"
   description: |
-    GitHub Agentic Workflow milestone.
-    - Repo manager workflow
-    - Package manager workflow
-    - Issue and PR triage automation
-    - Label, milestone, and relationship management
-    - Agent-safe outputs and workflow compilation
+    Automated issue and pull request management milestone.
+
+    - Assign labels based on changed paths and issue content
+    - Assign reviewers from CODEOWNERS and reviewer rules
+    - Assign assignees from repository rules
+    - Associate pull requests with issues
+    - Associate issues with pull requests
+    - Assign pull requests and issues to milestones
+    - Enforce pull request readiness rules before merge
   state: open
 
-- title: ⚙️ CI/CD
+- title: "Repo Management — Branch Policy"
   description: |
-    Continuous integration and deployment automation.
-    - Lint all projects
-    - Test all projects
-    - Build all projects
-    - Cloudflare frontend validation
-    - GitHub Actions hardening
-  state: open
+    Branch policy enforcement milestone.
 
-- title: 🚀 Release
-  description: |
-    Release, publishing, and packaging automation.
-    - npm library publishing
-    - GHCR container publishing
-    - Versioning and changelog generation
-    - GitHub Release creation
-    - Release rollback process
+    - Enforce feature branch naming rules
+    - Allow trusted automation branch patterns
+    - Require pull requests into main
+    - Prevent direct changes to main outside approved automation
+    - Support feature, fix, chore, docs, refactor, test, security, release, renovate, dependabot, mend, and openai branch patterns
   state: open
 
 # ----------------------------------------------------------
-# 🧱 Infrastructure / Observability / Documentation
+# CI/CD
 # ----------------------------------------------------------
-- title: 🏗️ Infrastructure
+- title: "CI/CD — Pull Request Validation"
   description: |
-    Infrastructure and platform milestone.
-    - Kubernetes platform work
-    - Ansible automation
-    - Terraform infrastructure
-    - Proxmox and homelab infrastructure
-    - GitOps platform services
+    Pull request validation milestone.
+
+    - Install dependencies with pnpm 10.23.0
+    - Use Node.js 24.15.0
+    - Restore pnpm and Nx caches
+    - Run Nx formatting checks
+    - Run Nx lint targets
+    - Run Nx typecheck targets
+    - Run detected test targets
+    - Run affected builds
+    - Validate Docker builds without publishing
+    - Upload artifacts and workflow summaries
   state: open
 
-- title: 📈 Observability
+- title: "CI/CD — Main Branch Verification"
   description: |
-    Observability and telemetry milestone.
-    - Grafana dashboards
-    - OpenTelemetry instrumentation
-    - Logs, metrics, traces, and profiles
-    - Alerting and operational visibility
-    - Faro frontend telemetry
+    Main branch verification milestone.
+
+    - Re-run full validation after merge to main
+    - Run strict security checks against main
+    - Build production-ready artifacts
+    - Generate artifact hashes
+    - Generate artifact manifests
+    - Preserve main build artifacts for configured retention windows
+    - Prevent dependency automation from triggering releases
   state: open
 
-- title: 📚 Documentation
+- title: "CI/CD — Cache Management"
   description: |
-    Documentation and architecture milestone.
-    - README updates
-    - MkDocs documentation
-    - Architecture Decision Records
-    - Developer setup guides
-    - Deployment and operations documentation
+    Cache management milestone for faster and cleaner workflows.
+
+    - Use human-readable cache names
+    - Cache pnpm store data
+    - Cache Nx computation data
+    - Cache Docker BuildKit layers
+    - Cache Cypress binaries when present
+    - Cache Playwright browsers when present
+    - Run scheduled weekly cache cleanup
+    - Summarize cache usage and cleanup actions
+  state: open
+
+- title: "CI/CD — Artifacts & Hashes"
+  description: |
+    Build artifact and checksum milestone.
+
+    - Collect build outputs from affected projects
+    - Generate SHA256SUMS
+    - Generate SHA512SUMS
+    - Generate artifact-manifest.json
+    - Generate SBOM SPDX JSON files
+    - Upload pull request artifacts for short retention
+    - Upload main branch artifacts for medium retention
+    - Upload release artifacts for long retention
+  state: open
+
+# ----------------------------------------------------------
+# Security & Compliance
+# ----------------------------------------------------------
+- title: "Security — Strict Pull Request Gate"
+  description: |
+    Strict security gate milestone for pull requests.
+
+    - Block critical vulnerabilities
+    - Block high vulnerabilities
+    - Block failed CodeQL checks
+    - Block failed SonarQube Cloud quality gates
+    - Block dependency review failures
+    - Block secret findings
+    - Block disallowed license findings
+    - Require all tests, linting, formatting, and builds to pass before merge
+  state: open
+
+- title: "Security — Main Branch Monitoring"
+  description: |
+    Scheduled security monitoring milestone for main.
+
+    - Regularly scan main for vulnerabilities
+    - Review dependency and supply-chain alerts
+    - Review container vulnerabilities
+    - Review CodeQL findings
+    - Review SonarQube Cloud findings
+    - Create actionable security issues automatically
+    - Assign security findings to the correct milestone and labels
+  state: open
+
+- title: "Security — Dependency Vulnerability Response"
+  description: |
+    Dependency vulnerability remediation milestone.
+
+    - Process Renovate, Mend, and Dependabot security updates
+    - Automatically merge passing security patch pull requests
+    - Apply security:dependency and no-release labels
+    - Prevent vulnerability remediation PRs from creating releases
+    - Track unresolved high-priority dependency findings
+  state: open
+
+- title: "Security — Supply Chain Integrity"
+  description: |
+    Supply-chain security milestone for releases and published artifacts.
+
+    - Generate SBOM SPDX JSON files
+    - Generate artifact checksums
+    - Generate attestations only on release and publish jobs
+    - Validate npm publishing provenance where supported
+    - Validate GHCR container publishing provenance
+    - Preserve release evidence for audit review
+  state: open
+
+# ----------------------------------------------------------
+# Dependency Automation
+# ----------------------------------------------------------
+- title: "Dependencies — Renovate Weekly Updates"
+  description: |
+    Weekly dependency automation milestone.
+
+    - Group safe dependency updates by ecosystem
+    - Label Renovate pull requests as dependencies and no-release
+    - Automerge safe patch and minor updates when checks pass
+    - Keep pnpm lockfiles current
+    - Avoid release creation from dependency-only pull requests
+  state: open
+
+- title: "Dependencies — Major Upgrade Program"
+  description: |
+    Manual review milestone for major dependency upgrades.
+
+    - Review major updates through the dependency dashboard
+    - Require manual approval for breaking changes
+    - Validate framework, Nx, Cloudflare, database, and test tooling migrations
+    - Track migration notes and rollback plans
+    - Merge only after strict CI and security checks pass
+  state: open
+
+- title: "Dependencies — Mend Management"
+  description: |
+    Mend dependency and security management milestone.
+
+    - Coordinate Mend findings with Renovate and Dependabot
+    - Track remediation work through security issues
+    - Prioritize vulnerable dependency updates
+    - Ensure dependency PRs are excluded from release automation
+    - Maintain security reporting visibility
+  state: open
+
+# ----------------------------------------------------------
+# Cloudflare
+# ----------------------------------------------------------
+- title: "Cloudflare — Preview Environments"
+  description: |
+    Pull request preview deployment milestone.
+
+    - Deploy preview environments automatically from pull requests
+    - Validate Workers before preview deployment
+    - Validate bindings for Queues, R2, D1, KV, and Secrets Store
+    - Keep preview deployment isolated from staging and production
+    - Report preview URLs back to pull requests
+  state: open
+
+- title: "Cloudflare — Staging Environment"
+  description: |
+    Main branch staging deployment milestone.
+
+    - Deploy staging automatically from main
+    - Validate migrations and bindings before deployment
+    - Run post-deployment smoke tests
+    - Preserve staging deployment logs
+    - Use staging as release verification before production
+  state: open
+
+- title: "Cloudflare — Production Environment"
+  description: |
+    Production deployment milestone.
+
+    - Deploy production only from release tags
+    - Require GitHub Environment approval
+    - Validate release artifacts before deployment
+    - Run production smoke checks
+    - Support rollback procedures
+    - Preserve production deployment evidence
+  state: open
+
+# ----------------------------------------------------------
+# Publishing
+# ----------------------------------------------------------
+- title: "Publishing — npm Packages"
+  description: |
+    npm package publishing milestone.
+
+    - Discover publishable packages from package.json files
+    - Publish only packages where private is false
+    - Build packages before publishing
+    - Generate package artifacts
+    - Generate checksums and manifests
+    - Publish only from approved release workflows
+  state: open
+
+- title: "Publishing — GHCR Containers"
+  description: |
+    GHCR container publishing milestone.
+
+    - Discover every Dockerfile in the repository
+    - Build each container image
+    - Tag images using the release version and channel
+    - Push images to ghcr.io/sinless-games/aerealith-ai
+    - Generate SBOM files for images
+    - Generate release attestations
+  state: open
+
+# ----------------------------------------------------------
+# AI Automation
+# ----------------------------------------------------------
+- title: "AI Automation — Changelogs"
+  description: |
+    OpenAI-powered changelog automation milestone.
+
+    - Generate changelog drafts from merged pull requests
+    - Organize changelog entries by release type and area
+    - Exclude no-release and dependency-only changes from release notes
+    - Create release announcement drafts
+    - Post approved release notes to the Announcements discussion category
+  state: open
+
+- title: "AI Automation — Issue & PR Intelligence"
+  description: |
+    OpenAI-powered issue and pull request automation milestone.
+
+    - Detect pull requests without linked issues
+    - Search for likely related issues
+    - Link pull requests to matching issues
+    - Create issues when no matching issue exists
+    - Draft pull requests from approved automation issues
+    - Keep AI-created work clearly labeled and reviewable
+  state: open
+
+- title: "AI Automation — Security Triage"
+  description: |
+    OpenAI-assisted security triage milestone.
+
+    - Summarize security findings
+    - Group related vulnerability reports
+    - Draft remediation issues
+    - Suggest priority, labels, and milestones
+    - Keep all security automation auditable and reviewable
+  state: open
+
+# ----------------------------------------------------------
+# Self-Hosted Deployment
+# ----------------------------------------------------------
+- title: "Self-Hosted — Helm Chart"
+  description: |
+    Future self-hosted deployment milestone for the Helix/Aerealith platform.
+
+    - Design a Helm chart for deploying the full platform
+    - Support local and self-hosted environments
+    - Define Workers-compatible service equivalents where needed
+    - Document required secrets, values, and storage configuration
+    - Prepare chart values for development, staging, and production-style deployments
+    - Keep Kubernetes and Helm support isolated from hosted Cloudflare workflows until ready
+  state: open
+
+- title: "Self-Hosted — Kubernetes Manifests"
+  description: |
+    Future Kubernetes deployment support milestone.
+
+    - Define deployment manifests for self-hosted services
+    - Add Kustomize support if needed
+    - Validate image references from GHCR
+    - Document ingress, secrets, storage, and observability requirements
+    - Prepare future compatibility with the Helm chart
+  state: open
+
+# ----------------------------------------------------------
+# Observability & Operations
+# ----------------------------------------------------------
+- title: "Observability — Grafana Cloud"
+  description: |
+    Observability milestone using Grafana Cloud.
+
+    - Add application metrics
+    - Add logs and traces where supported
+    - Add frontend telemetry where appropriate
+    - Create dashboards for CI/CD, deployment, and runtime health
+    - Track release, deployment, and security automation visibility
+  state: open
+
+- title: "Operations — Runbooks"
+  description: |
+    Operational documentation milestone.
+
+    - Document CI/CD workflows
+    - Document release procedures
+    - Document dependency automation
+    - Document security triage
+    - Document Cloudflare deployment
+    - Document rollback procedures
+    - Document self-hosted deployment plans
+  state: open
+
+# ----------------------------------------------------------
+# Documentation
+# ----------------------------------------------------------
+- title: "Documentation — Developer Experience"
+  description: |
+    Developer documentation milestone.
+
+    - Update README files
+    - Document pnpm and Nx setup
+    - Document apps and libs structure
+    - Document test target conventions
+    - Document Dockerfile conventions
+    - Document branch naming and pull request rules
+  state: open
+
+- title: "Documentation — Architecture"
+  description: |
+    Architecture documentation milestone.
+
+    - Maintain Architecture Decision Records
+    - Document Cloudflare architecture
+    - Document CI/CD architecture
+    - Document security automation architecture
+    - Document release and publishing architecture
+    - Document future self-hosted architecture
+  state: open
+
+# ----------------------------------------------------------
+# Planning / Backlog
+# ----------------------------------------------------------
+- title: "Backlog"
+  description: |
+    General planning milestone for future ideas and deferred work.
+
+    - Capture long-term ideas
+    - Capture deferred features
+    - Track exploratory automation work
+    - Convert prioritized items into scoped milestones
   state: open

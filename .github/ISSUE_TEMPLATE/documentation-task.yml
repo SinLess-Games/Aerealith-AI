@@ -1,0 +1,479 @@
+# .github/ISSUE_TEMPLATE/documentation-task.yml
+name: "📚 Documentation Task"
+description: "Track documentation, README, ADR, runbook, guide, architecture, workflow, release, deployment, or developer experience documentation work for Aerealith AI."
+title: "[Docs]: "
+labels:
+  - kind:documentation
+  - area:docs
+  - status:triage
+  - no-release
+assignees:
+  - Sinless777
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 📚 Documentation Task
+
+        Use this template for documentation work across **Aerealith AI**.
+
+        Documentation work can include:
+
+        - README updates
+        - Docs site pages
+        - Architecture Decision Records
+        - Developer setup guides
+        - CI/CD workflow documentation
+        - Release and publishing documentation
+        - Cloudflare deployment documentation
+        - Security process documentation
+        - Dependency automation documentation
+        - OpenAI automation documentation
+        - Self-hosted Helm or Kubernetes documentation
+        - Troubleshooting guides
+        - Runbooks
+        - Comments or examples that explain complex behavior
+
+        Good documentation should explain not only **what** to do, but also **why it matters**, **when to use it**, and **how to verify it worked**.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm this documentation task is ready for triage."
+      options:
+        - label: "I searched existing issues and did not find a duplicate documentation task."
+          required: true
+        - label: "I can describe what documentation is missing, outdated, unclear, or incorrect."
+          required: true
+        - label: "I can identify the intended audience or use case."
+          required: true
+        - label: "I included enough context for someone else to write or update the documentation."
+          required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: "Documentation Summary"
+      description: "Write one clear sentence describing the documentation task."
+      placeholder: "Example: Document the release label workflow and how V-prefixed tags are created."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: documentation_type
+    attributes:
+      label: "Documentation Type"
+      description: "Choose the primary type of documentation work."
+      multiple: false
+      options:
+        - README update
+        - Docs site page
+        - Architecture Decision Record
+        - Developer setup guide
+        - Contributor guide
+        - Workflow documentation
+        - CI/CD documentation
+        - Release documentation
+        - Publishing documentation
+        - Cloudflare deployment documentation
+        - Security documentation
+        - Dependency automation documentation
+        - OpenAI automation documentation
+        - API documentation
+        - Package documentation
+        - Docker / GHCR documentation
+        - Self-hosted / Helm / Kubernetes documentation
+        - Troubleshooting guide
+        - Operations runbook
+        - Inline code comments
+        - Examples or sample configuration
+        - Cleanup outdated documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: "Affected Area"
+      description: |
+        Select the primary repository or platform area this documentation covers.
+
+        Pick the closest match. Additional areas can be listed later.
+      multiple: false
+      options:
+        - area:docs
+        - area:frontend
+        - area:connectors
+        - area:e2e
+        - area:engines
+        - area:integrations
+        - area:services
+        - area:libs
+        - area:ui
+        - area:config
+        - area:db
+        - area:flags
+        - area:github-actions
+        - area:repo-management
+        - area:ci
+        - area:security
+        - area:dependencies
+        - area:cloudflare
+        - area:workers
+        - area:queues
+        - area:r2
+        - area:d1
+        - area:kv
+        - area:secrets
+        - area:docker
+        - area:ghcr
+        - area:npm
+        - area:artifacts
+        - area:cache
+        - area:observability
+        - area:ai
+        - area:openai
+        - area:self-hosted
+        - area:helm
+        - area:kubernetes
+    validations:
+      required: true
+
+  - type: dropdown
+    id: audience
+    attributes:
+      label: "Intended Audience"
+      description: "Who is this documentation for?"
+      multiple: false
+      options:
+        - End users
+        - New contributors
+        - Maintainers
+        - Developers
+        - Operators
+        - Security reviewers
+        - Release managers
+        - Automation maintainers
+        - Cloudflare deployment maintainers
+        - Self-hosted users
+        - API consumers
+        - Package consumers
+        - Internal project planning
+        - Multiple audiences
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      description: |
+        Choose how important this documentation task is.
+
+        Use Critical only when missing or incorrect documentation blocks security, releases, deployments, CI/CD, onboarding, or production operations.
+      multiple: false
+      options:
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_impact
+    attributes:
+      label: "Release Impact"
+      description: |
+        Most documentation tasks should be `no-release`.
+
+        Use a release label only if the documentation is part of a release-facing change or must be included in release notes.
+      multiple: false
+      options:
+        - no-release
+        - release:patch
+        - release:minor
+        - release:major
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Documentation Problem"
+      description: |
+        Explain what is missing, outdated, confusing, incorrect, incomplete, or hard to follow.
+
+        Be specific about the gap.
+      placeholder: |
+        Example:
+        The release process is not documented clearly.
+
+        Missing details:
+        - Which labels trigger releases
+        - Why dependency PRs do not create releases
+        - How V-prefixed tags are calculated
+        - Where changelogs are posted
+        - What artifacts are generated
+        - How to validate a release in dry-run mode
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired_outcome
+    attributes:
+      label: "Desired Outcome"
+      description: |
+        Describe what the documentation should accomplish after this task is complete.
+
+        Focus on what the reader should understand or be able to do.
+      placeholder: |
+        Example:
+        After reading this documentation, a maintainer should be able to:
+        - Understand the release process
+        - Know which labels to use
+        - Confirm dependency PRs are excluded
+        - Run a dry-run release validation
+        - Find generated artifacts and checksums
+        - Troubleshoot a failed release workflow
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_location
+    attributes:
+      label: "Proposed Documentation Location"
+      description: |
+        List where the documentation should live.
+
+        Include files, folders, docs pages, README sections, ADR paths, runbooks, comments, or examples.
+      placeholder: |
+        Example:
+        - README.md
+        - docs/development/ci-cd.md
+        - docs/operations/release-process.md
+        - docs/operations/cloudflare-deployment.md
+        - docs/architecture/release-automation.md
+        - docs/adrs/ADR-0001-release-automation.md
+        - .github/workflows/release.yaml comments
+    validations:
+      required: false
+
+  - type: textarea
+    id: current_location
+    attributes:
+      label: "Current Documentation Location"
+      description: |
+        If documentation already exists, list where it is now.
+
+        Include what should be updated, moved, merged, or removed.
+      placeholder: |
+        Example:
+        Existing documentation:
+        - README.md has a short release section
+        - docs/development/setup.md mentions pnpm and Nx
+        - No runbook exists yet
+
+        Needed:
+        - Expand release docs
+        - Move workflow-specific details into docs/operations/release-process.md
+        - Link from README.md
+    validations:
+      required: false
+
+  - type: textarea
+    id: topics_to_cover
+    attributes:
+      label: "Topics to Cover"
+      description: |
+        List the specific topics, sections, steps, warnings, examples, or diagrams that should be included.
+
+        Use checklist items so progress can be tracked.
+      placeholder: |
+        - [ ] Overview
+        - [ ] Intended audience
+        - [ ] Prerequisites
+        - [ ] Required secrets and variables
+        - [ ] Step-by-step process
+        - [ ] Common commands
+        - [ ] Expected outputs
+        - [ ] Validation steps
+        - [ ] Troubleshooting
+        - [ ] Rollback or recovery notes
+        - [ ] Security considerations
+        - [ ] Related workflows, scripts, issues, or ADRs
+    validations:
+      required: true
+
+  - type: textarea
+    id: required_details
+    attributes:
+      label: "Required Details"
+      description: |
+        Add any exact details that must appear in the documentation.
+
+        Include commands, labels, paths, environment names, workflow names, version numbers, service names, package names, or policy rules.
+      placeholder: |
+        Example:
+        Required details:
+        - Node.js 24.15.0
+        - pnpm 10.23.0
+        - Default branch: main
+        - Release tag format: V1.2.3
+        - Release labels: release:major, release:minor, release:patch
+        - Release blockers: no-release, dependencies, security:dependency
+        - Discussion category: Announcements
+        - Cloudflare environments: preview, staging, production
+    validations:
+      required: false
+
+  - type: textarea
+    id: examples_needed
+    attributes:
+      label: "Examples Needed"
+      description: |
+        Describe any examples, snippets, commands, screenshots, diagrams, or sample configs that should be included.
+      placeholder: |
+        Example:
+        - Example release PR labels
+        - Example changelog output
+        - Example GHCR image tag
+        - Example Cloudflare deploy workflow
+        - Example dry-run command
+        - Example troubleshooting log
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: |
+        Define what must be true before this documentation task is complete.
+
+        These should be specific and verifiable.
+      placeholder: |
+        - [ ] Documentation exists in the expected location.
+        - [ ] The intended audience is clear.
+        - [ ] The documentation explains the problem or workflow thoroughly.
+        - [ ] Required commands, labels, paths, or workflow names are included.
+        - [ ] Examples are included where helpful.
+        - [ ] Warnings or safety rules are included where needed.
+        - [ ] Links to related files, workflows, issues, or ADRs are included.
+        - [ ] Outdated Helix references are replaced with Aerealith AI where appropriate.
+        - [ ] Formatting and spelling are reviewed.
+        - [ ] The documentation can be followed by someone other than the original author.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "Validation Plan"
+      description: |
+        Explain how the documentation should be reviewed or tested.
+
+        Good documentation should be validated by following the steps, checking commands, verifying links, or reviewing examples.
+      placeholder: |
+        Example:
+        - Follow the documented workflow from start to finish.
+        - Verify all commands are current.
+        - Verify file paths exist.
+        - Verify labels match `.github/labels.yaml`.
+        - Verify milestones match `.github/milestones.yaml`.
+        - Verify workflow names match `.github/workflows`.
+        - Verify links work.
+        - Confirm no secrets or private values are included.
+        - Ask someone else to follow the guide.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: "Risks, Confusion Points, or Warnings"
+      description: |
+        List anything the documentation must explain carefully to avoid mistakes.
+
+        This is especially important for security, release, deployment, automation, and production work.
+      placeholder: |
+        Example:
+        - Do not run production deployment from feature branches.
+        - Do not expose secrets in logs.
+        - Do not add release labels to dependency PRs.
+        - OpenAI automation must not push directly to main.
+        - Attestations should only be generated on release and publish jobs.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_files
+    attributes:
+      label: "Related Files, Workflows, Scripts, or Configs"
+      description: |
+        List the files the documentation should reference or stay aligned with.
+      placeholder: |
+        Example:
+        - .github/workflows/ci.yaml
+        - .github/workflows/release.yaml
+        - .github/workflows/security.yaml
+        - .github/labels.yaml
+        - .github/milestones.yaml
+        - .github/assignees.yaml
+        - .github/repo-management/release-rules.yaml
+        - .github/scripts/release/build-changelog.js
+        - package.json
+        - nx.json
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or ADRs"
+      description: |
+        Link anything related.
+
+        Use references such as:
+        - Related to #123
+        - Depends on #456
+        - Blocks #789
+      placeholder: |
+        Related to #
+        Depends on #
+        Blocks #
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that would help with planning, writing, reviewing, or validating the documentation."
+      placeholder: |
+        Example:
+        This should be written after the release workflow is implemented.
+        This should be part of the Operations — Runbooks milestone.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm this documentation task is ready for triage."
+      options:
+        - label: "I explained what documentation is missing, outdated, unclear, or incorrect."
+          required: true
+        - label: "I included the intended audience and desired outcome."
+          required: true
+        - label: "I included topics to cover or enough detail to create them."
+          required: true
+        - label: "I understand maintainers may adjust priority, area, milestone, labels, and release impact."
+          required: true

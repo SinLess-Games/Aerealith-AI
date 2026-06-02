@@ -1,0 +1,580 @@
+# .github/ISSUE_TEMPLATE/release-task.yml
+name: "🚀 Release Task"
+description: "Plan, validate, troubleshoot, or execute release work for Aerealith AI."
+title: "[Release]: "
+labels:
+  - kind:release
+  - release
+  - status:triage
+assignees:
+  - Sinless777
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🚀 Release Task
+
+        Use this template for work related to **versioning, release labels, changelogs, GitHub Releases, npm publishing, GHCR container publishing, release artifacts, checksums, SBOMs, attestations, production deployment, or release announcements**.
+
+        Aerealith AI releases are controlled and should follow these rules:
+
+        - Releases happen only from merged pull requests on `main`
+        - A release must be intentionally marked with one release label:
+          - `release:major`
+          - `release:minor`
+          - `release:patch`
+        - Dependency-only work must not trigger a release
+        - `no-release`, `dependencies`, and `security:dependency` must block release creation
+        - Tags use the format `V1.2.3`
+        - Release and publish jobs generate attestations
+        - Release artifacts should include hashes and manifests
+        - Release notes should be posted to the `Announcements` discussion category
+
+        This form walks through the release task so it can be planned, validated, executed, and audited safely.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm this release task is ready for triage."
+      options:
+        - label: "I searched existing issues and did not find a duplicate release task."
+          required: true
+        - label: "I understand dependency-only PRs must not trigger releases."
+          required: true
+        - label: "I understand release creation requires a merged PR on `main` with a release label."
+          required: true
+        - label: "I included enough context to determine the release scope, risk, and validation needs."
+          required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: "Release Task Summary"
+      description: "Write one clear sentence describing the release task."
+      placeholder: "Example: Add release workflow logic for V-prefixed tags and Announcements discussion posts."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_task_type
+    attributes:
+      label: "Release Task Type"
+      description: "Choose the primary kind of release work."
+      multiple: false
+      options:
+        - Release planning
+        - Release blocker
+        - Release workflow implementation
+        - Release workflow bug
+        - Version calculation
+        - Tag creation
+        - Changelog generation
+        - GitHub Release creation
+        - Discussion announcement
+        - npm package publishing
+        - GHCR container publishing
+        - Docker image tagging
+        - Artifact generation
+        - Checksum generation
+        - SBOM generation
+        - Attestation generation
+        - Release validation
+        - Production deployment
+        - Rollback planning
+        - Release documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release_impact
+    attributes:
+      label: "Release Impact"
+      description: |
+        Choose the intended release impact.
+
+        Only use a release label when this task is expected to produce or support a real release.
+      multiple: false
+      options:
+        - release:major
+        - release:minor
+        - release:patch
+        - no-release
+        - Unsure
+    validations:
+      required: true
+
+  - type: input
+    id: target_version
+    attributes:
+      label: "Target Version"
+      description: "Use the expected V-prefixed version if known."
+      placeholder: "Example: V0.5.0, V1.0.0, or unknown"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: release_channel
+    attributes:
+      label: "Release Channel"
+      description: "Choose the intended release channel."
+      multiple: false
+      options:
+        - release
+        - beta
+        - alpha
+        - test
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: "Affected Area"
+      description: "Select the primary area affected by this release task."
+      multiple: false
+      options:
+        - area:ci
+        - area:github-actions
+        - area:repo-management
+        - area:security
+        - area:dependencies
+        - area:cloudflare
+        - area:docker
+        - area:ghcr
+        - area:npm
+        - area:artifacts
+        - area:cache
+        - area:ai
+        - area:openai
+        - area:frontend
+        - area:connectors
+        - area:e2e
+        - area:engines
+        - area:integrations
+        - area:services
+        - area:libs
+        - area:self-hosted
+        - area:helm
+        - area:kubernetes
+        - area:docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      description: |
+        Choose the urgency or impact level.
+
+        Use Critical when this blocks a planned release, production deployment, security fix, publishing job, or required release evidence.
+      multiple: false
+      options:
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: "Objective"
+      description: |
+        Explain the goal of this release task.
+
+        Focus on what needs to be true when the task is complete.
+      placeholder: |
+        Example:
+        Implement release detection so only merged PRs on `main` with `release:major`, `release:minor`, or `release:patch` can create a release.
+
+        The workflow must ignore Renovate, Dependabot, Mend, `dependencies`, `security:dependency`, and `no-release` work.
+    validations:
+      required: true
+
+  - type: textarea
+    id: release_scope
+    attributes:
+      label: "Release Scope"
+      description: |
+        Describe what is included in the release task.
+
+        Include apps, libraries, packages, containers, workflows, scripts, Cloudflare deployments, artifacts, or documentation.
+      placeholder: |
+        Example:
+        Included:
+        - .github/workflows/release.yaml
+        - .github/scripts/release/determine-release-version.js
+        - .github/scripts/release/build-changelog.js
+        - .github/scripts/release/post-discussion-announcement.js
+        - GitHub Release creation
+        - Announcements discussion post
+
+        Not included:
+        - npm publishing
+        - GHCR publishing
+        - production deployment
+    validations:
+      required: true
+
+  - type: textarea
+    id: release_rules
+    attributes:
+      label: "Release Rules"
+      description: |
+        Define the release rules this task must follow.
+
+        Be explicit about what can trigger a release and what must block a release.
+      placeholder: |
+        Required release behavior:
+        - Release only after a PR is merged into `main`.
+        - Require exactly one release label:
+          - `release:major`
+          - `release:minor`
+          - `release:patch`
+        - Use tag format `V{major}.{minor}.{patch}`.
+        - Do not release dependency-only PRs.
+        - Do not release PRs labeled `no-release`.
+        - Do not release PRs labeled `dependencies`.
+        - Do not release PRs labeled `security:dependency`.
+        - Do not release failed CI or failed security checks.
+    validations:
+      required: true
+
+  - type: textarea
+    id: versioning_details
+    attributes:
+      label: "Versioning Details"
+      description: |
+        Describe how the version should be selected, calculated, or validated.
+
+        Include the current version, target version, tag behavior, or release label behavior if known.
+      placeholder: |
+        Example:
+        - Current latest tag: V0.4.3
+        - Merged PR has `release:minor`
+        - Expected next version: V0.5.0
+        - Tag should be created on the merge commit on `main`
+        - The workflow should fail if the tag already exists
+    validations:
+      required: false
+
+  - type: textarea
+    id: changelog_requirements
+    attributes:
+      label: "Changelog Requirements"
+      description: |
+        Describe what should be included in the changelog or release notes.
+
+        Include grouping, exclusions, AI generation rules, manual review rules, or discussion announcement requirements.
+      placeholder: |
+        Example:
+        Changelog should:
+        - Include merged PRs since the last release.
+        - Group changes by type and area.
+        - Exclude dependency-only PRs.
+        - Exclude `no-release` changes.
+        - Include links to PRs and issues.
+        - Be generated by OpenAI as a draft.
+        - Be posted to the `Announcements` discussion category after release.
+    validations:
+      required: false
+
+  - type: textarea
+    id: publishing_requirements
+    attributes:
+      label: "Publishing Requirements"
+      description: |
+        Describe any npm, GHCR, Docker, artifact, or Cloudflare publishing requirements.
+
+        Leave blank if this release task does not publish anything.
+      placeholder: |
+        Example:
+        npm:
+        - Publish only packages where package.json has `private: false`.
+
+        GHCR:
+        - Build every detected Dockerfile.
+        - Push images to `ghcr.io/sinless-games/aerealith-ai/{name}`.
+        - Tag images as `V1.2.3-release`, `V1.2.3-beta`, `V1.2.3-alpha`, or `V1.2.3-test`.
+
+        Cloudflare:
+        - Deploy production only from release tags.
+        - Require GitHub Environment approval.
+    validations:
+      required: false
+
+  - type: textarea
+    id: artifact_requirements
+    attributes:
+      label: "Artifact, Hash, SBOM, or Attestation Requirements"
+      description: |
+        Describe the release evidence that must be generated.
+
+        Release and publish jobs should generate attestations. Pull request validation should not.
+      placeholder: |
+        Required release outputs:
+        - SHA256SUMS
+        - SHA512SUMS
+        - artifact-manifest.json
+        - SBOM SPDX JSON
+        - npm package artifacts when applicable
+        - GHCR image SBOMs when applicable
+        - Release attestations
+        - Published GitHub Release assets
+    validations:
+      required: false
+
+  - type: textarea
+    id: security_requirements
+    attributes:
+      label: "Security and Approval Requirements"
+      description: |
+        Describe security gates, approvals, workflow permissions, or release safety rules.
+
+        Release work should be strict and auditable.
+      placeholder: |
+        Example:
+        - CI must pass before release.
+        - Security workflow must pass before release.
+        - Critical and high vulnerabilities must block release.
+        - SonarQube quality gate must pass.
+        - CodeQL must pass.
+        - Production deploys require environment approval.
+        - Workflows must use least-privilege permissions.
+        - Release jobs require `contents: write`, `packages: write`, `id-token: write`, and `attestations: write` only where needed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected_files
+    attributes:
+      label: "Expected Files, Folders, Workflows, or Scripts Affected"
+      description: |
+        List likely files, folders, workflows, scripts, packages, or services affected by this release task.
+      placeholder: |
+        Example:
+        - .github/workflows/release.yaml
+        - .github/workflows/publish-npm.yaml
+        - .github/workflows/publish-containers.yaml
+        - .github/workflows/attestations.yaml
+        - .github/scripts/release/determine-release-version.js
+        - .github/scripts/release/build-changelog.js
+        - .github/scripts/release/create-github-release.js
+        - .github/scripts/release/post-discussion-announcement.js
+        - .github/scripts/artifacts/create-checksums.js
+        - .github/scripts/artifacts/create-sbom.js
+        - CHANGELOG.md
+        - package.json
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation_plan
+    attributes:
+      label: "Implementation Plan"
+      description: |
+        Break the release task into concrete implementation steps.
+
+        Use checklist items so progress can be tracked.
+      placeholder: |
+        - [ ] Confirm release labels exist.
+        - [ ] Detect merged PR from push to `main`.
+        - [ ] Read PR labels.
+        - [ ] Block release when `no-release`, `dependencies`, or `security:dependency` is present.
+        - [ ] Determine release type from `release:major`, `release:minor`, or `release:patch`.
+        - [ ] Calculate next V-prefixed version.
+        - [ ] Create release tag on the main merge commit.
+        - [ ] Generate changelog.
+        - [ ] Build release artifacts.
+        - [ ] Generate SHA256SUMS and SHA512SUMS.
+        - [ ] Generate artifact-manifest.json.
+        - [ ] Generate SBOM SPDX JSON.
+        - [ ] Generate attestations.
+        - [ ] Create GitHub Release.
+        - [ ] Post announcement to GitHub Discussions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: |
+        Define what must be true before this release task is complete.
+
+        These should be specific and verifiable.
+      placeholder: |
+        - [ ] Release workflow only runs for qualifying merged PRs on `main`.
+        - [ ] PRs without release labels do not create releases.
+        - [ ] PRs with `no-release` do not create releases.
+        - [ ] Dependency PRs do not create releases.
+        - [ ] Security dependency PRs do not create releases.
+        - [ ] Tags use the format `V1.2.3`.
+        - [ ] Changelog generation is deterministic and reviewable.
+        - [ ] Release artifacts are generated.
+        - [ ] SHA256SUMS and SHA512SUMS are generated.
+        - [ ] artifact-manifest.json is generated.
+        - [ ] SBOM SPDX JSON is generated where applicable.
+        - [ ] Attestations are generated only on release/publish jobs.
+        - [ ] GitHub Release is created successfully.
+        - [ ] Announcement is posted to `Announcements`.
+        - [ ] CI and security gates pass.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "Validation Plan"
+      description: |
+        Explain how this release task should be tested or verified.
+
+        Include dry-run behavior, test PR labels, workflow dispatch, expected outputs, and failure cases.
+      placeholder: |
+        Example validation:
+        - Run release logic in dry-run mode.
+        - Test with a PR labeled `release:patch`.
+        - Test with a PR labeled `release:minor`.
+        - Test with a PR labeled `release:major`.
+        - Test with a PR labeled `no-release`.
+        - Test with a Renovate PR labeled `dependencies`.
+        - Confirm only release-labeled PRs create a planned release.
+        - Confirm dependency PRs are skipped.
+        - Confirm generated tag uses the correct V-prefixed version.
+        - Confirm changelog excludes no-release work.
+        - Confirm artifacts and hashes are generated.
+        - Confirm no production deployment happens without approval.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure_modes
+    attributes:
+      label: "Expected Failure Modes"
+      description: |
+        Describe how the release workflow should fail safely.
+
+        Release failures should be clear, auditable, and non-destructive.
+      placeholder: |
+        Example:
+        - If no release label exists, skip release successfully.
+        - If multiple release labels exist, fail with a clear error.
+        - If the tag already exists, fail before publishing.
+        - If CI or security checks failed, block release.
+        - If artifact hashing fails, block release.
+        - If npm publishing fails, do not continue silently.
+        - If GHCR publishing fails, summarize failed images.
+        - If discussion posting fails, release should exist but the announcement failure should be reported.
+    validations:
+      required: false
+
+  - type: textarea
+    id: rollback_plan
+    attributes:
+      label: "Rollback Plan"
+      description: |
+        Describe how to recover if this release task causes problems.
+
+        Include workflow rollback, package rollback, image rollback, Cloudflare rollback, or tag/release handling if relevant.
+      placeholder: |
+        Example:
+        - Revert the workflow change.
+        - Disable release workflow temporarily.
+        - Delete failed draft release if no assets were published.
+        - Mark the release as failed in release notes.
+        - Roll back Cloudflare production deployment.
+        - Publish a patch release if correction is needed.
+        - Restore previous GHCR image tag or deployment target.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Dependencies, Prerequisites, or Blockers"
+      description: |
+        List anything that must exist before this release task can be completed.
+
+        Include secrets, labels, workflows, branch protection, environments, packages, repo settings, or related issues.
+      placeholder: |
+        Example:
+        - Requires release labels in `.github/labels.yaml`.
+        - Requires `NPM_ACCESS_TOKEN` for npm publishing.
+        - Requires `GITHUB_TOKEN` permissions for GitHub Releases.
+        - Requires GHCR package permissions.
+        - Requires `OPENAI_API_KEY` for AI-generated changelog drafts.
+        - Requires `Announcements` discussion category.
+        - Requires production GitHub Environment approval.
+        - Depends on #123.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or ADRs"
+      description: |
+        Link anything related.
+
+        Use references such as:
+        - Related to #123
+        - Depends on #456
+        - Blocks #789
+      placeholder: |
+        Related to #
+        Depends on #
+        Blocks #
+    validations:
+      required: false
+
+  - type: textarea
+    id: documentation
+    attributes:
+      label: "Documentation Updates"
+      description: |
+        Describe any release documentation, changelog documentation, runbooks, ADRs, or contributor docs that should be updated.
+      placeholder: |
+        Example:
+        - Document release labels.
+        - Document release workflow behavior.
+        - Document dependency PR release exclusion.
+        - Document npm publishing.
+        - Document GHCR image naming.
+        - Document artifact, SBOM, checksum, and attestation expectations.
+        - Document rollback process.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that would help with release planning, implementation, validation, review, or rollback."
+      placeholder: |
+        Example:
+        This should be completed before enabling production deployments from release tags.
+        This should be tested in dry-run mode before write-mode release automation is enabled.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm this release task is ready for triage."
+      options:
+        - label: "I explained the release task and expected release behavior."
+          required: true
+        - label: "I included release rules, acceptance criteria, or enough detail to create them."
+          required: true
+        - label: "I included validation steps or enough context to define them."
+          required: true
+        - label: "I understand maintainers may adjust priority, milestone, labels, release impact, and release channel."
+          required: true

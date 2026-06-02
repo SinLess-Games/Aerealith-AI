@@ -1,0 +1,456 @@
+name: Aerealith AI Dependency Review
+
+run-name: >-
+  Dependency Review / ${{ github.event_name }} / ${{ github.head_ref || github.ref_name || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      fail_on_severity:
+        description: "Minimum vulnerability severity that fails the review."
+        required: true
+        default: "high"
+        type: choice
+        options:
+          - low
+          - moderate
+          - high
+          - critical
+      fail_on_scopes:
+        description: "Dependency scopes that can fail the review."
+        required: false
+        default: "runtime"
+        type: string
+      vulnerability_check:
+        description: "Check for vulnerable dependencies."
+        required: true
+        default: true
+        type: boolean
+      license_check:
+        description: "Check dependency licenses."
+        required: true
+        default: true
+        type: boolean
+      deny_licenses:
+        description: "Comma-separated SPDX licenses to deny."
+        required: false
+        default: "AGPL-1.0,AGPL-3.0"
+        type: string
+      comment_summary:
+        description: "Comment dependency review summary on pull requests."
+        required: true
+        default: false
+        type: boolean
+      warn_only:
+        description: "Report findings without failing the workflow."
+        required: true
+        default: false
+        type: boolean
+      run_local_audit:
+        description: "Run pnpm audit and local dependency summary scripts."
+        required: true
+        default: true
+        type: boolean
+      dry_run:
+        description: "Pass dry-run mode to local summary scripts."
+        required: true
+        default: false
+        type: boolean
+
+  pull_request:
+    branches:
+      - main
+      - develop
+      - staging
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "apps/**/package.json"
+      - "libs/**/package.json"
+      - "packages/**/package.json"
+      - ".github/dependabot.yml"
+      - ".github/dependabot.yaml"
+      - "renovate.json"
+      - "renovate.json5"
+      - ".renovaterc"
+      - ".renovaterc.json"
+      - ".github/workflows/dependency-review.yaml"
+
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  pull-requests: write
+  security-events: read
+
+concurrency:
+  group: >-
+    dependency-review-${{ github.event.pull_request.number || github.ref_name || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  CI: "true"
+  NX_DAEMON: "false"
+  NEXT_TELEMETRY_DISABLED: "1"
+  DEPENDENCY_REVIEW_OUTPUT_DIR: artifacts/dependency-review
+  SECURITY_OUTPUT_DIR: artifacts/security
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      fail_on_severity: ${{ steps.context.outputs.fail_on_severity }}
+      fail_on_scopes: ${{ steps.context.outputs.fail_on_scopes }}
+      vulnerability_check: ${{ steps.context.outputs.vulnerability_check }}
+      license_check: ${{ steps.context.outputs.license_check }}
+      deny_licenses: ${{ steps.context.outputs.deny_licenses }}
+      comment_summary: ${{ steps.context.outputs.comment_summary }}
+      warn_only: ${{ steps.context.outputs.warn_only }}
+      run_local_audit: ${{ steps.context.outputs.run_local_audit }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      is_pull_request: ${{ steps.context.outputs.is_pull_request }}
+      should_run_dependency_review: ${{ steps.context.outputs.should_run_dependency_review }}
+
+    steps:
+      - name: Resolve dependency review context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_FAIL_ON_SEVERITY: ${{ github.event.inputs.fail_on_severity || 'high' }}
+          INPUT_FAIL_ON_SCOPES: ${{ github.event.inputs.fail_on_scopes || 'runtime' }}
+          INPUT_VULNERABILITY_CHECK: ${{ github.event.inputs.vulnerability_check || 'true' }}
+          INPUT_LICENSE_CHECK: ${{ github.event.inputs.license_check || 'true' }}
+          INPUT_DENY_LICENSES: ${{ github.event.inputs.deny_licenses || 'AGPL-1.0,AGPL-3.0' }}
+          INPUT_COMMENT_SUMMARY: ${{ github.event.inputs.comment_summary || 'false' }}
+          INPUT_WARN_ONLY: ${{ github.event.inputs.warn_only || 'false' }}
+          INPUT_RUN_LOCAL_AUDIT: ${{ github.event.inputs.run_local_audit || 'true' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+
+          fail_on_severity="${INPUT_FAIL_ON_SEVERITY:-high}"
+          fail_on_scopes="${INPUT_FAIL_ON_SCOPES:-runtime}"
+          vulnerability_check="${INPUT_VULNERABILITY_CHECK:-true}"
+          license_check="${INPUT_LICENSE_CHECK:-true}"
+          deny_licenses="${INPUT_DENY_LICENSES:-AGPL-1.0,AGPL-3.0}"
+          comment_summary="${INPUT_COMMENT_SUMMARY:-false}"
+          warn_only="${INPUT_WARN_ONLY:-false}"
+          run_local_audit="${INPUT_RUN_LOCAL_AUDIT:-true}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+
+          is_pull_request="false"
+          should_run_dependency_review="false"
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            is_pull_request="true"
+            should_run_dependency_review="true"
+          fi
+
+          case "$fail_on_severity" in
+            low|moderate|high|critical)
+              ;;
+            *)
+              echo "::error::Unsupported severity: $fail_on_severity"
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "fail_on_severity=$fail_on_severity"
+            echo "fail_on_scopes=$fail_on_scopes"
+            echo "vulnerability_check=$vulnerability_check"
+            echo "license_check=$license_check"
+            echo "deny_licenses=$deny_licenses"
+            echo "comment_summary=$comment_summary"
+            echo "warn_only=$warn_only"
+            echo "run_local_audit=$run_local_audit"
+            echo "dry_run=$dry_run"
+            echo "is_pull_request=$is_pull_request"
+            echo "should_run_dependency_review=$should_run_dependency_review"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Dependency Review"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Fail on severity | \`$fail_on_severity\` |"
+            echo "| Fail on scopes | \`$fail_on_scopes\` |"
+            echo "| Vulnerability check | \`$vulnerability_check\` |"
+            echo "| License check | \`$license_check\` |"
+            echo "| Denied licenses | \`${deny_licenses:-none}\` |"
+            echo "| Comment summary | \`$comment_summary\` |"
+            echo "| Warn only | \`$warn_only\` |"
+            echo "| Local audit | \`$run_local_audit\` |"
+            echo "| Dry run | \`$dry_run\` |"
+            echo "| Pull request | \`$is_pull_request\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  dependency-review:
+    name: GitHub Dependency Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - preflight
+
+    if: needs.preflight.outputs.should_run_dependency_review == 'true'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: ${{ needs.preflight.outputs.fail_on_severity }}
+          fail-on-scopes: ${{ needs.preflight.outputs.fail_on_scopes }}
+          vulnerability-check: ${{ needs.preflight.outputs.vulnerability_check }}
+          license-check: ${{ needs.preflight.outputs.license_check }}
+          deny-licenses: ${{ needs.preflight.outputs.deny_licenses }}
+          comment-summary-in-pr: ${{ needs.preflight.outputs.comment_summary }}
+          warn-only: ${{ needs.preflight.outputs.warn_only }}
+
+  local-audit:
+    name: Local Dependency Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs:
+      - preflight
+      - dependency-review
+
+    if: always() && needs.preflight.outputs.run_local_audit == 'true'
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      FAIL_ON_SEVERITY: ${{ needs.preflight.outputs.fail_on_severity }}
+      WARN_ONLY: ${{ needs.preflight.outputs.warn_only }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Enable Corepack
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          corepack prepare "$PACKAGE_MANAGER" --activate
+
+          pnpm --version
+
+      - name: Prepare output directories
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$DEPENDENCY_REVIEW_OUTPUT_DIR"
+          mkdir -p "$SECURITY_OUTPUT_DIR"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run pnpm audit
+        id: audit
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          audit_file="$SECURITY_OUTPUT_DIR/pnpm-audit.json"
+
+          set +e
+          pnpm audit --prod --audit-level="$FAIL_ON_SEVERITY" --json > "$audit_file"
+          audit_status=$?
+          set -e
+
+          echo "audit_status=$audit_status" >> "$GITHUB_OUTPUT"
+
+          if [[ "$audit_status" -ne 0 ]]; then
+            echo "::warning::pnpm audit reported vulnerabilities at or above level: $FAIL_ON_SEVERITY"
+
+            if [[ "$WARN_ONLY" != "true" ]]; then
+              exit "$audit_status"
+            fi
+          fi
+
+      - name: Write dependency review metadata
+        if: always()
+        run: |
+          set -euo pipefail
+
+          cat > "$DEPENDENCY_REVIEW_OUTPUT_DIR/dependency-review.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "dependency-review",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "event_name": "$GITHUB_EVENT_NAME",
+            "fail_on_severity": "$FAIL_ON_SEVERITY",
+            "warn_only": "$WARN_ONLY",
+            "audit_status": "${{ steps.audit.outputs.audit_status || 'skipped' }}",
+            "dry_run": "$PROJECT_SYNC_DRY_RUN",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          {
+            echo "# Aerealith AI Dependency Review"
+            echo ""
+            echo "Generated: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo ""
+            echo "## Status"
+            echo ""
+            echo "- Fail on severity: \`$FAIL_ON_SEVERITY\`"
+            echo "- Warn only: \`$WARN_ONLY\`"
+            echo "- Audit status: \`${{ steps.audit.outputs.audit_status || 'skipped' }}\`"
+            echo "- Dry run: \`$PROJECT_SYNC_DRY_RUN\`"
+          } > "$DEPENDENCY_REVIEW_OUTPUT_DIR/dependency-review.md"
+
+      - name: Summarize dependency findings
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/security/summarize-dependencies.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/security/summarize-dependencies.js"
+            exit 0
+          fi
+
+          node ".github/scripts/security/summarize-dependencies.js" \
+            --report-file "$SECURITY_OUTPUT_DIR/pnpm-audit.json" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-dependencies.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-dependencies.md" \
+            --no-fail-on-error
+
+      - name: Summarize unified security
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/security/summarize-security.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/security/summarize-security.js"
+            exit 0
+          fi
+
+          node ".github/scripts/security/summarize-security.js" \
+            --input-dir "$SECURITY_OUTPUT_DIR" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-security.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-security.md" \
+            --no-fail-on-error
+
+      - name: Write local audit output summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Dependency Review Output"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            for dir in "$DEPENDENCY_REVIEW_OUTPUT_DIR" "$SECURITY_OUTPUT_DIR"; do
+              if [[ -d "$dir" ]]; then
+                while IFS= read -r file; do
+                  size="$(wc -c < "$file" | xargs)"
+                  echo "| \`$file\` | \`$size\` bytes |"
+                done < <(find "$dir" -type f | sort)
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload dependency review artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-review-${{ github.run_id }}
+          path: |
+            artifacts/dependency-review/**
+            artifacts/security/**
+          if-no-files-found: ignore
+          retention-days: 21
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - preflight
+      - dependency-review
+      - local-audit
+
+    if: always()
+
+    steps:
+      - name: Write final dependency review summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Dependency Review Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| GitHub dependency review | \`${{ needs.dependency-review.result }}\` |"
+            echo "| Local audit | \`${{ needs.local-audit.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Fail on severity | \`${{ needs.preflight.outputs.fail_on_severity }}\` |"
+            echo "| Fail on scopes | \`${{ needs.preflight.outputs.fail_on_scopes }}\` |"
+            echo "| Vulnerability check | \`${{ needs.preflight.outputs.vulnerability_check }}\` |"
+            echo "| License check | \`${{ needs.preflight.outputs.license_check }}\` |"
+            echo "| Warn only | \`${{ needs.preflight.outputs.warn_only }}\` |"
+            echo "| Local audit | \`${{ needs.preflight.outputs.run_local_audit }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce dependency review result
+        run: |
+          set -euo pipefail
+
+          check_optional_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
+
+          check_optional_job "GitHub dependency review" "${{ needs.dependency-review.result }}"
+          check_optional_job "Local audit" "${{ needs.local-audit.result }}"
+
+          echo "Dependency review workflow completed."

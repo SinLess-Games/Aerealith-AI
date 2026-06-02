@@ -1,0 +1,1246 @@
+# .github/repo-management/cloudflare-rules.yaml
+# =============================================================================
+# Aerealith AI Cloudflare Rules
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Source-of-truth configuration for Cloudflare deployment routing, environment
+#   policy, bindings, required secrets, validation rules, smoke checks, and
+#   deployment safety.
+#
+# Used by:
+#   - .github/workflows/wrangler-deploy.yaml
+#   - .github/workflows/cloudflare-preview.yaml
+#   - .github/workflows/cloudflare-staging.yaml
+#   - .github/workflows/cloudflare-production.yaml
+#   - .github/scripts/cloudflare/discover-deployments.js
+#   - .github/scripts/cloudflare/deploy-preview.js
+#   - .github/scripts/cloudflare/deploy-staging.js
+#   - .github/scripts/cloudflare/deploy-production.js
+#   - .github/scripts/cloudflare/run-d1-migrations.js
+#   - .github/scripts/cloudflare/sync-kv.js
+#   - .github/scripts/cloudflare/sync-r2.js
+#   - .github/scripts/cloudflare/sync-queues.js
+#   - .github/scripts/cloudflare/sync-secrets.js
+#
+# Deployment model:
+#   - preview: automatic on pull requests
+#   - staging: automatic on main
+#   - production: release/tag only with GitHub Environment approval
+#
+# Safety:
+#   - No secrets in logs
+#   - No production deploy from pull requests
+#   - No production deploy without release tag and approval
+#   - No dependency PR deploys to production
+#   - Dry-run support everywhere
+# =============================================================================
+
+version: 1
+
+repository:
+  owner: SinLess-Games
+  name: Aerealith-AI
+  default_branch: main
+
+cloudflare:
+  account_id_variable: CLOUDFLARE_ACCOUNT_ID
+  api_token_secret: CLOUDFLARE_API_TOKEN
+
+  primary_platform: true
+
+  services:
+    workers: true
+    queues: true
+    r2: true
+    d1: true
+    kv: true
+    secrets_store: true
+    pages: false
+
+  tooling:
+    package_manager: pnpm
+    pnpm_version: 10.23.0
+    node_version: 24.15.0
+    wrangler_package: wrangler
+
+# -----------------------------------------------------------------------------
+# Global Deployment Policy
+# -----------------------------------------------------------------------------
+policy:
+  dry_run_supported: true
+  debug_supported: true
+
+  require_ci_before_deploy: true
+  require_security_before_deploy: true
+  require_build_before_deploy: true
+
+  production_requires_release_tag: true
+  production_requires_environment_approval: true
+  production_requires_smoke_tests: true
+
+  allow_preview_from_pull_request: true
+  allow_staging_from_main: true
+  allow_production_from_release_tag: true
+
+  block_production_from_pull_request: true
+  block_production_from_feature_branch: true
+  block_production_from_dependency_branch: true
+  block_production_from_openai_branch: true
+
+  dependency_prs_can_deploy_preview: true
+  dependency_prs_can_deploy_staging: false
+  dependency_prs_can_deploy_production: false
+
+  openai_prs_can_deploy_preview: false
+  openai_prs_can_deploy_staging: false
+  openai_prs_can_deploy_production: false
+
+  require_least_privilege_permissions: true
+  redact_secrets_in_logs: true
+  fail_on_missing_required_bindings: true
+  fail_on_missing_required_secrets: true
+  fail_on_invalid_wrangler_config: true
+
+# -----------------------------------------------------------------------------
+# GitHub Environments
+# -----------------------------------------------------------------------------
+github_environments:
+  preview:
+    name: preview
+    approval_required: false
+    deployment_branch_policy:
+      protected_branches: false
+      custom_branch_policies: true
+    allowed_events:
+      - pull_request
+      - workflow_dispatch
+
+  staging:
+    name: staging
+    approval_required: false
+    deployment_branch_policy:
+      protected_branches: true
+      custom_branch_policies: true
+    allowed_events:
+      - push
+      - workflow_dispatch
+    allowed_branches:
+      - main
+
+  production:
+    name: production
+    approval_required: true
+    deployment_branch_policy:
+      protected_branches: true
+      custom_branch_policies: true
+    allowed_events:
+      - push
+      - workflow_dispatch
+      - release
+    allowed_refs:
+      - "^refs/tags/V[0-9]+\\.[0-9]+\\.[0-9]+$"
+
+# -----------------------------------------------------------------------------
+# Deployment Environments
+# -----------------------------------------------------------------------------
+environments:
+  preview:
+    description: Pull request preview deployment.
+    enabled: true
+    github_environment: preview
+
+    trigger:
+      events:
+        - pull_request
+        - workflow_dispatch
+      branches:
+        include:
+          - "*"
+        exclude:
+          - main
+      tags:
+        include: []
+      allow_forks: false
+
+    labels:
+      add:
+        - preview
+        - deployment
+        - cloudflare
+        - area:cloudflare
+      block_if_present:
+        - do-not-merge
+        - blocked-by-security
+
+    release:
+      allowed: false
+      required: false
+
+    deployment:
+      command: deploy
+      dry_run_command: deploy --dry-run
+      require_approval: false
+      require_release_tag: false
+      upload_source_maps: false
+      keep_artifacts_days: 7
+
+    bindings:
+      strict: true
+      allow_preview_overrides: true
+
+    smoke_tests:
+      required: true
+      allow_failure: false
+
+  staging:
+    description: Main branch staging deployment.
+    enabled: true
+    github_environment: staging
+
+    trigger:
+      events:
+        - push
+        - workflow_dispatch
+      branches:
+        include:
+          - main
+      tags:
+        include: []
+
+    labels:
+      add:
+        - staging
+        - deployment
+        - cloudflare
+        - area:cloudflare
+      block_if_present:
+        - do-not-merge
+        - blocked-by-security
+        - status:blocked
+
+    release:
+      allowed: false
+      required: false
+
+    deployment:
+      command: deploy
+      dry_run_command: deploy --dry-run
+      require_approval: false
+      require_release_tag: false
+      upload_source_maps: true
+      keep_artifacts_days: 30
+
+    bindings:
+      strict: true
+      allow_preview_overrides: false
+
+    smoke_tests:
+      required: true
+      allow_failure: false
+
+  production:
+    description: Production deployment from release tags only.
+    enabled: true
+    github_environment: production
+
+    trigger:
+      events:
+        - push
+        - workflow_dispatch
+        - release
+      branches:
+        include: []
+      tags:
+        include:
+          - "^V[0-9]+\\.[0-9]+\\.[0-9]+$"
+
+    labels:
+      add:
+        - production
+        - deployment
+        - cloudflare
+        - area:cloudflare
+        - priority:high
+      block_if_present:
+        - do-not-merge
+        - blocked-by-security
+        - status:blocked
+        - no-release
+        - dependencies
+        - security:dependency
+
+    release:
+      allowed: true
+      required: true
+      required_tag_pattern: "^V[0-9]+\\.[0-9]+\\.[0-9]+$"
+      allowed_channels:
+        - release
+        - beta
+        - alpha
+        - test
+
+    deployment:
+      command: deploy
+      dry_run_command: deploy --dry-run
+      require_approval: true
+      require_release_tag: true
+      upload_source_maps: true
+      keep_artifacts_days: 90
+
+    bindings:
+      strict: true
+      allow_preview_overrides: false
+
+    smoke_tests:
+      required: true
+      allow_failure: false
+
+# -----------------------------------------------------------------------------
+# Project Discovery
+# -----------------------------------------------------------------------------
+discovery:
+  enabled: true
+
+  app_roots:
+    - apps/frontend
+    - apps/services
+    - apps/connectors
+    - apps/integrations
+    - apps/engines
+
+  config_files:
+    wrangler:
+      - wrangler.toml
+      - wrangler.json
+      - wrangler.jsonc
+      - "**/wrangler.toml"
+      - "**/wrangler.json"
+      - "**/wrangler.jsonc"
+
+    opennext:
+      - "**/open-next.config.ts"
+      - "**/open-next.config.js"
+      - "**/open-next.config.mjs"
+
+    cloudflare_types:
+      - "**/cloudflare-env.d.ts"
+      - "**/worker-configuration.d.ts"
+
+  ignore_paths:
+    - "**/node_modules/**"
+    - "**/.next/**"
+    - "**/.open-next/**"
+    - "**/.wrangler/**"
+    - "**/dist/**"
+    - "**/out/**"
+    - "**/build/**"
+    - "**/coverage/**"
+    - "**/.cache/**"
+    - "**/.nx/**"
+    - "**/.turbo/**"
+    - "**/tmp/**"
+    - "**/temp/**"
+
+  deployment_types:
+    frontend:
+      path_patterns:
+        - apps/frontend/**
+      labels:
+        - area:frontend
+        - area:cloudflare
+        - cloudflare
+        - deployment
+
+    service_worker:
+      path_patterns:
+        - apps/services/**
+      labels:
+        - area:services
+        - area:workers
+        - area:cloudflare
+        - cloudflare
+        - deployment
+
+    connector_worker:
+      path_patterns:
+        - apps/connectors/**
+      labels:
+        - area:connectors
+        - area:workers
+        - area:cloudflare
+        - cloudflare
+        - deployment
+
+    integration_worker:
+      path_patterns:
+        - apps/integrations/**
+      labels:
+        - area:integrations
+        - area:workers
+        - area:cloudflare
+        - cloudflare
+        - deployment
+
+    engine_worker:
+      path_patterns:
+        - apps/engines/**
+      labels:
+        - area:engines
+        - area:workers
+        - area:cloudflare
+        - cloudflare
+        - deployment
+
+# -----------------------------------------------------------------------------
+# Deployment Targets
+# -----------------------------------------------------------------------------
+# Scripts may use this to map discovered projects to deployment behavior.
+# Add explicit targets here as project names become stable.
+# -----------------------------------------------------------------------------
+targets:
+  frontend:
+    enabled: true
+    project_root: apps/frontend
+    type: frontend
+    runtime: cloudflare-workers
+    wrangler_config:
+      preferred:
+        - apps/frontend/wrangler.jsonc
+        - apps/frontend/wrangler.toml
+      required: true
+
+    nx:
+      project_name: frontend
+      build_target: build
+      deploy_target: deploy
+      preview_target: deploy-preview
+      staging_target: deploy-staging
+      production_target: deploy-production
+
+    environments:
+      preview:
+        enabled: true
+      staging:
+        enabled: true
+      production:
+        enabled: true
+
+    routes:
+      preview:
+        required: false
+      staging:
+        required: false
+      production:
+        required: true
+
+    bindings:
+      required:
+        - name: ENVIRONMENT
+          type: plain_text
+          required_in:
+            - preview
+            - staging
+            - production
+
+      optional:
+        - name: ASSETS
+          type: assets
+        - name: CACHE
+          type: kv_namespace
+        - name: DB
+          type: d1_database
+        - name: STORAGE
+          type: r2_bucket
+        - name: JOB_QUEUE
+          type: queue
+
+    smoke_tests:
+      enabled: true
+      paths:
+        - /
+        - /health
+
+  services:
+    enabled: true
+    project_root: apps/services
+    type: service_worker
+    runtime: cloudflare-workers
+    discover_children: true
+
+    nx:
+      build_target: build
+      deploy_target: deploy
+
+    environments:
+      preview:
+        enabled: true
+      staging:
+        enabled: true
+      production:
+        enabled: true
+
+    bindings:
+      required:
+        - name: ENVIRONMENT
+          type: plain_text
+          required_in:
+            - preview
+            - staging
+            - production
+
+      optional:
+        - name: DB
+          type: d1_database
+        - name: CACHE
+          type: kv_namespace
+        - name: STORAGE
+          type: r2_bucket
+        - name: JOB_QUEUE
+          type: queue
+
+    smoke_tests:
+      enabled: true
+      paths:
+        - /health
+
+  connectors:
+    enabled: true
+    project_root: apps/connectors
+    type: connector_worker
+    runtime: cloudflare-workers
+    discover_children: true
+
+    nx:
+      build_target: build
+      deploy_target: deploy
+
+    environments:
+      preview:
+        enabled: true
+      staging:
+        enabled: true
+      production:
+        enabled: true
+
+    bindings:
+      required:
+        - name: ENVIRONMENT
+          type: plain_text
+          required_in:
+            - preview
+            - staging
+            - production
+
+      optional:
+        - name: DB
+          type: d1_database
+        - name: CACHE
+          type: kv_namespace
+        - name: STORAGE
+          type: r2_bucket
+        - name: JOB_QUEUE
+          type: queue
+
+    smoke_tests:
+      enabled: true
+      paths:
+        - /health
+
+  integrations:
+    enabled: true
+    project_root: apps/integrations
+    type: integration_worker
+    runtime: cloudflare-workers
+    discover_children: true
+
+    nx:
+      build_target: build
+      deploy_target: deploy
+
+    environments:
+      preview:
+        enabled: true
+      staging:
+        enabled: true
+      production:
+        enabled: true
+
+    bindings:
+      required:
+        - name: ENVIRONMENT
+          type: plain_text
+          required_in:
+            - preview
+            - staging
+            - production
+
+      optional:
+        - name: DB
+          type: d1_database
+        - name: CACHE
+          type: kv_namespace
+        - name: STORAGE
+          type: r2_bucket
+        - name: JOB_QUEUE
+          type: queue
+
+    smoke_tests:
+      enabled: true
+      paths:
+        - /health
+
+  engines:
+    enabled: true
+    project_root: apps/engines
+    type: engine_worker
+    runtime: cloudflare-workers
+    discover_children: true
+
+    nx:
+      build_target: build
+      deploy_target: deploy
+
+    environments:
+      preview:
+        enabled: true
+      staging:
+        enabled: true
+      production:
+        enabled: true
+
+    bindings:
+      required:
+        - name: ENVIRONMENT
+          type: plain_text
+          required_in:
+            - preview
+            - staging
+            - production
+
+      optional:
+        - name: DB
+          type: d1_database
+        - name: CACHE
+          type: kv_namespace
+        - name: STORAGE
+          type: r2_bucket
+        - name: JOB_QUEUE
+          type: queue
+
+    smoke_tests:
+      enabled: true
+      paths:
+        - /health
+
+# -----------------------------------------------------------------------------
+# Required Repository Secrets and Variables
+# -----------------------------------------------------------------------------
+repository_configuration:
+  required_secrets:
+    all_environments:
+      - CLOUDFLARE_API_TOKEN
+
+    production:
+      - CLOUDFLARE_API_TOKEN
+
+  required_variables:
+    all_environments:
+      - CLOUDFLARE_ACCOUNT_ID
+      - NODE_VERSION
+      - PNPM_VERSION
+
+    optional:
+      - DEFAULT_BRANCH
+      - CLOUDFLARE_PROJECT_NAME
+      - CLOUDFLARE_ZONE_ID
+      - CLOUDFLARE_ENVIRONMENT
+
+  recommended_values:
+    NODE_VERSION: "24.15.0"
+    PNPM_VERSION: "10.23.0"
+    DEFAULT_BRANCH: main
+
+# -----------------------------------------------------------------------------
+# Binding Rules
+# -----------------------------------------------------------------------------
+bindings:
+  validation:
+    enabled: true
+    fail_on_missing_required: true
+    fail_on_unknown_production_binding: false
+    warn_on_unknown_preview_binding: true
+    require_environment_specific_bindings: true
+
+  supported_types:
+    - plain_text
+    - secret_text
+    - secrets_store_secret
+    - d1_database
+    - kv_namespace
+    - r2_bucket
+    - queue
+    - service
+    - durable_object_namespace
+    - assets
+    - analytics_engine_dataset
+    - vectorize
+    - hyperdrive
+
+  common_required:
+    - name: ENVIRONMENT
+      type: plain_text
+      description: Deployment environment name.
+      required_in:
+        - preview
+        - staging
+        - production
+
+  common_optional:
+    - name: DB
+      type: d1_database
+      description: Primary application database binding.
+
+    - name: CACHE
+      type: kv_namespace
+      description: General-purpose KV/cache namespace binding.
+
+    - name: STORAGE
+      type: r2_bucket
+      description: Object storage bucket binding.
+
+    - name: JOB_QUEUE
+      type: queue
+      description: Background job queue binding.
+
+    - name: ASSETS
+      type: assets
+      description: Static asset binding.
+
+  environment_suffixes:
+    preview: preview
+    staging: staging
+    production: production
+
+# -----------------------------------------------------------------------------
+# D1 Rules
+# -----------------------------------------------------------------------------
+d1:
+  enabled: true
+
+  migrations:
+    enabled: true
+    directory_patterns:
+      - "**/migrations"
+      - "**/d1/migrations"
+      - "migrations"
+
+    require_migration_check_before_deploy: true
+    require_backup_before_production_migration: true
+    allow_preview_migrations: true
+    allow_staging_migrations: true
+    allow_production_migrations: true
+
+    production:
+      require_release_tag: true
+      require_environment_approval: true
+      require_migration_summary: true
+      require_rollback_notes: true
+
+    commands:
+      preview: "wrangler d1 migrations apply --env preview"
+      staging: "wrangler d1 migrations apply --env staging"
+      production: "wrangler d1 migrations apply --env production"
+
+  safety:
+    block_destructive_migrations_without_approval: true
+    destructive_keywords:
+      - "DROP TABLE"
+      - "DROP COLUMN"
+      - "DELETE FROM"
+      - "TRUNCATE"
+      - "ALTER TABLE"
+    require_manual_review_for_destructive_keywords: true
+
+# -----------------------------------------------------------------------------
+# KV Rules
+# -----------------------------------------------------------------------------
+kv:
+  enabled: true
+
+  sync:
+    enabled: true
+    allow_preview_sync: true
+    allow_staging_sync: true
+    allow_production_sync: false
+
+  safety:
+    block_bulk_delete_in_production: true
+    block_namespace_creation_from_untrusted_pr: true
+    require_summary_for_mutations: true
+
+  naming:
+    recommended_pattern: "aerealith-{service}-{environment}"
+    environments:
+      - preview
+      - staging
+      - production
+
+# -----------------------------------------------------------------------------
+# R2 Rules
+# -----------------------------------------------------------------------------
+r2:
+  enabled: true
+
+  sync:
+    enabled: true
+    allow_preview_sync: true
+    allow_staging_sync: true
+    allow_production_sync: false
+
+  safety:
+    block_bucket_delete: true
+    block_public_bucket_without_review: true
+    require_summary_for_mutations: true
+
+  naming:
+    recommended_pattern: "aerealith-{service}-{environment}"
+    environments:
+      - preview
+      - staging
+      - production
+
+# -----------------------------------------------------------------------------
+# Queue Rules
+# -----------------------------------------------------------------------------
+queues:
+  enabled: true
+
+  validation:
+    require_producer_consumer_mapping: true
+    warn_if_queue_has_no_consumer: true
+    warn_if_consumer_has_no_dead_letter_queue: true
+
+  safety:
+    allow_preview_test_messages: true
+    allow_staging_test_messages: true
+    allow_production_test_messages: false
+    block_queue_delete: true
+
+  naming:
+    recommended_pattern: "aerealith-{service}-{purpose}-{environment}"
+    environments:
+      - preview
+      - staging
+      - production
+
+# -----------------------------------------------------------------------------
+# Secrets Store Rules
+# -----------------------------------------------------------------------------
+secrets:
+  enabled: true
+
+  validation:
+    require_secret_names_only: true
+    fail_if_secret_values_detected: true
+    require_environment_specific_secrets: true
+
+  allowed_secret_name_patterns:
+    - "^[A-Z][A-Z0-9_]*$"
+
+  common_secret_names:
+    - OPENAI_API_KEY
+    - NPM_ACCESS_TOKEN
+    - NX_ACCESS_TOKEN
+    - PROJECTS_PAT
+    - SONAR_TOKEN
+    - MEND_API_KEY
+
+  production:
+    require_environment_secret_scope: true
+    require_manual_review_for_new_secret_names: true
+    block_secret_printing: true
+
+  redaction:
+    enabled: true
+    redact_patterns:
+      - "ghp_[A-Za-z0-9_]+"
+      - "github_pat_[A-Za-z0-9_]+"
+      - "sk-[A-Za-z0-9_-]+"
+      - "Bearer [A-Za-z0-9._-]+"
+      - "-----BEGIN [A-Z ]+PRIVATE KEY-----"
+
+# -----------------------------------------------------------------------------
+# Wrangler Config Rules
+# -----------------------------------------------------------------------------
+wrangler:
+  validation:
+    enabled: true
+    require_name: true
+    require_compatibility_date: true
+    require_environment_sections: true
+    require_preview_environment: false
+    require_staging_environment: true
+    require_production_environment: true
+
+  allowed_config_files:
+    - wrangler.toml
+    - wrangler.json
+    - wrangler.jsonc
+
+  required_fields:
+    - name
+    - compatibility_date
+
+  recommended_fields:
+    - main
+    - compatibility_flags
+    - observability
+
+  forbidden_in_repository:
+    - secret_values
+    - production_tokens
+    - private_keys
+
+  compatibility:
+    minimum_compatibility_date: "2025-01-01"
+    warn_if_older_than_days: 180
+
+# -----------------------------------------------------------------------------
+# Build Rules
+# -----------------------------------------------------------------------------
+build:
+  require_nx_build: true
+  require_pnpm_install: true
+
+  setup_order:
+    - checkout
+    - setup-pnpm
+    - setup-node
+    - restore-cache
+    - install-dependencies
+    - detect-affected-projects
+    - validate-wrangler-config
+    - validate-bindings
+    - run-nx-build
+    - run-tests
+    - deploy
+    - smoke-tests
+    - summarize
+
+  nx_targets:
+    preferred:
+      build: build
+      test: test
+      lint: lint
+      typecheck: typecheck
+
+    optional:
+      deploy: deploy
+      deploy_preview: deploy-preview
+      deploy_staging: deploy-staging
+      deploy_production: deploy-production
+
+  cache:
+    enabled: true
+    readable_names: true
+    keys:
+      pnpm: "pnpm-store-linux-node24-{branch}"
+      nx: "nx-cache-linux-{branch}"
+      wrangler: "wrangler-cache-linux-node24-{branch}"
+
+# -----------------------------------------------------------------------------
+# Deployment Commands
+# -----------------------------------------------------------------------------
+commands:
+  install:
+    - pnpm install --frozen-lockfile
+
+  validate:
+    wrangler_config: pnpm exec wrangler deploy --dry-run
+    nx_build: pnpm nx run {project}:build
+    nx_lint: pnpm nx run {project}:lint
+    nx_test: pnpm nx run {project}:test
+
+  deploy:
+    preview: pnpm exec wrangler deploy --env preview
+    staging: pnpm exec wrangler deploy --env staging
+    production: pnpm exec wrangler deploy --env production
+
+  dry_run:
+    preview: pnpm exec wrangler deploy --env preview --dry-run
+    staging: pnpm exec wrangler deploy --env staging --dry-run
+    production: pnpm exec wrangler deploy --env production --dry-run
+
+# -----------------------------------------------------------------------------
+# Smoke Test Rules
+# -----------------------------------------------------------------------------
+smoke_tests:
+  enabled: true
+  fail_deployment_on_failure: true
+
+  timeout_seconds: 60
+  retry_count: 3
+  retry_delay_seconds: 5
+
+  required_status_codes:
+    - 200
+    - 204
+
+  common_paths:
+    - /health
+
+  environments:
+    preview:
+      required: true
+      allow_failure: false
+
+    staging:
+      required: true
+      allow_failure: false
+
+    production:
+      required: true
+      allow_failure: false
+
+  checks:
+    http:
+      enabled: true
+      verify_status_code: true
+      verify_response_time: true
+      max_response_time_ms: 5000
+
+    headers:
+      enabled: true
+      recommended:
+        - content-security-policy
+        - x-content-type-options
+        - referrer-policy
+
+    logs:
+      enabled: true
+      fail_on_error_logs: false
+      warn_on_error_logs: true
+
+# -----------------------------------------------------------------------------
+# Security Rules
+# -----------------------------------------------------------------------------
+security:
+  require_security_workflow_before_staging: true
+  require_security_workflow_before_production: true
+
+  block_deploy_on:
+    labels:
+      - do-not-merge
+      - blocked-by-security
+      - status:blocked
+
+    findings:
+      - critical
+      - high
+
+  workflow_permissions:
+    preview:
+      contents: read
+      pull-requests: write
+      deployments: write
+
+    staging:
+      contents: read
+      deployments: write
+
+    production:
+      contents: read
+      deployments: write
+      id-token: write
+
+  untrusted_pull_requests:
+    expose_secrets: false
+    allow_deploy: false
+    allow_dry_run: true
+
+  production:
+    require_approval: true
+    require_release_tag: true
+    require_audit_summary: true
+    require_artifact_manifest: true
+
+# -----------------------------------------------------------------------------
+# Artifact and Evidence Rules
+# -----------------------------------------------------------------------------
+artifacts:
+  enabled: true
+
+  upload_deployment_summary: true
+  upload_wrangler_logs: true
+  upload_smoke_test_results: true
+  upload_binding_summary: true
+
+  retention_days:
+    preview: 7
+    staging: 30
+    production: 90
+
+  files:
+    deployment_summary: cloudflare-deployment-summary.md
+    binding_summary: cloudflare-bindings.json
+    smoke_test_summary: cloudflare-smoke-tests.json
+    wrangler_log: wrangler-deploy.log
+
+# -----------------------------------------------------------------------------
+# Rollback Rules
+# -----------------------------------------------------------------------------
+rollback:
+  required_for_production: true
+  recommended_for_staging: true
+
+  production:
+    require_previous_deployment_reference: true
+    require_rollback_notes: true
+    require_manual_approval: true
+
+  rollback_methods:
+    - redeploy_previous_known_good_tag
+    - revert_workflow_change
+    - revert_wrangler_config
+    - rollback_d1_migration_if_safe
+    - restore_previous_bindings
+    - disable_route_temporarily
+
+# -----------------------------------------------------------------------------
+# Label and Milestone Routing
+# -----------------------------------------------------------------------------
+routing:
+  labels:
+    cloudflare_change:
+      - cloudflare
+      - area:cloudflare
+      - deployment
+
+    preview_change:
+      - preview
+      - deployment
+      - area:cloudflare
+
+    staging_change:
+      - staging
+      - deployment
+      - area:cloudflare
+
+    production_change:
+      - production
+      - deployment
+      - area:cloudflare
+      - priority:high
+      - needs-maintainer-review
+
+    d1_change:
+      - area:d1
+      - area:db
+      - area:cloudflare
+
+    kv_change:
+      - area:kv
+      - area:cloudflare
+
+    r2_change:
+      - area:r2
+      - area:cloudflare
+
+    queue_change:
+      - area:queues
+      - area:cloudflare
+
+    secrets_change:
+      - area:secrets
+      - area:security
+      - needs-security-review
+
+  milestones:
+    cloudflare_platform: V0.7.0 — Cloudflare Platform
+    preview: Cloudflare — Preview Environments
+    staging: Cloudflare — Staging Environment
+    production: Cloudflare — Production Environment
+    security: Security — Strict Pull Request Gate
+    runbooks: Operations — Runbooks
+
+# -----------------------------------------------------------------------------
+# Reporting
+# -----------------------------------------------------------------------------
+reporting:
+  add_pr_comment: true
+  add_workflow_summary: true
+  add_deployment_summary: true
+
+  comment_footer:
+    start: "<!-- cloudflare-deployment:start -->"
+    end: "<!-- cloudflare-deployment:end -->"
+
+  summary:
+    include_environment: true
+    include_project: true
+    include_worker_name: true
+    include_wrangler_config: true
+    include_bindings: true
+    include_d1_migrations: true
+    include_smoke_tests: true
+    include_artifacts: true
+    include_rollback_notes: true
+
+# -----------------------------------------------------------------------------
+# Enforcement
+# -----------------------------------------------------------------------------
+enforcement:
+  on_missing_cloudflare_token:
+    action: fail
+    message: |
+      CLOUDFLARE_API_TOKEN is required for Cloudflare deployment.
+
+  on_missing_account_id:
+    action: fail
+    message: |
+      CLOUDFLARE_ACCOUNT_ID is required for Cloudflare deployment.
+
+  on_invalid_wrangler_config:
+    action: fail
+    message: |
+      Wrangler configuration is invalid or missing required fields.
+
+  on_missing_required_binding:
+    action: fail
+    message: |
+      A required Cloudflare binding is missing for the target environment.
+
+  on_missing_required_secret:
+    action: fail
+    message: |
+      A required secret name is missing for the target environment.
+
+  on_secret_value_detected:
+    action: fail
+    message: |
+      Possible secret value detected. Only secret names should be committed or logged.
+
+  on_production_without_release_tag:
+    action: fail
+    message: |
+      Production deployment requires a V-prefixed release tag.
+
+  on_production_without_approval:
+    action: fail
+    message: |
+      Production deployment requires GitHub Environment approval.
+
+  on_dependency_pr_production_deploy:
+    action: fail
+    message: |
+      Dependency automation pull requests cannot deploy to production.
+
+  on_openai_pr_deploy:
+    action: fail
+    message: |
+      OpenAI automation branches cannot deploy Cloudflare environments.
+
+  on_smoke_test_failure:
+    action: fail
+    message: |
+      Cloudflare smoke tests failed. Deployment must be reviewed before continuing.

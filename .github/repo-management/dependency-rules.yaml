@@ -1,0 +1,1294 @@
+# .github/repo-management/dependency-rules.yaml
+# =============================================================================
+# Aerealith AI Dependency Rules
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Source-of-truth dependency automation policy for Renovate, Mend, Dependabot,
+#   dependency PR labeling, dependency auto-merge, security patch handling,
+#   release exclusion, and strict dependency security gates.
+#
+# Used by:
+#   - .github/renovate.json5
+#   - .github/dependabot.yaml
+#   - .github/workflows/dependency-management.yaml
+#   - .github/workflows/dependency-auto-merge.yaml
+#   - .github/workflows/security.yaml
+#   - .github/scripts/repo/assign-labels.js
+#   - .github/scripts/repo/assign-milestones.js
+#   - .github/scripts/security/summarize-dependencies.js
+#   - .github/scripts/security/create-security-issues.js
+#   - .github/scripts/security/run-policy-gate.js
+#
+# Repository policy:
+#   - Renovate / Mend Renovate manages normal pnpm/npm dependency updates.
+#   - Dependabot manages npm security updates and GitHub Actions updates.
+#   - Dependency PRs must never trigger releases.
+#   - Security dependency patches may auto-merge after all required checks pass.
+#   - Safe dependency patches may auto-merge after all required checks pass.
+#   - Major upgrades require manual review.
+#   - Strict security gates block critical and high risk findings.
+# =============================================================================
+
+version: 1
+
+repository:
+  owner: SinLess-Games
+  name: Aerealith-AI
+  default_branch: main
+
+tooling:
+  package_manager: pnpm
+  pnpm_version: 10.23.0
+  node_version: 24.15.0
+  monorepo_tool: nx
+
+# -----------------------------------------------------------------------------
+# Dependency Automation Ownership
+# -----------------------------------------------------------------------------
+automation_tools:
+  renovate:
+    enabled: true
+    role: normal_dependency_updates
+    config_file: .github/renovate.json5
+    branch_patterns:
+      - "^renovate/.+$"
+    authors:
+      - renovate[bot]
+    labels:
+      - renovate
+      - dependencies
+      - automation
+      - automation:renovate
+      - no-release
+
+  mend:
+    enabled: true
+    role: dependency_security_management
+    branch_patterns:
+      - "^mend/.+$"
+      - "^renovate/.+$"
+    authors:
+      - mend[bot]
+      - renovate[bot]
+    labels:
+      - mend
+      - dependencies
+      - automation
+      - automation:mend
+      - no-release
+
+  dependabot:
+    enabled: true
+    role: github_actions_and_security_updates
+    config_file: .github/dependabot.yaml
+    branch_patterns:
+      - "^dependabot/.+$"
+    authors:
+      - dependabot[bot]
+    labels:
+      - dependabot
+      - dependencies
+      - automation
+      - automation:dependabot
+      - no-release
+
+# -----------------------------------------------------------------------------
+# Global Dependency PR Policy
+# -----------------------------------------------------------------------------
+dependency_pull_requests:
+  release_allowed: false
+
+  required_labels:
+    - dependencies
+    - no-release
+
+  recommended_labels:
+    - area:dependencies
+    - kind:chore
+    - status:ready
+
+  release_blocking_labels:
+    - no-release
+    - dependencies
+    - security:dependency
+
+  release_labels_forbidden:
+    - release:major
+    - release:minor
+    - release:patch
+
+  allowed_base_branches:
+    - main
+
+  allowed_authors:
+    - renovate[bot]
+    - dependabot[bot]
+    - mend[bot]
+
+  allowed_branch_patterns:
+    - "^renovate/.+$"
+    - "^dependabot/.+$"
+    - "^mend/.+$"
+
+  require_linked_issue: false
+  require_milestone: true
+  default_milestone: Dependencies — Renovate Weekly Updates
+
+  title_prefixes:
+    allowed:
+      - "chore(deps):"
+      - "chore(deps-dev):"
+      - "chore(deps-security):"
+      - "chore(deps-dev-security):"
+      - "chore(actions):"
+
+  body_requirements:
+    require_update_summary: true
+    require_package_list: true
+    require_release_note_summary: false
+    require_security_context_for_security_updates: true
+
+# -----------------------------------------------------------------------------
+# Dependency Types
+# -----------------------------------------------------------------------------
+dependency_types:
+  production:
+    labels:
+      - dependencies
+      - area:dependencies
+      - priority:medium
+      - no-release
+    automerge_allowed: true
+
+  development:
+    labels:
+      - dependencies
+      - area:dependencies
+      - priority:low
+      - no-release
+    automerge_allowed: true
+
+  optional:
+    labels:
+      - dependencies
+      - area:dependencies
+      - priority:low
+      - no-release
+    automerge_allowed: true
+
+  peer:
+    labels:
+      - dependencies
+      - area:dependencies
+      - priority:medium
+      - no-release
+    automerge_allowed: false
+    review_required: true
+
+  github_actions:
+    labels:
+      - dependencies
+      - actions-update
+      - area:github-actions
+      - area:ci
+      - no-release
+    automerge_allowed: true
+
+  docker:
+    labels:
+      - dependencies
+      - area:docker
+      - deployment
+      - no-release
+    automerge_allowed: true
+
+  helm:
+    labels:
+      - dependencies
+      - area:helm
+      - area:self-hosted
+      - deployment
+      - no-release
+    automerge_allowed: false
+    review_required: true
+
+  kubernetes:
+    labels:
+      - dependencies
+      - area:kubernetes
+      - area:self-hosted
+      - deployment
+      - no-release
+    automerge_allowed: false
+    review_required: true
+
+# -----------------------------------------------------------------------------
+# Update Type Policy
+# -----------------------------------------------------------------------------
+update_types:
+  patch:
+    description: Safe patch-level dependency updates.
+    labels:
+      - dependencies
+      - kind:chore
+      - priority:low
+      - status:ready
+      - auto-merge
+      - no-release
+    automerge_allowed: true
+    review_required: false
+    minimum_release_age: 3 days
+
+  minor:
+    description: Safe minor dependency updates.
+    labels:
+      - dependencies
+      - kind:chore
+      - priority:medium
+      - status:ready
+      - auto-merge
+      - no-release
+    automerge_allowed: true
+    review_required: false
+    minimum_release_age: 5 days
+
+  major:
+    description: Major dependency updates that may contain breaking changes.
+    labels:
+      - dependencies
+      - kind:chore
+      - priority:high
+      - status:needs-review
+      - needs-maintainer-review
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    dependency_dashboard_approval_required: true
+    minimum_release_age: 7 days
+
+  digest:
+    description: Docker digest updates.
+    labels:
+      - dependencies
+      - area:docker
+      - priority:low
+      - status:ready
+      - auto-merge
+      - no-release
+    automerge_allowed: true
+    review_required: false
+    minimum_release_age: 3 days
+
+  pin:
+    description: Pin dependency versions for reproducibility.
+    labels:
+      - dependencies
+      - kind:chore
+      - priority:low
+      - no-release
+    automerge_allowed: true
+    review_required: false
+
+  lockfile:
+    description: Lockfile maintenance.
+    labels:
+      - dependencies
+      - lockfile
+      - kind:chore
+      - priority:low
+      - status:ready
+      - auto-merge
+      - no-release
+    automerge_allowed: true
+    review_required: false
+
+# -----------------------------------------------------------------------------
+# Security Update Policy
+# -----------------------------------------------------------------------------
+security_updates:
+  enabled: true
+  release_allowed: false
+  default_milestone: Security — Dependency Vulnerability Response
+
+  labels:
+    - dependencies
+    - security:dependency
+    - kind:security
+    - area:security
+    - area:dependencies
+    - priority:critical
+    - status:ready
+    - auto-merge
+    - no-release
+
+  automerge_allowed: true
+  review_required: false
+
+  require_all_checks: true
+  require_security_gate: true
+  require_dependency_review: true
+  require_codeql: true
+  require_sonarqube: true
+
+  block_if_exploit_known: false
+  create_security_issue_for_failed_patch: true
+  create_security_issue_for_unpatchable_alert: true
+
+  severity_policy:
+    critical:
+      block_merge: true
+      block_release: true
+      block_deploy: true
+      create_issue: true
+      priority_label: priority:critical
+      severity_label: severity:critical
+
+    high:
+      block_merge: true
+      block_release: true
+      block_deploy: true
+      create_issue: true
+      priority_label: priority:high
+      severity_label: severity:high
+
+    medium:
+      block_merge: false
+      block_release: false
+      block_deploy: false
+      create_issue: true
+      priority_label: priority:medium
+      severity_label: severity:medium
+
+    low:
+      block_merge: false
+      block_release: false
+      block_deploy: false
+      create_issue: false
+      priority_label: priority:low
+      severity_label: severity:low
+
+  security_issue_template:
+    title: "[Security]: Dependency vulnerability in {{packageName}}"
+    labels:
+      - kind:security
+      - security:dependency
+      - area:dependencies
+      - area:security
+      - status:triage
+      - no-release
+    milestone: Security — Dependency Vulnerability Response
+
+# -----------------------------------------------------------------------------
+# Auto-Merge Policy
+# -----------------------------------------------------------------------------
+auto_merge:
+  enabled: true
+  strategy: merge
+
+  allowed_pr_types:
+    - dependency_patch
+    - dependency_minor
+    - dependency_security_patch
+    - lockfile_maintenance
+    - github_actions_patch
+    - github_actions_minor
+    - docker_patch
+    - docker_digest
+
+  allowed_authors:
+    - renovate[bot]
+    - dependabot[bot]
+    - mend[bot]
+
+  allowed_branch_patterns:
+    - "^renovate/.+$"
+    - "^dependabot/.+$"
+    - "^mend/.+$"
+
+  required_labels:
+    - dependencies
+    - no-release
+    - auto-merge
+
+  required_any_labels:
+    - renovate
+    - dependabot
+    - mend
+    - automation:renovate
+    - automation:dependabot
+    - automation:mend
+
+  required_absent_labels:
+    - do-not-merge
+    - blocked-by-security
+    - needs-maintainer-review
+    - needs-security-review
+    - automation:needs-review
+    - breaking-change
+    - release:major
+    - release:minor
+    - release:patch
+    - status:blocked
+
+  required_checks:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  required_status:
+    - status:ready
+
+  require_branch_up_to_date: true
+  require_no_requested_changes: true
+  require_no_conflicts: true
+
+  allow_patch: true
+  allow_minor: true
+  allow_major: false
+  allow_security_patch: true
+  allow_lockfile: true
+
+  block_if_files_changed:
+    - ".github/workflows/release.yaml"
+    - ".github/workflows/publish-npm.yaml"
+    - ".github/workflows/publish-containers.yaml"
+    - ".github/workflows/cloudflare-production.yaml"
+    - ".github/workflows/attestations.yaml"
+    - ".github/repo-management/release-rules.yaml"
+    - ".github/repo-management/security-rules.yaml"
+
+  manual_review_required_if_files_changed:
+    - ".github/**"
+    - "nx.json"
+    - "tsconfig.base.json"
+    - "package.json"
+    - "pnpm-workspace.yaml"
+
+# -----------------------------------------------------------------------------
+# Manual Review Policy
+# -----------------------------------------------------------------------------
+manual_review:
+  required_for:
+    update_types:
+      - major
+
+    package_groups:
+      - nx
+      - next
+      - react
+      - cloudflare
+      - wrangler
+      - database
+      - orm
+      - openai
+      - github_automation
+      - security_tools
+      - release_tools
+      - publishing_tools
+      - helm
+      - kubernetes
+
+    labels:
+      - needs-maintainer-review
+      - needs-security-review
+      - needs-architecture-review
+      - automation:needs-review
+      - breaking-change
+
+  labels_to_add:
+    - status:needs-review
+    - needs-maintainer-review
+
+  milestone: Dependencies — Major Upgrade Program
+
+# -----------------------------------------------------------------------------
+# Package Group Rules
+# -----------------------------------------------------------------------------
+package_groups:
+  nx:
+    description: Nx workspace tooling.
+    match_package_names:
+      - nx
+      - "@nx/**"
+    labels:
+      - dependencies
+      - area:ci
+      - area:github-actions
+      - priority:high
+      - status:needs-review
+      - needs-maintainer-review
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: Dependencies — Major Upgrade Program
+
+  next:
+    description: Next.js and frontend framework dependencies.
+    match_package_names:
+      - next
+      - "@next/**"
+      - "@opennextjs/cloudflare"
+    labels:
+      - dependencies
+      - area:frontend
+      - area:cloudflare
+      - priority:high
+      - status:needs-review
+      - needs-maintainer-review
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: Dependencies — Major Upgrade Program
+
+  react:
+    description: React ecosystem dependencies.
+    match_package_names:
+      - react
+      - react-dom
+      - "@types/react"
+      - "@types/react-dom"
+    labels:
+      - dependencies
+      - area:frontend
+      - area:ui
+      - priority:high
+      - status:needs-review
+      - needs-maintainer-review
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: Dependencies — Major Upgrade Program
+
+  cloudflare:
+    description: Cloudflare, Wrangler, Workers, and OpenNext deployment dependencies.
+    match_package_names:
+      - wrangler
+      - "@cloudflare/**"
+      - "@cloudflare/workers-types"
+      - "@opennextjs/cloudflare"
+    labels:
+      - dependencies
+      - area:cloudflare
+      - cloudflare
+      - deployment
+      - priority:high
+      - status:needs-review
+      - needs-maintainer-review
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: Cloudflare — Staging Environment
+
+  typescript_lint_test:
+    description: TypeScript, ESLint, Prettier, Jest, Vitest, Cypress, Playwright, and test tooling.
+    match_package_names:
+      - typescript
+      - eslint
+      - "@eslint/**"
+      - typescript-eslint
+      - "@typescript-eslint/**"
+      - prettier
+      - jest
+      - "@jest/**"
+      - ts-jest
+      - vitest
+      - "@vitest/**"
+      - cypress
+      - "@cypress/**"
+      - playwright
+      - "@playwright/**"
+    labels:
+      - dependencies
+      - area:ci
+      - kind:test
+      - priority:medium
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: CI/CD — Pull Request Validation
+
+  database:
+    description: Database, ORM, migration, and persistence dependencies.
+    match_package_names:
+      - drizzle-orm
+      - "@mikro-orm/**"
+      - pg
+      - postgres
+      - "@neondatabase/**"
+      - uuid
+    labels:
+      - dependencies
+      - area:db
+      - priority:high
+      - status:needs-review
+      - needs-maintainer-review
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: V0.1.0 — Foundation
+
+  openai:
+    description: OpenAI and AI automation dependencies.
+    match_package_names:
+      - openai
+      - "@ai-sdk/**"
+      - ai
+    labels:
+      - dependencies
+      - area:ai
+      - area:openai
+      - automation:openai
+      - priority:high
+      - status:needs-review
+      - automation:needs-review
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: V0.8.0 — AI Repository Assistant
+
+  github_automation:
+    description: GitHub Actions, Octokit, Actions toolkit, YAML, validation, and repo automation script dependencies.
+    match_package_names:
+      - "@actions/**"
+      - "@octokit/**"
+      - octokit
+      - js-yaml
+      - zod
+      - glob
+      - minimatch
+      - semver
+    labels:
+      - dependencies
+      - area:github-actions
+      - area:repo-management
+      - automation
+      - priority:medium
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: V0.2.0 — Automation Core
+
+  security_tools:
+    description: Security scanning, dependency review, policy gate, SBOM, and provenance tooling.
+    match_package_names:
+      - "@microsoft/sarif-multitool"
+      - snyk
+      - osv-scanner
+      - cyclonedx
+      - "@cyclonedx/**"
+      - spdx-sbom-generator
+      - "@actions/attest-build-provenance"
+      - "@actions/attest-sbom"
+    labels:
+      - dependencies
+      - area:security
+      - sbom
+      - attestations
+      - priority:high
+      - status:needs-review
+      - needs-security-review
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: Security — Supply Chain Integrity
+
+  docker:
+    description: Dockerfile base image and container tooling dependencies.
+    managers:
+      - dockerfile
+    labels:
+      - dependencies
+      - area:docker
+      - deployment
+      - no-release
+    automerge_allowed: true
+    review_required_for_major: true
+    milestone: Publishing — GHCR Containers
+
+  github_actions:
+    description: GitHub Actions updates.
+    managers:
+      - github-actions
+    labels:
+      - dependencies
+      - actions-update
+      - area:github-actions
+      - area:ci
+      - automation
+      - no-release
+    automerge_allowed: true
+    review_required_for_major: true
+    milestone: CI/CD — Pull Request Validation
+
+  helm:
+    description: Future self-hosted Helm chart dependencies.
+    managers:
+      - helmv3
+      - helm-values
+      - helmfile
+    labels:
+      - dependencies
+      - area:helm
+      - area:self-hosted
+      - deployment
+      - status:needs-review
+      - needs-maintainer-review
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: Self-Hosted — Helm Chart
+
+  kubernetes:
+    description: Future Kubernetes and Kustomize dependency references.
+    managers:
+      - kubernetes
+      - kustomize
+    labels:
+      - dependencies
+      - area:kubernetes
+      - area:self-hosted
+      - deployment
+      - status:needs-review
+      - needs-maintainer-review
+      - no-release
+    automerge_allowed: false
+    review_required: true
+    milestone: Self-Hosted — Kubernetes Manifests
+
+# -----------------------------------------------------------------------------
+# File and Path Rules
+# -----------------------------------------------------------------------------
+path_rules:
+  package_files:
+    patterns:
+      - package.json
+      - "**/package.json"
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .npmrc
+    labels:
+      - dependencies
+      - area:dependencies
+      - no-release
+    milestone: Dependencies — Renovate Weekly Updates
+
+  github_actions:
+    patterns:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+    labels:
+      - dependencies
+      - actions-update
+      - area:github-actions
+      - area:ci
+      - no-release
+    milestone: CI/CD — Pull Request Validation
+
+  docker:
+    patterns:
+      - Dockerfile
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+      - docker/**
+      - .dockerignore
+      - "**/.dockerignore"
+    labels:
+      - dependencies
+      - area:docker
+      - deployment
+      - no-release
+    milestone: Publishing — GHCR Containers
+
+  cloudflare:
+    patterns:
+      - wrangler.toml
+      - wrangler.jsonc
+      - "**/wrangler.toml"
+      - "**/wrangler.jsonc"
+      - "**/open-next.config.ts"
+      - "**/cloudflare-env.d.ts"
+      - "**/worker-configuration.d.ts"
+    labels:
+      - dependencies
+      - area:cloudflare
+      - cloudflare
+      - deployment
+      - no-release
+    milestone: Cloudflare — Staging Environment
+
+  release_sensitive:
+    patterns:
+      - ".github/workflows/release.yaml"
+      - ".github/workflows/publish-npm.yaml"
+      - ".github/workflows/publish-containers.yaml"
+      - ".github/workflows/attestations.yaml"
+      - ".github/scripts/release/**"
+      - ".github/scripts/npm/**"
+      - ".github/scripts/docker/**"
+      - ".github/scripts/artifacts/**"
+    labels:
+      - dependencies
+      - release
+      - needs-maintainer-review
+      - no-release
+    automerge_allowed: false
+    milestone: V0.5.0 — Release Automation
+
+  self_hosted:
+    patterns:
+      - charts/**
+      - helm/**
+      - k8s/**
+      - kubernetes/**
+      - deploy/kubernetes/**
+      - deploy/self-hosted/**
+    labels:
+      - dependencies
+      - area:self-hosted
+      - deployment
+      - no-release
+    automerge_allowed: false
+    milestone: Self-Hosted — Helm Chart
+
+# -----------------------------------------------------------------------------
+# Required Checks
+# -----------------------------------------------------------------------------
+required_checks:
+  dependency_pr:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  security_dependency_pr:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+
+  github_actions_pr:
+    - CI
+    - Security
+    - CodeQL
+    - Dependency Review
+
+  docker_dependency_pr:
+    - CI
+    - Security
+    - CodeQL
+    - SonarQube
+    - Dependency Review
+    - Docker Build Validation
+
+# -----------------------------------------------------------------------------
+# Security Gates
+# -----------------------------------------------------------------------------
+security_gates:
+  strict: true
+
+  block_merge_on:
+    vulnerabilities:
+      - critical
+      - high
+
+    codeql:
+      - critical
+      - high
+
+    sonarqube_quality_gate_failed: true
+    dependency_review_failed: true
+    secret_findings: true
+    disallowed_licenses: true
+    malicious_packages: true
+
+  warn_on:
+    vulnerabilities:
+      - medium
+      - low
+
+  licenses:
+    enabled: true
+    block_unknown_license: false
+
+    forbidden:
+      - AGPL-1.0
+      - AGPL-3.0
+      - SSPL-1.0
+      - BUSL-1.1
+
+    allowed:
+      - MIT
+      - Apache-2.0
+      - BSD-2-Clause
+      - BSD-3-Clause
+      - ISC
+      - MPL-2.0
+      - Unlicense
+      - CC0-1.0
+
+  dependency_review:
+    fail_on_severity:
+      - critical
+      - high
+
+  pnpm_audit:
+    enabled: true
+    fail_on:
+      - critical
+      - high
+    warn_on:
+      - medium
+      - low
+
+  container_scanning:
+    enabled: true
+    fail_on:
+      - critical
+      - high
+    warn_on:
+      - medium
+      - low
+
+# -----------------------------------------------------------------------------
+# Release Exclusion Rules
+# -----------------------------------------------------------------------------
+release_exclusion:
+  enabled: true
+
+  dependency_changes_never_release: true
+  security_dependency_changes_never_release: true
+  lockfile_only_changes_never_release: true
+  github_actions_dependency_changes_never_release: true
+
+  block_release_if_author:
+    - renovate[bot]
+    - dependabot[bot]
+    - mend[bot]
+
+  block_release_if_branch_matches:
+    - "^renovate/.+$"
+    - "^dependabot/.+$"
+    - "^mend/.+$"
+
+  block_release_if_labels_present:
+    - no-release
+    - dependencies
+    - security:dependency
+    - renovate
+    - dependabot
+    - mend
+    - automation:renovate
+    - automation:dependabot
+    - automation:mend
+
+  remove_release_labels_if_present: true
+
+  release_labels_to_remove:
+    - release:major
+    - release:minor
+    - release:patch
+
+# -----------------------------------------------------------------------------
+# Scheduling
+# -----------------------------------------------------------------------------
+schedules:
+  renovate:
+    normal_updates:
+      description: Renovate normal dependency updates.
+      schedule:
+        - after 5pm every weekday
+        - every weekend
+
+    lockfile_maintenance:
+      description: Monthly lockfile maintenance.
+      schedule:
+        - before 5am on monday
+
+  dependabot:
+    npm_security:
+      description: Dependabot npm security update check.
+      interval: daily
+      time: "06:00"
+      timezone: America/Boise
+
+    github_actions:
+      description: Dependabot GitHub Actions update check.
+      interval: daily
+      time: "06:30"
+      timezone: America/Boise
+
+  mend:
+    security_review:
+      description: Mend security and dependency review cadence.
+      interval: daily
+      time: "07:00"
+      timezone: America/Boise
+
+  dependency_management_workflow:
+    description: Scheduled dependency management workflow.
+    cron: "0 7 * * 1-5"
+
+  dependency_auto_merge_workflow:
+    description: Checks dependency PRs for safe auto-merge.
+    triggers:
+      - pull_request
+      - workflow_run
+      - workflow_dispatch
+
+# -----------------------------------------------------------------------------
+# Grouping
+# -----------------------------------------------------------------------------
+groups:
+  npm_patch_dependencies:
+    managers:
+      - npm
+    update_types:
+      - patch
+    labels:
+      - dependencies
+      - priority:low
+      - auto-merge
+      - no-release
+
+  npm_minor_dependencies:
+    managers:
+      - npm
+    update_types:
+      - minor
+    labels:
+      - dependencies
+      - priority:medium
+      - auto-merge
+      - no-release
+
+  npm_major_dependencies:
+    managers:
+      - npm
+    update_types:
+      - major
+    labels:
+      - dependencies
+      - priority:high
+      - status:needs-review
+      - needs-maintainer-review
+      - no-release
+
+  github_actions_patch_minor:
+    managers:
+      - github-actions
+    update_types:
+      - patch
+      - minor
+    labels:
+      - dependencies
+      - actions-update
+      - area:github-actions
+      - area:ci
+      - auto-merge
+      - no-release
+
+  github_actions_major:
+    managers:
+      - github-actions
+    update_types:
+      - major
+    labels:
+      - dependencies
+      - actions-update
+      - area:github-actions
+      - area:ci
+      - status:needs-review
+      - needs-maintainer-review
+      - no-release
+
+  docker_patch_digest:
+    managers:
+      - dockerfile
+    update_types:
+      - patch
+      - digest
+    labels:
+      - dependencies
+      - area:docker
+      - deployment
+      - auto-merge
+      - no-release
+
+  security_updates:
+    security: true
+    labels:
+      - dependencies
+      - security:dependency
+      - kind:security
+      - area:security
+      - auto-merge
+      - no-release
+
+# -----------------------------------------------------------------------------
+# Issue Creation Rules
+# -----------------------------------------------------------------------------
+issue_creation:
+  enabled: true
+
+  create_issue_for:
+    - failed_security_update
+    - unpatchable_vulnerability
+    - major_upgrade_requires_migration
+    - repeated_dependency_pr_failure
+    - license_policy_violation
+    - malicious_package_detection
+
+  repeated_failure_threshold: 3
+
+  default_labels:
+    - dependencies
+    - status:triage
+    - no-release
+
+  security_labels:
+    - kind:security
+    - area:security
+    - security:dependency
+    - priority:critical
+    - no-release
+
+  default_assignees:
+    - Sinless777
+
+  default_milestone: Dependencies — Renovate Weekly Updates
+  security_milestone: Security — Dependency Vulnerability Response
+  major_upgrade_milestone: Dependencies — Major Upgrade Program
+
+# -----------------------------------------------------------------------------
+# Comments and Summaries
+# -----------------------------------------------------------------------------
+comments:
+  enabled: true
+
+  add_pr_comment_on_policy_failure: true
+  add_pr_comment_on_release_exclusion: true
+  add_pr_comment_on_auto_merge_blocked: true
+  add_workflow_summary: true
+
+  comment_footer:
+    start: "<!-- dependency-management:start -->"
+    end: "<!-- dependency-management:end -->"
+
+  summary:
+    include_tool: true
+    include_author: true
+    include_branch: true
+    include_update_type: true
+    include_packages: true
+    include_security_status: true
+    include_release_exclusion: true
+    include_auto_merge_eligibility: true
+    include_required_checks: true
+    include_blockers: true
+
+# -----------------------------------------------------------------------------
+# Enforcement
+# -----------------------------------------------------------------------------
+enforcement:
+  on_dependency_pr_missing_no_release:
+    action: add_label
+    label: no-release
+    message: |
+      Dependency PRs must include `no-release` so release automation does not create a release.
+
+  on_dependency_pr_missing_dependencies_label:
+    action: add_label
+    label: dependencies
+    message: |
+      Dependency PRs must include `dependencies`.
+
+  on_dependency_pr_has_release_label:
+    action: remove_label
+    labels:
+      - release:major
+      - release:minor
+      - release:patch
+    message: |
+      Dependency PRs cannot have release labels.
+
+  on_dependency_pr_from_unknown_author:
+    action: fail
+    message: |
+      Dependency automation PR author is not trusted.
+
+  on_dependency_pr_wrong_branch:
+    action: fail
+    message: |
+      Dependency automation branch does not match an allowed pattern.
+
+  on_major_update_without_review:
+    action: fail
+    message: |
+      Major dependency updates require maintainer review.
+
+  on_security_update_failed_checks:
+    action: fail
+    message: |
+      Security dependency update failed required checks and cannot be auto-merged.
+
+  on_auto_merge_blocked:
+    action: comment
+    message: |
+      Dependency auto-merge is blocked until all required labels, checks, and safety conditions pass.
+
+  on_release_attempt_from_dependency_pr:
+    action: fail
+    message: |
+      Dependency PRs must not trigger release automation.
+
+# -----------------------------------------------------------------------------
+# Safety
+# -----------------------------------------------------------------------------
+safety:
+  dry_run_supported: true
+  debug_supported: true
+
+  do_not_push_to_main: true
+  do_not_create_release: true
+  do_not_publish_npm: true
+  do_not_publish_containers: true
+  do_not_deploy_production: true
+
+  do_not_auto_merge_if_unknown_author: true
+  do_not_auto_merge_if_missing_required_checks: true
+  do_not_auto_merge_if_security_gate_failed: true
+  do_not_auto_merge_if_review_requested: true
+  do_not_auto_merge_if_conflicts: true
+  do_not_auto_merge_if_release_label_present: true
+
+  protected_labels:
+    - do-not-merge
+    - blocked-by-security
+    - needs-maintainer-review
+    - needs-security-review
+    - automation:needs-review
+    - release:major
+    - release:minor
+    - release:patch
+
+  labels_to_never_remove_automatically:
+    - do-not-merge
+    - blocked-by-security
+    - needs-security-review
+    - needs-maintainer-review
+    - automation:needs-review
+
+  labels_to_force_on_dependency_prs:
+    - dependencies
+    - no-release
+
+  labels_to_force_on_security_dependency_prs:
+    - dependencies
+    - security:dependency
+    - kind:security
+    - area:security
+    - no-release

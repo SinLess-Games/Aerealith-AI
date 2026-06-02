@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
-  "useDaemonProcess": false,
+  "useDaemonProcess": true,
   "useInferencePlugins": false,
   "plugins": [
     {
@@ -89,7 +89,8 @@
       "{workspaceRoot}/pnpm-workspace.yaml",
       "{workspaceRoot}/nx.json",
       "{workspaceRoot}/tsconfig.base.json",
-      "{workspaceRoot}/eslint.config.mjs"
+      "{workspaceRoot}/eslint.config.mjs",
+      "{workspaceRoot}/.github/workflows/continous-integration-.yml"
     ],
     "cloudflare": [
       "{workspaceRoot}/wrangler.toml",
@@ -160,5 +161,6 @@
       "inputs": ["cloudflare"],
       "cache": true
     }
-  }
+  },
+  "analytics": true
 }

@@ -1,0 +1,1237 @@
+# .github/repo-management/rules.yaml
+# =============================================================================
+# Aerealith AI Repository Management Rules
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Top-level source-of-truth configuration for repository automation.
+#
+# This file coordinates:
+#   - labels
+#   - milestones
+#   - issue routing
+#   - pull request routing
+#   - reviewer routing
+#   - assignee routing
+#   - branch policy
+#   - project board updates
+#   - dependency automation
+#   - release policy
+#   - security policy
+#   - Cloudflare deployment routing
+#   - GitHub Discussions announcements
+#   - OpenAI-assisted repository automation
+#
+# Used by:
+#   - .github/workflows/repo-management.yaml
+#   - .github/workflows/branch-policy.yaml
+#   - .github/workflows/dependency-management.yaml
+#   - .github/workflows/dependency-auto-merge.yaml
+#   - .github/workflows/release.yaml
+#   - .github/workflows/security.yaml
+#   - .github/workflows/ai-repo-assistant.yaml
+#   - .github/scripts/repo/**
+#   - .github/scripts/ai/**
+#   - .github/scripts/security/**
+#   - .github/scripts/release/**
+#
+# Core policy:
+#   - Default branch is main.
+#   - Human work happens on feature/fix/chore/docs/etc. branches.
+#   - Pull requests merge into main.
+#   - Direct pushes to main are not allowed.
+#   - Releases only happen from qualifying merged PRs on main.
+#   - Dependency automation must never trigger releases.
+#   - Repository-changing automation must support dry-run mode.
+#   - AI automation must create reviewable work and must not push to main.
+# =============================================================================
+
+version: 1
+
+repository:
+  owner: SinLess-Games
+  name: Aerealith-AI
+  full_name: SinLess-Games/Aerealith-AI
+  default_branch: main
+  visibility: public
+
+organization:
+  name: SinLess-Games
+  maintainer: Sinless777
+
+tooling:
+  package_manager: pnpm
+  pnpm_version: 10.23.0
+  node_version: 24.15.0
+  monorepo_tool: nx
+  primary_language: TypeScript
+
+project:
+  name: Aerealith AI
+  board: Aerealith AI Task Board
+  announcement_discussion_category: Announcements
+
+# -----------------------------------------------------------------------------
+# Config File Registry
+# -----------------------------------------------------------------------------
+config_files:
+  labels: .github/labels.yaml
+  milestones: .github/milestones.yaml
+  labeler: .github/labeler.yaml
+  assignees: .github/assignees.yaml
+  codeowners: .github/CODEOWNERS
+  dependabot: .github/dependabot.yaml
+  renovate: .github/renovate.json5
+  codeql: .github/codeql.yaml
+  project_board: .github/projects/kanban-board.yaml
+
+  repo_management:
+    root: .github/repo-management/rules.yaml
+    branch_rules: .github/repo-management/branch-rules.yaml
+    cloudflare_rules: .github/repo-management/cloudflare-rules.yaml
+    dependency_rules: .github/repo-management/dependency-rules.yaml
+    discussion_rules: .github/repo-management/discussion-rules.yaml
+    milestone_rules: .github/repo-management/milestone-rules.yaml
+    release_rules: .github/repo-management/release-rules.yaml
+    reviewer_rules: .github/repo-management/reviewer-rules.yaml
+    security_rules: .github/repo-management/security-rules.yaml
+
+# -----------------------------------------------------------------------------
+# Automation Modes
+# -----------------------------------------------------------------------------
+automation:
+  dry_run_supported: true
+  debug_supported: true
+
+  default_dry_run: false
+  default_debug: false
+
+  environment_variables:
+    dry_run:
+      - DRY_RUN
+      - REPO_MANAGEMENT_DRY_RUN
+
+    debug:
+      - DEBUG_PROJECT_SYNC
+      - REPO_MANAGEMENT_DEBUG
+
+  write_mode:
+    enabled: true
+    require_explicit_confirmation_for_manual_dispatch: true
+    require_trusted_event: true
+
+  trusted_events:
+    - workflow_dispatch
+    - push
+    - pull_request_target
+    - issues
+    - pull_request
+    - release
+    - schedule
+
+  untrusted_events:
+    - pull_request_from_fork
+
+  safety_defaults:
+    no_mutation_on_untrusted_pull_requests: true
+    no_secrets_on_untrusted_pull_requests: true
+    no_release_on_untrusted_pull_requests: true
+    no_production_deploy_on_untrusted_pull_requests: true
+
+# -----------------------------------------------------------------------------
+# Source of Truth Ownership
+# -----------------------------------------------------------------------------
+source_of_truth:
+  labels:
+    file: .github/labels.yaml
+    create_missing: true
+    update_existing: true
+    delete_unmanaged: true
+    dry_run_supported: true
+
+  milestones:
+    file: .github/milestones.yaml
+    create_missing: true
+    update_existing: true
+    delete_unmanaged: false
+    close_unmanaged: false
+    report_unmanaged: true
+    dry_run_supported: true
+
+  project_board:
+    file: .github/projects/kanban-board.yaml
+    create_missing_project: true
+    create_missing_fields: true
+    create_missing_views: true
+    delete_unmanaged: false
+    dry_run_supported: true
+
+  codeowners:
+    file: .github/CODEOWNERS
+    managed_manually: true
+    automation_reads_only: true
+
+  issue_templates:
+    directory: .github/ISSUE_TEMPLATE
+    managed_manually: true
+    automation_reads_only: true
+
+# -----------------------------------------------------------------------------
+# Repository State Sync
+# -----------------------------------------------------------------------------
+sync:
+  enabled: true
+
+  order:
+    - validate-config
+    - sync-labels
+    - sync-milestones
+    - sync-project-board
+    - validate-codeowners
+    - validate-issue-templates
+    - summarize
+
+  labels:
+    enabled: true
+    create_or_update_only: false
+    delete_unmanaged: true
+    preserve_protected_labels: true
+
+  milestones:
+    enabled: true
+    create_or_update_only: true
+    delete_unmanaged: false
+    report_unmanaged: true
+
+  project_board:
+    enabled: true
+    create_or_update_only: true
+    delete_unmanaged: false
+
+  repository_settings:
+    enabled: false
+    reason: Repository settings and branch protection should be applied by dedicated workflows or manual admin action.
+
+# -----------------------------------------------------------------------------
+# Branch Policy
+# -----------------------------------------------------------------------------
+branch_policy:
+  enabled: true
+  rules_file: .github/repo-management/branch-rules.yaml
+
+  default_branch: main
+
+  direct_push:
+    main_allowed: false
+    automation_allowed: false
+    openai_allowed: false
+
+  pull_requests:
+    required_for_main: true
+    required_base_branch: main
+
+  human_branches:
+    require_issue_number: true
+    required_pattern: "^(feature|feat|fix|bugfix|hotfix|chore|maintenance|docs|doc|refactor|test|tests|security|ci|deploy|deployment)/[0-9]+-[a-z0-9][a-z0-9-]*[a-z0-9]$"
+
+  automation_branches:
+    require_issue_number: false
+    allowed_patterns:
+      - "^renovate/.+$"
+      - "^dependabot/.+$"
+      - "^mend/.+$"
+      - "^github-actions/.+$"
+      - "^automation/.+$"
+      - "^openai/.+$"
+      - "^ai/.+$"
+
+  release_branches:
+    enabled: true
+    pattern: "^release/V[0-9]+\\.[0-9]+\\.[0-9]+$"
+    do_not_trigger_release_by_branch_name: true
+
+# -----------------------------------------------------------------------------
+# Labels
+# -----------------------------------------------------------------------------
+labels:
+  enabled: true
+  source_file: .github/labels.yaml
+
+  unmanaged_labels:
+    delete: true
+    report_before_delete: true
+
+  protected_labels:
+    - do-not-merge
+    - blocked-by-security
+    - needs-security-review
+    - needs-maintainer-review
+    - needs-architecture-review
+    - automation:needs-review
+    - release:major
+    - release:minor
+    - release:patch
+    - no-release
+
+  mutually_exclusive_groups:
+    status:
+      - status:triage
+      - status:backlog
+      - status:ready
+      - status:in-progress
+      - status:needs-info
+      - status:needs-review
+      - status:changes-requested
+      - status:blocked
+      - status:ready-to-merge
+      - status:merged
+
+    priority:
+      - priority:critical
+      - priority:high
+      - priority:medium
+      - priority:low
+
+    severity:
+      - severity:critical
+      - severity:high
+      - severity:medium
+      - severity:low
+
+    release:
+      - release:major
+      - release:minor
+      - release:patch
+
+  required_for_pull_requests:
+    any_kind_label: true
+    any_status_label: true
+
+  required_for_issues:
+    any_kind_label: false
+    any_status_label: true
+
+# -----------------------------------------------------------------------------
+# Issue Routing
+# -----------------------------------------------------------------------------
+issues:
+  enabled: true
+
+  default:
+    assignees:
+      - Sinless777
+    labels:
+      - status:triage
+    milestone: Backlog
+
+  template_routing:
+    "[Bug]":
+      labels:
+        - kind:bug
+        - status:triage
+      milestone: Backlog
+
+    "[Feature]":
+      labels:
+        - kind:feature
+        - status:triage
+      milestone: Backlog
+
+    "[Maintenance]":
+      labels:
+        - kind:maintenance
+        - status:triage
+        - no-release
+      milestone: Backlog
+
+    "[Security]":
+      labels:
+        - kind:security
+        - area:security
+        - status:triage
+        - needs-security-review
+      milestone: Security — Strict Pull Request Gate
+
+    "[Implementation]":
+      labels:
+        - kind:chore
+        - status:triage
+      milestone: Backlog
+
+    "[CI/CD]":
+      labels:
+        - kind:ci
+        - area:ci
+        - status:triage
+        - no-release
+      milestone: V0.3.0 — CI/CD Expansion
+
+    "[Release]":
+      labels:
+        - kind:release
+        - release
+        - status:triage
+      milestone: V0.5.0 — Release Automation
+
+    "[Docs]":
+      labels:
+        - kind:documentation
+        - area:docs
+        - status:triage
+        - no-release
+      milestone: Documentation — Developer Experience
+
+    "[Architecture]":
+      labels:
+        - discussion
+        - needs-architecture-review
+        - status:triage
+        - no-release
+      milestone: Documentation — Architecture
+
+    "[Cloudflare]":
+      labels:
+        - deployment
+        - cloudflare
+        - area:cloudflare
+        - status:triage
+      milestone: V0.7.0 — Cloudflare Platform
+
+    "[AI Automation]":
+      labels:
+        - automation:openai
+        - area:ai
+        - automation:needs-review
+        - status:triage
+        - no-release
+      milestone: V0.8.0 — AI Repository Assistant
+
+    "[Self-Hosted]":
+      labels:
+        - area:self-hosted
+        - deployment
+        - status:triage
+        - no-release
+      milestone: Self-Hosted — Helm Chart
+
+  automation:
+    assign_labels: true
+    assign_assignees: true
+    assign_milestones: true
+    add_to_project: true
+    link_related_pull_requests: true
+    do_not_close_issues: true
+    do_not_delete_issues: true
+
+# -----------------------------------------------------------------------------
+# Pull Request Routing
+# -----------------------------------------------------------------------------
+pull_requests:
+  enabled: true
+
+  default:
+    assignees:
+      - Sinless777
+    reviewers:
+      - Sinless777
+    team_reviewers: []
+    labels:
+      - status:ready
+    milestone: Backlog
+
+  draft:
+    labels:
+      - status:in-progress
+    request_reviewers: false
+
+  ready_for_review:
+    labels:
+      - status:needs-review
+    request_reviewers: true
+
+  merged:
+    labels:
+      - status:merged
+
+  closed_unmerged:
+    labels: []
+
+  automation:
+    assign_labels: true
+    assign_assignees: true
+    assign_reviewers: true
+    assign_milestones: true
+    add_to_project: true
+    link_related_issues: true
+    create_missing_issue_with_openai: true
+    do_not_merge_pull_requests: true
+    do_not_approve_pull_requests: true
+    do_not_push_to_main: true
+
+  required_before_merge:
+    labels_absent:
+      - do-not-merge
+      - blocked-by-security
+      - status:blocked
+
+    checks:
+      - CI
+      - Security
+      - CodeQL
+      - SonarQube
+      - Dependency Review
+
+# -----------------------------------------------------------------------------
+# Assignees and Reviewers
+# -----------------------------------------------------------------------------
+ownership:
+  assignees_file: .github/assignees.yaml
+  reviewer_rules_file: .github/repo-management/reviewer-rules.yaml
+  codeowners_file: .github/CODEOWNERS
+
+  default_assignees:
+    - Sinless777
+
+  default_reviewers:
+    - Sinless777
+
+  default_team_reviewers: []
+
+  allow_multiple_assignees: true
+  allow_multiple_reviewers: true
+  allow_team_reviewers: true
+
+  do_not_assign_bots: true
+  do_not_request_review_from_pr_author: true
+  do_not_request_review_from_bots: true
+
+  review_required_for:
+    security: true
+    release: true
+    architecture: true
+    production: true
+    ai_automation: true
+    major_dependencies: true
+
+# -----------------------------------------------------------------------------
+# Milestones
+# -----------------------------------------------------------------------------
+milestones:
+  enabled: true
+  source_file: .github/milestones.yaml
+  rules_file: .github/repo-management/milestone-rules.yaml
+
+  fallback: Backlog
+
+  assignment:
+    enabled: true
+    require_existing_milestone: true
+    do_not_create_from_assignment_script: true
+    do_not_delete: true
+
+  release_milestones:
+    do_not_trigger_release_by_milestone: true
+    release_labels_required: true
+
+  dependency_milestones:
+    default: Dependencies — Renovate Weekly Updates
+    security: Security — Dependency Vulnerability Response
+    major: Dependencies — Major Upgrade Program
+
+# -----------------------------------------------------------------------------
+# Project Board
+# -----------------------------------------------------------------------------
+project_board:
+  enabled: true
+  config_file: .github/projects/kanban-board.yaml
+
+  auto_add:
+    issues: true
+    pull_requests: true
+
+  update_fields:
+    enabled: true
+    from_labels: true
+    from_milestones: true
+    from_state: true
+
+  archive:
+    enabled: true
+    completed_after_days: 30
+
+  safety:
+    do_not_delete_project: true
+    do_not_delete_fields: true
+    do_not_delete_views: true
+    do_not_remove_items: true
+
+# -----------------------------------------------------------------------------
+# Relationship Automation
+# -----------------------------------------------------------------------------
+relationships:
+  enabled: true
+
+  link_issues_to_pull_requests: true
+  link_pull_requests_to_issues: true
+
+  strong_keywords:
+    - fixes
+    - fixed
+    - closes
+    - closed
+    - resolves
+    - resolved
+
+  weak_keywords:
+    - related to
+    - refs
+    - references
+
+  branch_issue_patterns:
+    - "^(feature|feat|fix|bugfix|hotfix|chore|maintenance|docs|doc|refactor|test|tests|security|ci|deploy|deployment)/(?<issue>[0-9]+)-(?<slug>.+)$"
+    - "^(?<issue>[0-9]+)-(?<slug>.+)$"
+
+  require_strong_evidence_for_closing_links: true
+
+  create_issue_when_missing:
+    enabled: true
+    use_openai: true
+    require_maintainer_review: true
+    labels:
+      - automation:openai
+      - automation:needs-review
+      - status:needs-review
+
+  comments:
+    add_relationship_footer: true
+    footer:
+      start: "<!-- repo-management:relationships:start -->"
+      end: "<!-- repo-management:relationships:end -->"
+
+# -----------------------------------------------------------------------------
+# Dependency Automation
+# -----------------------------------------------------------------------------
+dependencies:
+  enabled: true
+  rules_file: .github/repo-management/dependency-rules.yaml
+
+  tools:
+    renovate:
+      enabled: true
+      normal_updates: true
+
+    mend:
+      enabled: true
+      security_management: true
+
+    dependabot:
+      enabled: true
+      npm_security_updates: true
+      github_actions_updates: true
+
+  release_policy:
+    dependency_prs_never_release: true
+    security_dependency_prs_never_release: true
+    lockfile_only_prs_never_release: true
+
+  required_labels:
+    - dependencies
+    - no-release
+
+  security_dependency_labels:
+    - dependencies
+    - security:dependency
+    - kind:security
+    - area:security
+    - no-release
+
+  auto_merge:
+    enabled: true
+    allowed_update_types:
+      - patch
+      - minor
+      - security_patch
+      - lockfile
+
+    forbidden_update_types:
+      - major
+
+    allowed_authors:
+      - renovate[bot]
+      - dependabot[bot]
+      - mend[bot]
+
+    required_labels:
+      - dependencies
+      - no-release
+      - auto-merge
+
+    required_absent_labels:
+      - do-not-merge
+      - blocked-by-security
+      - needs-maintainer-review
+      - needs-security-review
+      - automation:needs-review
+      - release:major
+      - release:minor
+      - release:patch
+      - status:blocked
+
+    required_checks:
+      - CI
+      - Security
+      - CodeQL
+      - SonarQube
+      - Dependency Review
+
+# -----------------------------------------------------------------------------
+# Security Automation
+# -----------------------------------------------------------------------------
+security:
+  enabled: true
+  strict: true
+  rules_file: .github/repo-management/security-rules.yaml
+
+  tools:
+    codeql: true
+    dependabot_alerts: true
+    dependency_review: true
+    sonarqube_cloud: true
+    mend: true
+    renovate: true
+    pnpm_audit: true
+    secret_scanning: true
+    container_scanning: true
+    sbom: true
+    attestations: true
+
+  required_on_pull_requests: true
+  required_on_main: true
+  scheduled_main_scan: true
+
+  block_merge_on:
+    vulnerabilities:
+      - critical
+      - high
+
+    codeql:
+      - critical
+      - high
+
+    sonarqube_quality_gate_failed: true
+    dependency_review_failed: true
+    secret_findings: true
+    malicious_packages: true
+    disallowed_licenses: true
+
+  create_security_issues:
+    enabled: true
+    for_unpatchable_vulnerabilities: true
+    for_failed_security_updates: true
+    for_repeated_security_failures: true
+
+  labels:
+    security_blockers:
+      - blocked-by-security
+      - do-not-merge
+
+    security_review:
+      - needs-security-review
+
+# -----------------------------------------------------------------------------
+# Release Automation
+# -----------------------------------------------------------------------------
+release:
+  enabled: true
+  rules_file: .github/repo-management/release-rules.yaml
+
+  release_only_from_main: true
+  release_only_after_pr_merge: true
+  release_only_with_release_label: true
+  require_exactly_one_release_label: true
+
+  valid_release_labels:
+    - release:major
+    - release:minor
+    - release:patch
+
+  release_blocking_labels:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked
+
+  release_blocking_authors:
+    - renovate[bot]
+    - dependabot[bot]
+    - mend[bot]
+
+  versioning:
+    tag_format: "V{major}.{minor}.{patch}"
+    tag_pattern: "^V[0-9]+\\.[0-9]+\\.[0-9]+$"
+    initial_version: V0.1.0
+
+  changelog:
+    enabled: true
+    use_openai_draft: true
+    update_changelog_file: true
+    exclude_dependency_prs: true
+    exclude_no_release_prs: true
+
+  github_release:
+    enabled: true
+    title_format: "Aerealith AI {version}"
+
+  artifacts:
+    enabled: true
+    required:
+      - SHA256SUMS
+      - SHA512SUMS
+      - artifact-manifest.json
+      - SBOM SPDX JSON
+
+  attestations:
+    enabled: true
+    only_on_release_or_publish_jobs: true
+
+  announcements:
+    enabled: true
+    discussion_category: Announcements
+    use_openai_draft: true
+
+# -----------------------------------------------------------------------------
+# Publishing
+# -----------------------------------------------------------------------------
+publishing:
+  enabled: true
+
+  npm:
+    enabled: true
+    publish_only_on_release: true
+    publish_only_private_false: true
+    token_secret: NPM_ACCESS_TOKEN
+
+  ghcr:
+    enabled: true
+    publish_only_on_release: true
+    build_every_dockerfile: true
+    registry: ghcr.io
+    owner: sinless-games
+    namespace: aerealith-ai
+    image_repository_format: "ghcr.io/sinless-games/aerealith-ai/{name}"
+    image_tag_format: "{version}-{channel}"
+
+  artifacts:
+    enabled: true
+    generate_hashes: true
+    generate_manifest: true
+    generate_sbom: true
+
+  attestations:
+    enabled: true
+    release_only: true
+    publish_only: true
+
+# -----------------------------------------------------------------------------
+# Cloudflare Deployment
+# -----------------------------------------------------------------------------
+cloudflare:
+  enabled: true
+  rules_file: .github/repo-management/cloudflare-rules.yaml
+
+  services:
+    workers: true
+    queues: true
+    r2: true
+    d1: true
+    kv: true
+    secrets_store: true
+
+  environments:
+    preview:
+      automatic_on_pull_request: true
+      approval_required: false
+
+    staging:
+      automatic_on_main: true
+      approval_required: false
+
+    production:
+      release_tag_only: true
+      approval_required: true
+
+  production:
+    requires_release_tag: true
+    requires_environment_approval: true
+    requires_smoke_tests: true
+    blocked_for_dependency_prs: true
+    blocked_for_openai_prs: true
+
+# -----------------------------------------------------------------------------
+# GitHub Discussions
+# -----------------------------------------------------------------------------
+discussions:
+  enabled: true
+  rules_file: .github/repo-management/discussion-rules.yaml
+
+  categories:
+    announcements: Announcements
+    general: General
+    ideas: Ideas
+    polls: Polls
+    q_and_a: Q&A
+    show_and_tell: Show and tell
+
+  release_announcements:
+    enabled: true
+    category: Announcements
+    use_openai_draft: true
+    skip_dependency_prs: true
+    skip_no_release_prs: true
+    skip_security_dependency_prs: true
+
+# -----------------------------------------------------------------------------
+# OpenAI Automation
+# -----------------------------------------------------------------------------
+openai:
+  enabled: true
+
+  model:
+    variable: OPENAI_MODEL
+    default: gpt-5.5
+
+  secret:
+    name: OPENAI_API_KEY
+
+  allowed_use_cases:
+    - changelog_drafts
+    - release_announcement_drafts
+    - issue_creation_from_pull_requests
+    - pull_request_creation_from_issues
+    - issue_pr_link_suggestions
+    - security_triage_summaries
+    - dependency_update_summaries
+
+  write_policy:
+    may_create_issues: true
+    may_create_pull_requests: true
+    may_comment: true
+    may_post_discussions: true
+    may_push_to_main: false
+    may_merge_pull_requests: false
+    may_approve_pull_requests: false
+    may_publish_packages: false
+    may_deploy_production: false
+
+  required_labels_for_ai_created_work:
+    - automation:openai
+    - automation:needs-review
+
+  safety:
+    redact_secrets: true
+    redact_private_data: true
+    do_not_invent_changes: true
+    require_review_for_ai_created_prs: true
+    dry_run_supported: true
+
+# -----------------------------------------------------------------------------
+# Caching and Artifacts
+# -----------------------------------------------------------------------------
+caching:
+  enabled: true
+
+  human_readable_names: true
+
+  cache_types:
+    - pnpm-store
+    - nx-cache
+    - docker-buildx
+    - cypress-cache
+    - playwright-browsers
+    - wrangler-cache
+
+  cleanup:
+    enabled: true
+    schedule: weekly
+    workflow: .github/workflows/cache-maintenance.yaml
+
+artifacts:
+  enabled: true
+
+  retention_days:
+    pull_request: 7
+    main: 30
+    release: 90
+    security_reports: 90
+
+  required_release_artifacts:
+    - SHA256SUMS
+    - SHA512SUMS
+    - artifact-manifest.json
+    - sbom.spdx.json
+
+  hashes:
+    enabled: true
+    algorithms:
+      - sha256
+      - sha512
+
+# -----------------------------------------------------------------------------
+# Workflows
+# -----------------------------------------------------------------------------
+workflows:
+  ci:
+    file: .github/workflows/ci.yaml
+    required: true
+
+  security:
+    file: .github/workflows/security.yaml
+    required: true
+
+  codeql:
+    file: .github/workflows/codeql.yaml
+    required: true
+
+  dependency_review:
+    file: .github/workflows/dependency-review.yaml
+    required: true
+
+  dependency_management:
+    file: .github/workflows/dependency-management.yaml
+    required: true
+
+  dependency_auto_merge:
+    file: .github/workflows/dependency-auto-merge.yaml
+    required: true
+
+  repo_management:
+    file: .github/workflows/repo-management.yaml
+    required: true
+
+  branch_policy:
+    file: .github/workflows/branch-policy.yaml
+    required: true
+
+  release:
+    file: .github/workflows/release.yaml
+    required: true
+
+  publish_npm:
+    file: .github/workflows/publish-npm.yaml
+    required: true
+
+  publish_containers:
+    file: .github/workflows/publish-containers.yaml
+    required: true
+
+  cloudflare_preview:
+    file: .github/workflows/cloudflare-preview.yaml
+    required: true
+
+  cloudflare_staging:
+    file: .github/workflows/cloudflare-staging.yaml
+    required: true
+
+  cloudflare_production:
+    file: .github/workflows/cloudflare-production.yaml
+    required: true
+
+  ai_repo_assistant:
+    file: .github/workflows/ai-repo-assistant.yaml
+    required: true
+
+  cache_maintenance:
+    file: .github/workflows/cache-maintenance.yaml
+    required: true
+
+# -----------------------------------------------------------------------------
+# Required Secrets and Variables
+# -----------------------------------------------------------------------------
+configuration:
+  required_secrets:
+    github:
+      - PROJECTS_PAT
+
+    openai:
+      - OPENAI_API_KEY
+
+    npm:
+      - NPM_ACCESS_TOKEN
+
+    cloudflare:
+      - CLOUDFLARE_API_TOKEN
+
+    sonarqube:
+      - SONAR_TOKEN
+
+    mend:
+      - MEND_API_KEY
+
+  required_variables:
+    - NODE_VERSION
+    - PNPM_VERSION
+    - DEFAULT_BRANCH
+    - CLOUDFLARE_ACCOUNT_ID
+
+  recommended_variables:
+    NODE_VERSION: "24.15.0"
+    PNPM_VERSION: "10.23.0"
+    DEFAULT_BRANCH: main
+    DISCUSSION_CATEGORY: Announcements
+    RELEASE_CHANNEL: release
+    OPENAI_MODEL: gpt-5.5
+
+# -----------------------------------------------------------------------------
+# Reporting
+# -----------------------------------------------------------------------------
+reporting:
+  enabled: true
+
+  add_workflow_summary: true
+  add_pr_comments_for_failures: true
+  add_pr_comments_for_warnings: false
+  add_issue_comments_for_relationships: false
+
+  summary:
+    include_dry_run: true
+    include_debug: true
+    include_event: true
+    include_actor: true
+    include_repository: true
+    include_ref: true
+    include_labels: true
+    include_milestone: true
+    include_project_updates: true
+    include_reviewers: true
+    include_assignees: true
+    include_relationships: true
+    include_security_status: true
+    include_release_status: true
+    include_dependency_status: true
+    include_skipped_reason: true
+
+  comment_footers:
+    repo_management:
+      start: "<!-- repo-management:start -->"
+      end: "<!-- repo-management:end -->"
+
+    branch_policy:
+      start: "<!-- branch-policy:start -->"
+      end: "<!-- branch-policy:end -->"
+
+    dependency_management:
+      start: "<!-- dependency-management:start -->"
+      end: "<!-- dependency-management:end -->"
+
+    security:
+      start: "<!-- security-management:start -->"
+      end: "<!-- security-management:end -->"
+
+    release:
+      start: "<!-- release-rules:start -->"
+      end: "<!-- release-rules:end -->"
+
+# -----------------------------------------------------------------------------
+# Enforcement
+# -----------------------------------------------------------------------------
+enforcement:
+  on_invalid_config:
+    action: fail
+    message: |
+      Repository management configuration is invalid.
+
+  on_missing_required_config:
+    action: fail
+    message: |
+      Required repository management config file is missing.
+
+  on_missing_required_secret:
+    action: fail
+    message: |
+      Required secret is missing for the requested automation path.
+
+  on_missing_required_variable:
+    action: warn
+    message: |
+      Recommended repository variable is missing.
+
+  on_untrusted_pull_request:
+    action: read_only
+    message: |
+      Untrusted pull requests may run read-only checks only.
+
+  on_direct_push_to_main:
+    action: fail
+    message: |
+      Direct pushes to main are not allowed.
+
+  on_release_from_dependency_pr:
+    action: fail
+    message: |
+      Dependency automation must not create releases.
+
+  on_release_without_release_label:
+    action: skip
+    message: |
+      Release skipped because the merged pull request does not have a release label.
+
+  on_release_blocking_label:
+    action: skip
+    message: |
+      Release skipped because a release-blocking label is present.
+
+  on_security_gate_failed:
+    action: fail
+    message: |
+      Security gate failed.
+
+  on_openai_push_to_main:
+    action: fail
+    message: |
+      OpenAI automation must not push directly to main.
+
+# -----------------------------------------------------------------------------
+# Safety
+# -----------------------------------------------------------------------------
+safety:
+  dry_run_supported: true
+  debug_supported: true
+
+  do_not_push_to_main: true
+  do_not_merge_pull_requests: true
+  do_not_approve_pull_requests: true
+  do_not_delete_issues: true
+  do_not_delete_pull_requests: true
+  do_not_delete_milestones: true
+  do_not_delete_project_board: true
+  do_not_delete_project_fields: true
+  do_not_delete_project_views: true
+
+  do_not_publish_npm_outside_release: true
+  do_not_publish_containers_outside_release: true
+  do_not_generate_attestations_outside_release_or_publish: true
+  do_not_deploy_production_without_release_tag: true
+  do_not_deploy_production_without_approval: true
+  do_not_post_release_announcement_for_skipped_release: true
+
+  never_remove_labels:
+    - do-not-merge
+    - blocked-by-security
+    - needs-security-review
+    - needs-maintainer-review
+    - needs-architecture-review
+    - automation:needs-review
+
+  never_auto_apply_release_labels:
+    - release:major
+    - release:minor
+    - release:patch
+
+  release_blocking_labels:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked

@@ -1,0 +1,556 @@
+name: Aerealith AI Cloudflare Preview
+
+run-name: >-
+  Cloudflare Preview / ${{ github.event_name }} / ${{ github.head_ref || github.ref_name || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Cloudflare preview mode to run."
+        required: true
+        default: "deploy"
+        type: choice
+        options:
+          - deploy
+          - discover-only
+          - migrations-only
+          - sync-only
+          - summarize-only
+      environment_name:
+        description: "Cloudflare environment name."
+        required: false
+        default: "preview"
+        type: string
+      preview_alias:
+        description: "Optional preview alias or deployment suffix."
+        required: false
+        default: ""
+        type: string
+      run_d1_migrations:
+        description: "Run Cloudflare D1 preview migrations."
+        required: true
+        default: true
+        type: boolean
+      sync_kv:
+        description: "Sync Cloudflare KV preview configuration."
+        required: true
+        default: true
+        type: boolean
+      sync_queues:
+        description: "Sync Cloudflare Queues preview configuration."
+        required: true
+        default: true
+        type: boolean
+      sync_r2:
+        description: "Sync Cloudflare R2 preview configuration."
+        required: true
+        default: true
+        type: boolean
+      sync_secrets:
+        description: "Sync Cloudflare preview secrets."
+        required: true
+        default: false
+        type: boolean
+      dry_run:
+        description: "Evaluate without changing Cloudflare resources."
+        required: true
+        default: false
+        type: boolean
+
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  deployments: write
+  pull-requests: write
+
+concurrency:
+  group: >-
+    cloudflare-preview-${{ github.event.pull_request.number || github.ref_name || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  CLOUDFLARE_ENVIRONMENT: preview
+  CLOUDFLARE_DEPLOYMENT_STAGE: preview
+  PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+  CLOUDFLARE_OUTPUT_DIR: artifacts/cloudflare/preview
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+
+    outputs:
+      mode: ${{ steps.context.outputs.mode }}
+      dry_run: ${{ steps.context.outputs.dry_run }}
+      environment_name: ${{ steps.context.outputs.environment_name }}
+      preview_alias: ${{ steps.context.outputs.preview_alias }}
+      deployment_ref: ${{ steps.context.outputs.deployment_ref }}
+      pull_request_number: ${{ steps.context.outputs.pull_request_number }}
+      is_fork: ${{ steps.context.outputs.is_fork }}
+      should_discover: ${{ steps.context.outputs.should_discover }}
+      should_run_migrations: ${{ steps.context.outputs.should_run_migrations }}
+      should_sync_resources: ${{ steps.context.outputs.should_sync_resources }}
+      should_deploy: ${{ steps.context.outputs.should_deploy }}
+      should_summarize: ${{ steps.context.outputs.should_summarize }}
+
+    steps:
+      - name: Resolve Cloudflare preview context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'deploy' }}
+          INPUT_ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name || 'preview' }}
+          INPUT_PREVIEW_ALIAS: ${{ github.event.inputs.preview_alias || '' }}
+          INPUT_RUN_D1_MIGRATIONS: ${{ github.event.inputs.run_d1_migrations || 'true' }}
+          INPUT_SYNC_KV: ${{ github.event.inputs.sync_kv || 'true' }}
+          INPUT_SYNC_QUEUES: ${{ github.event.inputs.sync_queues || 'true' }}
+          INPUT_SYNC_R2: ${{ github.event.inputs.sync_r2 || 'true' }}
+          INPUT_SYNC_SECRETS: ${{ github.event.inputs.sync_secrets || 'false' }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          HEAD_REF: ${{ github.head_ref || '' }}
+          REF_NAME: ${{ github.ref_name || '' }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name || '' }}
+          BASE_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          mode="${INPUT_MODE:-deploy}"
+          dry_run="${INPUT_DRY_RUN:-false}"
+          environment_name="${INPUT_ENVIRONMENT_NAME:-preview}"
+          preview_alias="${INPUT_PREVIEW_ALIAS:-}"
+          pull_request_number="${PR_NUMBER:-}"
+
+          deployment_ref="${HEAD_REF:-${REF_NAME:-manual}}"
+
+          if [[ -z "$preview_alias" && -n "$pull_request_number" ]]; then
+            preview_alias="pr-${pull_request_number}"
+          fi
+
+          if [[ -z "$preview_alias" ]]; then
+            preview_alias="$(printf '%s' "$deployment_ref" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9]+#-#g; s#^-+##; s#-+$##' | cut -c1-48)"
+          fi
+
+          is_fork="false"
+          if [[ "$EVENT_NAME" == "pull_request" && -n "$PR_HEAD_REPO" && "$PR_HEAD_REPO" != "$BASE_REPO" ]]; then
+            is_fork="true"
+          fi
+
+          should_discover="false"
+          should_run_migrations="false"
+          should_sync_resources="false"
+          should_deploy="false"
+          should_summarize="true"
+
+          case "$mode" in
+            deploy)
+              should_discover="true"
+              should_deploy="true"
+
+              if [[ "${INPUT_RUN_D1_MIGRATIONS:-true}" == "true" ]]; then
+                should_run_migrations="true"
+              fi
+
+              if [[ "${INPUT_SYNC_KV:-true}" == "true" || "${INPUT_SYNC_QUEUES:-true}" == "true" || "${INPUT_SYNC_R2:-true}" == "true" || "${INPUT_SYNC_SECRETS:-false}" == "true" ]]; then
+                should_sync_resources="true"
+              fi
+              ;;
+            discover-only)
+              should_discover="true"
+              ;;
+            migrations-only)
+              should_discover="true"
+              should_run_migrations="true"
+              ;;
+            sync-only)
+              should_discover="true"
+              should_sync_resources="true"
+              ;;
+            summarize-only)
+              should_summarize="true"
+              ;;
+            *)
+              echo "::error::Unsupported Cloudflare preview mode: $mode"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$EVENT_NAME" == "pull_request" && "${{ github.event.pull_request.draft || false }}" == "true" ]]; then
+            echo "::notice::Pull request is a draft. Preview deployment will be skipped."
+            should_deploy="false"
+          fi
+
+          if [[ "$is_fork" == "true" ]]; then
+            echo "::notice::Pull request is from a fork. Cloudflare deployment and sync steps will be skipped to protect secrets."
+            should_run_migrations="false"
+            should_sync_resources="false"
+            should_deploy="false"
+          fi
+
+          {
+            echo "mode=$mode"
+            echo "dry_run=$dry_run"
+            echo "environment_name=$environment_name"
+            echo "preview_alias=$preview_alias"
+            echo "deployment_ref=$deployment_ref"
+            echo "pull_request_number=$pull_request_number"
+            echo "is_fork=$is_fork"
+            echo "should_discover=$should_discover"
+            echo "should_run_migrations=$should_run_migrations"
+            echo "should_sync_resources=$should_sync_resources"
+            echo "should_deploy=$should_deploy"
+            echo "should_summarize=$should_summarize"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Aerealith AI Cloudflare Preview"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Mode | \`$mode\` |"
+            echo "| Dry run | \`$dry_run\` |"
+            echo "| Environment | \`$environment_name\` |"
+            echo "| Preview alias | \`${preview_alias:-none}\` |"
+            echo "| Deployment ref | \`${deployment_ref:-none}\` |"
+            echo "| Pull request | \`${pull_request_number:-none}\` |"
+            echo "| Fork | \`$is_fork\` |"
+            echo "| Discover | \`$should_discover\` |"
+            echo "| D1 migrations | \`$should_run_migrations\` |"
+            echo "| Resource sync | \`$should_sync_resources\` |"
+            echo "| Deploy | \`$should_deploy\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  cloudflare-preview:
+    name: Deploy Cloudflare preview
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+
+    if: >-
+      needs.preflight.outputs.should_discover == 'true' ||
+      needs.preflight.outputs.should_run_migrations == 'true' ||
+      needs.preflight.outputs.should_sync_resources == 'true' ||
+      needs.preflight.outputs.should_deploy == 'true'
+
+    environment:
+      name: ${{ needs.preflight.outputs.environment_name }}
+      url: ${{ steps.deploy.outputs.cloudflare_preview_url || steps.deploy.outputs.preview_url || '' }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+      CLOUDFLARE_ENVIRONMENT: ${{ needs.preflight.outputs.environment_name }}
+      CLOUDFLARE_DEPLOYMENT_STAGE: preview
+      CLOUDFLARE_PREVIEW_ALIAS: ${{ needs.preflight.outputs.preview_alias }}
+      CLOUDFLARE_PREVIEW_REF: ${{ needs.preflight.outputs.deployment_ref }}
+      CLOUDFLARE_PULL_REQUEST_NUMBER: ${{ needs.preflight.outputs.pull_request_number }}
+      CLOUDFLARE_SYNC_KV: ${{ github.event.inputs.sync_kv || 'true' }}
+      CLOUDFLARE_SYNC_QUEUES: ${{ github.event.inputs.sync_queues || 'true' }}
+      CLOUDFLARE_SYNC_R2: ${{ github.event.inputs.sync_r2 || 'true' }}
+      CLOUDFLARE_SYNC_SECRETS: ${{ github.event.inputs.sync_secrets || 'false' }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      CLOUDFLARE_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack
+        run: |
+          set -euo pipefail
+          corepack enable
+
+      - name: Install dependencies
+        if: hashFiles('pnpm-lock.yaml') != ''
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+
+      - name: Prepare Cloudflare output directory
+        run: |
+          set -euo pipefail
+          mkdir -p "$CLOUDFLARE_OUTPUT_DIR"
+
+      - name: Validate Cloudflare credentials
+        if: >-
+          needs.preflight.outputs.should_run_migrations == 'true' ||
+          needs.preflight.outputs.should_sync_resources == 'true' ||
+          needs.preflight.outputs.should_deploy == 'true'
+        run: |
+          set -euo pipefail
+
+          missing=()
+
+          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+            missing+=("CLOUDFLARE_API_TOKEN")
+          fi
+
+          if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+            missing+=("CLOUDFLARE_ACCOUNT_ID")
+          fi
+
+          if [[ "${#missing[@]}" -gt 0 ]]; then
+            printf '::error::Missing required Cloudflare secret(s): %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: Discover Cloudflare deployments
+        id: discover
+        if: needs.preflight.outputs.should_discover == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/discover-deployments.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/discover-deployments.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/discover-deployments.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage preview \
+            --alias "$CLOUDFLARE_PREVIEW_ALIAS" \
+            --output "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.md"
+
+      - name: Run D1 preview migrations
+        if: needs.preflight.outputs.should_run_migrations == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/databases/run-d1-migrations.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/databases/run-d1-migrations.js"
+            exit 0
+          fi
+
+          node ".github/scripts/databases/run-d1-migrations.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage preview \
+            --output "$CLOUDFLARE_OUTPUT_DIR/d1-migrations.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/d1-migrations.md"
+
+      - name: Sync Cloudflare KV
+        if: needs.preflight.outputs.should_sync_resources == 'true' && env.CLOUDFLARE_SYNC_KV == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/sync-kv.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/sync-kv.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/sync-kv.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage preview \
+            --output "$CLOUDFLARE_OUTPUT_DIR/sync-kv.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/sync-kv.md"
+
+      - name: Sync Cloudflare Queues
+        if: needs.preflight.outputs.should_sync_resources == 'true' && env.CLOUDFLARE_SYNC_QUEUES == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/sync-queues.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/sync-queues.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/sync-queues.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage preview \
+            --output "$CLOUDFLARE_OUTPUT_DIR/sync-queues.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/sync-queues.md"
+
+      - name: Sync Cloudflare R2
+        if: needs.preflight.outputs.should_sync_resources == 'true' && env.CLOUDFLARE_SYNC_R2 == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/sync-r2.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/sync-r2.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/sync-r2.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage preview \
+            --output "$CLOUDFLARE_OUTPUT_DIR/sync-r2.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/sync-r2.md"
+
+      - name: Sync Cloudflare secrets
+        if: needs.preflight.outputs.should_sync_resources == 'true' && env.CLOUDFLARE_SYNC_SECRETS == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/sync-secrets.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/sync-secrets.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/sync-secrets.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage preview \
+            --output "$CLOUDFLARE_OUTPUT_DIR/sync-secrets.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/sync-secrets.md"
+
+      - name: Deploy Cloudflare preview
+        id: deploy
+        if: needs.preflight.outputs.should_deploy == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/deploy-preview.js" ]]; then
+            echo "::error::Missing script: .github/scripts/cloudflare/deploy-preview.js"
+            exit 1
+          fi
+
+          node ".github/scripts/cloudflare/deploy-preview.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage preview \
+            --alias "$CLOUDFLARE_PREVIEW_ALIAS" \
+            --ref "$CLOUDFLARE_PREVIEW_REF" \
+            --output "$CLOUDFLARE_OUTPUT_DIR/deploy-preview.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/deploy-preview.md"
+
+          preview_url="$(node -e '
+            const fs = require("node:fs");
+            const file = process.argv[1];
+            if (!fs.existsSync(file)) process.exit(0);
+            const data = JSON.parse(fs.readFileSync(file, "utf8"));
+            const url =
+              data.preview_url ||
+              data.deployment_url ||
+              data.url ||
+              data.cloudflare?.preview_url ||
+              data.cloudflare?.deployment_url ||
+              "";
+            if (url) console.log(url);
+          ' "$CLOUDFLARE_OUTPUT_DIR/deploy-preview.json")"
+
+          if [[ -n "$preview_url" ]]; then
+            echo "cloudflare_preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+            echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment preview URL on pull request
+        if: >-
+          github.event_name == 'pull_request' &&
+          needs.preflight.outputs.should_deploy == 'true' &&
+          steps.deploy.outputs.preview_url != ''
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+          PR_NUMBER: ${{ needs.preflight.outputs.pull_request_number }}
+        run: |
+          set -euo pipefail
+
+          body_file="$RUNNER_TEMP/cloudflare-preview-comment.md"
+
+          cat > "$body_file" <<EOF
+          ## Aerealith AI Cloudflare Preview
+
+          Preview deployment is ready:
+
+          $PREVIEW_URL
+
+          | Field | Value |
+          |---|---|
+          | Environment | \`${CLOUDFLARE_ENVIRONMENT}\` |
+          | Alias | \`${CLOUDFLARE_PREVIEW_ALIAS}\` |
+          | Ref | \`${CLOUDFLARE_PREVIEW_REF}\` |
+          | Run | \`${GITHUB_RUN_ID}\` |
+          EOF
+
+          gh pr comment "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --body-file "$body_file"
+
+      - name: Write Cloudflare preview job summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Cloudflare Preview Output"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            if [[ -d "$CLOUDFLARE_OUTPUT_DIR" ]]; then
+              while IFS= read -r file; do
+                size="$(wc -c < "$file" | xargs)"
+                echo "| \`$file\` | \`$size\` bytes |"
+              done < <(find "$CLOUDFLARE_OUTPUT_DIR" -type f | sort)
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Cloudflare preview artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-preview-${{ github.run_id }}
+          path: |
+            artifacts/cloudflare/preview/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    needs:
+      - preflight
+      - cloudflare-preview
+
+    if: always()
+
+    steps:
+      - name: Write final Cloudflare preview summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Aerealith AI Cloudflare Preview Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Cloudflare preview | \`${{ needs.cloudflare-preview.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| Environment | \`${{ needs.preflight.outputs.environment_name }}\` |"
+            echo "| Preview alias | \`${{ needs.preflight.outputs.preview_alias || 'none' }}\` |"
+            echo "| Deployment ref | \`${{ needs.preflight.outputs.deployment_ref || 'none' }}\` |"
+            echo "| Pull request | \`${{ needs.preflight.outputs.pull_request_number || 'none' }}\` |"
+            echo "| Fork | \`${{ needs.preflight.outputs.is_fork }}\` |"
+            echo "| Deploy | \`${{ needs.preflight.outputs.should_deploy }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

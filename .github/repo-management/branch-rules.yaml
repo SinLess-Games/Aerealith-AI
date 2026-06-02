@@ -1,0 +1,817 @@
+# .github/repo-management/branch-rules.yaml
+# =============================================================================
+# Aerealith AI Branch Rules
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Source-of-truth branch naming, branch routing, release-branch behavior,
+#   automation branch allowances, and PR targeting policy.
+#
+# Used by:
+#   - .github/workflows/branch-policy.yaml
+#   - .github/workflows/repo-management.yaml
+#   - .github/scripts/repo/enforce-branch-name.js
+#   - .github/scripts/repo/enforce-pr-rules.js
+#   - .github/scripts/repo/link-issues-prs.js
+#
+# Repository model:
+#   - Default branch: main
+#   - Human work happens on feature/fix/chore/etc. branches
+#   - Pull requests merge into main
+#   - Releases only happen from qualifying merged PRs on main
+#   - Dependency automation must not trigger releases
+# =============================================================================
+
+version: 1
+
+repository:
+  name: Aerealith-AI
+  owner: SinLess-Games
+  default_branch: main
+
+# -----------------------------------------------------------------------------
+# Global Policy
+# -----------------------------------------------------------------------------
+policy:
+  require_pull_request_to_main: true
+  block_direct_push_to_main: true
+  allow_main_as_base_branch: true
+
+  # Human branches should normally include an issue number.
+  # Example:
+  #   feature/123-release-automation
+  #   fix/456-cloudflare-preview-deploy
+  require_issue_number_for_human_branches: true
+
+  # Automation branches are allowed to skip issue numbers because bot-generated
+  # branches often use package names, workflow names, or generated identifiers.
+  require_issue_number_for_automation_branches: false
+
+  # Release branches are only for preparing or validating a release.
+  # Actual release creation should still be controlled by merged PR labels on main.
+  allow_release_branches: true
+
+  # Prevent release labels from being inferred from branch names.
+  # Release labels must be explicit labels on the PR.
+  infer_release_labels_from_branch: false
+
+  # Do not let dependency/security dependency branches create releases.
+  dependency_branches_are_no_release: true
+
+  # OpenAI automation should never push directly to main.
+  ai_must_not_push_to_main: true
+
+# -----------------------------------------------------------------------------
+# Protected Branches
+# -----------------------------------------------------------------------------
+protected_branches:
+  main:
+    description: Primary protected branch. All human and automation changes must merge through pull requests.
+    required: true
+    allow_direct_push: false
+    allow_force_push: false
+    allow_delete: false
+    allowed_base_for_pull_requests: true
+
+    required_status_checks:
+      - CI
+      - Security
+      - CodeQL
+      - SonarQube
+      - Dependency Review
+
+    required_labels_absent:
+      - do-not-merge
+      - blocked-by-security
+      - status:blocked
+
+    required_before_merge:
+      - formatting
+      - linting
+      - typecheck
+      - tests
+      - builds
+      - security-gates
+
+# -----------------------------------------------------------------------------
+# Allowed Base Branches
+# -----------------------------------------------------------------------------
+base_branches:
+  main:
+    enabled: true
+    description: All normal pull requests target main.
+
+  # Release branches can exist for preparation, testing, or hotfix coordination,
+  # but final release eligibility still comes from merged PRs on main.
+  release:
+    enabled: true
+    pattern: "^release/V[0-9]+\\.[0-9]+\\.[0-9]+$"
+    description: Optional release preparation branches using V-prefixed version format.
+
+# -----------------------------------------------------------------------------
+# Human Branch Naming Rules
+# -----------------------------------------------------------------------------
+# Format:
+#   <type>/<issue-number>-<short-kebab-description>
+#
+# Examples:
+#   feature/123-openai-changelog-generator
+#   fix/124-cloudflare-d1-migration
+#   chore/125-update-renovate-rules
+#   docs/126-release-runbook
+# -----------------------------------------------------------------------------
+
+human_branch_rules:
+  enabled: true
+
+  allowed_types:
+    - feature
+    - feat
+    - fix
+    - bugfix
+    - hotfix
+    - chore
+    - maintenance
+    - docs
+    - doc
+    - refactor
+    - test
+    - tests
+    - security
+    - ci
+    - deploy
+    - deployment
+    - release
+
+  required_pattern: "^(feature|feat|fix|bugfix|hotfix|chore|maintenance|docs|doc|refactor|test|tests|security|ci|deploy|deployment)/(?<issue>[0-9]+)-(?<slug>[a-z0-9][a-z0-9-]*[a-z0-9])$"
+
+  release_branch_pattern: "^release/V(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)$"
+
+  slug_rules:
+    format: kebab-case
+    min_length: 3
+    max_length: 80
+    allowed_characters: "a-z, 0-9, hyphen"
+    disallow_trailing_hyphen: true
+    disallow_double_hyphen: true
+
+  issue_number_rules:
+    required: true
+    min: 1
+
+  examples:
+    valid:
+      - feature/123-add-cloudflare-preview-workflow
+      - feat/124-openai-release-announcements
+      - fix/125-labeler-duplicate-keys
+      - bugfix/126-codeql-path-filter
+      - hotfix/127-production-worker-binding
+      - chore/128-update-renovate-config
+      - maintenance/129-cleanup-github-scripts
+      - docs/130-release-process-runbook
+      - refactor/131-nx-target-detection
+      - test/132-playwright-e2e-coverage
+      - security/133-secret-redaction
+      - ci/134-cache-maintenance-workflow
+      - deploy/135-cloudflare-staging-deploy
+
+    invalid:
+      - feature/add-cloudflare-preview-workflow
+      - feature/ABC-add-cloudflare-preview-workflow
+      - feature/123_Add_Cloudflare_Preview_Workflow
+      - fix/no-issue-number
+      - random-branch-name
+      - main
+
+# -----------------------------------------------------------------------------
+# Branch Type Routing
+# -----------------------------------------------------------------------------
+branch_types:
+  feature:
+    aliases:
+      - feature
+      - feat
+    labels:
+      - kind:feature
+      - status:ready
+    release_allowed: true
+    default_release_label: null
+    milestone_hint: Backlog
+
+  fix:
+    aliases:
+      - fix
+      - bugfix
+      - hotfix
+    labels:
+      - kind:bug
+      - status:ready
+    release_allowed: true
+    default_release_label: null
+    milestone_hint: Backlog
+
+  chore:
+    aliases:
+      - chore
+      - maintenance
+    labels:
+      - kind:maintenance
+      - status:ready
+      - no-release
+    release_allowed: false
+    milestone_hint: Backlog
+
+  docs:
+    aliases:
+      - docs
+      - doc
+    labels:
+      - kind:documentation
+      - area:docs
+      - status:ready
+      - no-release
+    release_allowed: false
+    milestone_hint: Documentation — Developer Experience
+
+  refactor:
+    aliases:
+      - refactor
+    labels:
+      - kind:refactor
+      - status:ready
+    release_allowed: true
+    default_release_label: null
+    milestone_hint: Backlog
+
+  test:
+    aliases:
+      - test
+      - tests
+    labels:
+      - kind:test
+      - status:ready
+      - no-release
+    release_allowed: false
+    milestone_hint: CI/CD — Pull Request Validation
+
+  security:
+    aliases:
+      - security
+    labels:
+      - kind:security
+      - area:security
+      - priority:high
+      - needs-security-review
+      - status:ready
+    release_allowed: true
+    default_release_label: null
+    milestone_hint: Security — Strict Pull Request Gate
+
+  ci:
+    aliases:
+      - ci
+    labels:
+      - kind:ci
+      - area:ci
+      - status:ready
+      - no-release
+    release_allowed: false
+    milestone_hint: V0.3.0 — CI/CD Expansion
+
+  deployment:
+    aliases:
+      - deploy
+      - deployment
+    labels:
+      - kind:deployment
+      - deployment
+      - status:ready
+    release_allowed: true
+    default_release_label: null
+    milestone_hint: V0.7.0 — Cloudflare Platform
+
+  release:
+    aliases:
+      - release
+    labels:
+      - kind:release
+      - release
+      - needs-maintainer-review
+    release_allowed: true
+    default_release_label: null
+    milestone_hint: V0.5.0 — Release Automation
+
+# -----------------------------------------------------------------------------
+# Automation Branch Rules
+# -----------------------------------------------------------------------------
+automation_branch_rules:
+  enabled: true
+
+  allowed_patterns:
+    - "^renovate/.+$"
+    - "^dependabot/.+$"
+    - "^mend/.+$"
+    - "^github-actions/.+$"
+    - "^automation/.+$"
+    - "^openai/.+$"
+    - "^ai/.+$"
+
+  rules:
+    renovate:
+      patterns:
+        - "^renovate/.+$"
+      allowed_base_branches:
+        - main
+      labels:
+        - renovate
+        - dependencies
+        - automation
+        - automation:renovate
+        - no-release
+      release_allowed: false
+      auto_merge_allowed: true
+      require_issue_number: false
+
+    dependabot:
+      patterns:
+        - "^dependabot/.+$"
+      allowed_base_branches:
+        - main
+      labels:
+        - dependabot
+        - dependencies
+        - automation
+        - automation:dependabot
+        - no-release
+      release_allowed: false
+      auto_merge_allowed: true
+      require_issue_number: false
+
+    mend:
+      patterns:
+        - "^mend/.+$"
+      allowed_base_branches:
+        - main
+      labels:
+        - mend
+        - dependencies
+        - automation
+        - automation:mend
+        - no-release
+      release_allowed: false
+      auto_merge_allowed: true
+      require_issue_number: false
+
+    github-actions:
+      patterns:
+        - "^github-actions/.+$"
+        - "^automation/github-actions-.+$"
+      allowed_base_branches:
+        - main
+      labels:
+        - automation
+        - automation:github-actions
+        - area:github-actions
+        - no-release
+      release_allowed: false
+      auto_merge_allowed: false
+      require_issue_number: false
+
+    openai:
+      patterns:
+        - "^openai/.+$"
+        - "^ai/.+$"
+        - "^automation/openai-.+$"
+      allowed_base_branches:
+        - main
+      labels:
+        - automation
+        - automation:openai
+        - automation:needs-review
+        - area:ai
+        - no-release
+      release_allowed: false
+      auto_merge_allowed: false
+      require_issue_number: false
+      require_maintainer_review: true
+
+# -----------------------------------------------------------------------------
+# Pull Request Rules
+# -----------------------------------------------------------------------------
+pull_request_rules:
+  required_base_branch: main
+
+  title:
+    require_type_prefix: true
+    allowed_prefixes:
+      - "[Feature]"
+      - "[Fix]"
+      - "[Bug]"
+      - "[Hotfix]"
+      - "[Maintenance]"
+      - "[Docs]"
+      - "[Refactor]"
+      - "[Test]"
+      - "[Security]"
+      - "[CI/CD]"
+      - "[Deployment]"
+      - "[Release]"
+      - "[AI Automation]"
+      - "[Cloudflare]"
+      - "[Self-Hosted]"
+      - "[Architecture]"
+
+  body:
+    require_linked_issue_for_human_prs: true
+    accepted_link_keywords:
+      - closes
+      - fixes
+      - resolves
+      - related to
+      - refs
+      - references
+
+  labels:
+    require_at_least_one_kind_label: true
+    require_at_least_one_status_label: true
+    require_release_label_for_release: true
+
+    mutually_exclusive_groups:
+      status:
+        - status:triage
+        - status:backlog
+        - status:ready
+        - status:in-progress
+        - status:needs-info
+        - status:needs-review
+        - status:changes-requested
+        - status:blocked
+        - status:ready-to-merge
+        - status:merged
+
+      priority:
+        - priority:critical
+        - priority:high
+        - priority:medium
+        - priority:low
+
+      severity:
+        - severity:critical
+        - severity:high
+        - severity:medium
+        - severity:low
+
+      release:
+        - release:major
+        - release:minor
+        - release:patch
+
+  blockers:
+    labels_that_block_merge:
+      - do-not-merge
+      - blocked-by-security
+      - status:blocked
+
+    labels_that_require_review:
+      - needs-maintainer-review
+      - needs-security-review
+      - needs-architecture-review
+      - automation:needs-review
+
+# -----------------------------------------------------------------------------
+# Release Branch and Release Label Rules
+# -----------------------------------------------------------------------------
+release_rules:
+  release_only_from_main: true
+  release_only_after_merge_to_main: true
+
+  tag_format: "V{major}.{minor}.{patch}"
+  tag_pattern: "^V[0-9]+\\.[0-9]+\\.[0-9]+$"
+
+  valid_release_labels:
+    - release:major
+    - release:minor
+    - release:patch
+
+  require_exactly_one_release_label: true
+
+  release_blocking_labels:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security
+
+  release_blocking_authors:
+    - dependabot[bot]
+    - renovate[bot]
+    - mend[bot]
+
+  release_blocking_branch_patterns:
+    - "^renovate/.+$"
+    - "^dependabot/.+$"
+    - "^mend/.+$"
+
+  release_channel:
+    default: release
+    allowed:
+      - alpha
+      - beta
+      - test
+      - release
+
+# -----------------------------------------------------------------------------
+# Dependency Branch Policy
+# -----------------------------------------------------------------------------
+dependency_rules:
+  labels:
+    required:
+      - dependencies
+      - no-release
+
+  allowed_authors:
+    - dependabot[bot]
+    - renovate[bot]
+    - mend[bot]
+
+  allowed_branch_patterns:
+    - "^renovate/.+$"
+    - "^dependabot/.+$"
+    - "^mend/.+$"
+
+  auto_merge:
+    enabled: true
+
+    allowed_labels:
+      - dependencies
+      - no-release
+      - auto-merge
+
+    required_absent_labels:
+      - do-not-merge
+      - blocked-by-security
+      - needs-maintainer-review
+      - needs-security-review
+      - automation:needs-review
+      - release:major
+      - release:minor
+      - release:patch
+
+    required_checks:
+      - CI
+      - Security
+      - CodeQL
+      - SonarQube
+      - Dependency Review
+
+# -----------------------------------------------------------------------------
+# Security Branch Policy
+# -----------------------------------------------------------------------------
+security_rules:
+  branch_patterns:
+    - "^security/[0-9]+-[a-z0-9][a-z0-9-]*[a-z0-9]$"
+    - "^hotfix/[0-9]+-[a-z0-9][a-z0-9-]*[a-z0-9]$"
+
+  required_labels:
+    - kind:security
+    - area:security
+    - needs-security-review
+
+  allowed_release_labels:
+    - release:patch
+    - release:minor
+    - release:major
+
+  require_security_review: true
+
+  block_if_labels_present:
+    - blocked-by-security
+    - do-not-merge
+
+# -----------------------------------------------------------------------------
+# Path-Based Branch Hints
+# -----------------------------------------------------------------------------
+# These are hints for repo-management automation. They do not replace labeler.yaml.
+# -----------------------------------------------------------------------------
+path_hints:
+  "apps/frontend/**":
+    suggested_branch_types:
+      - feature
+      - fix
+      - refactor
+    labels:
+      - area:frontend
+
+  "apps/connectors/**":
+    suggested_branch_types:
+      - feature
+      - fix
+      - refactor
+    labels:
+      - area:connectors
+
+  "apps/e2e/**":
+    suggested_branch_types:
+      - test
+      - fix
+    labels:
+      - area:e2e
+      - kind:test
+
+  "apps/engines/**":
+    suggested_branch_types:
+      - feature
+      - fix
+      - refactor
+    labels:
+      - area:engines
+
+  "apps/integrations/**":
+    suggested_branch_types:
+      - feature
+      - fix
+      - refactor
+    labels:
+      - area:integrations
+
+  "apps/services/**":
+    suggested_branch_types:
+      - feature
+      - fix
+      - refactor
+    labels:
+      - area:services
+
+  "libs/**":
+    suggested_branch_types:
+      - feature
+      - fix
+      - refactor
+      - chore
+    labels:
+      - area:libs
+
+  ".github/workflows/**":
+    suggested_branch_types:
+      - ci
+      - chore
+      - security
+    labels:
+      - area:github-actions
+      - area:ci
+
+  ".github/scripts/**":
+    suggested_branch_types:
+      - ci
+      - chore
+      - refactor
+    labels:
+      - area:github-actions
+      - automation
+
+  ".github/repo-management/**":
+    suggested_branch_types:
+      - chore
+      - ci
+    labels:
+      - area:repo-management
+      - automation
+
+  ".github/scripts/ai/**":
+    suggested_branch_types:
+      - feature
+      - chore
+    labels:
+      - area:ai
+      - automation:openai
+      - automation:needs-review
+
+  "**/wrangler.toml":
+    suggested_branch_types:
+      - deploy
+      - fix
+    labels:
+      - area:cloudflare
+      - cloudflare
+      - deployment
+
+  "**/wrangler.jsonc":
+    suggested_branch_types:
+      - deploy
+      - fix
+    labels:
+      - area:cloudflare
+      - cloudflare
+      - deployment
+
+  "**/Dockerfile":
+    suggested_branch_types:
+      - chore
+      - deploy
+    labels:
+      - area:docker
+      - deployment
+
+  "charts/**":
+    suggested_branch_types:
+      - feature
+      - chore
+    labels:
+      - area:self-hosted
+      - area:helm
+
+  "kubernetes/**":
+    suggested_branch_types:
+      - feature
+      - chore
+    labels:
+      - area:self-hosted
+      - area:kubernetes
+
+  "k8s/**":
+    suggested_branch_types:
+      - feature
+      - chore
+    labels:
+      - area:self-hosted
+      - area:kubernetes
+
+  "docs/**":
+    suggested_branch_types:
+      - docs
+    labels:
+      - area:docs
+      - kind:documentation
+      - no-release
+
+# -----------------------------------------------------------------------------
+# Enforcement Actions
+# -----------------------------------------------------------------------------
+enforcement:
+  on_invalid_branch_name:
+    action: fail
+    message: |
+      Branch name does not match Aerealith AI branch policy.
+
+      Human branches must use:
+        <type>/<issue-number>-<short-kebab-description>
+
+      Examples:
+        feature/123-openai-changelog-generator
+        fix/124-cloudflare-preview-deploy
+        ci/125-cache-maintenance-workflow
+        docs/126-release-runbook
+
+      Automation branches may use:
+        renovate/*
+        dependabot/*
+        mend/*
+        openai/*
+        ai/*
+        automation/*
+
+  on_missing_issue_number:
+    action: fail
+    message: |
+      Human branches must include a GitHub issue number.
+
+      Example:
+        feature/123-add-release-workflow
+
+  on_pr_to_wrong_base:
+    action: fail
+    message: |
+      Pull requests must target main unless an approved release preparation branch is being used.
+
+  on_direct_push_to_main:
+    action: fail
+    message: |
+      Direct pushes to main are not allowed. Open a pull request instead.
+
+  on_release_from_dependency_branch:
+    action: fail
+    message: |
+      Dependency automation branches cannot create releases.
+
+  on_openai_push_to_main:
+    action: fail
+    message: |
+      OpenAI automation must not push directly to main. It must create a reviewable branch or pull request.
+
+# -----------------------------------------------------------------------------
+# Reporting
+# -----------------------------------------------------------------------------
+reporting:
+  add_pr_comment_on_failure: true
+  add_workflow_summary: true
+
+  comment_footer:
+    start: "<!-- branch-policy:start -->"
+    end: "<!-- branch-policy:end -->"
+
+  summary:
+    include_branch_name: true
+    include_base_branch: true
+    include_detected_type: true
+    include_issue_number: true
+    include_release_allowed: true
+    include_matched_rule: true

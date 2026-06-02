@@ -1,400 +1,638 @@
-name: CI
+name: Continuous Integration
+
+run-name: >-
+  CI / ${{ github.event_name }} / ${{ github.head_ref || github.ref_name || 'manual' }}
 
 on:
-  pull_request:
-    branches:
-      - main
-      - develop
+  workflow_dispatch:
+    inputs:
+      full_run:
+        description: "Run all projects instead of only affected projects."
+        required: true
+        default: false
+        type: boolean
+      run_e2e:
+        description: "Run E2E targets when available."
+        required: true
+        default: true
+        type: boolean
+      run_docker:
+        description: "Discover and build Docker images when Dockerfiles are present."
+        required: true
+        default: true
+        type: boolean
+      publish_images:
+        description: "Push Docker images to GHCR. Ignored for pull requests."
+        required: true
+        default: false
+        type: boolean
+      fail_on_audit:
+        description: "Fail CI when pnpm audit reports critical production vulnerabilities."
+        required: true
+        default: true
+        type: boolean
+      nx_parallel:
+        description: "Nx parallel task count."
+        required: true
+        default: "3"
+        type: string
 
   push:
     branches:
       - main
       - develop
+      - staging
+      - "release/**"
 
-  workflow_dispatch:
-    inputs:
-      full_run:
-        description: Run all projects instead of only affected projects
-        required: false
-        default: false
-        type: boolean
+  pull_request:
+    branches:
+      - main
+      - develop
+      - staging
 
 permissions:
-  contents: read
-  pull-requests: read
   actions: read
-  packages: write
-  id-token: write
   attestations: write
+  checks: write
+  contents: read
+  id-token: write
+  packages: write
+  pull-requests: read
+  security-events: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name || github.run_id }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 env:
-  CI: true
-  NODE_VERSION: '24'
-  PNPM_HOME: ~/.local/share/pnpm
-  NX_DAEMON: 'false'
-  NX_VERBOSE_LOGGING: 'true'
-  NEXT_TELEMETRY_DISABLED: '1'
+  CI: "true"
+  PROJECT_NAME: Aerealith AI
+  NODE_VERSION: "24"
+  FORCE_COLOR: "1"
+  NX_DAEMON: "false"
+  NX_VERBOSE_LOGGING: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
   CYPRESS_CACHE_FOLDER: ~/.cache/Cypress
   REGISTRY: ghcr.io
+  CI_OUTPUT_DIR: artifacts/ci
+  SECURITY_OUTPUT_DIR: artifacts/security
+  PROJECT_SYNC_DRY_RUN: "false"
 
 jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      full_run: ${{ steps.context.outputs.full_run }}
+      run_e2e: ${{ steps.context.outputs.run_e2e }}
+      run_docker: ${{ steps.context.outputs.run_docker }}
+      publish_images: ${{ steps.context.outputs.publish_images }}
+      fail_on_audit: ${{ steps.context.outputs.fail_on_audit }}
+      nx_parallel: ${{ steps.context.outputs.nx_parallel }}
+      is_pull_request: ${{ steps.context.outputs.is_pull_request }}
+      is_fork: ${{ steps.context.outputs.is_fork }}
+
+    steps:
+      - name: Resolve CI context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_FULL_RUN: ${{ github.event.inputs.full_run || 'false' }}
+          INPUT_RUN_E2E: ${{ github.event.inputs.run_e2e || 'true' }}
+          INPUT_RUN_DOCKER: ${{ github.event.inputs.run_docker || 'true' }}
+          INPUT_PUBLISH_IMAGES: ${{ github.event.inputs.publish_images || 'false' }}
+          INPUT_FAIL_ON_AUDIT: ${{ github.event.inputs.fail_on_audit || 'true' }}
+          INPUT_NX_PARALLEL: ${{ github.event.inputs.nx_parallel || '3' }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name || '' }}
+          BASE_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          full_run="${INPUT_FULL_RUN:-false}"
+          run_e2e="${INPUT_RUN_E2E:-true}"
+          run_docker="${INPUT_RUN_DOCKER:-true}"
+          publish_images="${INPUT_PUBLISH_IMAGES:-false}"
+          fail_on_audit="${INPUT_FAIL_ON_AUDIT:-true}"
+          nx_parallel="${INPUT_NX_PARALLEL:-3}"
+
+          is_pull_request="false"
+          is_fork="false"
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            is_pull_request="true"
+            publish_images="false"
+
+            if [[ -n "${PR_HEAD_REPO:-}" && "$PR_HEAD_REPO" != "$BASE_REPO" ]]; then
+              is_fork="true"
+            fi
+          fi
+
+          if [[ "$EVENT_NAME" == "push" && "${GITHUB_REF_NAME:-}" == "main" ]]; then
+            publish_images="true"
+          fi
+
+          if ! [[ "$nx_parallel" =~ ^[0-9]+$ ]]; then
+            nx_parallel="3"
+          fi
+
+          {
+            echo "full_run=$full_run"
+            echo "run_e2e=$run_e2e"
+            echo "run_docker=$run_docker"
+            echo "publish_images=$publish_images"
+            echo "fail_on_audit=$fail_on_audit"
+            echo "nx_parallel=$nx_parallel"
+            echo "is_pull_request=$is_pull_request"
+            echo "is_fork=$is_fork"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Continuous Integration"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Full run | \`$full_run\` |"
+            echo "| Run E2E | \`$run_e2e\` |"
+            echo "| Run Docker | \`$run_docker\` |"
+            echo "| Publish images | \`$publish_images\` |"
+            echo "| Fail on audit | \`$fail_on_audit\` |"
+            echo "| Nx parallel | \`$nx_parallel\` |"
+            echo "| Pull request | \`$is_pull_request\` |"
+            echo "| Fork | \`$is_fork\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   workspace:
     name: Workspace Validation
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    needs:
+      - preflight
+
+    env:
+      NX_PARALLEL: ${{ needs.preflight.outputs.nx_parallel }}
+      FULL_RUN: ${{ needs.preflight.outputs.full_run }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
-      - name: Setup pnpm
-        shell: bash
+      - name: Enable Corepack
         run: |
           set -euo pipefail
-
           corepack enable
 
-          PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
           corepack prepare "$PACKAGE_MANAGER" --activate
 
           pnpm --version
 
+      - name: Resolve pnpm store
+        id: pnpm_store
+        run: |
+          set -euo pipefail
+          echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pnpm cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Show Nx report
-        run: pnpm nx report
-
-      - name: Set Nx affected SHAs
-        shell: bash
+      - name: Resolve Nx affected SHAs
         run: |
           set -euo pipefail
 
           ZERO_SHA="0000000000000000000000000000000000000000"
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch --no-tags --prune --depth=1 origin "${{ github.base_ref }}"
             echo "NX_BASE=origin/${{ github.base_ref }}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
           elif [[ "${{ github.event_name }}" == "push" && "${{ github.event.before }}" != "$ZERO_SHA" ]]; then
             echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
           else
+            git fetch --no-tags --prune --depth=1 origin main || true
             echo "NX_BASE=origin/main" >> "$GITHUB_ENV"
             echo "NX_HEAD=HEAD" >> "$GITHUB_ENV"
           fi
 
+      - name: Show Nx report
+        run: pnpm exec nx report
+
       - name: Check formatting
-        shell: bash
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.full_run }}" == "true" ]]; then
-            pnpm nx format:check
+          if [[ "$FULL_RUN" == "true" ]]; then
+            pnpm exec nx format:check
           else
-            pnpm nx format:check --base="$NX_BASE" --head="$NX_HEAD"
+            pnpm exec nx format:check --base="$NX_BASE" --head="$NX_HEAD"
           fi
 
-      - name: Check workspace graph
-        run: pnpm nx graph --file=.nx/workspace-graph.html
+      - name: Generate workspace graph
+        run: |
+          set -euo pipefail
+          mkdir -p "$CI_OUTPUT_DIR"
+          pnpm exec nx graph --file="$CI_OUTPUT_DIR/workspace-graph.html"
 
-      - name: Upload workspace graph
+      - name: Upload workspace artifacts
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
-          name: workspace-graph
-          path: .nx/workspace-graph.html
+          name: workspace-${{ github.run_id }}
+          path: |
+            artifacts/ci/workspace-graph.html
           if-no-files-found: ignore
           retention-days: 7
 
   security:
     name: Dependency Security
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    needs:
+      - preflight
+
+    env:
+      FAIL_ON_AUDIT: ${{ needs.preflight.outputs.fail_on_audit }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
-      - name: Setup pnpm
-        shell: bash
+      - name: Enable Corepack
         run: |
           set -euo pipefail
-
           corepack enable
 
-          PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
           corepack prepare "$PACKAGE_MANAGER" --activate
 
           pnpm --version
+
+      - name: Resolve pnpm store
+        id: pnpm_store
+        run: |
+          set -euo pipefail
+          echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pnpm cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Audit production dependencies
-        run: pnpm audit --prod --audit-level=critical
+        run: |
+          set -euo pipefail
 
-  lint:
-    name: Lint and Typecheck
+          mkdir -p "$SECURITY_OUTPUT_DIR"
+
+          set +e
+          pnpm audit --prod --audit-level=critical --json > "$SECURITY_OUTPUT_DIR/pnpm-audit.json"
+          audit_status=$?
+          set -e
+
+          if [[ "$audit_status" -ne 0 ]]; then
+            echo "::warning::pnpm audit reported critical production dependency findings."
+
+            if [[ "$FAIL_ON_AUDIT" == "true" ]]; then
+              exit "$audit_status"
+            fi
+          fi
+
+      - name: Summarize dependencies
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/security/summarize-dependencies.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/security/summarize-dependencies.js"
+            exit 0
+          fi
+
+          node ".github/scripts/security/summarize-dependencies.js" \
+            --report-file "$SECURITY_OUTPUT_DIR/pnpm-audit.json" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-dependencies.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-dependencies.md" \
+            --no-fail-on-error
+
+      - name: Upload security artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependency-security-${{ github.run_id }}
+          path: |
+            artifacts/security/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  quality:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: ${{ matrix.timeout }}
     needs:
+      - preflight
       - workspace
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: lint
+            name: Lint
+            targets: lint
+            timeout: 30
+            parallel: 3
+          - id: typecheck
+            name: Typecheck
+            targets: typecheck
+            timeout: 30
+            parallel: 3
+          - id: test
+            name: Unit Tests
+            targets: test
+            timeout: 40
+            parallel: 3
+          - id: build
+            name: Build
+            targets: build
+            timeout: 45
+            parallel: 3
+
+    env:
+      FULL_RUN: ${{ needs.preflight.outputs.full_run }}
+      NX_PARALLEL: ${{ needs.preflight.outputs.nx_parallel }}
+      MATRIX_ID: ${{ matrix.id }}
+      REQUESTED_TARGETS: ${{ matrix.targets }}
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
-      - name: Setup pnpm
-        shell: bash
+      - name: Enable Corepack
         run: |
           set -euo pipefail
-
           corepack enable
 
-          PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
           corepack prepare "$PACKAGE_MANAGER" --activate
 
           pnpm --version
 
+      - name: Resolve pnpm store
+        id: pnpm_store
+        run: |
+          set -euo pipefail
+          echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pnpm cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Set Nx affected SHAs
-        shell: bash
+      - name: Resolve Nx affected SHAs
         run: |
           set -euo pipefail
 
           ZERO_SHA="0000000000000000000000000000000000000000"
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch --no-tags --prune --depth=1 origin "${{ github.base_ref }}"
             echo "NX_BASE=origin/${{ github.base_ref }}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
           elif [[ "${{ github.event_name }}" == "push" && "${{ github.event.before }}" != "$ZERO_SHA" ]]; then
             echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
           else
+            git fetch --no-tags --prune --depth=1 origin main || true
             echo "NX_BASE=origin/main" >> "$GITHUB_ENV"
             echo "NX_HEAD=HEAD" >> "$GITHUB_ENV"
           fi
 
-      - name: Run affected lint and typecheck
-        shell: bash
+      - name: Resolve available Nx targets
+        id: targets
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.full_run }}" == "true" ]]; then
-            pnpm nx run-many --targets=lint,typecheck --all --parallel=3
-          else
-            pnpm nx affected --targets=lint,typecheck --base="$NX_BASE" --head="$NX_HEAD" --parallel=3
+          available_targets=()
+
+          IFS=',' read -ra requested <<< "$REQUESTED_TARGETS"
+
+          for target in "${requested[@]}"; do
+            target="$(printf '%s' "$target" | xargs)"
+
+            if [[ -z "$target" ]]; then
+              continue
+            fi
+
+            projects="$(pnpm exec nx show projects --with-target="$target" 2>/dev/null || true)"
+
+            project_count="$(printf '%s' "$projects" | node <<'NODE'
+          const fs = require("node:fs");
+          const input = fs.readFileSync(0, "utf8").trim();
+
+          if (!input) {
+            console.log(0);
+            process.exit(0);
+          }
+
+          try {
+            const parsed = JSON.parse(input);
+            if (Array.isArray(parsed)) {
+              console.log(parsed.length);
+            } else if (parsed && typeof parsed === "object") {
+              console.log(Object.keys(parsed).length);
+            } else {
+              console.log(0);
+            }
+          } catch {
+            console.log(input.split(/\s+/).filter(Boolean).length);
+          }
+          NODE
+          )"
+
+            if [[ "$project_count" -gt 0 ]]; then
+              available_targets+=("$target")
+            else
+              echo "::notice::No projects expose Nx target: $target"
+            fi
+          done
+
+          if [[ "${#available_targets[@]}" -eq 0 ]]; then
+            echo "has_targets=false" >> "$GITHUB_OUTPUT"
+            echo "targets=" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-  # unit-tests:
-  #   name: Unit Tests
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 35
-  #   needs:
-  #     - workspace
-  #
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v5
-  #       with:
-  #         fetch-depth: 0
-  #
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v6
-  #       with:
-  #         node-version: ${{ env.NODE_VERSION }}
-  #
-  #     - name: Setup pnpm
-  #       shell: bash
-  #       run: |
-  #         set -euo pipefail
-  #
-  #         corepack enable
-  #
-  #         PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
-  #         corepack prepare "$PACKAGE_MANAGER" --activate
-  #
-  #         pnpm --version
-  #
-  #     - name: Install dependencies
-  #       run: pnpm install --frozen-lockfile
-  #
-  #     - name: Set Nx affected SHAs
-  #       shell: bash
-  #       run: |
-  #         set -euo pipefail
-  #
-  #         ZERO_SHA="0000000000000000000000000000000000000000"
-  #
-  #         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-  #           echo "NX_BASE=origin/${{ github.base_ref }}" >> "$GITHUB_ENV"
-  #           echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
-  #         elif [[ "${{ github.event_name }}" == "push" && "${{ github.event.before }}" != "$ZERO_SHA" ]]; then
-  #           echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
-  #           echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
-  #         else
-  #           echo "NX_BASE=origin/main" >> "$GITHUB_ENV"
-  #           echo "NX_HEAD=HEAD" >> "$GITHUB_ENV"
-  #         fi
-  #
-  #     - name: Run affected unit tests
-  #       shell: bash
-  #       run: |
-  #         set -euo pipefail
-  #
-  #         if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.full_run }}" == "true" ]]; then
-  #           pnpm nx run-many --target=test --all --parallel=3
-  #         else
-  #           pnpm nx affected --target=test --base="$NX_BASE" --head="$NX_HEAD" --parallel=3
-  #         fi
-  #
-  #     - name: Upload coverage reports
-  #       if: always()
-  #       uses: actions/upload-artifact@v6
-  #       with:
-  #         name: unit-test-coverage
-  #         path: |
-  #           coverage
-  #           apps/**/coverage
-  #           libs/**/coverage
-  #         if-no-files-found: ignore
-  #         retention-days: 14
+          targets="$(IFS=,; echo "${available_targets[*]}")"
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    needs:
-      - lint
+          echo "has_targets=true" >> "$GITHUB_OUTPUT"
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        shell: bash
+      - name: Run Nx targets
+        if: steps.targets.outputs.has_targets == 'true'
         run: |
           set -euo pipefail
 
-          corepack enable
+          targets="${{ steps.targets.outputs.targets }}"
+          parallel="${NX_PARALLEL:-${{ matrix.parallel }}}"
 
-          PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
-          corepack prepare "$PACKAGE_MANAGER" --activate
-
-          pnpm --version
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Set Nx affected SHAs
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          ZERO_SHA="0000000000000000000000000000000000000000"
-
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "NX_BASE=origin/${{ github.base_ref }}" >> "$GITHUB_ENV"
-            echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
-          elif [[ "${{ github.event_name }}" == "push" && "${{ github.event.before }}" != "$ZERO_SHA" ]]; then
-            echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
-            echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
+          if [[ "$FULL_RUN" == "true" ]]; then
+            pnpm exec nx run-many \
+              --targets="$targets" \
+              --all \
+              --parallel="$parallel"
           else
-            echo "NX_BASE=origin/main" >> "$GITHUB_ENV"
-            echo "NX_HEAD=HEAD" >> "$GITHUB_ENV"
+            pnpm exec nx affected \
+              --targets="$targets" \
+              --base="$NX_BASE" \
+              --head="$NX_HEAD" \
+              --parallel="$parallel"
           fi
 
-      - name: Run affected builds
-        shell: bash
+      - name: Collect build artifacts
+        if: always() && matrix.id == 'build'
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.full_run }}" == "true" ]]; then
-            pnpm nx run-many --target=build --all --parallel=3
-          else
-            pnpm nx affected --target=build --base="$NX_BASE" --head="$NX_HEAD" --parallel=3
+          if [[ ! -f ".github/scripts/ci/collect-build-artifacts.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/ci/collect-build-artifacts.js"
+            exit 0
           fi
+
+          node ".github/scripts/ci/collect-build-artifacts.js" || true
 
       - name: Upload build outputs
-        if: always()
-        uses: actions/upload-artifact@v6
+        if: always() && matrix.id == 'build'
+        uses: actions/upload-artifact@v7
         with:
-          name: build-outputs
+          name: build-outputs-${{ github.run_id }}
           path: |
             dist
             .next
             apps/**/.next
             apps/**/dist
             libs/**/dist
+            artifacts/build/**
+            artifacts/ci/build/**
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Upload test coverage
+        if: always() && matrix.id == 'test'
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-coverage-${{ github.run_id }}
+          path: |
+            coverage
+            apps/**/coverage
+            libs/**/coverage
+          if-no-files-found: ignore
+          retention-days: 14
 
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs:
-      - build
+      - preflight
+      - quality
+
+    if: needs.preflight.outputs.run_e2e == 'true'
+
+    env:
+      FULL_RUN: ${{ needs.preflight.outputs.full_run }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
-      - name: Setup pnpm
-        shell: bash
+      - name: Enable Corepack
         run: |
           set -euo pipefail
-
           corepack enable
 
-          PACKAGE_MANAGER="$(node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
+          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
           corepack prepare "$PACKAGE_MANAGER" --activate
 
           pnpm --version
 
+      - name: Resolve pnpm store
+        id: pnpm_store
+        run: |
+          set -euo pipefail
+          echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pnpm cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
       - name: Restore Cypress cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.CYPRESS_CACHE_FOLDER }}
           key: cypress-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -405,7 +643,6 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Cypress binary when present
-        shell: bash
         run: |
           set -euo pipefail
 
@@ -413,52 +650,114 @@ jobs:
             pnpm exec cypress install
             pnpm exec cypress verify
           else
-            echo "Cypress package was not detected at the workspace root. Skipping Cypress binary install."
+            echo "::notice::Cypress package was not detected. Skipping Cypress binary install."
           fi
 
-      - name: Set Nx affected SHAs
-        shell: bash
+      - name: Resolve Nx affected SHAs
         run: |
           set -euo pipefail
 
           ZERO_SHA="0000000000000000000000000000000000000000"
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch --no-tags --prune --depth=1 origin "${{ github.base_ref }}"
             echo "NX_BASE=origin/${{ github.base_ref }}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
           elif [[ "${{ github.event_name }}" == "push" && "${{ github.event.before }}" != "$ZERO_SHA" ]]; then
             echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
           else
+            git fetch --no-tags --prune --depth=1 origin main || true
             echo "NX_BASE=origin/main" >> "$GITHUB_ENV"
             echo "NX_HEAD=HEAD" >> "$GITHUB_ENV"
           fi
 
-      - name: Run affected e2e tests
-        shell: bash
+      - name: Resolve E2E target
+        id: e2e_target
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.full_run }}" == "true" ]]; then
-            pnpm nx run-many --targets=e2e-ci,coverage --all --parallel=1
+          selected_target=""
+
+          for target in e2e-ci e2e; do
+            projects="$(pnpm exec nx show projects --with-target="$target" 2>/dev/null || true)"
+
+            project_count="$(printf '%s' "$projects" | node <<'NODE'
+          const fs = require("node:fs");
+          const input = fs.readFileSync(0, "utf8").trim();
+
+          if (!input) {
+            console.log(0);
+            process.exit(0);
+          }
+
+          try {
+            const parsed = JSON.parse(input);
+            if (Array.isArray(parsed)) {
+              console.log(parsed.length);
+            } else if (parsed && typeof parsed === "object") {
+              console.log(Object.keys(parsed).length);
+            } else {
+              console.log(0);
+            }
+          } catch {
+            console.log(input.split(/\s+/).filter(Boolean).length);
+          }
+          NODE
+          )"
+
+            if [[ "$project_count" -gt 0 ]]; then
+              selected_target="$target"
+              break
+            fi
+          done
+
+          if [[ -z "$selected_target" ]]; then
+            echo "::notice::No e2e-ci or e2e Nx targets were found."
+            echo "has_e2e=false" >> "$GITHUB_OUTPUT"
+            echo "target=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "has_e2e=true" >> "$GITHUB_OUTPUT"
+          echo "target=$selected_target" >> "$GITHUB_OUTPUT"
+
+      - name: Run E2E tests
+        if: steps.e2e_target.outputs.has_e2e == 'true'
+        run: |
+          set -euo pipefail
+
+          target="${{ steps.e2e_target.outputs.target }}"
+
+          if [[ "$FULL_RUN" == "true" ]]; then
+            pnpm exec nx run-many \
+              --target="$target" \
+              --all \
+              --parallel=1
           else
-            pnpm nx affected --targets=e2e-ci,coverage --base="$NX_BASE" --head="$NX_HEAD" --parallel=1
+            pnpm exec nx affected \
+              --target="$target" \
+              --base="$NX_BASE" \
+              --head="$NX_HEAD" \
+              --parallel=1
           fi
 
       - name: Upload E2E coverage summary
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
-          name: e2e-coverage-summary
-          path: dist/cypress/apps/e2e/**/e2e-summary.json
+          name: e2e-coverage-summary-${{ github.run_id }}
+          path: |
+            dist/cypress/apps/e2e/**/e2e-summary.json
+            artifacts/e2e/**
           if-no-files-found: ignore
           retention-days: 14
 
       - name: Upload Cypress screenshots
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
-          name: cypress-screenshots
+          name: cypress-screenshots-${{ github.run_id }}
           path: |
             cypress/screenshots
             apps/**/cypress/screenshots
@@ -469,9 +768,9 @@ jobs:
 
       - name: Upload Cypress videos
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
-          name: cypress-videos
+          name: cypress-videos-${{ github.run_id }}
           path: |
             cypress/videos
             apps/**/cypress/videos
@@ -484,19 +783,24 @@ jobs:
     name: Discover Dockerfiles
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs:
+      - preflight
+
+    if: needs.preflight.outputs.run_docker == 'true'
+
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
       has_dockerfiles: ${{ steps.discover.outputs.has_dockerfiles }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Discover Dockerfiles
         id: discover
-        shell: bash
         run: |
           set -euo pipefail
 
@@ -519,6 +823,7 @@ jobs:
               ".next",
               ".nx",
               ".turbo",
+              "artifacts",
               "coverage",
               "dist",
               "node_modules",
@@ -552,6 +857,7 @@ jobs:
                   image_suffix = slugify(f"{context_slug}-{dockerfile_suffix}")
 
               image_name = f"ghcr.io/{owner}/{repo}"
+
               if image_suffix != "root":
                   image_name = f"{image_name}-{image_suffix}"
 
@@ -565,29 +871,27 @@ jobs:
               )
 
           print(f"has_dockerfiles={'true' if entries else 'false'}")
-          print(
-              "matrix="
-              + json.dumps(
-                  {"include": entries},
-                  separators=(",", ":"),
-              )
-          )
+          print("matrix=" + json.dumps({"include": entries}, separators=(",", ":")))
           PY
 
       - name: Show discovered Dockerfiles
-        shell: bash
+        if: steps.discover.outputs.has_dockerfiles == 'true'
         run: |
+          set -euo pipefail
           echo '${{ steps.discover.outputs.matrix }}' | python -m json.tool
 
   docker-images:
-    name: Build and Push Docker Images
+    name: Docker Image / ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     needs:
-      - build
+      - preflight
+      - quality
       - discover-dockerfiles
 
-    if: needs.discover-dockerfiles.outputs.has_dockerfiles == 'true'
+    if: >-
+      needs.preflight.outputs.run_docker == 'true' &&
+      needs.discover-dockerfiles.outputs.has_dockerfiles == 'true'
 
     strategy:
       fail-fast: false
@@ -595,20 +899,21 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
-        if: github.event_name != 'pull_request'
+        if: needs.preflight.outputs.publish_images == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
       - name: Extract Docker metadata
         id: meta
@@ -622,7 +927,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
           labels: |
             org.opencontainers.image.title=${{ matrix.name }}
-            org.opencontainers.image.description=Helix container image built from ${{ matrix.dockerfile }}
+            org.opencontainers.image.description=Aerealith AI container image built from ${{ matrix.dockerfile }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
 
@@ -631,7 +936,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ needs.preflight.outputs.publish_images == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.name }}
@@ -642,12 +947,12 @@ jobs:
   ci-complete:
     name: CI Complete
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs:
+      - preflight
       - workspace
       - security
-      - lint
-      - build
+      - quality
       - e2e
       - discover-dockerfiles
       - docker-images
@@ -655,8 +960,57 @@ jobs:
     if: always()
 
     steps:
-      - name: Check CI result
-        shell: bash
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Write CI result summary
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Continuous Integration Result"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Preflight | \`${{ needs.preflight.result }}\` |"
+            echo "| Workspace | \`${{ needs.workspace.result }}\` |"
+            echo "| Dependency security | \`${{ needs.security.result }}\` |"
+            echo "| Quality matrix | \`${{ needs.quality.result }}\` |"
+            echo "| E2E | \`${{ needs.e2e.result }}\` |"
+            echo "| Docker discovery | \`${{ needs.discover-dockerfiles.result }}\` |"
+            echo "| Docker images | \`${{ needs.docker-images.result }}\` |"
+            echo ""
+            echo "| Decision | Value |"
+            echo "|---|---|"
+            echo "| Full run | \`${{ needs.preflight.outputs.full_run }}\` |"
+            echo "| Run E2E | \`${{ needs.preflight.outputs.run_e2e }}\` |"
+            echo "| Run Docker | \`${{ needs.preflight.outputs.run_docker }}\` |"
+            echo "| Publish images | \`${{ needs.preflight.outputs.publish_images }}\` |"
+            echo "| Nx parallel | \`${{ needs.preflight.outputs.nx_parallel }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run optional CI summary script
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/ci/summarize-ci.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/ci/summarize-ci.js"
+            exit 0
+          fi
+
+          node ".github/scripts/ci/summarize-ci.js" || true
+
+      - name: Enforce CI result
         run: |
           set -euo pipefail
 
@@ -665,7 +1019,7 @@ jobs:
             local result="$2"
 
             if [[ "$result" != "success" ]]; then
-              echo "$name failed with result: $result"
+              echo "::error::$name failed with result: $result"
               exit 1
             fi
           }
@@ -675,17 +1029,28 @@ jobs:
             local result="$2"
 
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
-              echo "$name failed with result: $result"
+              echo "::error::$name failed with result: $result"
               exit 1
             fi
           }
 
+          check_required_job "Preflight" "${{ needs.preflight.result }}"
           check_required_job "Workspace validation" "${{ needs.workspace.result }}"
           check_required_job "Dependency security" "${{ needs.security.result }}"
-          check_required_job "Lint/typecheck" "${{ needs.lint.result }}"
-          check_required_job "Build" "${{ needs.build.result }}"
-          check_required_job "E2E tests" "${{ needs.e2e.result }}"
-          check_required_job "Dockerfile discovery" "${{ needs.discover-dockerfiles.result }}"
-          check_optional_job "Docker image build/push" "${{ needs.docker-images.result }}"
+          check_required_job "Quality matrix" "${{ needs.quality.result }}"
+
+          if [[ "${{ needs.preflight.outputs.run_e2e }}" == "true" ]]; then
+            check_required_job "E2E tests" "${{ needs.e2e.result }}"
+          else
+            check_optional_job "E2E tests" "${{ needs.e2e.result }}"
+          fi
+
+          if [[ "${{ needs.preflight.outputs.run_docker }}" == "true" ]]; then
+            check_optional_job "Dockerfile discovery" "${{ needs.discover-dockerfiles.result }}"
+            check_optional_job "Docker image build/push" "${{ needs.docker-images.result }}"
+          else
+            check_optional_job "Dockerfile discovery" "${{ needs.discover-dockerfiles.result }}"
+            check_optional_job "Docker image build/push" "${{ needs.docker-images.result }}"
+          fi
 
           echo "CI passed."

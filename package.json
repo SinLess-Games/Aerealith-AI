@@ -1,49 +1,86 @@
 {
-  "name": "helix",
+  "name": "aerealith-ai",
   "private": true,
   "version": "0.2.0",
-  "description": "Helix AI — autonomous assistant platform for users, creators, and businesses.",
+  "description": "Aerealith AI — a secure, user-controlled digital companion and intelligent command center for users, creators, and businesses.",
   "main": "index.js",
   "scripts": {
-    "graph": "nx graph --watch",
+    "graph": "nx graph",
+    "graph:watch": "nx graph --watch",
     "grapgh": "pnpm graph",
-    "build": "pnpm -w -r build",
     "start": "pnpm --filter frontend start",
     "dev": "pnpm --filter frontend dev",
     "preview": "pnpm --filter frontend preview",
+    "build": "nx run-many --target=build --all --parallel=3",
     "deploy": "pnpm --filter frontend deploy",
     "upload": "pnpm --filter frontend upload",
     "cf:typegen": "pnpm --filter frontend cf:typegen",
+    "wrangler:version": "wrangler --version",
+    "wrangler:deploy": "pnpm --filter frontend deploy",
     "format": "nx format:write",
     "format:check": "nx format:check",
-    "lint": "nx run-many -t lint --all",
-    "test": "nx run-many -t test --all",
-    "typecheck": "nx run-many -t typecheck --all",
-    "ci": "pnpm format:check && pnpm lint && pnpm test && pnpm build",
-    "affected:lint": "nx affected -t lint",
-    "affected:test": "nx affected -t test",
-    "affected:build": "nx affected -t build",
-    "affected": "nx affected -t lint test build",
+    "lint": "nx run-many --target=lint --all --parallel=3",
+    "test": "nx run-many --target=test --all --parallel=3",
+    "typecheck": "nx run-many --target=typecheck --all --parallel=3",
+    "e2e": "nx run-many --target=e2e --all --parallel=1",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "ci": "pnpm check && pnpm build",
+    "affected": "nx affected --targets=lint,test,build",
+    "affected:lint": "nx affected --target=lint",
+    "affected:test": "nx affected --target=test",
+    "affected:build": "nx affected --target=build",
+    "affected:typecheck": "nx affected --target=typecheck",
+    "affected:e2e": "nx affected --target=e2e --parallel=1",
+    "cy:install": "cypress install",
+    "cy:verify": "cypress verify",
+    "commitlint": "commitlint --edit",
+    "lint-staged": "lint-staged",
     "publish:libs": "pnpm -w -r publish --access public",
-    "update:todo": "node .github/scripts/update-todo.mjs"
+    "update:todo": "node .github/scripts/update-todo.mjs",
+    "prepare": "husky"
   },
   "keywords": [
-    "helix",
+    "aerealith",
+    "aerealith-ai",
     "ai",
     "assistant",
     "automation",
     "cloudflare",
     "workers",
     "nextjs",
-    "nx"
+    "nx",
+    "hono",
+    "nestjs",
+    "digital-companion"
   ],
   "author": "SinLess Games LLC",
   "license": "SEE LICENSE IN LICENSE.md",
+  "homepage": "https://aerealith.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SinLess-Games/Aerealith-AI.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SinLess-Games/Aerealith-AI/issues"
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.23.0"
+  },
   "packageManager": "pnpm@10.23.0",
   "pnpm": {
     "overrides": {
       "next": "15.5.16"
     }
+  },
+  "lint-staged": {
+    "*.{json,jsonc,md,mdx,yml,yaml,css,scss,html}": [
+      "prettier --write"
+    ],
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@actions/core": "^1.11.1",
@@ -52,6 +89,9 @@
     "@babel/preset-react": "^7.14.5",
     "@cloudflare/vitest-pool-workers": "^0.16.2",
     "@cloudflare/workers-types": "^4.20260507.1",
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@commitlint/types": "^21.0.1",
     "@eslint/compat": "^2.0.0",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.8.0",
@@ -97,10 +137,12 @@
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.0.1",
+    "husky": "^9.1.7",
     "jest": "^30.0.2",
     "jest-environment-node": "^30.0.2",
     "jest-util": "^30.0.2",
     "jsonc-eslint-parser": "^2.1.0",
+    "lint-staged": "^17.0.7",
     "nx": "22.1.3",
     "nx-mcp": "^0.10.0",
     "openai": "^6.9.1",

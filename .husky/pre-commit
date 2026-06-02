@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+set -eu
+
+echo "Running Aerealith AI pre-commit checks..."
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pnpm is required but was not found."
+  exit 1
+fi
+
+if [ ! -f "package.json" ]; then
+  echo "package.json was not found. Run this hook from the repository root."
+  exit 1
+fi
+
+if git diff --cached --quiet; then
+  echo "No staged changes found."
+  exit 0
+fi
+
+if pnpm exec lint-staged --version >/dev/null 2>&1; then
+  echo "Running lint-staged..."
+  pnpm exec lint-staged
+else
+  echo "lint-staged is not installed. Running fallback checks..."
+
+  if pnpm exec nx --version >/dev/null 2>&1; then
+    pnpm exec nx format:check
+  elif pnpm run | grep -qE '(^|[[:space:]])format:check($|[[:space:]])'; then
+    pnpm run format:check
+  fi
+
+  if pnpm run | grep -qE '(^|[[:space:]])lint($|[[:space:]])'; then
+    pnpm run lint
+  fi
+
+  if pnpm run | grep -qE '(^|[[:space:]])typecheck($|[[:space:]])'; then
+    pnpm run typecheck
+  fi
+fi
+
+echo "Pre-commit checks passed."

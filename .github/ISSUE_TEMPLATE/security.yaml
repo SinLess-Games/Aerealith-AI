@@ -1,117 +1,498 @@
-# .github/ISSUE_TEMPLATE/security.yml
-name: 🔐 Security Vulnerability Report
-description: Report a potential security vulnerability or weakness in Helix AI.
+# .github/ISSUE_TEMPLATE/security.yaml
+name: "🔐 Security Vulnerability Report"
+description: "Report a potential vulnerability, weakness, exposure, policy failure, or security regression in Aerealith AI."
 title: "[Security]: "
 labels:
-  - type:security
-  - status:todo
-  - needs-triage
+  - kind:security
+  - area:security
+  - status:triage
+  - needs-security-review
 assignees:
   - Sinless777
+
 body:
   - type: markdown
     attributes:
       value: |
-        ## 🛡️ Security Vulnerability Report
-        Thank you for responsibly disclosing this issue.  
-        Please provide as much detail as possible so we can assess and remediate it swiftly.
+        # 🔐 Security Vulnerability Report
+
+        Thank you for helping protect **Aerealith AI**.
+
+        This form is for reporting possible security vulnerabilities, security weaknesses, misconfigurations, access-control problems, dependency vulnerabilities, secret exposure, supply-chain risks, or security regressions.
+
+        Please be careful with sensitive details.
+
+        Do **not** include:
+
+        - Real API keys, access tokens, passwords, cookies, session tokens, private keys, or secrets
+        - Private customer data or personal data
+        - Full exploit chains that could be used against production systems
+        - Publicly reachable proof-of-exploit links that could endanger users
+        - Screenshots containing secrets or private information
+
+        Instead, provide enough detail for maintainers to understand, reproduce, assess, and fix the issue safely.
+
+        If the vulnerability is actively exploitable, affects production, exposes secrets, causes account compromise, enables privilege escalation, or could cause data loss, mark the severity as `severity:critical`.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm this report is safe and ready for security triage."
+      options:
+        - label: "I searched existing issues and did not find a duplicate report."
+          required: true
+        - label: "I removed or redacted secrets, tokens, passwords, cookies, private keys, and sensitive user data."
+          required: true
+        - label: "I included enough information for maintainers to assess the risk."
+          required: true
+        - label: "I understand this issue may be treated as sensitive and details may be limited until fixed."
+          required: true
 
   - type: input
     id: summary
     attributes:
-      label: 🔖 Summary
-      description: A concise description of the vulnerability.
-      placeholder: “Stored XSS vulnerability in the Web UI login form”
+      label: "Summary"
+      description: "Write one clear sentence describing the security concern."
+      placeholder: "Example: Cloudflare Worker endpoint allows unauthorized access to another user's memory records."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: vulnerability_type
+    attributes:
+      label: "Vulnerability Type"
+      description: "Choose the closest category."
+      multiple: false
+      options:
+        - Authentication bypass
+        - Authorization / access-control failure
+        - Privilege escalation
+        - Secret exposure
+        - Sensitive data exposure
+        - Injection
+        - Cross-site scripting
+        - Cross-site request forgery
+        - Server-side request forgery
+        - Remote code execution
+        - Dependency vulnerability
+        - Supply-chain vulnerability
+        - Insecure configuration
+        - Insecure Cloudflare binding or route
+        - Insecure GitHub Actions workflow
+        - Insecure container or Dockerfile
+        - Insecure npm package or publishing flow
+        - Insecure release artifact, SBOM, checksum, or attestation flow
+        - Rate-limit or abuse-control weakness
+        - Logging or telemetry data exposure
+        - Encryption, signing, or integrity weakness
+        - Security regression
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Severity"
+      description: |
+        Choose the highest realistic impact.
+
+        Use Critical when the issue could expose secrets, expose private data, compromise accounts, affect production, allow privilege escalation, enable remote code execution, or block a secure release.
+      multiple: false
+      options:
+        - severity:critical
+        - severity:high
+        - severity:medium
+        - severity:low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: "Affected Area"
+      description: |
+        Select the primary area affected by this security issue.
+
+        Pick the closest match. Additional affected areas can be listed later.
+      multiple: false
+      options:
+        - area:frontend
+        - area:connectors
+        - area:e2e
+        - area:engines
+        - area:integrations
+        - area:services
+        - area:libs
+        - area:ui
+        - area:config
+        - area:db
+        - area:flags
+        - area:github-actions
+        - area:repo-management
+        - area:ci
+        - area:security
+        - area:dependencies
+        - area:cloudflare
+        - area:workers
+        - area:queues
+        - area:r2
+        - area:d1
+        - area:kv
+        - area:secrets
+        - area:docker
+        - area:ghcr
+        - area:npm
+        - area:artifacts
+        - area:cache
+        - area:observability
+        - area:ai
+        - area:openai
+        - area:self-hosted
+        - area:helm
+        - area:kubernetes
+        - area:docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_environment
+    attributes:
+      label: "Affected Environment"
+      description: "Where was the issue observed or where would it apply?"
+      multiple: false
+      options:
+        - Local development
+        - Pull request preview
+        - Staging
+        - Production
+        - GitHub Actions
+        - Cloudflare Workers
+        - Cloudflare D1
+        - Cloudflare R2
+        - Cloudflare KV
+        - Cloudflare Queues
+        - Cloudflare Secrets Store
+        - npm package
+        - GHCR container
+        - Release artifact
+        - Self-hosted / local deployment
+        - Future Helm deployment
+        - Future Kubernetes deployment
+        - Unknown
     validations:
       required: true
 
   - type: textarea
     id: impact
     attributes:
-      label: 🎯 Impact
-      description: Describe the potential impact or damage this vulnerability could cause (data leak, remote code execution, privilege escalation, etc.).
+      label: "Impact"
+      description: |
+        Describe what an attacker, unauthorized user, malicious dependency, compromised workflow, or misconfigured service could do.
+
+        Be specific about possible damage, but avoid posting dangerous exploit details publicly.
       placeholder: |
-        An attacker could execute arbitrary JavaScript as admin and extract session tokens.
+        Example:
+        An authenticated user may be able to read another user's records by changing the `userId` parameter in the request.
+
+        Possible impact:
+        - Unauthorized data access
+        - Privacy boundary violation
+        - Tenant isolation failure
+        - Audit log inconsistency
     validations:
       required: true
 
-  - type: textarea
-    id: steps
+  - type: checkboxes
+    id: impact_categories
     attributes:
-      label: ⚠️ Steps to Reproduce
-      description: Provide a minimal reproducible scenario, including environment, endpoints, affected modules, and any exploit instructions.
-      placeholder: |
-        1. Login as a user.
-        2. Navigate to /admin/settings -> “Webhooks”.
-        3. Enter payload: `<script>alert(1)</script>` and save.
-        4. Navigate as admin to see alert triggered.
-      render: shell
-    validations:
-      required: true
-
-  - type: textarea
-    id: mitigation
-    attributes:
-      label: 🛠️ Recommended Mitigation / Workaround
-      description: If known, provide any workaround, patch, or steps to reduce risk until full fix is available.
-      placeholder: |
-        - Apply input sanitization to the ‘destination URL’ field.
-        - Introduce Content-Security-Policy header.
-    validations:
-      required: false
-
-  - type: dropdown
-    id: affected_area
-    attributes:
-      label: 🏗️ Affected Area
-      description: Which part of the system is impacted?
-      multiple: false
+      label: "Impact Categories"
+      description: "Select every category that may apply."
       options:
-        - area:frontend
-        - area:backend
-        - area:infra
-        - area:database
-        - area:ai
-        - area:security
-    validations:
-      required: true
+        - label: "Confidentiality impact — data, secrets, memory records, logs, or private resources could be exposed."
+        - label: "Integrity impact — data, permissions, releases, artifacts, or workflows could be modified without authorization."
+        - label: "Availability impact — service, deployment, CI/CD, or user access could be disrupted."
+        - label: "Authentication impact — login, session, token, or identity boundaries could be bypassed."
+        - label: "Authorization impact — users may access actions or data they should not be allowed to access."
+        - label: "Supply-chain impact — dependencies, packages, containers, artifacts, SBOMs, or attestations may be affected."
+        - label: "Production impact — hosted production systems may be affected."
+        - label: "Unknown impact — more investigation is needed."
 
   - type: textarea
-    id: environment
+    id: affected_components
     attributes:
-      label: 🌍 Environment
-      description: Share context about your deployment and versions when issue observed.
+      label: "Affected Components, Files, Routes, Packages, or Workflows"
+      description: |
+        List known affected components.
+
+        Include routes, endpoints, package names, workflows, workers, bindings, services, libraries, Dockerfiles, npm packages, GHCR images, or Cloudflare resources when known.
       placeholder: |
-        - App: web client
-        - Version/commit: v0.5.2 (commit `a1b2c3d`)
-        - Runtime: Node.js 22 on Ubuntu 24.04
-        - Browser: Chrome 125
+        Example:
+        - apps/services/auth
+        - apps/frontend/app/dashboard/settings
+        - libs/db
+        - .github/workflows/release.yaml
+        - .github/workflows/security.yaml
+        - Cloudflare Worker:
+        - Cloudflare D1 database:
+        - npm package:
+        - GHCR image:
     validations:
       required: false
 
   - type: textarea
-    id: logs
+    id: reproduction_summary
     attributes:
-      label: 🪵 Logs / Evidence
-      description: Paste relevant log output, stack traces, or screenshot evidence; sensitive data may be redacted.
+      label: "Reproduction Summary"
+      description: |
+        Provide a safe, minimal explanation of how the issue can be reproduced.
+
+        Do not include real secrets, real user data, destructive payloads, or instructions that would endanger production systems.
+      placeholder: |
+        Example:
+        1. Log in as a normal user.
+        2. Send a request to the affected endpoint.
+        3. Change the record identifier to a record owned by another test user.
+        4. The endpoint returns data that should be denied.
+
+        Notes:
+        - Tested only against local development.
+        - No production data was accessed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proof_of_concept
+    attributes:
+      label: "Safe Proof of Concept"
+      description: |
+        Include a safe proof of concept if possible.
+
+        Use placeholder values. Redact secrets. Avoid destructive payloads. Avoid targeting production.
+      render: shell
+      placeholder: |
+        Example:
+        curl -X GET "http://localhost:8787/api/example/redacted-id" \
+          -H "Authorization: Bearer REDACTED_TEST_TOKEN"
+
+        Expected secure result:
+        403 Forbidden
+
+        Actual result:
+        200 OK with another test user's resource
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected_secure_behavior
+    attributes:
+      label: "Expected Secure Behavior"
+      description: "Describe what should happen if the system is secure."
+      placeholder: |
+        Example:
+        The request should be rejected with 403 Forbidden unless the authenticated user owns the requested resource or has an explicit permission grant.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: "Actual Behavior"
+      description: "Describe what actually happens."
+      placeholder: |
+        Example:
+        The endpoint returns the resource even when the authenticated test user does not own it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "Evidence, Logs, Screenshots, or Traces"
+      description: |
+        Paste relevant evidence.
+
+        Redact secrets, tokens, cookies, private keys, user data, private URLs, and account identifiers.
+
+        Screenshots can be dragged into this field, but make sure sensitive information is hidden.
+      render: shell
+      placeholder: |
+        Example:
+        Request ID: REDACTED
+        Worker log excerpt:
+        [security] WARN authorization policy skipped for resource REDACTED_RESOURCE_ID
+
+        Browser console:
+        Redacted screenshot attached below.
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment_details
+    attributes:
+      label: "Environment Details"
+      description: |
+        Provide as much context as possible.
+
+        Delete lines that do not apply.
+      placeholder: |
+        - App/project:
+        - Nx project name:
+        - Version/tag:
+        - Commit SHA:
+        - Branch:
+        - Environment: local / preview / staging / production
+        - URL or route:
+        - Browser:
+        - OS:
+        - Node.js version:
+        - pnpm version:
+        - Workflow name:
+        - Job name:
+        - Cloudflare Worker:
+        - Cloudflare binding involved:
+        - Cloudflare account/environment:
+        - Docker image/tag:
+        - npm package:
+        - Dependency name/version:
+    validations:
+      required: false
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: "Known Scope"
+      description: |
+        Explain what is known about the scope.
+
+        Include who can trigger it, what permissions are needed, whether it affects one environment or many, and whether it affects one user, one tenant, all users, CI/CD, packages, containers, or deployments.
+      placeholder: |
+        Example:
+        - Requires authenticated user access.
+        - Confirmed in local development only.
+        - May affect preview and staging if the same route is deployed.
+        - Production impact is unknown.
+    validations:
+      required: false
+
+  - type: textarea
+    id: suspected_root_cause
+    attributes:
+      label: "Suspected Root Cause"
+      description: |
+        Share any theory about why the issue exists.
+
+        This is optional. It is okay to say unknown.
+      placeholder: |
+        Example:
+        The route appears to validate authentication but does not enforce ownership or role-based access control before reading from the database.
+    validations:
+      required: false
+
+  - type: textarea
+    id: recommended_mitigation
+    attributes:
+      label: "Recommended Mitigation or Workaround"
+      description: |
+        Suggest a fix, mitigation, or temporary workaround if known.
+
+        Include short-term containment and long-term remediation when possible.
+      placeholder: |
+        Short-term:
+        - Disable the affected route in production.
+        - Add a temporary ownership check.
+        - Rotate affected secrets if exposure is confirmed.
+
+        Long-term:
+        - Add centralized authorization checks.
+        - Add regression tests for cross-user access.
+        - Add CodeQL / security tests where possible.
+    validations:
+      required: false
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: "Suggested Validation Plan"
+      description: |
+        Describe how maintainers can verify the fix.
+
+        Include tests, security checks, workflow checks, or manual verification steps.
+      placeholder: |
+        Example:
+        - Add a unit test for denied cross-user access.
+        - Add an e2e test for unauthorized access.
+        - Run affected Nx test targets.
+        - Run CodeQL and security workflow.
+        - Confirm the endpoint returns 403 for unauthorized users.
+        - Confirm authorized users still receive valid responses.
       render: shell
     validations:
       required: false
 
   - type: textarea
-    id: disclosure
+    id: regression_information
     attributes:
-      label: 📜 Disclosure Preferences
-      description: Let us know your preference for public disclosure once fixed (e.g., coordinated disclosure timeline, credit anonymization).
+      label: "Regression Information"
+      description: |
+        Tell us whether this used to be secure or whether it appeared after a recent change.
+
+        Link related issues, PRs, releases, dependency updates, or workflow changes if known.
       placeholder: |
-        I prefer the fix to be deployed before public disclosure. You may credit me as “security-researcher”.
+        - Did this work securely before? yes / no / unknown
+        - Last known secure version, tag, or commit:
+        - First known affected version, tag, or commit:
+        - Possibly introduced by:
+        - Related PR:
+        - Related issue:
     validations:
       required: false
 
   - type: textarea
-    id: notes
+    id: disclosure_preferences
     attributes:
-      label: 🧠 Additional Notes
-      description: Add any references, related issues, CVE numbers, or external blogs/resources.
+      label: "Disclosure Preferences"
+      description: |
+        Let maintainers know how you prefer disclosure and credit to be handled.
+
+        Do not include private contact information unless you are comfortable with it being visible wherever this issue is visible.
       placeholder: |
-        Related to CVE-2025-XXXXX, similar issue found in module xyz.
+        Example:
+        - Please wait until a fix is released before public disclosure.
+        - You may credit me as:
+        - I prefer to remain anonymous.
+        - I can help verify the fix.
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: "References"
+      description: |
+        Add related references, advisories, CVEs, CWE IDs, package advisories, documentation, issues, pull requests, or external research.
+      placeholder: |
+        Example:
+        - Related issue: #
+        - Related PR: #
+        - CVE:
+        - CWE:
+        - Advisory:
+        - Package:
+        - Documentation:
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm the report is ready for triage."
+      options:
+        - label: "I included a clear summary, impact, and safe reproduction information."
+          required: true
+        - label: "I redacted secrets, private data, and sensitive identifiers."
+          required: true
+        - label: "I understand maintainers may restrict details, adjust labels, assign severity, and coordinate remediation before disclosure."
+          required: true

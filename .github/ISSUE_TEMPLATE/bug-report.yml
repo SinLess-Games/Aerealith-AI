@@ -1,135 +1,347 @@
 # .github/ISSUE_TEMPLATE/bug-report.yml
-name: 🐞 Bug Report
-description: Report a problem, crash, or unexpected behavior in Helix AI.
+name: "🐞 Bug Report"
+description: "Report a problem, crash, regression, broken workflow, or unexpected behavior in Aerealith AI."
 title: "[Bug]: "
 labels:
-  - type:bug
-  - status:todo
-  - needs-triage
+  - kind:bug
+  - status:triage
 assignees:
   - Sinless777
+
 body:
   - type: markdown
     attributes:
       value: |
-        ## 🧩 Bug Report Template
-        Thank you for taking the time to help us improve **Helix AI**.  
-        Please fill out the details below as completely as possible.  
-        Clear reports make it faster for us to reproduce and fix issues. 🧠
+        # 🐞 Bug Report
+
+        Thank you for helping improve **Aerealith AI**.
+
+        This form is designed to walk you through the details needed to reproduce, understand, prioritize, and fix the issue.  
+        The more precise the report is, the faster it can be verified and resolved.
+
+        Before submitting, please try to include:
+
+        - What you were trying to do
+        - What happened instead
+        - The exact steps that reproduce the problem
+        - Any logs, errors, screenshots, or terminal output
+        - Whether the issue happens locally, in preview, staging, or production
+        - Whether this started after a specific change, dependency update, release, or pull request
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      description: "Confirm the basic checks before opening the bug report."
+      options:
+        - label: "I searched existing issues and did not find a duplicate."
+          required: true
+        - label: "I can describe what I expected to happen."
+          required: true
+        - label: "I can describe what actually happened."
+          required: true
+        - label: "I included reproduction steps or explained why the issue cannot be reproduced yet."
+          required: true
+        - label: "I removed or redacted secrets, tokens, passwords, API keys, private URLs, and personal data."
+          required: true
 
   - type: input
     id: summary
     attributes:
-      label: 🔖 Summary
-      description: A short, descriptive title for the bug.
-      placeholder: e.g. "The dashboard crashes when opening the sessions page"
+      label: "Summary"
+      description: "Write one clear sentence describing the bug."
+      placeholder: "Example: The frontend crashes when opening the dashboard settings page."
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: "What were you trying to do?"
+      description: "Explain the task, workflow, command, page, feature, or action you were attempting."
+      placeholder: |
+        Example:
+        I was trying to open the authenticated dashboard and update my profile settings.
+
+        The issue happened after clicking Save on the settings form.
     validations:
       required: true
 
   - type: dropdown
-    id: area
+    id: affected_area
     attributes:
-      label: 🏗️ Affected Area
-      description: Which part of the system does this issue affect?
+      label: "Affected Area"
+      description: |
+        Select the main part of the repository or platform affected by this issue.
+
+        Pick the closest match. Additional details can be added later in the form.
       multiple: false
       options:
         - area:frontend
-        - area:backend
-        - area:infra
+        - area:connectors
+        - area:e2e
+        - area:engines
+        - area:integrations
+        - area:services
+        - area:libs
+        - area:ui
+        - area:config
+        - area:db
+        - area:flags
+        - area:github-actions
+        - area:repo-management
+        - area:ci
         - area:security
+        - area:cloudflare
+        - area:workers
+        - area:queues
+        - area:r2
+        - area:d1
+        - area:kv
+        - area:secrets
+        - area:docker
+        - area:ghcr
+        - area:npm
+        - area:artifacts
+        - area:cache
+        - area:observability
         - area:ai
-        - area:database
+        - area:openai
+        - area:self-hosted
+        - area:helm
+        - area:kubernetes
+        - area:docs
     validations:
       required: true
 
-  - type: textarea
-    id: steps
+  - type: dropdown
+    id: environment_type
     attributes:
-      label: ⚙️ Steps to Reproduce
-      description: List the actions that consistently reproduce the problem.
-      placeholder: |
-        1. Go to ...
-        2. Click on ...
-        3. Observe ...
-      render: shell
-    validations:
-      required: true
-
-  - type: textarea
-    id: expected
-    attributes:
-      label: ✅ Expected Behavior
-      description: What did you expect to happen?
-      placeholder: The page should display the user sessions correctly.
-    validations:
-      required: true
-
-  - type: textarea
-    id: actual
-    attributes:
-      label: ❌ Actual Behavior
-      description: What actually happened? Include errors, crash logs, or screenshots.
-      placeholder: 'The dashboard shows a blank white screen and logs `TypeError: undefined is not a function`.'
+      label: "Where did this happen?"
+      description: "Choose the environment where the issue was observed."
+      multiple: false
+      options:
+        - Local development
+        - Pull request preview
+        - Staging
+        - Production
+        - GitHub Actions
+        - Cloudflare Workers
+        - Cloudflare D1
+        - Cloudflare R2
+        - Cloudflare KV
+        - Cloudflare Queues
+        - npm package
+        - GHCR container
+        - Self-hosted / local deployment
+        - Unknown
     validations:
       required: true
 
   - type: dropdown
     id: severity
     attributes:
-      label: 🚦 Severity
-      description: How severe is the impact of this issue?
+      label: "Severity"
+      description: |
+        Choose the impact level.
+
+        Use Critical only for production-breaking issues, security impact, data loss, release blockers, or complete workflow failure.
+      multiple: false
       options:
-        - 🟥 Critical — crashes or data loss
-        - 🟧 High — major feature broken
-        - 🟨 Medium — noticeable disruption
-        - 🟩 Low — minor bug or visual issue
+        - severity:critical
+        - severity:high
+        - severity:medium
+        - severity:low
     validations:
       required: true
-
-  - type: textarea
-    id: environment
-    attributes:
-      label: 🌍 Environment
-      description: Provide context about where and how you observed the issue.
-      placeholder: |
-        - **App**: web / api / infra / discord
-        - **Version / commit**: v0.5.1 (commit `a1b2c3d`)
-        - **Environment**: dev / staging / production
-        - **Browser / OS / runtime**: Firefox 121 / Ubuntu 24.04
-        - **Node.js version**: 20.10.0
-        - **Additional context**: using local.sinlessgamesllc.com
-    validations:
-      required: false
-
-  - type: textarea
-    id: logs
-    attributes:
-      label: 🪵 Logs / Stack Traces
-      description: Paste any relevant console logs, stack traces, or excerpts from your terminal.
-        If you have screenshots, drag and drop them below.
-      render: shell
-      placeholder: |
-        [2025-11-07T20:22:12Z] ERROR: /api/session/fetch -> TypeError: cannot read property 'id' of undefined
 
   - type: dropdown
     id: reproducibility
     attributes:
-      label: 🔁 Reproducibility
-      description: How often does this issue occur?
+      label: "Reproducibility"
+      description: "How reliably can this issue be reproduced?"
+      multiple: false
       options:
         - Always
         - Often
         - Intermittent
         - Rarely
+        - Only happened once
         - Unknown
+        - Cannot reproduce yet
     validations:
       required: true
 
   - type: textarea
-    id: notes
+    id: steps
     attributes:
-      label: 🧠 Additional Notes
-      description: Any insights, temporary workarounds, or related issues/PRs.
+      label: "Steps to Reproduce"
+      description: |
+        List the exact steps someone else can follow to reproduce the issue.
+
+        Be specific. Include commands, pages, buttons, branch names, environment names, workflow names, or input values when relevant.
       placeholder: |
-        Possibly linked to PR #245 or similar issue #312.
-        This started happening after upgrading to v0.5.0.
+        1. Check out branch `feature/example-branch`.
+        2. Run `pnpm install`.
+        3. Run `pnpm nx serve frontend`.
+        4. Open `http://local.sinlessgamesllc.com`.
+        5. Navigate to `Dashboard > Settings`.
+        6. Click `Save`.
+        7. Observe the crash or error.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: "Expected Behavior"
+      description: "Describe what should have happened if everything worked correctly."
+      placeholder: |
+        Example:
+        The settings form should save successfully, show a confirmation message, and keep the user on the settings page.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: "Actual Behavior"
+      description: "Describe what actually happened instead."
+      placeholder: |
+        Example:
+        The page went blank. The browser console showed a TypeError, and the request to `/api/settings` returned a 500 response.
+    validations:
+      required: true
+
+  - type: textarea
+    id: error_output
+    attributes:
+      label: "Logs, Errors, Stack Traces, or Console Output"
+      description: |
+        Paste the most relevant logs here.
+
+        Include terminal output, browser console errors, GitHub Actions logs, Cloudflare logs, stack traces, failing test output, or API responses.
+
+        Redact secrets before submitting.
+      render: shell
+      placeholder: |
+        Example:
+        [project-sync] ERROR: Failed to load config
+        TypeError: Cannot read properties of undefined (reading 'id')
+            at loadUserSettings (...)
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: "Screenshots, Recordings, or Artifacts"
+      description: |
+        Drag and drop screenshots, screen recordings, workflow artifacts, or logs here.
+
+        Screenshots are especially useful for UI issues, layout problems, deployment errors, and GitHub Actions failures.
+      placeholder: |
+        Attach screenshots or recordings here if available.
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment_details
+    attributes:
+      label: "Environment Details"
+      description: |
+        Fill in as much as applies. Delete lines that are not relevant.
+
+        For GitHub Actions issues, include workflow name, job name, run URL, and failing step.
+        For Cloudflare issues, include Worker name, environment, route, and binding involved.
+        For frontend issues, include browser, OS, and URL.
+      placeholder: |
+        - App/project:
+        - Nx project name:
+        - Version/tag:
+        - Commit SHA:
+        - Branch:
+        - Environment: local / preview / staging / production
+        - URL or route:
+        - Browser:
+        - OS:
+        - Node.js version:
+        - pnpm version:
+        - Workflow name:
+        - Job name:
+        - Cloudflare Worker:
+        - Cloudflare binding involved:
+        - Docker image/tag:
+        - npm package:
+    validations:
+      required: false
+
+  - type: textarea
+    id: regression
+    attributes:
+      label: "Regression Information"
+      description: |
+        Tell us whether this used to work.
+
+        This helps identify the pull request, dependency update, release, or configuration change that introduced the bug.
+      placeholder: |
+        - Did this work before? yes / no / unknown
+        - Last known working version, tag, or commit:
+        - First known broken version, tag, or commit:
+        - Suspected PR, issue, dependency update, or release:
+    validations:
+      required: false
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: "Workaround"
+      description: "Describe any temporary workaround you found."
+      placeholder: |
+        Example:
+        Restarting the Worker temporarily fixes the issue.
+        Rolling back `@example/package` to `1.2.3` avoids the crash.
+    validations:
+      required: false
+
+  - type: textarea
+    id: related_items
+    attributes:
+      label: "Related Issues, Pull Requests, Discussions, or Commits"
+      description: |
+        Link anything that may be related.
+
+        Use GitHub keywords when appropriate:
+        - Related to #123
+        - Possibly caused by #456
+        - Started after #789
+      placeholder: |
+        Related to #
+        Possibly caused by #
+        Started after #
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add anything else that may help explain, reproduce, or fix the issue."
+      placeholder: |
+        Example:
+        This only happens when the user has no saved memory records.
+        This only happens after a fresh install.
+        This only happens when running through the preview deployment.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: final_confirmation
+    attributes:
+      label: "Final Confirmation"
+      description: "Confirm the issue is ready for triage."
+      options:
+        - label: "I included enough information for someone else to start investigating."
+          required: true
+        - label: "I understand that missing reproduction details may delay triage."
+          required: true

@@ -1,0 +1,1763 @@
+# .github/repo-management/milestone-rules.yaml
+# =============================================================================
+# Aerealith AI Milestone Rules
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Source-of-truth milestone routing, milestone assignment, release milestone
+#   behavior, issue/PR milestone policy, dependency milestone policy, security
+#   milestone policy, and automation safety.
+#
+# Used by:
+#   - .github/milestones.yaml
+#   - .github/assignees.yaml
+#   - .github/projects/kanban-board.yaml
+#   - .github/workflows/repo-management.yaml
+#   - .github/workflows/release.yaml
+#   - .github/scripts/repo/sync-milestones.js
+#   - .github/scripts/repo/assign-milestones.js
+#   - .github/scripts/repo/assign-labels.js
+#   - .github/scripts/repo/link-issues-prs.js
+#   - .github/scripts/release/determine-release-version.js
+#   - .github/scripts/release/summarize-release.js
+#
+# Repository policy:
+#   - Milestones are managed from .github/milestones.yaml.
+#   - Automation may create/update milestones only through sync-milestones.
+#   - Assignment scripts may assign milestones but must not create or delete them.
+#   - Release milestones should match V-prefixed release planning.
+#   - Dependency PRs are routed to dependency milestones and must not trigger release milestones.
+#   - Security issues are routed by severity and remediation type.
+# =============================================================================
+
+version: 1
+
+repository:
+  owner: SinLess-Games
+  name: Aerealith-AI
+  default_branch: main
+
+# -----------------------------------------------------------------------------
+# Global Milestone Policy
+# -----------------------------------------------------------------------------
+policy:
+  source_of_truth: .github/milestones.yaml
+
+  allow_create: true
+  allow_update: true
+  allow_delete: false
+  allow_close: true
+  allow_reopen: true
+
+  assignment_scripts_can_create_milestones: false
+  assignment_scripts_can_delete_milestones: false
+  assignment_scripts_can_close_milestones: false
+
+  require_existing_milestone_for_assignment: true
+  fallback_milestone: Backlog
+
+  dry_run_supported: true
+  debug_supported: true
+
+  # Milestone descriptions can be long because they are managed from YAML.
+  preserve_markdown_descriptions: true
+
+  # Keeps sync behavior safe. Unlisted remote milestones should be reported,
+  # not deleted.
+  report_unmanaged_milestones: true
+  close_unmanaged_milestones: false
+  delete_unmanaged_milestones: false
+
+  # Keep release creation tied to PR labels, not milestone names alone.
+  milestones_do_not_trigger_releases: true
+
+# -----------------------------------------------------------------------------
+# Milestone Groups
+# -----------------------------------------------------------------------------
+milestone_groups:
+  release_train:
+    description: Versioned release planning milestones.
+    milestones:
+      - V0.1.0 — Foundation
+      - V0.2.0 — Automation Core
+      - V0.3.0 — CI/CD Expansion
+      - V0.4.0 — Security Automation
+      - V0.5.0 — Release Automation
+      - V0.6.0 — Publishing Pipeline
+      - V0.7.0 — Cloudflare Platform
+      - V0.8.0 — AI Repository Assistant
+      - V0.9.0 — Release Candidate
+      - V1.0.0 — General Availability
+
+  repository_management:
+    description: Repository management automation and governance milestones.
+    milestones:
+      - Repo Management — Labels
+      - Repo Management — Milestones
+      - Repo Management — Issues & Pull Requests
+      - Repo Management — Branch Policy
+
+  ci_cd:
+    description: CI/CD validation, caching, artifacts, and workflow milestones.
+    milestones:
+      - CI/CD — Pull Request Validation
+      - CI/CD — Main Branch Verification
+      - CI/CD — Cache Management
+      - CI/CD — Artifacts & Hashes
+
+  security:
+    description: Security gates, monitoring, dependency response, and supply-chain integrity.
+    milestones:
+      - Security — Strict Pull Request Gate
+      - Security — Main Branch Monitoring
+      - Security — Dependency Vulnerability Response
+      - Security — Supply Chain Integrity
+
+  dependencies:
+    description: Dependency automation, Renovate, Mend, Dependabot, and major upgrade planning.
+    milestones:
+      - Dependencies — Renovate Weekly Updates
+      - Dependencies — Major Upgrade Program
+      - Dependencies — Mend Management
+
+  cloudflare:
+    description: Cloudflare preview, staging, and production deployment milestones.
+    milestones:
+      - Cloudflare — Preview Environments
+      - Cloudflare — Staging Environment
+      - Cloudflare — Production Environment
+
+  publishing:
+    description: npm package publishing and GHCR container publishing milestones.
+    milestones:
+      - Publishing — npm Packages
+      - Publishing — GHCR Containers
+
+  ai_automation:
+    description: OpenAI-assisted changelogs, issue/PR intelligence, and security triage.
+    milestones:
+      - AI Automation — Changelogs
+      - AI Automation — Issue & PR Intelligence
+      - AI Automation — Security Triage
+
+  self_hosted:
+    description: Future self-hosted Helm and Kubernetes deployment milestones.
+    milestones:
+      - Self-Hosted — Helm Chart
+      - Self-Hosted — Kubernetes Manifests
+
+  operations:
+    description: Observability, runbooks, and operational readiness milestones.
+    milestones:
+      - Observability — Grafana Cloud
+      - Operations — Runbooks
+
+  documentation:
+    description: Developer documentation and architecture documentation milestones.
+    milestones:
+      - Documentation — Developer Experience
+      - Documentation — Architecture
+
+  planning:
+    description: General backlog and future planning.
+    milestones:
+      - Backlog
+
+# -----------------------------------------------------------------------------
+# Default Routing
+# -----------------------------------------------------------------------------
+defaults:
+  issue:
+    milestone: Backlog
+    labels:
+      - status:backlog
+
+  pull_request:
+    milestone: Backlog
+    labels:
+      - status:ready
+
+  draft_pull_request:
+    milestone: Backlog
+    labels:
+      - status:in-progress
+
+  dependency_pull_request:
+    milestone: Dependencies — Renovate Weekly Updates
+    labels:
+      - dependencies
+      - no-release
+
+  security_dependency_pull_request:
+    milestone: Security — Dependency Vulnerability Response
+    labels:
+      - dependencies
+      - security:dependency
+      - no-release
+
+  release_pull_request:
+    milestone: V0.5.0 — Release Automation
+    labels:
+      - release
+      - kind:release
+
+  unknown:
+    milestone: Backlog
+
+# -----------------------------------------------------------------------------
+# Label-Based Milestone Routing
+# -----------------------------------------------------------------------------
+label_routing:
+  # ---------------------------------------------------------------------------
+  # Release train
+  # ---------------------------------------------------------------------------
+  release:
+    milestone: V0.5.0 — Release Automation
+    priority: 70
+
+  kind:release:
+    milestone: V0.5.0 — Release Automation
+    priority: 70
+
+  release:major:
+    milestone: V0.5.0 — Release Automation
+    priority: 95
+
+  release:minor:
+    milestone: V0.5.0 — Release Automation
+    priority: 90
+
+  release:patch:
+    milestone: V0.5.0 — Release Automation
+    priority: 85
+
+  breaking-change:
+    milestone: V0.5.0 — Release Automation
+    priority: 95
+
+  # ---------------------------------------------------------------------------
+  # Repository management
+  # ---------------------------------------------------------------------------
+  area:repo-management:
+    milestone: Repo Management — Issues & Pull Requests
+    priority: 75
+
+  area:github-actions:
+    milestone: V0.2.0 — Automation Core
+    priority: 60
+
+  automation:
+    milestone: V0.2.0 — Automation Core
+    priority: 50
+
+  automation:github-actions:
+    milestone: V0.2.0 — Automation Core
+    priority: 60
+
+  automation:needs-review:
+    milestone: V0.8.0 — AI Repository Assistant
+    priority: 75
+
+  # ---------------------------------------------------------------------------
+  # CI/CD
+  # ---------------------------------------------------------------------------
+  kind:ci:
+    milestone: V0.3.0 — CI/CD Expansion
+    priority: 80
+
+  area:ci:
+    milestone: V0.3.0 — CI/CD Expansion
+    priority: 80
+
+  kind:test:
+    milestone: CI/CD — Pull Request Validation
+    priority: 70
+
+  area:e2e:
+    milestone: CI/CD — Pull Request Validation
+    priority: 70
+
+  area:cache:
+    milestone: CI/CD — Cache Management
+    priority: 75
+
+  area:artifacts:
+    milestone: CI/CD — Artifacts & Hashes
+    priority: 75
+
+  checksums:
+    milestone: CI/CD — Artifacts & Hashes
+    priority: 80
+
+  # ---------------------------------------------------------------------------
+  # Security
+  # ---------------------------------------------------------------------------
+  kind:security:
+    milestone: Security — Strict Pull Request Gate
+    priority: 90
+
+  area:security:
+    milestone: Security — Strict Pull Request Gate
+    priority: 90
+
+  needs-security-review:
+    milestone: Security — Strict Pull Request Gate
+    priority: 95
+
+  blocked-by-security:
+    milestone: Security — Strict Pull Request Gate
+    priority: 100
+
+  do-not-merge:
+    milestone: Security — Strict Pull Request Gate
+    priority: 100
+
+  security:dependency:
+    milestone: Security — Dependency Vulnerability Response
+    priority: 100
+
+  sbom:
+    milestone: Security — Supply Chain Integrity
+    priority: 85
+
+  attestations:
+    milestone: Security — Supply Chain Integrity
+    priority: 85
+
+  area:secrets:
+    milestone: Security — Strict Pull Request Gate
+    priority: 95
+
+  severity:critical:
+    milestone: Security — Strict Pull Request Gate
+    priority: 100
+
+  severity:high:
+    milestone: Security — Strict Pull Request Gate
+    priority: 95
+
+  severity:medium:
+    milestone: Security — Main Branch Monitoring
+    priority: 60
+
+  severity:low:
+    milestone: Security — Main Branch Monitoring
+    priority: 40
+
+  # ---------------------------------------------------------------------------
+  # Dependencies
+  # ---------------------------------------------------------------------------
+  dependencies:
+    milestone: Dependencies — Renovate Weekly Updates
+    priority: 90
+
+  area:dependencies:
+    milestone: Dependencies — Renovate Weekly Updates
+    priority: 90
+
+  renovate:
+    milestone: Dependencies — Renovate Weekly Updates
+    priority: 95
+
+  dependabot:
+    milestone: Dependencies — Renovate Weekly Updates
+    priority: 95
+
+  mend:
+    milestone: Dependencies — Mend Management
+    priority: 95
+
+  lockfile:
+    milestone: Dependencies — Renovate Weekly Updates
+    priority: 70
+
+  actions-update:
+    milestone: CI/CD — Pull Request Validation
+    priority: 75
+
+  auto-merge:
+    milestone: Dependencies — Renovate Weekly Updates
+    priority: 70
+
+  # ---------------------------------------------------------------------------
+  # Cloudflare and deployment
+  # ---------------------------------------------------------------------------
+  cloudflare:
+    milestone: V0.7.0 — Cloudflare Platform
+    priority: 80
+
+  area:cloudflare:
+    milestone: V0.7.0 — Cloudflare Platform
+    priority: 80
+
+  kind:deployment:
+    milestone: V0.7.0 — Cloudflare Platform
+    priority: 75
+
+  deployment:
+    milestone: V0.7.0 — Cloudflare Platform
+    priority: 75
+
+  preview:
+    milestone: Cloudflare — Preview Environments
+    priority: 85
+
+  staging:
+    milestone: Cloudflare — Staging Environment
+    priority: 85
+
+  production:
+    milestone: Cloudflare — Production Environment
+    priority: 95
+
+  area:workers:
+    milestone: V0.7.0 — Cloudflare Platform
+    priority: 70
+
+  area:queues:
+    milestone: V0.7.0 — Cloudflare Platform
+    priority: 70
+
+  area:r2:
+    milestone: V0.7.0 — Cloudflare Platform
+    priority: 70
+
+  area:d1:
+    milestone: V0.7.0 — Cloudflare Platform
+    priority: 70
+
+  area:kv:
+    milestone: V0.7.0 — Cloudflare Platform
+    priority: 70
+
+  # ---------------------------------------------------------------------------
+  # Publishing
+  # ---------------------------------------------------------------------------
+  publishing:
+    milestone: V0.6.0 — Publishing Pipeline
+    priority: 85
+
+  area:npm:
+    milestone: Publishing — npm Packages
+    priority: 90
+
+  npm-package:
+    milestone: Publishing — npm Packages
+    priority: 90
+
+  area:ghcr:
+    milestone: Publishing — GHCR Containers
+    priority: 90
+
+  ghcr:
+    milestone: Publishing — GHCR Containers
+    priority: 90
+
+  area:docker:
+    milestone: Publishing — GHCR Containers
+    priority: 80
+
+  # ---------------------------------------------------------------------------
+  # AI automation
+  # ---------------------------------------------------------------------------
+  area:ai:
+    milestone: V0.8.0 — AI Repository Assistant
+    priority: 85
+
+  area:openai:
+    milestone: V0.8.0 — AI Repository Assistant
+    priority: 85
+
+  automation:openai:
+    milestone: V0.8.0 — AI Repository Assistant
+    priority: 90
+
+  # ---------------------------------------------------------------------------
+  # Self-hosted
+  # ---------------------------------------------------------------------------
+  area:self-hosted:
+    milestone: Self-Hosted — Helm Chart
+    priority: 80
+
+  area:helm:
+    milestone: Self-Hosted — Helm Chart
+    priority: 90
+
+  area:kubernetes:
+    milestone: Self-Hosted — Kubernetes Manifests
+    priority: 90
+
+  # ---------------------------------------------------------------------------
+  # Observability and docs
+  # ---------------------------------------------------------------------------
+  area:observability:
+    milestone: Observability — Grafana Cloud
+    priority: 80
+
+  kind:documentation:
+    milestone: Documentation — Developer Experience
+    priority: 70
+
+  area:docs:
+    milestone: Documentation — Developer Experience
+    priority: 70
+
+  needs-architecture-review:
+    milestone: Documentation — Architecture
+    priority: 85
+
+  discussion:
+    milestone: Backlog
+    priority: 30
+
+  question:
+    milestone: Backlog
+    priority: 20
+
+  # ---------------------------------------------------------------------------
+  # General work kinds
+  # ---------------------------------------------------------------------------
+  kind:feature:
+    milestone: Backlog
+    priority: 40
+
+  kind:bug:
+    milestone: Backlog
+    priority: 50
+
+  kind:chore:
+    milestone: Backlog
+    priority: 35
+
+  kind:maintenance:
+    milestone: Backlog
+    priority: 35
+
+  kind:refactor:
+    milestone: Backlog
+    priority: 45
+
+# -----------------------------------------------------------------------------
+# Path-Based Milestone Routing
+# -----------------------------------------------------------------------------
+path_routing:
+  # ---------------------------------------------------------------------------
+  # Apps
+  # ---------------------------------------------------------------------------
+  "apps/frontend/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:frontend
+    priority: 50
+
+  "apps/connectors/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:connectors
+    priority: 50
+
+  "apps/e2e/**":
+    milestone: CI/CD — Pull Request Validation
+    labels:
+      - area:e2e
+      - kind:test
+    priority: 70
+
+  "apps/engines/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:engines
+    priority: 50
+
+  "apps/integrations/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:integrations
+    priority: 50
+
+  "apps/services/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:services
+    priority: 50
+
+  # ---------------------------------------------------------------------------
+  # Libraries
+  # ---------------------------------------------------------------------------
+  "libs/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:libs
+    priority: 50
+
+  "libs/ui/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:ui
+      - area:frontend
+    priority: 55
+
+  "libs/design/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:ui
+    priority: 55
+
+  "libs/theme/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:ui
+    priority: 55
+
+  "libs/config/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:config
+    priority: 55
+
+  "libs/env/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:config
+    priority: 55
+
+  "libs/db/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:db
+    priority: 60
+
+  "libs/database/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:db
+    priority: 60
+
+  "libs/flags/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:flags
+    priority: 50
+
+  "libs/feature-flags/**":
+    milestone: V0.1.0 — Foundation
+    labels:
+      - area:flags
+    priority: 50
+
+  # ---------------------------------------------------------------------------
+  # GitHub and repo automation
+  # ---------------------------------------------------------------------------
+  ".github/labels.yaml":
+    milestone: Repo Management — Labels
+    labels:
+      - area:repo-management
+    priority: 100
+
+  ".github/milestones.yaml":
+    milestone: Repo Management — Milestones
+    labels:
+      - area:repo-management
+    priority: 100
+
+  ".github/assignees.yaml":
+    milestone: Repo Management — Issues & Pull Requests
+    labels:
+      - area:repo-management
+    priority: 90
+
+  ".github/CODEOWNERS":
+    milestone: Repo Management — Issues & Pull Requests
+    labels:
+      - area:repo-management
+    priority: 90
+
+  ".github/labeler.yaml":
+    milestone: Repo Management — Issues & Pull Requests
+    labels:
+      - area:repo-management
+    priority: 90
+
+  ".github/projects/**":
+    milestone: Repo Management — Issues & Pull Requests
+    labels:
+      - area:repo-management
+    priority: 90
+
+  ".github/repo-management/branch-rules.yaml":
+    milestone: Repo Management — Branch Policy
+    labels:
+      - area:repo-management
+    priority: 100
+
+  ".github/repo-management/**":
+    milestone: Repo Management — Issues & Pull Requests
+    labels:
+      - area:repo-management
+    priority: 85
+
+  ".github/scripts/repo/**":
+    milestone: Repo Management — Issues & Pull Requests
+    labels:
+      - area:repo-management
+    priority: 85
+
+  ".github/scripts/utils/config-loaders/**":
+    milestone: V0.2.0 — Automation Core
+    labels:
+      - area:repo-management
+      - automation
+    priority: 80
+
+  ".github/scripts/utils/validators/**":
+    milestone: V0.2.0 — Automation Core
+    labels:
+      - area:repo-management
+      - automation
+    priority: 80
+
+  # ---------------------------------------------------------------------------
+  # CI/CD
+  # ---------------------------------------------------------------------------
+  ".github/workflows/ci.yaml":
+    milestone: CI/CD — Pull Request Validation
+    labels:
+      - area:ci
+      - kind:ci
+    priority: 100
+
+  ".github/workflows/security.yaml":
+    milestone: Security — Strict Pull Request Gate
+    labels:
+      - area:security
+      - kind:security
+    priority: 100
+
+  ".github/workflows/codeql.yaml":
+    milestone: Security — Strict Pull Request Gate
+    labels:
+      - area:security
+    priority: 95
+
+  ".github/workflows/sonarqube.yaml":
+    milestone: Security — Strict Pull Request Gate
+    labels:
+      - area:security
+    priority: 95
+
+  ".github/workflows/dependency-review.yaml":
+    milestone: Security — Dependency Vulnerability Response
+    labels:
+      - area:security
+      - area:dependencies
+    priority: 95
+
+  ".github/workflows/dependency-management.yaml":
+    milestone: Dependencies — Renovate Weekly Updates
+    labels:
+      - area:dependencies
+    priority: 90
+
+  ".github/workflows/dependency-auto-merge.yaml":
+    milestone: Dependencies — Renovate Weekly Updates
+    labels:
+      - area:dependencies
+    priority: 90
+
+  ".github/workflows/cache-maintenance.yaml":
+    milestone: CI/CD — Cache Management
+    labels:
+      - area:cache
+      - area:ci
+    priority: 90
+
+  ".github/workflows/artifact-hashes.yaml":
+    milestone: CI/CD — Artifacts & Hashes
+    labels:
+      - area:artifacts
+      - checksums
+    priority: 90
+
+  ".github/workflows/attestations.yaml":
+    milestone: Security — Supply Chain Integrity
+    labels:
+      - attestations
+      - area:security
+    priority: 95
+
+  ".github/scripts/ci/**":
+    milestone: V0.3.0 — CI/CD Expansion
+    labels:
+      - area:ci
+    priority: 80
+
+  ".github/scripts/cache/**":
+    milestone: CI/CD — Cache Management
+    labels:
+      - area:cache
+      - area:ci
+    priority: 85
+
+  ".github/scripts/artifacts/**":
+    milestone: CI/CD — Artifacts & Hashes
+    labels:
+      - area:artifacts
+    priority: 85
+
+  # ---------------------------------------------------------------------------
+  # Release and publishing
+  # ---------------------------------------------------------------------------
+  ".github/workflows/release.yaml":
+    milestone: V0.5.0 — Release Automation
+    labels:
+      - release
+      - kind:release
+    priority: 100
+
+  ".github/scripts/release/**":
+    milestone: V0.5.0 — Release Automation
+    labels:
+      - release
+      - kind:release
+    priority: 95
+
+  ".github/workflows/publish-npm.yaml":
+    milestone: Publishing — npm Packages
+    labels:
+      - area:npm
+      - publishing
+    priority: 100
+
+  ".github/scripts/npm/**":
+    milestone: Publishing — npm Packages
+    labels:
+      - area:npm
+      - publishing
+    priority: 90
+
+  ".github/workflows/publish-containers.yaml":
+    milestone: Publishing — GHCR Containers
+    labels:
+      - area:ghcr
+      - publishing
+    priority: 100
+
+  ".github/scripts/docker/**":
+    milestone: Publishing — GHCR Containers
+    labels:
+      - area:docker
+      - area:ghcr
+      - publishing
+    priority: 90
+
+  # ---------------------------------------------------------------------------
+  # Cloudflare
+  # ---------------------------------------------------------------------------
+  ".github/workflows/wrangler-deploy.yaml":
+    milestone: V0.7.0 — Cloudflare Platform
+    labels:
+      - area:cloudflare
+      - cloudflare
+      - deployment
+    priority: 95
+
+  ".github/workflows/cloudflare-preview.yaml":
+    milestone: Cloudflare — Preview Environments
+    labels:
+      - preview
+      - area:cloudflare
+    priority: 100
+
+  ".github/workflows/cloudflare-staging.yaml":
+    milestone: Cloudflare — Staging Environment
+    labels:
+      - staging
+      - area:cloudflare
+    priority: 100
+
+  ".github/workflows/cloudflare-production.yaml":
+    milestone: Cloudflare — Production Environment
+    labels:
+      - production
+      - area:cloudflare
+    priority: 100
+
+  ".github/scripts/cloudflare/**":
+    milestone: V0.7.0 — Cloudflare Platform
+    labels:
+      - area:cloudflare
+      - cloudflare
+      - deployment
+    priority: 85
+
+  "**/wrangler.toml":
+    milestone: V0.7.0 — Cloudflare Platform
+    labels:
+      - area:cloudflare
+      - cloudflare
+      - deployment
+    priority: 80
+
+  "**/wrangler.jsonc":
+    milestone: V0.7.0 — Cloudflare Platform
+    labels:
+      - area:cloudflare
+      - cloudflare
+      - deployment
+    priority: 80
+
+  "**/open-next.config.ts":
+    milestone: V0.7.0 — Cloudflare Platform
+    labels:
+      - area:cloudflare
+    priority: 75
+
+  # ---------------------------------------------------------------------------
+  # Dependencies
+  # ---------------------------------------------------------------------------
+  ".github/renovate.json5":
+    milestone: Dependencies — Renovate Weekly Updates
+    labels:
+      - renovate
+      - dependencies
+      - no-release
+    priority: 100
+
+  ".github/dependabot.yaml":
+    milestone: Dependencies — Renovate Weekly Updates
+    labels:
+      - dependabot
+      - dependencies
+      - no-release
+    priority: 95
+
+  ".github/dependabot.yml":
+    milestone: Dependencies — Renovate Weekly Updates
+    labels:
+      - dependabot
+      - dependencies
+      - no-release
+    priority: 95
+
+  "package.json":
+    milestone: Dependencies — Renovate Weekly Updates
+    labels:
+      - dependencies
+      - area:dependencies
+      - no-release
+    priority: 80
+
+  "**/package.json":
+    milestone: Dependencies — Renovate Weekly Updates
+    labels:
+      - dependencies
+      - area:dependencies
+      - no-release
+    priority: 75
+
+  "pnpm-lock.yaml":
+    milestone: Dependencies — Renovate Weekly Updates
+    labels:
+      - dependencies
+      - lockfile
+      - no-release
+    priority: 80
+
+  "pnpm-workspace.yaml":
+    milestone: Dependencies — Renovate Weekly Updates
+    labels:
+      - dependencies
+      - area:dependencies
+      - no-release
+    priority: 80
+
+  # ---------------------------------------------------------------------------
+  # AI automation
+  # ---------------------------------------------------------------------------
+  ".github/workflows/ai-repo-assistant.yaml":
+    milestone: V0.8.0 — AI Repository Assistant
+    labels:
+      - area:ai
+      - automation:openai
+    priority: 100
+
+  ".github/scripts/ai/build-changelog-draft.js":
+    milestone: AI Automation — Changelogs
+    labels:
+      - area:ai
+      - automation:openai
+    priority: 95
+
+  ".github/scripts/ai/discussion-announcement.js":
+    milestone: AI Automation — Changelogs
+    labels:
+      - area:ai
+      - automation:openai
+    priority: 95
+
+  ".github/scripts/ai/create-issue-from-pr.js":
+    milestone: AI Automation — Issue & PR Intelligence
+    labels:
+      - area:ai
+      - automation:openai
+    priority: 95
+
+  ".github/scripts/ai/create-pr-from-issue.js":
+    milestone: AI Automation — Issue & PR Intelligence
+    labels:
+      - area:ai
+      - automation:openai
+    priority: 95
+
+  ".github/scripts/ai/link-pr-to-issue.js":
+    milestone: AI Automation — Issue & PR Intelligence
+    labels:
+      - area:ai
+      - automation:openai
+    priority: 95
+
+  ".github/scripts/ai/security-triage.js":
+    milestone: AI Automation — Security Triage
+    labels:
+      - area:ai
+      - area:security
+      - automation:openai
+    priority: 95
+
+  ".github/scripts/ai/**":
+    milestone: V0.8.0 — AI Repository Assistant
+    labels:
+      - area:ai
+      - automation:openai
+    priority: 85
+
+  # ---------------------------------------------------------------------------
+  # Self-hosted
+  # ---------------------------------------------------------------------------
+  "charts/**":
+    milestone: Self-Hosted — Helm Chart
+    labels:
+      - area:self-hosted
+      - area:helm
+    priority: 90
+
+  "helm/**":
+    milestone: Self-Hosted — Helm Chart
+    labels:
+      - area:self-hosted
+      - area:helm
+    priority: 90
+
+  "kubernetes/**":
+    milestone: Self-Hosted — Kubernetes Manifests
+    labels:
+      - area:self-hosted
+      - area:kubernetes
+    priority: 90
+
+  "k8s/**":
+    milestone: Self-Hosted — Kubernetes Manifests
+    labels:
+      - area:self-hosted
+      - area:kubernetes
+    priority: 90
+
+  "deploy/self-hosted/**":
+    milestone: Self-Hosted — Helm Chart
+    labels:
+      - area:self-hosted
+    priority: 85
+
+  "deploy/kubernetes/**":
+    milestone: Self-Hosted — Kubernetes Manifests
+    labels:
+      - area:self-hosted
+      - area:kubernetes
+    priority: 85
+
+  # ---------------------------------------------------------------------------
+  # Documentation
+  # ---------------------------------------------------------------------------
+  "docs/**":
+    milestone: Documentation — Developer Experience
+    labels:
+      - area:docs
+      - kind:documentation
+      - no-release
+    priority: 70
+
+  "Docs/**":
+    milestone: Documentation — Developer Experience
+    labels:
+      - area:docs
+      - kind:documentation
+      - no-release
+    priority: 70
+
+  "docs/adrs/**":
+    milestone: Documentation — Architecture
+    labels:
+      - area:docs
+      - needs-architecture-review
+    priority: 85
+
+  "README.md":
+    milestone: Documentation — Developer Experience
+    labels:
+      - area:docs
+      - kind:documentation
+      - no-release
+    priority: 70
+
+  "SECURITY.md":
+    milestone: Security — Strict Pull Request Gate
+    labels:
+      - area:security
+      - kind:documentation
+    priority: 90
+
+# -----------------------------------------------------------------------------
+# Title and Template-Based Routing
+# -----------------------------------------------------------------------------
+title_routing:
+  "^\\[Bug\\]:":
+    milestone: Backlog
+    labels:
+      - kind:bug
+    priority: 50
+
+  "^\\[Feature\\]:":
+    milestone: Backlog
+    labels:
+      - kind:feature
+    priority: 40
+
+  "^\\[Maintenance\\]:":
+    milestone: Backlog
+    labels:
+      - kind:maintenance
+      - no-release
+    priority: 40
+
+  "^\\[Security\\]:":
+    milestone: Security — Strict Pull Request Gate
+    labels:
+      - kind:security
+      - area:security
+    priority: 95
+
+  "^\\[Implementation\\]:":
+    milestone: Backlog
+    labels:
+      - kind:chore
+    priority: 45
+
+  "^\\[CI/CD\\]:":
+    milestone: V0.3.0 — CI/CD Expansion
+    labels:
+      - kind:ci
+      - area:ci
+    priority: 85
+
+  "^\\[Release\\]:":
+    milestone: V0.5.0 — Release Automation
+    labels:
+      - kind:release
+      - release
+    priority: 90
+
+  "^\\[Docs\\]:":
+    milestone: Documentation — Developer Experience
+    labels:
+      - kind:documentation
+      - area:docs
+      - no-release
+    priority: 75
+
+  "^\\[Architecture\\]:":
+    milestone: Documentation — Architecture
+    labels:
+      - discussion
+      - needs-architecture-review
+    priority: 85
+
+  "^\\[Cloudflare\\]:":
+    milestone: V0.7.0 — Cloudflare Platform
+    labels:
+      - cloudflare
+      - deployment
+      - area:cloudflare
+    priority: 90
+
+  "^\\[AI Automation\\]:":
+    milestone: V0.8.0 — AI Repository Assistant
+    labels:
+      - area:ai
+      - automation:openai
+    priority: 90
+
+  "^\\[Self-Hosted\\]:":
+    milestone: Self-Hosted — Helm Chart
+    labels:
+      - area:self-hosted
+      - deployment
+      - no-release
+    priority: 80
+
+# -----------------------------------------------------------------------------
+# Release Milestone Rules
+# -----------------------------------------------------------------------------
+release_milestones:
+  enabled: true
+
+  version_pattern: "^V[0-9]+\\.[0-9]+\\.[0-9]+"
+  release_tag_pattern: "^V[0-9]+\\.[0-9]+\\.[0-9]+$"
+
+  # Release labels determine release type. Milestones only help organize work.
+  release_type_source: pr_label
+
+  valid_release_labels:
+    - release:major
+    - release:minor
+    - release:patch
+
+  release_blocking_labels:
+    - no-release
+    - dependencies
+    - security:dependency
+    - do-not-merge
+    - blocked-by-security
+    - status:blocked
+
+  assign_release_prs_to_release_automation_milestone: true
+  default_release_automation_milestone: V0.5.0 — Release Automation
+
+  version_to_milestone:
+    V0.1.0: V0.1.0 — Foundation
+    V0.2.0: V0.2.0 — Automation Core
+    V0.3.0: V0.3.0 — CI/CD Expansion
+    V0.4.0: V0.4.0 — Security Automation
+    V0.5.0: V0.5.0 — Release Automation
+    V0.6.0: V0.6.0 — Publishing Pipeline
+    V0.7.0: V0.7.0 — Cloudflare Platform
+    V0.8.0: V0.8.0 — AI Repository Assistant
+    V0.9.0: V0.9.0 — Release Candidate
+    V1.0.0: V1.0.0 — General Availability
+
+  close_version_milestone_on_successful_release: false
+  close_release_automation_milestone_on_successful_release: false
+
+  include_in_release_notes:
+    labels:
+      - release:major
+      - release:minor
+      - release:patch
+
+  exclude_from_release_notes:
+    labels:
+      - no-release
+      - dependencies
+      - security:dependency
+
+# -----------------------------------------------------------------------------
+# Dependency Milestone Rules
+# -----------------------------------------------------------------------------
+dependency_milestones:
+  enabled: true
+
+  default_milestone: Dependencies — Renovate Weekly Updates
+  major_upgrade_milestone: Dependencies — Major Upgrade Program
+  mend_milestone: Dependencies — Mend Management
+  security_dependency_milestone: Security — Dependency Vulnerability Response
+
+  authors:
+    renovate[bot]:
+      milestone: Dependencies — Renovate Weekly Updates
+      labels:
+        - renovate
+        - dependencies
+        - no-release
+
+    dependabot[bot]:
+      milestone: Dependencies — Renovate Weekly Updates
+      labels:
+        - dependabot
+        - dependencies
+        - no-release
+
+    mend[bot]:
+      milestone: Dependencies — Mend Management
+      labels:
+        - mend
+        - dependencies
+        - no-release
+
+  update_types:
+    patch:
+      milestone: Dependencies — Renovate Weekly Updates
+      labels:
+        - dependencies
+        - auto-merge
+        - no-release
+
+    minor:
+      milestone: Dependencies — Renovate Weekly Updates
+      labels:
+        - dependencies
+        - auto-merge
+        - no-release
+
+    major:
+      milestone: Dependencies — Major Upgrade Program
+      labels:
+        - dependencies
+        - needs-maintainer-review
+        - no-release
+
+    security:
+      milestone: Security — Dependency Vulnerability Response
+      labels:
+        - dependencies
+        - security:dependency
+        - no-release
+
+    lockfile:
+      milestone: Dependencies — Renovate Weekly Updates
+      labels:
+        - dependencies
+        - lockfile
+        - no-release
+
+  package_groups:
+    nx:
+      milestone: Dependencies — Major Upgrade Program
+
+    next:
+      milestone: Dependencies — Major Upgrade Program
+
+    react:
+      milestone: Dependencies — Major Upgrade Program
+
+    cloudflare:
+      milestone: Cloudflare — Staging Environment
+
+    wrangler:
+      milestone: Cloudflare — Staging Environment
+
+    database:
+      milestone: Dependencies — Major Upgrade Program
+
+    openai:
+      milestone: V0.8.0 — AI Repository Assistant
+
+    github_automation:
+      milestone: V0.2.0 — Automation Core
+
+    security_tools:
+      milestone: Security — Supply Chain Integrity
+
+    docker:
+      milestone: Publishing — GHCR Containers
+
+    helm:
+      milestone: Self-Hosted — Helm Chart
+
+    kubernetes:
+      milestone: Self-Hosted — Kubernetes Manifests
+
+# -----------------------------------------------------------------------------
+# Security Milestone Rules
+# -----------------------------------------------------------------------------
+security_milestones:
+  enabled: true
+
+  default_security_milestone: Security — Strict Pull Request Gate
+  monitoring_milestone: Security — Main Branch Monitoring
+  dependency_response_milestone: Security — Dependency Vulnerability Response
+  supply_chain_milestone: Security — Supply Chain Integrity
+
+  severity:
+    critical:
+      milestone: Security — Strict Pull Request Gate
+      labels:
+        - severity:critical
+        - priority:critical
+        - blocked-by-security
+
+    high:
+      milestone: Security — Strict Pull Request Gate
+      labels:
+        - severity:high
+        - priority:high
+        - needs-security-review
+
+    medium:
+      milestone: Security — Main Branch Monitoring
+      labels:
+        - severity:medium
+        - priority:medium
+
+    low:
+      milestone: Security — Main Branch Monitoring
+      labels:
+        - severity:low
+        - priority:low
+
+  finding_types:
+    dependency_vulnerability:
+      milestone: Security — Dependency Vulnerability Response
+      labels:
+        - security:dependency
+        - dependencies
+
+    codeql:
+      milestone: Security — Strict Pull Request Gate
+      labels:
+        - area:security
+
+    sonarqube:
+      milestone: Security — Strict Pull Request Gate
+      labels:
+        - area:security
+
+    secret_exposure:
+      milestone: Security — Strict Pull Request Gate
+      labels:
+        - area:secrets
+        - blocked-by-security
+
+    container_vulnerability:
+      milestone: Security — Supply Chain Integrity
+      labels:
+        - area:docker
+        - area:security
+
+    sbom:
+      milestone: Security — Supply Chain Integrity
+      labels:
+        - sbom
+
+    attestation:
+      milestone: Security — Supply Chain Integrity
+      labels:
+        - attestations
+
+    license_violation:
+      milestone: Security — Supply Chain Integrity
+      labels:
+        - area:dependencies
+        - area:security
+
+# -----------------------------------------------------------------------------
+# Project Field Mapping
+# -----------------------------------------------------------------------------
+project_fields:
+  enabled: true
+
+  target_project: Aerealith AI Task Board
+
+  milestone_to_target_version:
+    V0.1.0 — Foundation: V0.1.0
+    V0.2.0 — Automation Core: V0.2.0
+    V0.3.0 — CI/CD Expansion: V0.3.0
+    V0.4.0 — Security Automation: V0.4.0
+    V0.5.0 — Release Automation: V0.5.0
+    V0.6.0 — Publishing Pipeline: V0.6.0
+    V0.7.0 — Cloudflare Platform: V0.7.0
+    V0.8.0 — AI Repository Assistant: V0.8.0
+    V0.9.0 — Release Candidate: V0.9.0
+    V1.0.0 — General Availability: V1.0.0
+
+  milestone_to_area:
+    Repo Management — Labels: Repo Management
+    Repo Management — Milestones: Repo Management
+    Repo Management — Issues & Pull Requests: Repo Management
+    Repo Management — Branch Policy: Repo Management
+
+    CI/CD — Pull Request Validation: CI/CD
+    CI/CD — Main Branch Verification: CI/CD
+    CI/CD — Cache Management: Cache
+    CI/CD — Artifacts & Hashes: Artifacts
+
+    Security — Strict Pull Request Gate: Security
+    Security — Main Branch Monitoring: Security
+    Security — Dependency Vulnerability Response: Dependencies
+    Security — Supply Chain Integrity: Security
+
+    Dependencies — Renovate Weekly Updates: Dependencies
+    Dependencies — Major Upgrade Program: Dependencies
+    Dependencies — Mend Management: Dependencies
+
+    Cloudflare — Preview Environments: Cloudflare
+    Cloudflare — Staging Environment: Cloudflare
+    Cloudflare — Production Environment: Cloudflare
+
+    Publishing — npm Packages: NPM
+    Publishing — GHCR Containers: GHCR
+
+    AI Automation — Changelogs: AI Automation
+    AI Automation — Issue & PR Intelligence: AI Automation
+    AI Automation — Security Triage: AI Automation
+
+    Self-Hosted — Helm Chart: Helm
+    Self-Hosted — Kubernetes Manifests: Kubernetes
+
+    Observability — Grafana Cloud: Observability
+    Operations — Runbooks: Documentation
+    Documentation — Developer Experience: Documentation
+    Documentation — Architecture: Documentation
+    Backlog: Repo Management
+
+# -----------------------------------------------------------------------------
+# Milestone Conflict Resolution
+# -----------------------------------------------------------------------------
+conflict_resolution:
+  enabled: true
+
+  # Higher priority wins when multiple rules match.
+  strategy: highest_priority
+
+  tie_breaker_order:
+    - blocked_security
+    - security_dependency
+    - release_label
+    - production_deployment
+    - explicit_title_rule
+    - exact_path_rule
+    - label_rule
+    - path_rule
+    - default
+
+  protected_milestones:
+    - Security — Strict Pull Request Gate
+    - Security — Dependency Vulnerability Response
+    - Cloudflare — Production Environment
+    - V0.5.0 — Release Automation
+    - V1.0.0 — General Availability
+
+  do_not_override_if_current_milestone_is_protected: true
+
+  allow_override_when:
+    current_milestone_is_backlog: true
+    current_milestone_is_empty: true
+    new_rule_priority_at_least: 85
+
+  manual_override_labels:
+    - needs-maintainer-review
+    - needs-security-review
+    - needs-architecture-review
+
+# -----------------------------------------------------------------------------
+# Issue and PR Relationship Rules
+# -----------------------------------------------------------------------------
+relationships:
+  inherit_milestone_from_linked_issue:
+    enabled: true
+    apply_to_pull_requests: true
+    require_issue_milestone_exists: true
+
+  inherit_milestone_from_linked_pr:
+    enabled: true
+    apply_to_issues: false
+
+  prefer_pr_release_milestone_when_release_label_present: true
+  prefer_security_milestone_when_security_blocker_present: true
+  prefer_dependency_milestone_for_dependency_authors: true
+
+  linked_issue_keywords:
+    - fixes
+    - fixed
+    - closes
+    - closed
+    - resolves
+    - resolved
+    - related to
+    - refs
+    - references
+
+  create_issue_when_missing:
+    enabled: true
+    default_milestone: Backlog
+    ai_created_issue_milestone: V0.8.0 — AI Repository Assistant
+
+# -----------------------------------------------------------------------------
+# Sync Rules
+# -----------------------------------------------------------------------------
+sync:
+  enabled: true
+
+  source_file: .github/milestones.yaml
+
+  create_missing: true
+  update_existing: true
+  close_when_state_closed: true
+  reopen_when_state_open: true
+
+  delete_unmanaged: false
+  close_unmanaged: false
+  report_unmanaged: true
+
+  fields_to_sync:
+    - title
+    - description
+    - state
+
+  title_matching:
+    case_sensitive: true
+    trim_whitespace: true
+
+  description_matching:
+    normalize_line_endings: true
+    preserve_markdown: true
+
+  state_matching:
+    allowed_states:
+      - open
+      - closed
+
+# -----------------------------------------------------------------------------
+# Closing Rules
+# -----------------------------------------------------------------------------
+closing:
+  enabled: true
+
+  # Only sync-milestones may close milestones from YAML state.
+  allow_close_from_yaml_state: true
+
+  # Do not automatically close milestones just because all issues are closed.
+  close_when_all_items_closed: false
+
+  release_milestones:
+    close_on_release_success: false
+    require_manual_close: true
+
+  backlog:
+    never_auto_close: true
+
+  protected_from_auto_close:
+    - Backlog
+    - Security — Strict Pull Request Gate
+    - Security — Dependency Vulnerability Response
+    - Cloudflare — Production Environment
+    - V1.0.0 — General Availability
+
+# -----------------------------------------------------------------------------
+# Reporting
+# -----------------------------------------------------------------------------
+reporting:
+  add_pr_comment_on_assignment: false
+  add_pr_comment_on_change: false
+  add_workflow_summary: true
+  report_unmanaged_milestones: true
+  report_missing_milestones: true
+  report_assignment_reason: true
+
+  comment_footer:
+    start: "<!-- milestone-routing:start -->"
+    end: "<!-- milestone-routing:end -->"
+
+  summary:
+    include_item_number: true
+    include_item_type: true
+    include_current_milestone: true
+    include_new_milestone: true
+    include_matched_rules: true
+    include_priority: true
+    include_reason: true
+    include_dry_run: true
+    include_skipped_reason: true
+
+# -----------------------------------------------------------------------------
+# Enforcement
+# -----------------------------------------------------------------------------
+enforcement:
+  on_missing_source_file:
+    action: fail
+    message: |
+      .github/milestones.yaml is required because it is the milestone source of truth.
+
+  on_invalid_milestone_yaml:
+    action: fail
+    message: |
+      Milestone configuration is invalid. Each entry must include title, description, and state.
+
+  on_missing_target_milestone:
+    action: warn
+    fallback: Backlog
+    message: |
+      Requested milestone does not exist. Falling back to Backlog.
+
+  on_unmanaged_remote_milestone:
+    action: warn
+    message: |
+      A GitHub milestone exists that is not managed by .github/milestones.yaml.
+
+  on_duplicate_milestone_title:
+    action: fail
+    message: |
+      Duplicate milestone title detected. Milestone titles must be unique.
+
+  on_assignment_script_attempts_create:
+    action: fail
+    message: |
+      Assignment scripts must not create milestones. Use sync-milestones instead.
+
+  on_assignment_script_attempts_delete:
+    action: fail
+    message: |
+      Milestones must not be deleted by automation.
+
+  on_dependency_pr_assigned_release_milestone:
+    action: replace
+    milestone: Dependencies — Renovate Weekly Updates
+    message: |
+      Dependency PRs must not be assigned to release-triggering milestones.
+
+  on_security_dependency_pr_assigned_release_milestone:
+    action: replace
+    milestone: Security — Dependency Vulnerability Response
+    message: |
+      Security dependency PRs must not be assigned to release-triggering milestones.
+
+  on_release_label_without_release_milestone:
+    action: assign
+    milestone: V0.5.0 — Release Automation
+    message: |
+      Release-labeled PR assigned to release automation milestone.
+
+# -----------------------------------------------------------------------------
+# Safety
+# -----------------------------------------------------------------------------
+safety:
+  dry_run_supported: true
+  debug_supported: true
+
+  do_not_delete_milestones: true
+  do_not_delete_issues: true
+  do_not_close_issues: true
+  do_not_merge_pull_requests: true
+  do_not_create_releases: true
+  do_not_publish_packages: true
+  do_not_deploy: true
+
+  assignment_does_not_trigger_release: true
+  release_labels_required_for_release: true
+
+  never_assign_dependency_pr_to:
+    - V0.1.0 — Foundation
+    - V0.2.0 — Automation Core
+    - V0.3.0 — CI/CD Expansion
+    - V0.4.0 — Security Automation
+    - V0.5.0 — Release Automation
+    - V0.6.0 — Publishing Pipeline
+    - V0.7.0 — Cloudflare Platform
+    - V0.8.0 — AI Repository Assistant
+    - V0.9.0 — Release Candidate
+    - V1.0.0 — General Availability
+
+  protected_milestones:
+    - Backlog
+    - Security — Strict Pull Request Gate
+    - Security — Dependency Vulnerability Response
+    - Security — Supply Chain Integrity
+    - Cloudflare — Production Environment
+    - V1.0.0 — General Availability

@@ -1,46 +1,68 @@
 # .github/dependabot.yaml
 # =============================================================================
-# Helix AI Dependabot Configuration
+# Aerealith AI Dependabot Configuration
 # -----------------------------------------------------------------------------
 # Purpose:
-#   Keep pnpm/npm workspace dependencies and GitHub Actions up to date.
+#   Use Dependabot for GitHub Actions updates and npm security updates.
+#
+# Dependency ownership:
+#   - Renovate / Mend Renovate manages normal pnpm/npm dependency version updates.
+#   - Dependabot manages npm security update PRs only.
+#   - Dependabot manages GitHub Actions version updates.
+#
+# Release policy:
+#   - Dependabot PRs must never trigger a release.
+#   - All Dependabot PRs are labeled no-release.
+#   - Security dependency PRs are labeled security:dependency.
+#   - Auto-merge is handled by dependency-auto-merge workflow after CI/security pass.
 #
 # Notes:
-#   - GitHub officially documents the file as `.github/dependabot.yml`, but
-#     `.github/dependabot.yaml` is also accepted by GitHub.
-#   - Dependabot ignores labels that do not already exist in the repository, so
-#     keep `.github/labels.yaml` synced first.
-#   - Reviewers should be handled through CODEOWNERS. Dependabot's old reviewers
-#     option is retired on newer GitHub Enterprise Server versions.
+#   - GitHub officially documents the file as .github/dependabot.yml.
+#   - This repo uses .github/dependabot.yaml.
+#   - Dependabot ignores labels that do not already exist in the repository.
+#   - Keep .github/labels.yaml synced before enabling this.
+#   - Reviewers should be handled through CODEOWNERS and repo-management rules.
 # =============================================================================
 
 version: 2
 
 updates:
   # ---------------------------------------------------------------------------
-  # 📦 Root pnpm/npm workspace dependencies
+  # npm / pnpm security updates only
+  # ---------------------------------------------------------------------------
+  # Normal npm and pnpm version updates are managed by Renovate.
+  # open-pull-requests-limit: 0 disables normal version update PRs while allowing
+  # this ecosystem block to customize Dependabot security update PRs.
   # ---------------------------------------------------------------------------
   - package-ecosystem: "npm"
     directory: "/"
+
     schedule:
       interval: "daily"
       time: "06:00"
       timezone: "America/Boise"
 
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 0
 
     assignees:
       - "Sinless777"
 
     labels:
       - "dependencies"
-      - "kind:chore"
-      - "area:libs"
+      - "security:dependency"
+      - "kind:security"
+      - "area:dependencies"
+      - "area:security"
+      - "priority:critical"
       - "status:ready"
+      - "automation"
+      - "automation:dependabot"
+      - "auto-merge"
+      - "no-release"
 
     commit-message:
-      prefix: "chore(deps)"
-      prefix-development: "chore(deps-dev)"
+      prefix: "chore(deps-security)"
+      prefix-development: "chore(deps-dev-security)"
       include: "scope"
 
     pull-request-branch-name:
@@ -49,33 +71,36 @@ updates:
     rebase-strategy: "auto"
 
     groups:
-      production-dependencies:
+      npm-production-security:
+        applies-to: "security-updates"
         patterns:
           - "*"
         dependency-type: "production"
         update-types:
-          - "minor"
           - "patch"
+          - "minor"
+          - "major"
 
-      development-dependencies:
+      npm-development-security:
+        applies-to: "security-updates"
         patterns:
           - "*"
         dependency-type: "development"
         update-types:
-          - "minor"
           - "patch"
-
-      major-dependencies:
-        patterns:
-          - "*"
-        update-types:
+          - "minor"
           - "major"
 
   # ---------------------------------------------------------------------------
-  # ⚙️ GitHub Actions dependencies
+  # GitHub Actions dependency updates
+  # ---------------------------------------------------------------------------
+  # Dependabot owns GitHub Actions updates.
+  # Renovate should not also manage GitHub Actions unless you intentionally want
+  # duplicate automation coverage.
   # ---------------------------------------------------------------------------
   - package-ecosystem: "github-actions"
     directory: "/"
+
     schedule:
       interval: "daily"
       time: "06:30"
@@ -88,10 +113,14 @@ updates:
 
     labels:
       - "dependencies"
-      - "automation"
+      - "actions-update"
+      - "kind:chore"
       - "area:github-actions"
       - "area:ci"
+      - "automation"
+      - "automation:dependabot"
       - "status:ready"
+      - "no-release"
 
     commit-message:
       prefix: "chore(actions)"
@@ -103,6 +132,15 @@ updates:
     rebase-strategy: "auto"
 
     groups:
-      github-actions:
+      github-actions-patch-minor:
         patterns:
           - "*"
+        update-types:
+          - "patch"
+          - "minor"
+
+      github-actions-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
