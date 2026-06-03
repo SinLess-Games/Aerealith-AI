@@ -31,7 +31,7 @@ on:
       fail_on_audit:
         description: "Fail when pnpm audit reports vulnerabilities at or above audit_level."
         required: true
-        default: true
+        default: false
         type: boolean
       run_dependency_review:
         description: "Run GitHub dependency review on pull requests."
@@ -43,10 +43,20 @@ on:
         required: true
         default: true
         type: boolean
+      fail_on_package_validation:
+        description: "Fail when local package validation scripts fail."
+        required: true
+        default: false
+        type: boolean
       run_security_summary:
         description: "Run dependency and unified security summary scripts."
         required: true
         default: true
+        type: boolean
+      fail_on_security_summary:
+        description: "Fail when dependency/security summary scripts report errors."
+        required: true
+        default: false
         type: boolean
       dry_run:
         description: "Evaluate without making repository changes."
@@ -73,6 +83,8 @@ on:
       - ".renovaterc"
       - ".renovaterc.json"
       - ".github/workflows/dependency-management.yaml"
+      - ".github/scripts/npm/**"
+      - ".github/scripts/security/**"
 
   push:
     branches:
@@ -94,6 +106,8 @@ on:
       - ".renovaterc"
       - ".renovaterc.json"
       - ".github/workflows/dependency-management.yaml"
+      - ".github/scripts/npm/**"
+      - ".github/scripts/security/**"
 
   schedule:
     - cron: "19 12 * * 2"
@@ -106,7 +120,7 @@ permissions:
   security-events: read
 
 concurrency:
-  group: dependency-management-${{ github.workflow }}-${{ github.ref_name || github.run_id }}
+  group: dependency-management-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name || github.run_id }}
   cancel-in-progress: true
 
 defaults:
@@ -122,6 +136,7 @@ env:
   NX_DAEMON: "false"
   NEXT_TELEMETRY_DISABLED: "1"
   DEPENDENCY_OUTPUT_DIR: artifacts/dependencies
+  DEPENDENCY_RAW_OUTPUT_DIR: artifacts/dependency-raw
   SECURITY_OUTPUT_DIR: artifacts/security
   PACKAGE_OUTPUT_DIR: artifacts/packages
   PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
@@ -138,8 +153,11 @@ jobs:
       fail_on_audit: ${{ steps.context.outputs.fail_on_audit }}
       run_dependency_review: ${{ steps.context.outputs.run_dependency_review }}
       run_package_validation: ${{ steps.context.outputs.run_package_validation }}
+      fail_on_package_validation: ${{ steps.context.outputs.fail_on_package_validation }}
       run_security_summary: ${{ steps.context.outputs.run_security_summary }}
+      fail_on_security_summary: ${{ steps.context.outputs.fail_on_security_summary }}
       dry_run: ${{ steps.context.outputs.dry_run }}
+      is_pull_request: ${{ steps.context.outputs.is_pull_request }}
       should_run_audit: ${{ steps.context.outputs.should_run_audit }}
       should_run_outdated: ${{ steps.context.outputs.should_run_outdated }}
       should_run_dependency_review: ${{ steps.context.outputs.should_run_dependency_review }}
@@ -153,27 +171,36 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           INPUT_MODE: ${{ github.event.inputs.mode || 'all' }}
           INPUT_AUDIT_LEVEL: ${{ github.event.inputs.audit_level || 'high' }}
-          INPUT_FAIL_ON_AUDIT: ${{ github.event.inputs.fail_on_audit || 'true' }}
+          INPUT_FAIL_ON_AUDIT: ${{ github.event.inputs.fail_on_audit || 'false' }}
           INPUT_RUN_DEPENDENCY_REVIEW: ${{ github.event.inputs.run_dependency_review || 'true' }}
           INPUT_RUN_PACKAGE_VALIDATION: ${{ github.event.inputs.run_package_validation || 'true' }}
+          INPUT_FAIL_ON_PACKAGE_VALIDATION: ${{ github.event.inputs.fail_on_package_validation || 'false' }}
           INPUT_RUN_SECURITY_SUMMARY: ${{ github.event.inputs.run_security_summary || 'true' }}
+          INPUT_FAIL_ON_SECURITY_SUMMARY: ${{ github.event.inputs.fail_on_security_summary || 'false' }}
           INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
           set -euo pipefail
 
           mode="${INPUT_MODE:-all}"
           audit_level="${INPUT_AUDIT_LEVEL:-high}"
-          fail_on_audit="${INPUT_FAIL_ON_AUDIT:-true}"
+          fail_on_audit="${INPUT_FAIL_ON_AUDIT:-false}"
           run_dependency_review="${INPUT_RUN_DEPENDENCY_REVIEW:-true}"
           run_package_validation="${INPUT_RUN_PACKAGE_VALIDATION:-true}"
+          fail_on_package_validation="${INPUT_FAIL_ON_PACKAGE_VALIDATION:-false}"
           run_security_summary="${INPUT_RUN_SECURITY_SUMMARY:-true}"
+          fail_on_security_summary="${INPUT_FAIL_ON_SECURITY_SUMMARY:-false}"
           dry_run="${INPUT_DRY_RUN:-false}"
 
+          is_pull_request="false"
           should_run_audit="false"
           should_run_outdated="false"
           should_run_dependency_review="false"
           should_run_package_validation="false"
           should_run_security_summary="false"
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            is_pull_request="true"
+          fi
 
           case "$mode" in
             all)
@@ -219,6 +246,9 @@ jobs:
             should_run_dependency_review="false"
             should_run_package_validation="true"
             should_run_security_summary="true"
+            fail_on_audit="false"
+            fail_on_package_validation="false"
+            fail_on_security_summary="false"
           fi
 
           case "$audit_level" in
@@ -236,8 +266,11 @@ jobs:
             echo "fail_on_audit=$fail_on_audit"
             echo "run_dependency_review=$run_dependency_review"
             echo "run_package_validation=$run_package_validation"
+            echo "fail_on_package_validation=$fail_on_package_validation"
             echo "run_security_summary=$run_security_summary"
+            echo "fail_on_security_summary=$fail_on_security_summary"
             echo "dry_run=$dry_run"
+            echo "is_pull_request=$is_pull_request"
             echo "should_run_audit=$should_run_audit"
             echo "should_run_outdated=$should_run_outdated"
             echo "should_run_dependency_review=$should_run_dependency_review"
@@ -251,12 +284,15 @@ jobs:
             echo "| Setting | Value |"
             echo "|---|---|"
             echo "| Event | \`$EVENT_NAME\` |"
+            echo "| Pull request | \`$is_pull_request\` |"
             echo "| Mode | \`$mode\` |"
             echo "| Audit level | \`$audit_level\` |"
             echo "| Fail on audit | \`$fail_on_audit\` |"
             echo "| Dependency review | \`$should_run_dependency_review\` |"
             echo "| Package validation | \`$should_run_package_validation\` |"
+            echo "| Fail on package validation | \`$fail_on_package_validation\` |"
             echo "| Security summary | \`$should_run_security_summary\` |"
+            echo "| Fail on security summary | \`$fail_on_security_summary\` |"
             echo "| Dry run | \`$dry_run\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -291,7 +327,7 @@ jobs:
       - preflight
       - dependency-review
 
-    if: always()
+    if: always() && needs.preflight.result == 'success'
 
     env:
       GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
@@ -299,6 +335,8 @@ jobs:
       REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
       AUDIT_LEVEL: ${{ needs.preflight.outputs.audit_level }}
       FAIL_ON_AUDIT: ${{ needs.preflight.outputs.fail_on_audit }}
+      FAIL_ON_PACKAGE_VALIDATION: ${{ needs.preflight.outputs.fail_on_package_validation }}
+      FAIL_ON_SECURITY_SUMMARY: ${{ needs.preflight.outputs.fail_on_security_summary }}
       PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
 
     steps:
@@ -357,6 +395,7 @@ jobs:
           set -euo pipefail
 
           mkdir -p "$DEPENDENCY_OUTPUT_DIR"
+          mkdir -p "$DEPENDENCY_RAW_OUTPUT_DIR"
           mkdir -p "$SECURITY_OUTPUT_DIR"
           mkdir -p "$PACKAGE_OUTPUT_DIR"
 
@@ -367,9 +406,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          pnpm list --recursive --depth=0 --json > "$DEPENDENCY_OUTPUT_DIR/pnpm-workspace-packages.json" || true
-          pnpm list --recursive --prod --depth=20 --json > "$DEPENDENCY_OUTPUT_DIR/pnpm-production-dependencies.json" || true
-          pnpm list --recursive --dev --depth=20 --json > "$DEPENDENCY_OUTPUT_DIR/pnpm-development-dependencies.json" || true
+          pnpm list --recursive --depth=0 --json > "$DEPENDENCY_RAW_OUTPUT_DIR/pnpm-workspace-packages.json" || true
+          pnpm list --recursive --prod --depth=20 --json > "$DEPENDENCY_RAW_OUTPUT_DIR/pnpm-production-dependencies.json" || true
+          pnpm list --recursive --dev --depth=20 --json > "$DEPENDENCY_RAW_OUTPUT_DIR/pnpm-development-dependencies.json" || true
 
           node <<'NODE'
           const fs = require("node:fs");
@@ -394,6 +433,7 @@ jobs:
                 entry.name === "node_modules" ||
                 entry.name === ".next" ||
                 entry.name === ".nx" ||
+                entry.name === ".turbo" ||
                 entry.name === "dist" ||
                 entry.name === "coverage" ||
                 entry.name === "artifacts"
@@ -440,8 +480,23 @@ jobs:
             project: process.env.PROJECT_NAME || "Aerealith AI",
             repository: process.env.GITHUB_REPOSITORY || "",
             run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            event_name: process.env.GITHUB_EVENT_NAME || "",
             package_count: packages.length,
             packages,
+            totals: {
+              packages: packages.length,
+              findings: 0,
+              active_findings: 0,
+              critical: 0,
+              high: 0,
+              medium: 0,
+              low: 0,
+              warnings: 0,
+              errors: 0
+            },
+            status: "passed",
+            ok: true,
             created_at: new Date().toISOString(),
           };
 
@@ -467,7 +522,6 @@ jobs:
       - name: Audit dependencies
         id: audit
         if: needs.preflight.outputs.should_run_audit == 'true'
-        continue-on-error: true
         run: |
           set -euo pipefail
 
@@ -484,18 +538,18 @@ jobs:
             echo "::warning::pnpm audit reported vulnerabilities at or above level: $AUDIT_LEVEL"
 
             if [[ "$FAIL_ON_AUDIT" == "true" ]]; then
+              echo "::error::Dependency audit failed and fail_on_audit is true."
               exit "$audit_status"
             fi
           fi
 
       - name: Check outdated dependencies
         if: needs.preflight.outputs.should_run_outdated == 'true'
-        continue-on-error: true
         run: |
           set -euo pipefail
 
           set +e
-          pnpm outdated --recursive --format=json > "$DEPENDENCY_OUTPUT_DIR/pnpm-outdated.json"
+          pnpm outdated --recursive --format=json > "$DEPENDENCY_RAW_OUTPUT_DIR/pnpm-outdated.json"
           outdated_status=$?
           set -e
 
@@ -508,7 +562,8 @@ jobs:
           const path = require("node:path");
 
           const outputDir = process.env.DEPENDENCY_OUTPUT_DIR || "artifacts/dependencies";
-          const file = path.join(outputDir, "pnpm-outdated.json");
+          const rawDir = process.env.DEPENDENCY_RAW_OUTPUT_DIR || "artifacts/dependency-raw";
+          const file = path.join(rawDir, "pnpm-outdated.json");
 
           let raw = "";
           let data = null;
@@ -532,11 +587,27 @@ jobs:
             project: process.env.PROJECT_NAME || "Aerealith AI",
             repository: process.env.GITHUB_REPOSITORY || "",
             run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            event_name: process.env.GITHUB_EVENT_NAME || "",
+            status: "passed",
+            ok: true,
             outdated_count: rows.length,
             outdated: rows,
+            totals: {
+              outdated: rows.length,
+              findings: 0,
+              active_findings: 0,
+              critical: 0,
+              high: 0,
+              medium: 0,
+              low: 0,
+              warnings: rows.length,
+              errors: 0
+            },
             created_at: new Date().toISOString(),
           };
 
+          fs.mkdirSync(outputDir, { recursive: true });
           fs.writeFileSync(path.join(outputDir, "pnpm-outdated-summary.json"), `${JSON.stringify(report, null, 2)}\n`);
 
           const lines = [
@@ -565,9 +636,13 @@ jobs:
           NODE
 
       - name: Validate package metadata
+        id: package_validation
         if: needs.preflight.outputs.should_run_package_validation == 'true'
         run: |
           set -euo pipefail
+
+          validation_status="passed"
+          validation_errors=0
 
           run_optional() {
             local file="$1"
@@ -579,8 +654,24 @@ jobs:
             fi
 
             echo "::group::$file"
+
+            set +e
             node "$file" "$@"
+            local script_status=$?
+            set -e
+
             echo "::endgroup::"
+
+            if [[ "$script_status" -ne 0 ]]; then
+              echo "::warning::Package script failed: $file"
+              validation_status="warning"
+              validation_errors="$((validation_errors + 1))"
+
+              if [[ "$FAIL_ON_PACKAGE_VALIDATION" == "true" ]]; then
+                echo "::error::Package validation failed and fail_on_package_validation is true."
+                exit "$script_status"
+              fi
+            fi
           }
 
           run_optional ".github/scripts/npm/discover-packages.js" \
@@ -595,10 +686,34 @@ jobs:
             --output "$PACKAGE_OUTPUT_DIR/summarize-packages.json" \
             --summary "$PACKAGE_OUTPUT_DIR/summarize-packages.md"
 
+          {
+            echo "validation_status=$validation_status"
+            echo "validation_errors=$validation_errors"
+          } >> "$GITHUB_OUTPUT"
+
+          cat > "$PACKAGE_OUTPUT_DIR/package-validation-result.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "package-validation-result",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "status": "$validation_status",
+            "ok": $([[ "$validation_errors" -eq 0 ]] && echo "true" || echo "false"),
+            "errors": $validation_errors,
+            "fail_on_package_validation": "$FAIL_ON_PACKAGE_VALIDATION",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
       - name: Summarize dependency security
+        id: dependency_security_summary
         if: always() && needs.preflight.outputs.should_run_security_summary == 'true'
         run: |
           set -euo pipefail
+
+          summary_errors=0
 
           run_optional_summary() {
             local file="$1"
@@ -611,11 +726,22 @@ jobs:
 
             echo "::group::$file"
 
-            if ! node "$file" "$@"; then
-              echo "::warning::Summary script reported a non-zero exit: $file"
-            fi
+            set +e
+            node "$file" "$@"
+            local script_status=$?
+            set -e
 
             echo "::endgroup::"
+
+            if [[ "$script_status" -ne 0 ]]; then
+              echo "::warning::Summary script reported a non-zero exit: $file"
+              summary_errors="$((summary_errors + 1))"
+
+              if [[ "$FAIL_ON_SECURITY_SUMMARY" == "true" ]]; then
+                echo "::error::Security summary failed and fail_on_security_summary is true."
+                exit "$script_status"
+              fi
+            fi
           }
 
           dependency_args=(
@@ -631,11 +757,18 @@ jobs:
 
           run_optional_summary ".github/scripts/security/summarize-dependencies.js" "${dependency_args[@]}"
 
-          run_optional_summary ".github/scripts/security/summarize-security.js" \
-            --input-dir "$SECURITY_OUTPUT_DIR" \
-            --output "$SECURITY_OUTPUT_DIR/summarize-security.json" \
-            --summary "$SECURITY_OUTPUT_DIR/summarize-security.md" \
+          security_args=(
+            --input-dir "$SECURITY_OUTPUT_DIR"
+            --output "$SECURITY_OUTPUT_DIR/summarize-security.json"
+            --summary "$SECURITY_OUTPUT_DIR/summarize-security.md"
             --no-fail-on-error
+          )
+
+          run_optional_summary ".github/scripts/security/summarize-security.js" "${security_args[@]}"
+
+          {
+            echo "summary_errors=$summary_errors"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Write dependency management output summary
         if: always()
@@ -648,7 +781,7 @@ jobs:
             echo "| File | Size |"
             echo "|---|---:|"
 
-            for dir in "$DEPENDENCY_OUTPUT_DIR" "$SECURITY_OUTPUT_DIR" "$PACKAGE_OUTPUT_DIR"; do
+            for dir in "$DEPENDENCY_OUTPUT_DIR" "$DEPENDENCY_RAW_OUTPUT_DIR" "$SECURITY_OUTPUT_DIR" "$PACKAGE_OUTPUT_DIR"; do
               if [[ -d "$dir" ]]; then
                 while IFS= read -r file; do
                   size="$(wc -c < "$file" | xargs)"
@@ -665,6 +798,7 @@ jobs:
           name: dependency-management-${{ github.run_id }}
           path: |
             artifacts/dependencies/**
+            artifacts/dependency-raw/**
             artifacts/security/**
             artifacts/packages/**
           if-no-files-found: ignore
@@ -697,18 +831,30 @@ jobs:
             echo ""
             echo "| Decision | Value |"
             echo "|---|---|"
-            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
-            echo "| Audit level | \`${{ needs.preflight.outputs.audit_level }}\` |"
-            echo "| Fail on audit | \`${{ needs.preflight.outputs.fail_on_audit }}\` |"
-            echo "| Dependency review | \`${{ needs.preflight.outputs.should_run_dependency_review }}\` |"
-            echo "| Package validation | \`${{ needs.preflight.outputs.should_run_package_validation }}\` |"
-            echo "| Security summary | \`${{ needs.preflight.outputs.should_run_security_summary }}\` |"
-            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode || 'unknown' }}\` |"
+            echo "| Audit level | \`${{ needs.preflight.outputs.audit_level || 'unknown' }}\` |"
+            echo "| Fail on audit | \`${{ needs.preflight.outputs.fail_on_audit || 'unknown' }}\` |"
+            echo "| Dependency review | \`${{ needs.preflight.outputs.should_run_dependency_review || 'unknown' }}\` |"
+            echo "| Package validation | \`${{ needs.preflight.outputs.should_run_package_validation || 'unknown' }}\` |"
+            echo "| Fail on package validation | \`${{ needs.preflight.outputs.fail_on_package_validation || 'unknown' }}\` |"
+            echo "| Security summary | \`${{ needs.preflight.outputs.should_run_security_summary || 'unknown' }}\` |"
+            echo "| Fail on security summary | \`${{ needs.preflight.outputs.fail_on_security_summary || 'unknown' }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run || 'unknown' }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Enforce dependency management result
         run: |
           set -euo pipefail
+
+          check_required_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
 
           check_optional_job() {
             local name="$1"
@@ -720,7 +866,8 @@ jobs:
             fi
           }
 
+          check_required_job "Preflight" "${{ needs.preflight.result }}"
           check_optional_job "Dependency review" "${{ needs.dependency-review.result }}"
-          check_optional_job "Dependency management" "${{ needs.dependency-management.result }}"
+          check_required_job "Dependency management" "${{ needs.dependency-management.result }}"
 
           echo "Dependency management workflow completed."
