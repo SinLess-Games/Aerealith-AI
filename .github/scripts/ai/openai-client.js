@@ -401,12 +401,18 @@ function readTextFile(filePath, options = {}) {
 
   const absolutePath = path.resolve(filePath);
 
-  if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
-    if (options.required === false) return options.fallback ?? "";
-    throw new Error(`File not found: ${filePath}`);
-  }
+  try {
+    return fs.readFileSync(absolutePath, "utf8");
+  } catch (error) {
+    const code = error?.code;
 
-  return fs.readFileSync(absolutePath, "utf8");
+    if (code === "ENOENT" || code === "EISDIR" || code === "ENOTDIR") {
+      if (options.required === false) return options.fallback ?? "";
+      throw new Error(`File not found: ${filePath}`);
+    }
+
+    throw error;
+  }
 }
 
 function writeTextFile(filePath, contents, options = {}) {

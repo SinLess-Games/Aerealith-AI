@@ -1,9 +1,9 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from "node:crypto";
 
 const ALLOWED_ORIGINS = new Set([
-  'https://helixaibot.com',
-  'https://www.helixaibot.com',
-  'http://localhost:3000',
+  "https://helixaibot.com",
+  "https://www.helixaibot.com",
+  "http://localhost:3000",
 ]);
 
 type WaitlistPayload = {
@@ -13,13 +13,13 @@ type WaitlistPayload = {
 };
 
 type ApiErrorCode =
-  | 'METHOD_NOT_ALLOWED'
-  | 'INVALID_ORIGIN'
-  | 'INVALID_CONTENT_TYPE'
-  | 'VALIDATION_ERROR'
-  | 'BOT_CHECK_FAILED'
-  | 'DUPLICATE_EMAIL'
-  | 'INTERNAL_ERROR';
+  | "METHOD_NOT_ALLOWED"
+  | "INVALID_ORIGIN"
+  | "INVALID_CONTENT_TYPE"
+  | "VALIDATION_ERROR"
+  | "BOT_CHECK_FAILED"
+  | "DUPLICATE_EMAIL"
+  | "INTERNAL_ERROR";
 
 export async function OPTIONS(request: Request) {
   return new Response(null, {
@@ -34,26 +34,26 @@ export async function POST(request: Request) {
 
   try {
     if (!isAllowedOrigin(request)) {
-      logEvent('warn', 'waitlist.invalid_origin', {
+      logEvent("warn", "waitlist.invalid_origin", {
         requestId,
-        origin: request.headers.get('origin'),
+        origin: request.headers.get("origin"),
       });
 
       return errorResponse(
-        'INVALID_ORIGIN',
-        'This origin is not allowed.',
+        "INVALID_ORIGIN",
+        "This origin is not allowed.",
         403,
         requestId,
         request,
       );
     }
 
-    const contentType = request.headers.get('content-type') ?? '';
+    const contentType = request.headers.get("content-type") ?? "";
 
-    if (!contentType.includes('application/json')) {
+    if (!contentType.includes("application/json")) {
       return errorResponse(
-        'INVALID_CONTENT_TYPE',
-        'Content-Type must be application/json.',
+        "INVALID_CONTENT_TYPE",
+        "Content-Type must be application/json.",
         415,
         requestId,
         request,
@@ -62,32 +62,32 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as WaitlistPayload;
 
-    const email = body.email?.trim().toLowerCase() ?? '';
-    const turnstileToken = body.turnstileToken ?? '';
+    const email = body.email?.trim().toLowerCase() ?? "";
+    const turnstileToken = body.turnstileToken ?? "";
 
     if (!email || !isValidEmail(email)) {
       return errorResponse(
-        'VALIDATION_ERROR',
-        'A valid email address is required.',
+        "VALIDATION_ERROR",
+        "A valid email address is required.",
         400,
         requestId,
         request,
       );
     }
 
-    const ip = request.headers.get('cf-connecting-ip') ?? undefined;
+    const ip = request.headers.get("cf-connecting-ip") ?? undefined;
 
     const botCheckPassed = await verifyTurnstile(turnstileToken, ip);
 
     if (!botCheckPassed) {
-      logEvent('warn', 'waitlist.bot_check_failed', {
+      logEvent("warn", "waitlist.bot_check_failed", {
         requestId,
-        ipCountry: request.headers.get('cf-ipcountry'),
+        ipCountry: request.headers.get("cf-ipcountry"),
       });
 
       return errorResponse(
-        'BOT_CHECK_FAILED',
-        'Bot verification failed.',
+        "BOT_CHECK_FAILED",
+        "Bot verification failed.",
         403,
         requestId,
         request,
@@ -105,31 +105,31 @@ export async function POST(request: Request) {
       - Return DUPLICATE_EMAIL instead of leaking DB errors
     */
 
-    logEvent('info', 'waitlist.created', {
+    logEvent("info", "waitlist.created", {
       requestId,
       emailHash,
       durationMs: Date.now() - startedAt,
-      ipCountry: request.headers.get('cf-ipcountry'),
+      ipCountry: request.headers.get("cf-ipcountry"),
     });
 
     return successResponse(
       {
-        message: 'You have been added to the waitlist.',
+        message: "You have been added to the waitlist.",
       },
       requestId,
       201,
       request,
     );
   } catch (error) {
-    logEvent('error', 'waitlist.internal_error', {
+    logEvent("error", "waitlist.internal_error", {
       requestId,
       durationMs: Date.now() - startedAt,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     });
 
     return errorResponse(
-      'INTERNAL_ERROR',
-      'Something went wrong.',
+      "INTERNAL_ERROR",
+      "Something went wrong.",
       500,
       requestId,
       request,
@@ -138,28 +138,28 @@ export async function POST(request: Request) {
 }
 
 function getCorsHeaders(request: Request): HeadersInit {
-  const origin = request.headers.get('origin');
+  const origin = request.headers.get("origin");
 
   if (!origin || !ALLOWED_ORIGINS.has(origin)) {
     return {
-      Vary: 'Origin',
+      Vary: "Origin",
     };
   }
 
   return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Max-Age': '86400',
-    Vary: 'Origin',
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
   };
 }
 
 function isAllowedOrigin(request: Request): boolean {
-  const origin = request.headers.get('origin');
+  const origin = request.headers.get("origin");
 
   if (!origin) {
-    return true;
+    return false;
   }
 
   return ALLOWED_ORIGINS.has(origin);
@@ -219,11 +219,11 @@ async function verifyTurnstile(token: string, ip?: string): Promise<boolean> {
   }
 
   const response = await fetch(
-    'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
     {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         secret,
@@ -242,15 +242,15 @@ async function verifyTurnstile(token: string, ip?: string): Promise<boolean> {
 
 async function sha256(value: string): Promise<string> {
   const data = new TextEncoder().encode(value.toLowerCase().trim());
-  const hash = await crypto.subtle.digest('SHA-256', data);
+  const hash = await crypto.subtle.digest("SHA-256", data);
 
   return [...new Uint8Array(hash)]
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function logEvent(
-  level: 'info' | 'warn' | 'error',
+  level: "info" | "warn" | "error",
   event: string,
   data: Record<string, unknown>,
 ) {
@@ -258,7 +258,7 @@ function logEvent(
     JSON.stringify({
       level,
       event,
-      service: 'helix-ai-frontend',
+      service: "helix-ai-frontend",
       timestamp: new Date().toISOString(),
       ...data,
     }),

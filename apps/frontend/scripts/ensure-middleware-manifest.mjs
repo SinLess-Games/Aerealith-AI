@@ -1,9 +1,9 @@
-import { mkdirSync, existsSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const appRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const manifestPath = join(appRoot, '.next/server/middleware-manifest.json');
+const manifestPath = join(appRoot, ".next/server/middleware-manifest.json");
 
 const emptyMiddlewareManifest = {
   version: 3,
@@ -14,10 +14,24 @@ const emptyMiddlewareManifest = {
 
 mkdirSync(dirname(manifestPath), { recursive: true });
 
-if (!existsSync(manifestPath)) {
+try {
   writeFileSync(
     manifestPath,
     `${JSON.stringify(emptyMiddlewareManifest, null, 2)}\n`,
-    'utf8',
+    {
+      encoding: "utf8",
+      flag: "wx",
+    },
   );
+} catch (error) {
+  if (
+    !(
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "EEXIST"
+    )
+  ) {
+    throw error;
+  }
 }

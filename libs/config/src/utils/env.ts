@@ -31,7 +31,7 @@ export type EnvPathMapping = {
 };
 
 export class MissingEnvVarError extends Error {
-  public override readonly name = 'MissingEnvVarError';
+  public override readonly name = "MissingEnvVarError";
 
   public readonly key: string;
 
@@ -42,7 +42,7 @@ export class MissingEnvVarError extends Error {
 }
 
 export class InvalidEnvVarError extends Error {
-  public override readonly name = 'InvalidEnvVarError';
+  public override readonly name = "InvalidEnvVarError";
 
   public readonly key: string;
 
@@ -56,23 +56,23 @@ export class InvalidEnvVarError extends Error {
 }
 
 export const DEFAULT_TRUE_VALUES: readonly string[] = [
-  '1',
-  'true',
-  't',
-  'yes',
-  'y',
-  'on',
-  'enabled',
+  "1",
+  "true",
+  "t",
+  "yes",
+  "y",
+  "on",
+  "enabled",
 ];
 
 export const DEFAULT_FALSE_VALUES: readonly string[] = [
-  '0',
-  'false',
-  'f',
-  'no',
-  'n',
-  'off',
-  'disabled',
+  "0",
+  "false",
+  "f",
+  "no",
+  "n",
+  "off",
+  "disabled",
 ];
 
 export function normalizeEnvValue(
@@ -84,9 +84,9 @@ export function normalizeEnvValue(
   }
 
   if (
-    typeof value !== 'string' &&
-    typeof value !== 'number' &&
-    typeof value !== 'boolean'
+    typeof value !== "string" &&
+    typeof value !== "number" &&
+    typeof value !== "boolean"
   ) {
     return undefined;
   }
@@ -156,7 +156,7 @@ export function getRequiredFirstEnv(
     return value;
   }
 
-  throw new MissingEnvVarError(keys.join(' | '));
+  throw new MissingEnvVarError(keys.join(" | "));
 }
 
 export function getEnvBoolean(
@@ -185,10 +185,9 @@ export function getEnvBoolean(
   throw new InvalidEnvVarError(
     key,
     value,
-    `expected boolean-like value: ${[
-      ...trueValues,
-      ...falseValues,
-    ].join(', ')}`,
+    `expected boolean-like value: ${[...trueValues, ...falseValues].join(
+      ", ",
+    )}`,
   );
 }
 
@@ -220,7 +219,7 @@ export function getEnvNumber(
   const parsed = Number(value);
 
   if (!Number.isFinite(parsed)) {
-    throw new InvalidEnvVarError(key, value, 'expected a finite number');
+    throw new InvalidEnvVarError(key, value, "expected a finite number");
   }
 
   if (options.min !== undefined && parsed < options.min) {
@@ -268,7 +267,7 @@ export function getEnvInteger(
   }
 
   if (!Number.isInteger(value)) {
-    throw new InvalidEnvVarError(key, String(value), 'expected an integer');
+    throw new InvalidEnvVarError(key, String(value), "expected an integer");
   }
 
   return value;
@@ -299,7 +298,7 @@ export function getEnvList(
     return [];
   }
 
-  const separator = options.separator ?? ',';
+  const separator = options.separator ?? ",";
   const unique = options.unique ?? true;
 
   const values = value
@@ -328,7 +327,7 @@ export function getEnvJson<T>(
   try {
     return JSON.parse(value) as T;
   } catch {
-    throw new InvalidEnvVarError(key, value, 'expected valid JSON');
+    throw new InvalidEnvVarError(key, value, "expected valid JSON");
   }
 }
 
@@ -362,7 +361,7 @@ export function getEnvOneOf<TValue extends string>(
     throw new InvalidEnvVarError(
       key,
       value,
-      `expected one of: ${allowedValues.join(', ')}`,
+      `expected one of: ${allowedValues.join(", ")}`,
     );
   }
 
@@ -428,7 +427,7 @@ export function assertEnvKeys(
   const missingKeys = getMissingEnvKeys(env, keys, options);
 
   if (missingKeys.length > 0) {
-    throw new MissingEnvVarError(missingKeys.join(', '));
+    throw new MissingEnvVarError(missingKeys.join(", "));
   }
 }
 
@@ -480,63 +479,63 @@ export function getPublicEnv(
   options: EnvStringOptions = {},
 ): Record<string, string> {
   return {
-    ...filterEnvByPrefix(env, 'NEXT_PUBLIC_', options),
-    ...filterEnvByPrefix(env, 'PUBLIC_', options),
+    ...filterEnvByPrefix(env, "NEXT_PUBLIC_", options),
+    ...filterEnvByPrefix(env, "PUBLIC_", options),
   };
 }
 
 export function isPublicEnvKey(key: string): boolean {
-  return key.startsWith('NEXT_PUBLIC_') || key.startsWith('PUBLIC_');
+  return key.startsWith("NEXT_PUBLIC_") || key.startsWith("PUBLIC_");
 }
 
 export function isCloudflareEnv(env: EnvRecord): boolean {
   return (
-    hasEnv(env, 'CF_PAGES') ||
-    hasEnv(env, 'CF_PAGES_BRANCH') ||
-    hasEnv(env, 'CF_PAGES_COMMIT_SHA') ||
-    hasEnv(env, 'CLOUDFLARE_ACCOUNT_ID') ||
-    hasEnv(env, 'CLOUDFLARE_API_TOKEN')
+    hasEnv(env, "CF_PAGES") ||
+    hasEnv(env, "CF_PAGES_BRANCH") ||
+    hasEnv(env, "CF_PAGES_COMMIT_SHA") ||
+    hasEnv(env, "CLOUDFLARE_ACCOUNT_ID") ||
+    hasEnv(env, "CLOUDFLARE_API_TOKEN")
   );
 }
 
 export function isProductionEnv(env: EnvRecord): boolean {
   const value =
-    getFirstEnv(env, ['APP_ENV', 'NODE_ENV', 'ENVIRONMENT']) ?? 'development';
+    getFirstEnv(env, ["APP_ENV", "NODE_ENV", "ENVIRONMENT"]) ?? "development";
 
-  return value === 'production';
+  return value === "production";
 }
 
 export function isPreviewEnv(env: EnvRecord): boolean {
   const value =
-    getFirstEnv(env, ['APP_ENV', 'VERCEL_ENV', 'CF_PAGES_BRANCH']) ??
-    'development';
+    getFirstEnv(env, ["APP_ENV", "VERCEL_ENV", "CF_PAGES_BRANCH"]) ??
+    "development";
 
-  return value === 'preview';
+  return value === "preview";
 }
 
 export function resolveAppEnvironment(
   env: EnvRecord,
-): 'development' | 'preview' | 'staging' | 'production' | 'test' {
+): "development" | "preview" | "staging" | "production" | "test" {
   const value =
-    getFirstEnv(env, ['APP_ENV', 'NODE_ENV', 'ENVIRONMENT']) ?? 'development';
+    getFirstEnv(env, ["APP_ENV", "NODE_ENV", "ENVIRONMENT"]) ?? "development";
 
-  if (value === 'production') {
-    return 'production';
+  if (value === "production") {
+    return "production";
   }
 
-  if (value === 'preview') {
-    return 'preview';
+  if (value === "preview") {
+    return "preview";
   }
 
-  if (value === 'staging') {
-    return 'staging';
+  if (value === "staging") {
+    return "staging";
   }
 
-  if (value === 'test') {
-    return 'test';
+  if (value === "test") {
+    return "test";
   }
 
-  return 'development';
+  return "development";
 }
 
 export function envToPlainRecord(
@@ -582,7 +581,7 @@ export function setObjectPath(
   value: unknown,
 ): void {
   const segments = path
-    .split('.')
+    .split(".")
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0);
 
@@ -593,6 +592,10 @@ export function setObjectPath(
   let cursor: Record<string, unknown> = target;
 
   for (const segment of segments.slice(0, -1)) {
+    if (isUnsafePathSegment(segment)) {
+      return;
+    }
+
     const existing = cursor[segment];
 
     if (!isPlainObject(existing)) {
@@ -602,7 +605,13 @@ export function setObjectPath(
     cursor = cursor[segment] as Record<string, unknown>;
   }
 
-  cursor[segments[segments.length - 1]] = value;
+  const leafSegment = segments[segments.length - 1];
+
+  if (leafSegment === undefined || isUnsafePathSegment(leafSegment)) {
+    return;
+  }
+
+  cursor[leafSegment] = value;
 }
 
 export function parseEnvBoolean(value: string): boolean {
@@ -617,12 +626,12 @@ export function parseEnvBoolean(value: string): boolean {
   }
 
   throw new InvalidEnvVarError(
-    '<inline>',
+    "<inline>",
     value,
     `expected boolean-like value: ${[
       ...DEFAULT_TRUE_VALUES,
       ...DEFAULT_FALSE_VALUES,
-    ].join(', ')}`,
+    ].join(", ")}`,
   );
 }
 
@@ -630,7 +639,7 @@ export function parseEnvNumber(value: string): number {
   const parsed = Number(value);
 
   if (!Number.isFinite(parsed)) {
-    throw new InvalidEnvVarError('<inline>', value, 'expected a finite number');
+    throw new InvalidEnvVarError("<inline>", value, "expected a finite number");
   }
 
   return parsed;
@@ -640,7 +649,7 @@ export function parseEnvInteger(value: string): number {
   const parsed = parseEnvNumber(value);
 
   if (!Number.isInteger(parsed)) {
-    throw new InvalidEnvVarError('<inline>', value, 'expected an integer');
+    throw new InvalidEnvVarError("<inline>", value, "expected an integer");
   }
 
   return parsed;
@@ -648,9 +657,9 @@ export function parseEnvInteger(value: string): number {
 
 export function parseEnvList(
   value: string,
-  options: Omit<EnvListOptions, 'trim' | 'emptyAsUndefined'> = {},
+  options: Omit<EnvListOptions, "trim" | "emptyAsUndefined"> = {},
 ): string[] {
-  const separator = options.separator ?? ',';
+  const separator = options.separator ?? ",";
   const unique = options.unique ?? true;
 
   const values = value
@@ -666,9 +675,13 @@ export function parseEnvList(
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUnsafePathSegment(segment: string): boolean {
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value)
+    segment === "__proto__" ||
+    segment === "prototype" ||
+    segment === "constructor"
   );
 }

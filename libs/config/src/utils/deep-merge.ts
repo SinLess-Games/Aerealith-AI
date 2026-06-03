@@ -14,9 +14,9 @@ export type DeepPartial<T> = T extends (...args: never[]) => unknown
             }
           : T;
 
-export type ArrayMergeStrategy = 'replace' | 'concat' | 'merge-by-index';
+export type ArrayMergeStrategy = "replace" | "concat" | "merge-by-index";
 
-export type UndefinedMergeStrategy = 'ignore' | 'overwrite';
+export type UndefinedMergeStrategy = "ignore" | "overwrite";
 
 export type DeepMergeOptions = {
   /**
@@ -59,8 +59,8 @@ type DeepMergeContext = {
 const DEFAULT_MAX_DEPTH = 100;
 
 const defaultDeepMergeOptions = {
-  arrayStrategy: 'replace',
-  undefinedStrategy: 'ignore',
+  arrayStrategy: "replace",
+  undefinedStrategy: "ignore",
   maxDepth: DEFAULT_MAX_DEPTH,
 } satisfies Required<DeepMergeOptions>;
 
@@ -92,27 +92,27 @@ export function deepClone<T>(value: T): T {
 export function mergeDefined<TTarget, TSource>(
   target: TTarget,
   source: TSource,
-  options: Omit<DeepMergeOptions, 'undefinedStrategy'> = {},
+  options: Omit<DeepMergeOptions, "undefinedStrategy"> = {},
 ): TTarget & TSource {
   return deepMerge(target, source, {
     ...options,
-    undefinedStrategy: 'ignore',
+    undefinedStrategy: "ignore",
   });
 }
 
 export function mergeOverwrite<TTarget, TSource>(
   target: TTarget,
   source: TSource,
-  options: Omit<DeepMergeOptions, 'undefinedStrategy'> = {},
+  options: Omit<DeepMergeOptions, "undefinedStrategy"> = {},
 ): TTarget & TSource {
   return deepMerge(target, source, {
     ...options,
-    undefinedStrategy: 'overwrite',
+    undefinedStrategy: "overwrite",
   });
 }
 
 export function isPlainObject(value: unknown): value is PlainObject {
-  if (typeof value !== 'object' || value === null) {
+  if (typeof value !== "object" || value === null) {
     return false;
   }
 
@@ -176,6 +176,10 @@ export function setDeepValue<T extends PlainObject>(
   let cursor: PlainObject = target;
 
   for (const segment of segments.slice(0, -1)) {
+    if (isUnsafePathSegment(segment)) {
+      return target;
+    }
+
     const existing = cursor[segment];
 
     if (!isPlainObject(existing)) {
@@ -183,6 +187,10 @@ export function setDeepValue<T extends PlainObject>(
     }
 
     cursor = cursor[segment] as PlainObject;
+  }
+
+  if (isUnsafePathSegment(leafSegment)) {
+    return target;
   }
 
   cursor[leafSegment] = value;
@@ -270,10 +278,7 @@ function deepMergeUnknown(
     return cloneUnknown(source, context.seen);
   }
 
-  if (
-    source === undefined &&
-    context.options.undefinedStrategy === 'ignore'
-  ) {
+  if (source === undefined && context.options.undefinedStrategy === "ignore") {
     return cloneUnknown(target, context.seen);
   }
 
@@ -304,7 +309,7 @@ function mergeObjects(
   for (const [key, sourceValue] of Object.entries(source)) {
     if (
       sourceValue === undefined &&
-      context.options.undefinedStrategy === 'ignore'
+      context.options.undefinedStrategy === "ignore"
     ) {
       continue;
     }
@@ -325,14 +330,14 @@ function mergeArrays(
   source: unknown[],
   context: DeepMergeContext,
 ): unknown[] {
-  if (context.options.arrayStrategy === 'concat') {
+  if (context.options.arrayStrategy === "concat") {
     return [
       ...target.map((item: unknown) => cloneUnknown(item, context.seen)),
       ...source.map((item: unknown) => cloneUnknown(item, context.seen)),
     ];
   }
 
-  if (context.options.arrayStrategy === 'merge-by-index') {
+  if (context.options.arrayStrategy === "merge-by-index") {
     const maxLength = Math.max(target.length, source.length);
     const output: unknown[] = [];
 
@@ -359,19 +364,16 @@ function mergeArrays(
   return source.map((item: unknown) => cloneUnknown(item, context.seen));
 }
 
-function cloneUnknown(
-  value: unknown,
-  seen: WeakMap<object, unknown>,
-): unknown {
+function cloneUnknown(value: unknown, seen: WeakMap<object, unknown>): unknown {
   if (
     value === null ||
     value === undefined ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean' ||
-    typeof value === 'bigint' ||
-    typeof value === 'symbol' ||
-    typeof value === 'function'
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint" ||
+    typeof value === "symbol" ||
+    typeof value === "function"
   ) {
     return value;
   }
@@ -456,9 +458,9 @@ function cloneUnknown(
 }
 
 function normalizePath(path: string | readonly string[]): string[] {
-  if (typeof path === 'string') {
+  if (typeof path === "string") {
     return path
-      .split('.')
+      .split(".")
       .map((segment: string) => segment.trim())
       .filter((segment: string) => segment.length > 0);
   }
@@ -466,4 +468,12 @@ function normalizePath(path: string | readonly string[]): string[] {
   return path
     .map((segment: string) => segment.trim())
     .filter((segment: string) => segment.length > 0);
+}
+
+function isUnsafePathSegment(segment: string): boolean {
+  return (
+    segment === "__proto__" ||
+    segment === "prototype" ||
+    segment === "constructor"
+  );
 }
