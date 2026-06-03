@@ -18,46 +18,67 @@ on:
           - enable-auto-merge
           - merge-now
           - summarize-only
+
       pull_request_number:
         description: "Optional pull request number. Leave empty to scan open dependency PRs."
         required: false
         default: ""
         type: string
+
       allowed_authors:
         description: "Comma-separated bot authors allowed for dependency auto-merge."
         required: false
         default: "dependabot[bot],renovate[bot]"
         type: string
+
       required_label:
         description: "Optional label required before auto-merge."
         required: false
         default: ""
         type: string
+
       blocked_labels:
         description: "Comma-separated labels that block auto-merge."
         required: false
         default: "do-not-merge,blocked,hold,manual-review,security-review"
         type: string
+
       allow_major:
         description: "Allow major dependency updates."
         required: true
         default: false
         type: boolean
+
       allow_workflow_updates:
         description: "Allow dependency PRs that modify .github workflow/action files."
         required: true
         default: false
         type: boolean
+
       approve:
         description: "Approve eligible dependency PRs."
         required: true
         default: true
         type: boolean
+
       enable_auto_merge:
         description: "Enable GitHub auto-merge for eligible dependency PRs."
         required: true
         default: true
         type: boolean
+
+      fallback_to_merge_now:
+        description: "Directly merge eligible PRs when GitHub auto-merge is unavailable because branch protection is not configured."
+        required: true
+        default: true
+        type: boolean
+
+      require_passing_checks:
+        description: "Require at least one successful status/check before direct merge fallback or merge-now."
+        required: true
+        default: true
+        type: boolean
+
       merge_method:
         description: "Merge method to use."
         required: true
@@ -67,21 +88,25 @@ on:
           - squash
           - merge
           - rebase
+
       delete_branch:
         description: "Delete branch after merge when supported."
         required: true
         default: true
         type: boolean
+
       add_labels:
         description: "Comma-separated labels to add to eligible PRs when they exist."
         required: false
         default: "dependencies,auto-merge"
         type: string
+
       dry_run:
         description: "Evaluate without approving or enabling merge."
         required: true
         default: false
         type: boolean
+
       fail_on_blocked:
         description: "Fail the workflow if an evaluated PR is blocked."
         required: true
@@ -102,6 +127,7 @@ on:
     workflows:
       - Continuous Integration
       - CI
+      - Aerealith AI Security
       - Aerealith AI CodeQL
       - Aerealith AI Branch Policy
     types:
@@ -149,6 +175,8 @@ jobs:
       allow_workflow_updates: ${{ steps.context.outputs.allow_workflow_updates }}
       approve: ${{ steps.context.outputs.approve }}
       enable_auto_merge: ${{ steps.context.outputs.enable_auto_merge }}
+      fallback_to_merge_now: ${{ steps.context.outputs.fallback_to_merge_now }}
+      require_passing_checks: ${{ steps.context.outputs.require_passing_checks }}
       merge_method: ${{ steps.context.outputs.merge_method }}
       delete_branch: ${{ steps.context.outputs.delete_branch }}
       add_labels: ${{ steps.context.outputs.add_labels }}
@@ -160,23 +188,25 @@ jobs:
       - name: Resolve dependency auto-merge context
         id: context
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_MODE: ${{ github.event.inputs.mode || 'auto' }}
-          INPUT_PULL_REQUEST_NUMBER: ${{ github.event.inputs.pull_request_number || '' }}
-          INPUT_ALLOWED_AUTHORS: ${{ github.event.inputs.allowed_authors || 'dependabot[bot],renovate[bot]' }}
-          INPUT_REQUIRED_LABEL: ${{ github.event.inputs.required_label || '' }}
-          INPUT_BLOCKED_LABELS: ${{ github.event.inputs.blocked_labels || 'do-not-merge,blocked,hold,manual-review,security-review' }}
-          INPUT_ALLOW_MAJOR: ${{ github.event.inputs.allow_major || 'false' }}
-          INPUT_ALLOW_WORKFLOW_UPDATES: ${{ github.event.inputs.allow_workflow_updates || 'false' }}
-          INPUT_APPROVE: ${{ github.event.inputs.approve || 'true' }}
-          INPUT_ENABLE_AUTO_MERGE: ${{ github.event.inputs.enable_auto_merge || 'true' }}
-          INPUT_MERGE_METHOD: ${{ github.event.inputs.merge_method || 'squash' }}
-          INPUT_DELETE_BRANCH: ${{ github.event.inputs.delete_branch || 'true' }}
-          INPUT_ADD_LABELS: ${{ github.event.inputs.add_labels || 'dependencies,auto-merge' }}
-          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
-          INPUT_FAIL_ON_BLOCKED: ${{ github.event.inputs.fail_on_blocked || 'false' }}
-          EVENT_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
-          WORKFLOW_RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion || '' }}
+          EVENT_NAME: "${{ github.event_name }}"
+          INPUT_MODE: "${{ github.event.inputs.mode || 'auto' }}"
+          INPUT_PULL_REQUEST_NUMBER: "${{ github.event.inputs.pull_request_number || '' }}"
+          INPUT_ALLOWED_AUTHORS: "${{ github.event.inputs.allowed_authors || 'dependabot[bot],renovate[bot]' }}"
+          INPUT_REQUIRED_LABEL: "${{ github.event.inputs.required_label || '' }}"
+          INPUT_BLOCKED_LABELS: "${{ github.event.inputs.blocked_labels || 'do-not-merge,blocked,hold,manual-review,security-review' }}"
+          INPUT_ALLOW_MAJOR: "${{ github.event.inputs.allow_major || 'false' }}"
+          INPUT_ALLOW_WORKFLOW_UPDATES: "${{ github.event.inputs.allow_workflow_updates || 'false' }}"
+          INPUT_APPROVE: "${{ github.event.inputs.approve || 'true' }}"
+          INPUT_ENABLE_AUTO_MERGE: "${{ github.event.inputs.enable_auto_merge || 'true' }}"
+          INPUT_FALLBACK_TO_MERGE_NOW: "${{ github.event.inputs.fallback_to_merge_now || 'true' }}"
+          INPUT_REQUIRE_PASSING_CHECKS: "${{ github.event.inputs.require_passing_checks || 'true' }}"
+          INPUT_MERGE_METHOD: "${{ github.event.inputs.merge_method || 'squash' }}"
+          INPUT_DELETE_BRANCH: "${{ github.event.inputs.delete_branch || 'true' }}"
+          INPUT_ADD_LABELS: "${{ github.event.inputs.add_labels || 'dependencies,auto-merge' }}"
+          INPUT_DRY_RUN: "${{ github.event.inputs.dry_run || 'false' }}"
+          INPUT_FAIL_ON_BLOCKED: "${{ github.event.inputs.fail_on_blocked || 'false' }}"
+          EVENT_PR_NUMBER: "${{ github.event.pull_request.number || '' }}"
+          WORKFLOW_RUN_CONCLUSION: "${{ github.event.workflow_run.conclusion || '' }}"
         run: |
           set -euo pipefail
 
@@ -189,6 +219,8 @@ jobs:
           allow_workflow_updates="${INPUT_ALLOW_WORKFLOW_UPDATES:-false}"
           approve="${INPUT_APPROVE:-true}"
           enable_auto_merge="${INPUT_ENABLE_AUTO_MERGE:-true}"
+          fallback_to_merge_now="${INPUT_FALLBACK_TO_MERGE_NOW:-true}"
+          require_passing_checks="${INPUT_REQUIRE_PASSING_CHECKS:-true}"
           merge_method="${INPUT_MERGE_METHOD:-squash}"
           delete_branch="${INPUT_DELETE_BRANCH:-true}"
           add_labels="${INPUT_ADD_LABELS:-dependencies,auto-merge}"
@@ -201,10 +233,19 @@ jobs:
             should_collect_prs="false"
           fi
 
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_run" && "${WORKFLOW_RUN_CONCLUSION:-}" != "success" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_run" && "${WORKFLOW_RUN_CONCLUSION:-}" != "success" ]]; then
             echo "::notice::Source workflow conclusion was '${WORKFLOW_RUN_CONCLUSION:-unknown}'. Dependency auto-merge will not process PRs."
             should_collect_prs="false"
           fi
+
+          case "$mode" in
+            auto|evaluate-only|approve-only|enable-auto-merge|merge-now|summarize-only)
+              ;;
+            *)
+              echo "::error::Unsupported mode: $mode"
+              exit 1
+              ;;
+          esac
 
           case "$merge_method" in
             squash|merge|rebase)
@@ -225,6 +266,8 @@ jobs:
             echo "allow_workflow_updates=$allow_workflow_updates"
             echo "approve=$approve"
             echo "enable_auto_merge=$enable_auto_merge"
+            echo "fallback_to_merge_now=$fallback_to_merge_now"
+            echo "require_passing_checks=$require_passing_checks"
             echo "merge_method=$merge_method"
             echo "delete_branch=$delete_branch"
             echo "add_labels=$add_labels"
@@ -248,6 +291,8 @@ jobs:
             echo "| Allow workflow updates | \`${allow_workflow_updates}\` |"
             echo "| Approve | \`${approve}\` |"
             echo "| Enable auto-merge | \`${enable_auto_merge}\` |"
+            echo "| Fallback to merge-now | \`${fallback_to_merge_now}\` |"
+            echo "| Require passing checks | \`${require_passing_checks}\` |"
             echo "| Merge method | \`${merge_method}\` |"
             echo "| Delete branch | \`${delete_branch}\` |"
             echo "| Dry run | \`${dry_run}\` |"
@@ -303,6 +348,7 @@ jobs:
           const prsFile = process.env.PRS_FILE;
           const outputFile = process.env.GITHUB_OUTPUT;
           const eventName = process.env.GITHUB_EVENT_NAME || "";
+          const requestedPrNumber = String(process.env.REQUESTED_PR_NUMBER || "").trim();
           const allowedAuthors = new Set(
             String(process.env.ALLOWED_AUTHORS || "dependabot[bot],renovate[bot]")
               .split(",")
@@ -317,6 +363,9 @@ jobs:
             "renovate",
             "github-actions",
             "deps",
+            "npm",
+            "pnpm",
+            "yarn",
           ]);
 
           let prs = [];
@@ -340,7 +389,7 @@ jobs:
               continue;
             }
 
-            if (eventName === "pull_request_target" || eventName === "workflow_run" || process.env.REQUESTED_PR_NUMBER) {
+            if (eventName === "pull_request_target" || eventName === "workflow_run" || requestedPrNumber) {
               include.push({ number });
               continue;
             }
@@ -424,6 +473,8 @@ jobs:
       ALLOW_WORKFLOW_UPDATES: ${{ needs.preflight.outputs.allow_workflow_updates }}
       APPROVE: ${{ needs.preflight.outputs.approve }}
       ENABLE_AUTO_MERGE: ${{ needs.preflight.outputs.enable_auto_merge }}
+      FALLBACK_TO_MERGE_NOW: ${{ needs.preflight.outputs.fallback_to_merge_now }}
+      REQUIRE_PASSING_CHECKS: ${{ needs.preflight.outputs.require_passing_checks }}
       MERGE_METHOD: ${{ needs.preflight.outputs.merge_method }}
       DELETE_BRANCH: ${{ needs.preflight.outputs.delete_branch }}
       ADD_LABELS: ${{ needs.preflight.outputs.add_labels }}
@@ -478,11 +529,72 @@ jobs:
             return patterns.some((pattern) => pattern.test(value));
           }
 
+          function output(name, value) {
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
+          }
+
+          function checkRollupSummary(items) {
+            const summary = {
+              total: 0,
+              success: 0,
+              pending: 0,
+              failure: 0,
+              skipped: 0,
+              unknown: 0,
+              passed: false,
+              failed: false,
+              pending_or_unknown: false,
+            };
+
+            if (!Array.isArray(items)) {
+              return summary;
+            }
+
+            for (const item of items) {
+              summary.total += 1;
+
+              const conclusion = String(item.conclusion || "").toUpperCase();
+              const status = String(item.status || item.state || "").toUpperCase();
+
+              if (["SUCCESS", "NEUTRAL"].includes(conclusion) || ["SUCCESS"].includes(status)) {
+                summary.success += 1;
+                continue;
+              }
+
+              if (conclusion === "SKIPPED") {
+                summary.skipped += 1;
+                continue;
+              }
+
+              if (
+                ["FAILURE", "FAILED", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED"].includes(conclusion) ||
+                ["FAILURE", "ERROR"].includes(status)
+              ) {
+                summary.failure += 1;
+                continue;
+              }
+
+              if (["PENDING", "QUEUED", "IN_PROGRESS", "REQUESTED", "WAITING", "EXPECTED"].includes(status)) {
+                summary.pending += 1;
+                continue;
+              }
+
+              summary.unknown += 1;
+            }
+
+            summary.failed = summary.failure > 0;
+            summary.pending_or_unknown = summary.pending > 0 || summary.unknown > 0;
+            summary.passed = summary.total > 0 && summary.failure === 0 && summary.pending === 0 && summary.unknown === 0;
+
+            return summary;
+          }
+
           const allowedAuthors = new Set(lowerList(process.env.ALLOWED_AUTHORS || "dependabot[bot],renovate[bot]"));
           const blockedLabels = new Set(lowerList(process.env.BLOCKED_LABELS || ""));
           const requiredLabel = String(process.env.REQUIRED_LABEL || "").trim().toLowerCase();
           const allowMajor = bool(process.env.ALLOW_MAJOR);
           const allowWorkflowUpdates = bool(process.env.ALLOW_WORKFLOW_UPDATES);
+          const requirePassingChecks = bool(process.env.REQUIRE_PASSING_CHECKS);
 
           const dependencyLabels = new Set([
             "dependencies",
@@ -551,6 +663,9 @@ jobs:
           const title = String(pr.title || "");
           const titleLower = title.toLowerCase();
           const branchLower = String(pr.headRefName || "").toLowerCase();
+          const mergeStateStatus = String(pr.mergeStateStatus || "").toUpperCase();
+          const mergeable = String(pr.mergeable || "").toUpperCase();
+          const checkSummary = checkRollupSummary(pr.statusCheckRollup);
 
           const dependencySignal =
             allowedAuthors.has(author) ||
@@ -573,6 +688,7 @@ jobs:
             branchLower.includes("major");
 
           const workflowFiles = files.filter((file) => matchesAny(file, workflowFilePatterns));
+
           const disallowedFiles = files.filter((file) => {
             if (matchesAny(file, packageFilePatterns)) {
               return false;
@@ -625,6 +741,11 @@ jobs:
 
           const eligible = reasons.length === 0;
 
+          const cleanMergeState = ["CLEAN", "HAS_HOOKS"].includes(mergeStateStatus);
+          const mergeableEnough = mergeable === "MERGEABLE" || mergeable === "UNKNOWN" || mergeable === "";
+          const checksPassed = requirePassingChecks ? checkSummary.passed : !checkSummary.failed;
+          const readyForDirectMerge = eligible && cleanMergeState && mergeableEnough && checksPassed;
+
           const evaluation = {
             schema_version: 1,
             type: "dependency-auto-merge-evaluation",
@@ -644,6 +765,7 @@ jobs:
               merge_state_status: pr.mergeStateStatus || "",
               mergeable: pr.mergeable || "",
               review_decision: pr.reviewDecision || "",
+              auto_merge_enabled: Boolean(pr.autoMergeRequest),
               changed_files: pr.changedFiles || files.length,
               additions: pr.additions || 0,
               deletions: pr.deletions || 0,
@@ -658,12 +780,15 @@ jobs:
               workflow_files: workflowFiles,
               disallowed_files: disallowedFiles,
             },
+            checks: checkSummary,
             policy: {
               allow_major: allowMajor,
               allow_workflow_updates: allowWorkflowUpdates,
               required_label: requiredLabel,
+              require_passing_checks: requirePassingChecks,
             },
             eligible,
+            ready_for_direct_merge: readyForDirectMerge,
             reasons,
             created_at: new Date().toISOString(),
           };
@@ -671,21 +796,34 @@ jobs:
           fs.writeFileSync(process.env.EVALUATION_FILE, `${JSON.stringify(evaluation, null, 2)}\n`);
 
           const icon = eligible ? "✅" : "⚠️";
+          const directMergeIcon = readyForDirectMerge ? "✅" : "⏳";
           const lines = [
-            `# Dependency Auto Merge Evaluation`,
+            "# Dependency Auto Merge Evaluation",
             "",
             `Generated: \`${evaluation.created_at}\``,
             "",
             "## Status",
             "",
             `- Eligible: ${icon} \`${eligible ? "true" : "false"}\``,
+            `- Ready for direct merge: ${directMergeIcon} \`${readyForDirectMerge ? "true" : "false"}\``,
             `- PR: \`#${pr.number}\``,
             `- Title: ${pr.title}`,
             `- Author: \`${author || "unknown"}\``,
             `- Base: \`${pr.baseRefName || "unknown"}\``,
             `- Head: \`${pr.headRefName || "unknown"}\``,
             `- Merge state: \`${pr.mergeStateStatus || "unknown"}\``,
+            `- Mergeable: \`${pr.mergeable || "unknown"}\``,
             `- Review decision: \`${pr.reviewDecision || "unknown"}\``,
+            "",
+            "## Checks",
+            "",
+            `- Require passing checks: \`${requirePassingChecks ? "true" : "false"}\``,
+            `- Checks passed: \`${checkSummary.passed ? "true" : "false"}\``,
+            `- Total checks: \`${checkSummary.total}\``,
+            `- Successful checks: \`${checkSummary.success}\``,
+            `- Failed checks: \`${checkSummary.failure}\``,
+            `- Pending checks: \`${checkSummary.pending}\``,
+            `- Unknown checks: \`${checkSummary.unknown}\``,
             "",
             "## Signals",
             "",
@@ -702,17 +840,16 @@ jobs:
 
           fs.writeFileSync(process.env.SUMMARY_FILE, `${lines.join("\n").trim()}\n`);
 
-          fs.appendFileSync(
-            process.env.GITHUB_OUTPUT,
-            [
-              `eligible=${eligible ? "true" : "false"}`,
-              `blocked=${eligible ? "false" : "true"}`,
-              `reason=${reasons.join(" ") || "eligible"}`,
-              `evaluation_file=${process.env.EVALUATION_FILE}`,
-              `summary_file=${process.env.SUMMARY_FILE}`,
-              "",
-            ].join("\n"),
-          );
+          output("eligible", eligible ? "true" : "false");
+          output("blocked", eligible ? "false" : "true");
+          output("ready_for_direct_merge", readyForDirectMerge ? "true" : "false");
+          output("checks_passed", checkSummary.passed ? "true" : "false");
+          output("check_count", String(checkSummary.total));
+          output("merge_state_status", mergeStateStatus || "UNKNOWN");
+          output("mergeable", mergeable || "UNKNOWN");
+          output("reason", reasons.join(" ") || "eligible");
+          output("evaluation_file", process.env.EVALUATION_FILE);
+          output("summary_file", process.env.SUMMARY_FILE);
           NODE
 
           cat "$SUMMARY_FILE" >> "$GITHUB_STEP_SUMMARY"
@@ -758,7 +895,7 @@ jobs:
             echo "::warning::Unable to approve PR #$PR_NUMBER. It may already be approved or the token may not be allowed to approve it."
           fi
 
-      - name: Enable auto-merge
+      - name: Enable auto-merge or use safe fallback
         if: >-
           steps.evaluate.outputs.eligible == 'true' &&
           env.DRY_RUN != 'true' &&
@@ -789,10 +926,118 @@ jobs:
             merge_args+=(--delete-branch)
           fi
 
+          merge_log="$DEPENDENCY_AUTO_MERGE_OUTPUT_DIR/pr-${PR_NUMBER}-merge-action.log"
+          merge_result="$DEPENDENCY_AUTO_MERGE_OUTPUT_DIR/pr-${PR_NUMBER}-merge-action.json"
+
+          set +e
           gh pr merge "$PR_NUMBER" \
             --repo "$GITHUB_REPOSITORY" \
             --auto \
-            "${merge_args[@]}"
+            "${merge_args[@]}" >"$merge_log" 2>&1
+          auto_merge_status=$?
+          set -e
+
+          if [[ "$auto_merge_status" -eq 0 ]]; then
+            echo "::notice::Auto-merge enabled for PR #$PR_NUMBER."
+
+            cat > "$merge_result" <<JSON
+          {
+            "schema_version": 1,
+            "type": "dependency-auto-merge-action",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "pull_request": $PR_NUMBER,
+            "action": "enable-auto-merge",
+            "status": "success",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+            {
+              echo "## Auto-merge"
+              echo ""
+              echo "- PR: \`#$PR_NUMBER\`"
+              echo "- Status: \`enabled\`"
+              echo "- Method: \`$MERGE_METHOD\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            exit 0
+          fi
+
+          cat "$merge_log"
+
+          if grep -qiE "Protected branch rules not configured|enablePullRequestAutoMerge" "$merge_log"; then
+            echo "::warning::GitHub auto-merge is unavailable for PR #$PR_NUMBER because protected branch rules are not configured."
+
+            if [[ "$FALLBACK_TO_MERGE_NOW" == "true" && "${{ steps.evaluate.outputs.ready_for_direct_merge }}" == "true" ]]; then
+              echo "::notice::Using safe direct-merge fallback for PR #$PR_NUMBER."
+
+              gh pr merge "$PR_NUMBER" \
+                --repo "$GITHUB_REPOSITORY" \
+                "${merge_args[@]}"
+
+              cat > "$merge_result" <<JSON
+          {
+            "schema_version": 1,
+            "type": "dependency-auto-merge-action",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "pull_request": $PR_NUMBER,
+            "action": "fallback-merge-now",
+            "status": "success",
+            "reason": "GitHub auto-merge was unavailable because protected branch rules were not configured.",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+              {
+                echo "## Auto-merge fallback"
+                echo ""
+                echo "- PR: \`#$PR_NUMBER\`"
+                echo "- Auto-merge status: \`unavailable\`"
+                echo "- Fallback: \`direct merge completed\`"
+                echo "- Method: \`$MERGE_METHOD\`"
+              } >> "$GITHUB_STEP_SUMMARY"
+
+              exit 0
+            fi
+
+            cat > "$merge_result" <<JSON
+          {
+            "schema_version": 1,
+            "type": "dependency-auto-merge-action",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "pull_request": $PR_NUMBER,
+            "action": "enable-auto-merge",
+            "status": "skipped",
+            "reason": "GitHub auto-merge is unavailable because protected branch rules are not configured. Direct fallback was disabled or PR was not ready for direct merge.",
+            "ready_for_direct_merge": ${{ steps.evaluate.outputs.ready_for_direct_merge }},
+            "fallback_to_merge_now": $FALLBACK_TO_MERGE_NOW,
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+            {
+              echo "## Auto-merge skipped"
+              echo ""
+              echo "- PR: \`#$PR_NUMBER\`"
+              echo "- Auto-merge status: \`unavailable\`"
+              echo "- Reason: \`Protected branch rules are not configured for the base branch.\`"
+              echo "- Fallback to merge-now: \`$FALLBACK_TO_MERGE_NOW\`"
+              echo "- Ready for direct merge: \`${{ steps.evaluate.outputs.ready_for_direct_merge }}\`"
+              echo ""
+              echo "Configure branch protection with required checks/reviews, or run with \`mode=merge-now\` after checks pass."
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            exit 0
+          fi
+
+          echo "::error::Failed to enable auto-merge for PR #$PR_NUMBER."
+          exit "$auto_merge_status"
 
       - name: Merge now
         if: >-
@@ -801,6 +1046,27 @@ jobs:
           env.MODE == 'merge-now'
         run: |
           set -euo pipefail
+
+          if [[ "${{ steps.evaluate.outputs.ready_for_direct_merge }}" != "true" ]]; then
+            {
+              echo "## Merge Now Skipped"
+              echo ""
+              echo "- PR: \`#$PR_NUMBER\`"
+              echo "- Ready for direct merge: \`${{ steps.evaluate.outputs.ready_for_direct_merge }}\`"
+              echo "- Checks passed: \`${{ steps.evaluate.outputs.checks_passed }}\`"
+              echo "- Check count: \`${{ steps.evaluate.outputs.check_count }}\`"
+              echo "- Merge state: \`${{ steps.evaluate.outputs.merge_state_status }}\`"
+              echo "- Mergeable: \`${{ steps.evaluate.outputs.mergeable }}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            if [[ "$FAIL_ON_BLOCKED" == "true" ]]; then
+              echo "::error::PR #$PR_NUMBER is not ready for direct merge."
+              exit 1
+            fi
+
+            echo "::warning::PR #$PR_NUMBER is not ready for direct merge. Skipping merge-now."
+            exit 0
+          fi
 
           merge_args=()
 
@@ -841,6 +1107,9 @@ jobs:
             echo "Requested mode: \`$MODE\`"
             echo "Approve: \`$APPROVE\`"
             echo "Enable auto-merge: \`$ENABLE_AUTO_MERGE\`"
+            echo "Fallback to merge-now: \`$FALLBACK_TO_MERGE_NOW\`"
+            echo "Require passing checks: \`$REQUIRE_PASSING_CHECKS\`"
+            echo "Ready for direct merge: \`${{ steps.evaluate.outputs.ready_for_direct_merge }}\`"
             echo "Merge method: \`$MERGE_METHOD\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -853,12 +1122,13 @@ jobs:
 
       - name: Upload dependency auto-merge artifacts
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dependency-auto-merge-pr-${{ matrix.number }}-${{ github.run_id }}
           path: |
             artifacts/dependency-auto-merge/pr-${{ matrix.number }}*.json
             artifacts/dependency-auto-merge/pr-${{ matrix.number }}*.md
+            artifacts/dependency-auto-merge/pr-${{ matrix.number }}*.log
           if-no-files-found: ignore
           retention-days: 14
 
@@ -889,17 +1159,30 @@ jobs:
             echo ""
             echo "| Decision | Value |"
             echo "|---|---|"
-            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode || 'unknown' }}\` |"
             echo "| PR count | \`${{ needs.collect-prs.outputs.pr_count || '0' }}\` |"
-            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
-            echo "| Allow major | \`${{ needs.preflight.outputs.allow_major }}\` |"
-            echo "| Allow workflow updates | \`${{ needs.preflight.outputs.allow_workflow_updates }}\` |"
-            echo "| Merge method | \`${{ needs.preflight.outputs.merge_method }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run || 'unknown' }}\` |"
+            echo "| Allow major | \`${{ needs.preflight.outputs.allow_major || 'unknown' }}\` |"
+            echo "| Allow workflow updates | \`${{ needs.preflight.outputs.allow_workflow_updates || 'unknown' }}\` |"
+            echo "| Enable auto-merge | \`${{ needs.preflight.outputs.enable_auto_merge || 'unknown' }}\` |"
+            echo "| Fallback to merge-now | \`${{ needs.preflight.outputs.fallback_to_merge_now || 'unknown' }}\` |"
+            echo "| Require passing checks | \`${{ needs.preflight.outputs.require_passing_checks || 'unknown' }}\` |"
+            echo "| Merge method | \`${{ needs.preflight.outputs.merge_method || 'unknown' }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Enforce workflow result
         run: |
           set -euo pipefail
+
+          check_required_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
 
           check_optional_job() {
             local name="$1"
@@ -911,6 +1194,7 @@ jobs:
             fi
           }
 
+          check_required_job "Preflight" "${{ needs.preflight.result }}"
           check_optional_job "Collect PRs" "${{ needs.collect-prs.result }}"
           check_optional_job "Process PRs" "${{ needs.process-dependency-pr.result }}"
 
