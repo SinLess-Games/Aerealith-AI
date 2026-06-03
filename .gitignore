@@ -20,6 +20,7 @@ test-output/
 *.seed
 *.tgz
 *.swp
+.outputs/
 
 # Local runtime data
 null
