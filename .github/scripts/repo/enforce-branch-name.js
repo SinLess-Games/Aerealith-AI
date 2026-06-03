@@ -1313,19 +1313,17 @@ function regexFromPattern(pattern, flags = "") {
 
   if (!source) return null;
 
-  if (source.startsWith("/") && source.lastIndexOf("/") > 0) {
-    const lastSlash = source.lastIndexOf("/");
-    const body = source.slice(1, lastSlash);
-    const patternFlags = source.slice(lastSlash + 1) || flags;
-
-    return new RegExp(body, patternFlags);
-  }
-
   if (hasGlob(source)) {
     return globToRegExp(source);
   }
 
-  return new RegExp(source, flags);
+  const safeFlags = String(flags || "")
+    .replace(/[^dgimsuvy]/g, "")
+    .split("")
+    .filter((flag, index, array) => array.indexOf(flag) === index)
+    .join("");
+
+  return new RegExp(escapeRegExp(source), safeFlags);
 }
 
 function safeTest(pattern, value, flags = "") {
@@ -1837,7 +1835,11 @@ function createReport(
 }
 
 function escapeMarkdown(value) {
-  return String(value || "").replace(/\|/g, "\\|");
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/([`*_{}\[\]()#+\-.!|])/g, "\\$1");
 }
 
 function createMarkdownSummary(report) {
@@ -2058,7 +2060,7 @@ async function main() {
   }
 
   if (args.print) {
-    console.log(json.trim());
+    console.log(logger.redact(json).trim());
   }
 
   if (args.fail_on_error && !report.ok) {

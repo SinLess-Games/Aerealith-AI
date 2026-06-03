@@ -803,11 +803,7 @@ function refVariants(ref) {
 function regexMatches(value, pattern) {
   if (!pattern) return true;
 
-  try {
-    return new RegExp(pattern).test(value);
-  } catch (err) {
-    throw new Error(`Invalid --key-regex value: ${logger.formatError(err)}`);
-  }
+  return String(value || "").includes(String(pattern));
 }
 
 function cacheMatchesFilters(cache, args) {
@@ -1329,7 +1325,7 @@ async function main() {
   }
 
   if (args.print) {
-    console.log(json.trim());
+    console.log(logger.redact(json).trim());
   }
 
   if (args.fail_if_empty && output.totals.matched === 0) {

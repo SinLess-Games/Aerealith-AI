@@ -1394,7 +1394,11 @@ function compareUrl(repository, fromRef, toRef) {
 }
 
 function escapeMarkdown(value) {
-  return String(value || "").replace(/\|/g, "\\|");
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/([`*_{}\[\]()#+\-.!|])/g, "\\$1");
 }
 
 function markdownLink(label, url) {
@@ -1857,7 +1861,7 @@ async function main() {
   }
 
   if (args.print) {
-    console.log(json.trim());
+    console.log(logger.redact(json).trim());
   }
 
   if (args.fail_on_error && args.fail_if_empty && report.totals.commits === 0) {

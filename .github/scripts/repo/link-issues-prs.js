@@ -84,6 +84,14 @@ const DEFAULT_ISSUE_REFERENCE_PATTERN =
 
 const DEFAULT_BRANCH_ISSUE_PATTERN =
   "(?:^|/)(?:[a-z]+-)?([1-9][0-9]{0,8})(?:[-_/]|$)";
+const DEFAULT_ISSUE_REFERENCE_REGEX = new RegExp(
+  DEFAULT_ISSUE_REFERENCE_PATTERN,
+  "gi",
+);
+const DEFAULT_BRANCH_ISSUE_REGEX = new RegExp(
+  DEFAULT_BRANCH_ISSUE_PATTERN,
+  "gi",
+);
 
 const DEFAULT_LINK_KEYWORD = "Refs";
 
@@ -1631,15 +1639,15 @@ function regexFromPattern(pattern, flags = "gi") {
 
   if (!source) return null;
 
-  if (source.startsWith("/") && source.lastIndexOf("/") > 0) {
-    const lastSlash = source.lastIndexOf("/");
-    const body = source.slice(1, lastSlash);
-    const patternFlags = source.slice(lastSlash + 1) || flags;
-
-    return new RegExp(body, patternFlags);
+  if (source === DEFAULT_ISSUE_REFERENCE_PATTERN) {
+    return new RegExp(DEFAULT_ISSUE_REFERENCE_REGEX.source, "gi");
   }
 
-  return new RegExp(source, flags);
+  if (source === DEFAULT_BRANCH_ISSUE_PATTERN) {
+    return new RegExp(DEFAULT_BRANCH_ISSUE_REGEX.source, "gi");
+  }
+
+  return null;
 }
 
 function extractIssueNumbersFromText(text, pattern, sourceName) {
@@ -1665,6 +1673,7 @@ function extractIssueNumbersFromText(text, pattern, sourceName) {
       normalizeIssueNumber(match[1]) ||
       normalizeIssueNumber(match[2]) ||
       normalizeIssueNumber(match[3]) ||
+      normalizeIssueNumber(match[0].match(/[1-9][0-9]{0,8}/)?.[0]) ||
       "";
 
     if (number) {
@@ -2208,7 +2217,11 @@ function createReport(
 }
 
 function escapeMarkdown(value) {
-  return String(value || "").replace(/\|/g, "\\|");
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/([`*_{}\[\]()#+\-.!|])/g, "\\$1");
 }
 
 function createMarkdownSummary(report) {
@@ -2520,7 +2533,7 @@ async function main() {
   }
 
   if (args.print) {
-    console.log(json.trim());
+    console.log(logger.redact(json).trim());
   }
 
   if (args.fail_on_error && !report.ok) {

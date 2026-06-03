@@ -41,6 +41,16 @@ const DRY_RUN = ["true", "1", "yes", "on"].includes(
 const GITHUB_ACTIONS =
   String(process.env.GITHUB_ACTIONS || "").toLowerCase() === "true";
 
+let actionsCore = null;
+
+if (GITHUB_ACTIONS) {
+  try {
+    actionsCore = require("@actions/core");
+  } catch {
+    actionsCore = null;
+  }
+}
+
 const USE_GITHUB_ANNOTATIONS =
   GITHUB_ACTIONS &&
   String(
@@ -370,8 +380,8 @@ function mask(value) {
 
   if (!rendered) return;
 
-  if (GITHUB_ACTIONS) {
-    console.log(`::add-mask::${escapeGithubCommandValue(rendered)}`);
+  if (actionsCore?.setSecret) {
+    actionsCore.setSecret(rendered);
   }
 }
 

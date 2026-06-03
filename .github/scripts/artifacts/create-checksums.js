@@ -1106,7 +1106,7 @@ function main() {
   }
 
   if (args.print) {
-    console.log(json.trim());
+    console.log(logger.redact(json).trim());
   }
 
   if (args.fail_if_empty && checksums.totals.files === 0) {

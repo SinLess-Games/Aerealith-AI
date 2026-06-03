@@ -2323,7 +2323,11 @@ function createReport(
 }
 
 function escapeMarkdown(value) {
-  return String(value || "").replace(/\|/g, "\\|");
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/([`*_{}\[\]()#+\-.!|])/g, "\\$1");
 }
 
 function createMarkdownSummary(report) {
@@ -2647,7 +2651,7 @@ async function main() {
   }
 
   if (args.print) {
-    console.log(json.trim());
+    console.log(logger.redact(json).trim());
   }
 
   if (args.fail_on_error && !report.ok) {
