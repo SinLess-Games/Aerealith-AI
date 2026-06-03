@@ -71,7 +71,8 @@
   "pnpm": {
     "overrides": {
       "next": "15.5.18",
-      "ajv": "8.18.0",
+      "@rushstack/node-core-library>ajv": "8.18.0",
+      "postcss": "8.5.10",
       "protobufjs": "7.5.8",
       "qs": "6.15.2"
     }
