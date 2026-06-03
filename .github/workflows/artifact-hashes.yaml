@@ -9,41 +9,51 @@ on:
       source_run_id:
         description: "Optional GitHub Actions run ID to download artifacts from."
         required: false
+        default: ""
         type: string
+
       artifact_name:
         description: "Optional artifact name filter. Leave empty to download all artifacts."
         required: false
+        default: ""
         type: string
+
       artifact_paths:
         description: "Comma-separated local artifact paths/globs to hash after download."
         required: false
         default: ".outputs/artifact-hashes/input,artifacts,input,dist"
         type: string
+
       verify_only:
         description: "Only verify existing checksums instead of creating new ones."
         required: true
         default: false
         type: boolean
+
       create_manifest:
         description: "Create artifact manifest."
         required: true
         default: true
         type: boolean
+
       create_checksums:
         description: "Create checksums."
         required: true
         default: true
         type: boolean
+
       create_sbom:
         description: "Create SBOM when the script is available."
         required: true
         default: true
         type: boolean
+
       fail_on_verify_error:
         description: "Fail the workflow if verification fails."
         required: true
         default: true
         type: boolean
+
       dry_run:
         description: "Evaluate without writing generated outputs."
         required: true
@@ -52,6 +62,8 @@ on:
 
   workflow_run:
     workflows:
+      - Continuous Integration
+      - CI
       - Aerealith AI CI
       - Aerealith AI Release
       - Aerealith AI Repository Assistant
@@ -60,8 +72,8 @@ on:
 
 permissions:
   actions: read
-  contents: read
   checks: write
+  contents: read
   security-events: read
 
 concurrency:
@@ -77,6 +89,7 @@ env:
   PROJECT_NAME: Aerealith AI
   NODE_VERSION: "24"
   FORCE_COLOR: "1"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
   ARTIFACT_HASH_INPUT_DIR: ".outputs/artifact-hashes/input"
   ARTIFACT_HASH_OUTPUT_DIR: "artifacts/artifact-hashes"
@@ -85,6 +98,7 @@ jobs:
   preflight:
     name: Preflight
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     outputs:
       source_run_id: ${{ steps.context.outputs.source_run_id }}
@@ -97,22 +111,24 @@ jobs:
       fail_on_verify_error: ${{ steps.context.outputs.fail_on_verify_error }}
       dry_run: ${{ steps.context.outputs.dry_run }}
       should_download_artifacts: ${{ steps.context.outputs.should_download_artifacts }}
+      should_run_hashes: ${{ steps.context.outputs.should_run_hashes }}
 
     steps:
       - name: Resolve artifact hash context
         id: context
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_SOURCE_RUN_ID: ${{ github.event.inputs.source_run_id || '' }}
-          INPUT_ARTIFACT_NAME: ${{ github.event.inputs.artifact_name || '' }}
-          INPUT_ARTIFACT_PATHS: ${{ github.event.inputs.artifact_paths || '.outputs/artifact-hashes/input,artifacts,input,dist' }}
-          INPUT_VERIFY_ONLY: ${{ github.event.inputs.verify_only || 'false' }}
-          INPUT_CREATE_MANIFEST: ${{ github.event.inputs.create_manifest || 'true' }}
-          INPUT_CREATE_CHECKSUMS: ${{ github.event.inputs.create_checksums || 'true' }}
-          INPUT_CREATE_SBOM: ${{ github.event.inputs.create_sbom || 'true' }}
-          INPUT_FAIL_ON_VERIFY_ERROR: ${{ github.event.inputs.fail_on_verify_error || 'true' }}
-          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
-          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+          EVENT_NAME: "${{ github.event_name }}"
+          INPUT_SOURCE_RUN_ID: "${{ github.event.inputs.source_run_id || '' }}"
+          INPUT_ARTIFACT_NAME: "${{ github.event.inputs.artifact_name || '' }}"
+          INPUT_ARTIFACT_PATHS: "${{ github.event.inputs.artifact_paths || '.outputs/artifact-hashes/input,artifacts,input,dist' }}"
+          INPUT_VERIFY_ONLY: "${{ github.event.inputs.verify_only || 'false' }}"
+          INPUT_CREATE_MANIFEST: "${{ github.event.inputs.create_manifest || 'true' }}"
+          INPUT_CREATE_CHECKSUMS: "${{ github.event.inputs.create_checksums || 'true' }}"
+          INPUT_CREATE_SBOM: "${{ github.event.inputs.create_sbom || 'true' }}"
+          INPUT_FAIL_ON_VERIFY_ERROR: "${{ github.event.inputs.fail_on_verify_error || 'true' }}"
+          INPUT_DRY_RUN: "${{ github.event.inputs.dry_run || 'false' }}"
+          WORKFLOW_RUN_ID: "${{ github.event.workflow_run.id || '' }}"
+          WORKFLOW_RUN_CONCLUSION: "${{ github.event.workflow_run.conclusion || '' }}"
         run: |
           set -euo pipefail
 
@@ -125,9 +141,17 @@ jobs:
           create_sbom="${INPUT_CREATE_SBOM:-true}"
           fail_on_verify_error="${INPUT_FAIL_ON_VERIFY_ERROR:-true}"
           dry_run="${INPUT_DRY_RUN:-false}"
+          should_run_hashes="true"
 
-          if [[ "$EVENT_NAME" == "workflow_run" && -n "${WORKFLOW_RUN_ID:-}" ]]; then
-            source_run_id="$WORKFLOW_RUN_ID"
+          if [[ "$EVENT_NAME" == "workflow_run" ]]; then
+            if [[ -n "${WORKFLOW_RUN_ID:-}" ]]; then
+              source_run_id="$WORKFLOW_RUN_ID"
+            fi
+
+            if [[ "${WORKFLOW_RUN_CONCLUSION:-}" != "success" ]]; then
+              echo "::notice::Source workflow conclusion was '${WORKFLOW_RUN_CONCLUSION:-unknown}'. Artifact hash generation will be skipped."
+              should_run_hashes="false"
+            fi
           fi
 
           should_download_artifacts="false"
@@ -146,6 +170,7 @@ jobs:
             echo "fail_on_verify_error=$fail_on_verify_error"
             echo "dry_run=$dry_run"
             echo "should_download_artifacts=$should_download_artifacts"
+            echo "should_run_hashes=$should_run_hashes"
           } >> "$GITHUB_OUTPUT"
 
           {
@@ -164,13 +189,17 @@ jobs:
             echo "| Fail on verify error | \`$fail_on_verify_error\` |"
             echo "| Dry run | \`$dry_run\` |"
             echo "| Download artifacts | \`$should_download_artifacts\` |"
+            echo "| Run hashes | \`$should_run_hashes\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   artifact-hashes:
     name: Generate artifact hashes
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs:
       - preflight
+
+    if: needs.preflight.outputs.should_run_hashes == 'true'
 
     env:
       GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
@@ -188,12 +217,17 @@ jobs:
 
     steps:
       - name: Checkout repository automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
       - name: Prepare artifact directories
         run: |
@@ -212,18 +246,28 @@ jobs:
 
           echo "Downloading artifacts from run: $SOURCE_RUN_ID"
 
+          set +e
+
           if [[ -n "${ARTIFACT_NAME:-}" ]]; then
             gh run download "$SOURCE_RUN_ID" \
               --repo "$GITHUB_REPOSITORY" \
               --name "$ARTIFACT_NAME" \
               --dir "$ARTIFACT_HASH_INPUT_DIR"
+            download_status=$?
           else
             gh run download "$SOURCE_RUN_ID" \
               --repo "$GITHUB_REPOSITORY" \
               --dir "$ARTIFACT_HASH_INPUT_DIR"
+            download_status=$?
           fi
 
-          find "$ARTIFACT_HASH_INPUT_DIR" -type f | sort | sed 's#^#Downloaded: #'
+          set -e
+
+          if [[ "$download_status" -ne 0 ]]; then
+            echo "::warning::Unable to download artifacts from run $SOURCE_RUN_ID. Continuing with local staged paths."
+          fi
+
+          find "$ARTIFACT_HASH_INPUT_DIR" -type f | sort | sed 's#^#Downloaded: #' || true
 
       - name: Stage local artifact paths
         run: |
@@ -241,6 +285,10 @@ jobs:
             fi
 
             if [[ "$artifact_path" == "$ARTIFACT_HASH_INPUT_DIR"* ]]; then
+              continue
+            fi
+
+            if [[ "$artifact_path" == "$ARTIFACT_HASH_OUTPUT_DIR"* ]]; then
               continue
             fi
 
@@ -267,13 +315,18 @@ jobs:
 
               if [[ -d "$match" ]]; then
                 mkdir -p "$destination"
-                rsync -a \
-                  --exclude '.git' \
-                  --exclude 'node_modules' \
-                  --exclude '.nx' \
-                  --exclude '.turbo' \
-                  --exclude '.next/cache' \
-                  "$match/" "$destination/"
+
+                if command -v rsync >/dev/null 2>&1; then
+                  rsync -a \
+                    --exclude '.git' \
+                    --exclude 'node_modules' \
+                    --exclude '.nx' \
+                    --exclude '.turbo' \
+                    --exclude '.next/cache' \
+                    "$match/" "$destination/"
+                else
+                  cp -R "$match/." "$destination/"
+                fi
               else
                 cp "$match" "$destination"
               fi
@@ -297,12 +350,77 @@ jobs:
             exit 0
           fi
 
-          set +e
-          node ".github/scripts/artifacts/verify-artifacts.js" \
-            --input "$ARTIFACT_HASH_INPUT_DIR" \
-            --output "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.json" \
-            --summary "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.md"
+          find_first_named_file() {
+            local file_name="$1"
 
+            find "$ARTIFACT_HASH_INPUT_DIR" "$ARTIFACT_HASH_OUTPUT_DIR" \
+              -type f \
+              -name "$file_name" \
+              2>/dev/null | sort | head -n 1 || true
+          }
+
+          find_first_sbom_file() {
+            find "$ARTIFACT_HASH_INPUT_DIR" "$ARTIFACT_HASH_OUTPUT_DIR" \
+              -type f \
+              \( -iname "*sbom*.json" -o -iname "*.spdx.json" -o -iname "*.cdx.json" -o -iname "*cyclonedx*.json" \) \
+              2>/dev/null | sort | head -n 1 || true
+          }
+
+          manifest_file="$(find_first_named_file "artifact-manifest.json")"
+          checksums_json_file="$(find_first_named_file "checksums.json")"
+          hash_report_file="$(find_first_named_file "artifact-hashes.json")"
+          sha256_file="$(find_first_named_file "SHA256SUMS")"
+          sha512_file="$(find_first_named_file "SHA512SUMS")"
+          sbom_file="$(find_first_sbom_file)"
+
+          verify_args=(
+            --output "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.json"
+            --summary "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.md"
+            --no-print
+          )
+
+          if [[ -n "$manifest_file" && -f "$manifest_file" ]]; then
+            verify_args+=(--manifest "$manifest_file")
+          else
+            verify_args+=(--no-manifest)
+          fi
+
+          if [[ -n "$checksums_json_file" && -f "$checksums_json_file" ]]; then
+            verify_args+=(--checksums-json "$checksums_json_file")
+          else
+            verify_args+=(--no-checksums-json)
+          fi
+
+          if [[ -n "$hash_report_file" && -f "$hash_report_file" ]]; then
+            verify_args+=(--hash-report "$hash_report_file")
+          else
+            verify_args+=(--no-hash-report)
+          fi
+
+          if [[ -n "$sha256_file" && -f "$sha256_file" ]]; then
+            verify_args+=(--sha256 "$sha256_file")
+          fi
+
+          if [[ -n "$sha512_file" && -f "$sha512_file" ]]; then
+            verify_args+=(--sha512 "$sha512_file")
+          fi
+
+          if [[ -z "$sha256_file" && -z "$sha512_file" ]]; then
+            verify_args+=(--no-sums)
+          fi
+
+          if [[ -n "$sbom_file" && -f "$sbom_file" ]]; then
+            verify_args+=(--sbom "$sbom_file")
+          else
+            verify_args+=(--no-sbom)
+          fi
+
+          if [[ "$ARTIFACT_HASH_FAIL_ON_VERIFY_ERROR" != "true" ]]; then
+            verify_args+=(--no-fail-on-error)
+          fi
+
+          set +e
+          node ".github/scripts/artifacts/verify-artifacts.js" "${verify_args[@]}"
           status=$?
           set -e
 
@@ -325,9 +443,13 @@ jobs:
           fi
 
           node ".github/scripts/artifacts/create-artifact-manifest.js" \
-            --input "$ARTIFACT_HASH_INPUT_DIR" \
+            --include "$ARTIFACT_HASH_INPUT_DIR" \
             --output "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.json" \
-            --summary "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.md"
+            --summary "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.md" \
+            --sha256 "$ARTIFACT_HASH_OUTPUT_DIR/SHA256SUMS" \
+            --sha512 "$ARTIFACT_HASH_OUTPUT_DIR/SHA512SUMS" \
+            --include-hidden \
+            --no-print
 
       - name: Create artifact checksums
         if: needs.preflight.outputs.verify_only != 'true' && needs.preflight.outputs.create_checksums == 'true'
@@ -340,11 +462,13 @@ jobs:
           fi
 
           node ".github/scripts/artifacts/create-checksums.js" \
-            --input "$ARTIFACT_HASH_INPUT_DIR" \
-            --output "$ARTIFACT_HASH_OUTPUT_DIR/checksums.json" \
+            --include "$ARTIFACT_HASH_INPUT_DIR" \
+            --json "$ARTIFACT_HASH_OUTPUT_DIR/checksums.json" \
             --summary "$ARTIFACT_HASH_OUTPUT_DIR/checksums.md" \
             --sha256 "$ARTIFACT_HASH_OUTPUT_DIR/SHA256SUMS" \
-            --sha512 "$ARTIFACT_HASH_OUTPUT_DIR/SHA512SUMS"
+            --sha512 "$ARTIFACT_HASH_OUTPUT_DIR/SHA512SUMS" \
+            --include-hidden \
+            --no-print
 
       - name: Hash artifacts
         if: needs.preflight.outputs.verify_only != 'true'
@@ -356,10 +480,20 @@ jobs:
             exit 0
           fi
 
-          node ".github/scripts/artifacts/hash-artifacts.js" \
-            --input "$ARTIFACT_HASH_INPUT_DIR" \
-            --output "$ARTIFACT_HASH_OUTPUT_DIR/hash-artifacts.json" \
+          hash_args=(
+            --include "$ARTIFACT_HASH_INPUT_DIR"
+            --output "$ARTIFACT_HASH_OUTPUT_DIR/hash-artifacts.json"
             --summary "$ARTIFACT_HASH_OUTPUT_DIR/hash-artifacts.md"
+            --hashes "$ARTIFACT_HASH_OUTPUT_DIR/ARTIFACT-HASHES.txt"
+            --include-hidden
+            --no-print
+          )
+
+          if [[ -f "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.json" ]]; then
+            hash_args+=(--manifest "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.json")
+          fi
+
+          node ".github/scripts/artifacts/hash-artifacts.js" "${hash_args[@]}"
 
       - name: Create artifact SBOM
         if: needs.preflight.outputs.verify_only != 'true' && needs.preflight.outputs.create_sbom == 'true'
@@ -372,9 +506,11 @@ jobs:
           fi
 
           node ".github/scripts/artifacts/create-sbom.js" \
-            --input "$ARTIFACT_HASH_INPUT_DIR" \
+            --source "$GITHUB_WORKSPACE" \
             --output "$ARTIFACT_HASH_OUTPUT_DIR/sbom.json" \
-            --summary "$ARTIFACT_HASH_OUTPUT_DIR/sbom.md"
+            --summary "$ARTIFACT_HASH_OUTPUT_DIR/sbom.md" \
+            --no-fail-if-empty \
+            --no-print
 
       - name: Verify generated artifact hashes
         if: needs.preflight.outputs.verify_only != 'true'
@@ -386,13 +522,61 @@ jobs:
             exit 0
           fi
 
-          set +e
-          node ".github/scripts/artifacts/verify-artifacts.js" \
-            --input "$ARTIFACT_HASH_INPUT_DIR" \
-            --checksums "$ARTIFACT_HASH_OUTPUT_DIR/checksums.json" \
-            --output "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.json" \
-            --summary "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.md"
+          manifest_file="$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.json"
+          checksums_json_file="$ARTIFACT_HASH_OUTPUT_DIR/checksums.json"
+          hash_report_file="$ARTIFACT_HASH_OUTPUT_DIR/hash-artifacts.json"
+          sha256_file="$ARTIFACT_HASH_OUTPUT_DIR/SHA256SUMS"
+          sha512_file="$ARTIFACT_HASH_OUTPUT_DIR/SHA512SUMS"
+          sbom_file="$ARTIFACT_HASH_OUTPUT_DIR/sbom.json"
 
+          verify_args=(
+            --output "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.json"
+            --summary "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.md"
+            --no-print
+          )
+
+          if [[ -f "$manifest_file" ]]; then
+            verify_args+=(--manifest "$manifest_file")
+          else
+            verify_args+=(--no-manifest)
+          fi
+
+          if [[ -f "$checksums_json_file" ]]; then
+            verify_args+=(--checksums-json "$checksums_json_file")
+          else
+            verify_args+=(--no-checksums-json)
+          fi
+
+          if [[ -f "$hash_report_file" ]]; then
+            verify_args+=(--hash-report "$hash_report_file")
+          else
+            verify_args+=(--no-hash-report)
+          fi
+
+          if [[ -f "$sha256_file" ]]; then
+            verify_args+=(--sha256 "$sha256_file")
+          fi
+
+          if [[ -f "$sha512_file" ]]; then
+            verify_args+=(--sha512 "$sha512_file")
+          fi
+
+          if [[ ! -f "$sha256_file" && ! -f "$sha512_file" ]]; then
+            verify_args+=(--no-sums)
+          fi
+
+          if [[ -f "$sbom_file" ]]; then
+            verify_args+=(--sbom "$sbom_file")
+          else
+            verify_args+=(--no-sbom)
+          fi
+
+          if [[ "$ARTIFACT_HASH_FAIL_ON_VERIFY_ERROR" != "true" ]]; then
+            verify_args+=(--no-fail-on-error)
+          fi
+
+          set +e
+          node ".github/scripts/artifacts/verify-artifacts.js" "${verify_args[@]}"
           status=$?
           set -e
 
@@ -425,7 +609,7 @@ jobs:
 
       - name: Upload artifact hash reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: artifact-hashes-${{ github.run_id }}
           path: |
@@ -435,7 +619,7 @@ jobs:
 
       - name: Upload staged artifact input snapshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: artifact-hash-input-${{ github.run_id }}
           path: |
@@ -446,6 +630,7 @@ jobs:
   finalize:
     name: Finalize
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs:
       - preflight
       - artifact-hashes
@@ -469,9 +654,38 @@ jobs:
             echo "|---|---|"
             echo "| Source run ID | \`${{ needs.preflight.outputs.source_run_id || 'none' }}\` |"
             echo "| Artifact name filter | \`${{ needs.preflight.outputs.artifact_name || 'none' }}\` |"
-            echo "| Verify only | \`${{ needs.preflight.outputs.verify_only }}\` |"
-            echo "| Create manifest | \`${{ needs.preflight.outputs.create_manifest }}\` |"
-            echo "| Create checksums | \`${{ needs.preflight.outputs.create_checksums }}\` |"
-            echo "| Create SBOM | \`${{ needs.preflight.outputs.create_sbom }}\` |"
-            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| Verify only | \`${{ needs.preflight.outputs.verify_only || 'unknown' }}\` |"
+            echo "| Create manifest | \`${{ needs.preflight.outputs.create_manifest || 'unknown' }}\` |"
+            echo "| Create checksums | \`${{ needs.preflight.outputs.create_checksums || 'unknown' }}\` |"
+            echo "| Create SBOM | \`${{ needs.preflight.outputs.create_sbom || 'unknown' }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run || 'unknown' }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce artifact hash result
+        run: |
+          set -euo pipefail
+
+          check_required_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
+
+          check_optional_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
+
+          check_required_job "Preflight" "${{ needs.preflight.result }}"
+          check_optional_job "Artifact hashes" "${{ needs.artifact-hashes.result }}"
+
+          echo "Artifact hash workflow completed."
