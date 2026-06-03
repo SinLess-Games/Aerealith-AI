@@ -1,84 +1,126 @@
-name: Aerealith AI Artifact Hashes
+name: Aerealith AI Repository Assistant
 
 run-name: >-
-  Artifact Hashes / ${{ github.event_name }} / ${{ github.ref_name || github.head_ref || github.event.workflow_run.head_branch || 'manual' }}
+  Repository Assistant / ${{ github.event_name }} / ${{ github.event.pull_request.number || github.event.issue.number || github.ref_name || 'manual' }}
 
 on:
   workflow_dispatch:
     inputs:
-      source_run_id:
-        description: "Optional GitHub Actions run ID to download artifacts from."
+      mode:
+        description: "Repository assistant mode."
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - all
+          - repo-management
+          - ai-assistant
+          - security-triage
+          - security-summary
+          - summarize-only
+
+      issue_number:
+        description: "Optional issue number for item-scoped repository automation."
         required: false
         default: ""
         type: string
 
-      artifact_name:
-        description: "Optional artifact name filter. Leave empty to download all artifacts."
+      pull_request_number:
+        description: "Optional pull request number for item-scoped repository automation."
         required: false
         default: ""
         type: string
 
-      artifact_paths:
-        description: "Comma-separated local artifact paths/globs to hash after download."
-        required: false
-        default: ".outputs/artifact-hashes/input,artifacts,input,dist"
-        type: string
+      run_repo_management:
+        description: "Run repository management automation."
+        required: true
+        default: true
+        type: boolean
 
-      verify_only:
-        description: "Only verify existing checksums instead of creating new ones."
+      run_ai_assistant:
+        description: "Run AI assistant automation when configured."
         required: true
         default: false
         type: boolean
 
-      create_manifest:
-        description: "Create artifact manifest."
+      run_security_triage:
+        description: "Run security triage automation when configured."
+        required: true
+        default: false
+        type: boolean
+
+      run_security_summary:
+        description: "Run security summary automation."
         required: true
         default: true
         type: boolean
 
-      create_checksums:
-        description: "Create checksums."
+      fail_on_repo_management_error:
+        description: "Fail when item-scoped repository management scripts fail."
         required: true
         default: true
         type: boolean
 
-      create_sbom:
-        description: "Create SBOM when the script is available."
+      fail_on_security_summary_error:
+        description: "Fail when security summary scripts fail."
         required: true
-        default: true
-        type: boolean
-
-      fail_on_verify_error:
-        description: "Fail the workflow if verification fails."
-        required: true
-        default: true
+        default: false
         type: boolean
 
       dry_run:
-        description: "Evaluate without writing generated outputs."
+        description: "Evaluate without changing repository state."
         required: true
         default: false
         type: boolean
 
-  workflow_run:
-    workflows:
-      - Continuous Integration
-      - CI
-      - Aerealith AI CI
-      - Aerealith AI Release
-      - Aerealith AI Repository Assistant
+  issues:
     types:
-      - completed
+      - opened
+      - edited
+      - reopened
+      - assigned
+      - unassigned
+      - labeled
+      - unlabeled
+      - milestoned
+      - demilestoned
+
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+      - converted_to_draft
+      - labeled
+      - unlabeled
+      - assigned
+      - unassigned
+      - review_requested
+      - review_request_removed
+
+  issue_comment:
+    types:
+      - created
+      - edited
+
+  schedule:
+    - cron: "17 14 * * *"
 
 permissions:
   actions: read
   checks: write
   contents: read
+  issues: write
+  pull-requests: write
   security-events: read
+  statuses: read
 
 concurrency:
   group: >-
-    artifact-hashes-${{ github.event.workflow_run.id || github.run_id }}
+    repo-assistant-${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.ref_name || github.run_id }}
   cancel-in-progress: false
 
 defaults:
@@ -90,9 +132,13 @@ env:
   NODE_VERSION: "24"
   FORCE_COLOR: "1"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  CI: "true"
+  NX_DAEMON: "false"
+  NEXT_TELEMETRY_DISABLED: "1"
+  REPO_OUTPUT_DIR: artifacts/repo
+  SECURITY_OUTPUT_DIR: artifacts/security
+  AI_OUTPUT_DIR: artifacts/ai
   PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
-  ARTIFACT_HASH_INPUT_DIR: ".outputs/artifact-hashes/input"
-  ARTIFACT_HASH_OUTPUT_DIR: "artifacts/artifact-hashes"
 
 jobs:
   preflight:
@@ -101,125 +147,656 @@ jobs:
     timeout-minutes: 5
 
     outputs:
-      source_run_id: ${{ steps.context.outputs.source_run_id }}
-      artifact_name: ${{ steps.context.outputs.artifact_name }}
-      artifact_paths: ${{ steps.context.outputs.artifact_paths }}
-      verify_only: ${{ steps.context.outputs.verify_only }}
-      create_manifest: ${{ steps.context.outputs.create_manifest }}
-      create_checksums: ${{ steps.context.outputs.create_checksums }}
-      create_sbom: ${{ steps.context.outputs.create_sbom }}
-      fail_on_verify_error: ${{ steps.context.outputs.fail_on_verify_error }}
+      mode: ${{ steps.context.outputs.mode }}
       dry_run: ${{ steps.context.outputs.dry_run }}
-      should_download_artifacts: ${{ steps.context.outputs.should_download_artifacts }}
-      should_run_hashes: ${{ steps.context.outputs.should_run_hashes }}
+      item_kind: ${{ steps.context.outputs.item_kind }}
+      item_number: ${{ steps.context.outputs.item_number }}
+      has_item: ${{ steps.context.outputs.has_item }}
+      script_event_name: ${{ steps.context.outputs.script_event_name }}
+      should_run_repo_management: ${{ steps.context.outputs.should_run_repo_management }}
+      should_run_ai_assistant: ${{ steps.context.outputs.should_run_ai_assistant }}
+      should_run_security_triage: ${{ steps.context.outputs.should_run_security_triage }}
+      should_run_security_summary: ${{ steps.context.outputs.should_run_security_summary }}
+      fail_on_repo_management_error: ${{ steps.context.outputs.fail_on_repo_management_error }}
+      fail_on_security_summary_error: ${{ steps.context.outputs.fail_on_security_summary_error }}
 
     steps:
-      - name: Resolve artifact hash context
+      - name: Resolve repository assistant context
         id: context
         env:
           EVENT_NAME: "${{ github.event_name }}"
-          INPUT_SOURCE_RUN_ID: "${{ github.event.inputs.source_run_id || '' }}"
-          INPUT_ARTIFACT_NAME: "${{ github.event.inputs.artifact_name || '' }}"
-          INPUT_ARTIFACT_PATHS: "${{ github.event.inputs.artifact_paths || '.outputs/artifact-hashes/input,artifacts,input,dist' }}"
-          INPUT_VERIFY_ONLY: "${{ github.event.inputs.verify_only || 'false' }}"
-          INPUT_CREATE_MANIFEST: "${{ github.event.inputs.create_manifest || 'true' }}"
-          INPUT_CREATE_CHECKSUMS: "${{ github.event.inputs.create_checksums || 'true' }}"
-          INPUT_CREATE_SBOM: "${{ github.event.inputs.create_sbom || 'true' }}"
-          INPUT_FAIL_ON_VERIFY_ERROR: "${{ github.event.inputs.fail_on_verify_error || 'true' }}"
+          INPUT_MODE: "${{ github.event.inputs.mode || 'auto' }}"
+          INPUT_ISSUE_NUMBER: "${{ github.event.inputs.issue_number || '' }}"
+          INPUT_PULL_REQUEST_NUMBER: "${{ github.event.inputs.pull_request_number || '' }}"
+          INPUT_RUN_REPO_MANAGEMENT: "${{ github.event.inputs.run_repo_management || 'true' }}"
+          INPUT_RUN_AI_ASSISTANT: "${{ github.event.inputs.run_ai_assistant || 'false' }}"
+          INPUT_RUN_SECURITY_TRIAGE: "${{ github.event.inputs.run_security_triage || 'false' }}"
+          INPUT_RUN_SECURITY_SUMMARY: "${{ github.event.inputs.run_security_summary || 'true' }}"
+          INPUT_FAIL_ON_REPO_MANAGEMENT_ERROR: "${{ github.event.inputs.fail_on_repo_management_error || 'true' }}"
+          INPUT_FAIL_ON_SECURITY_SUMMARY_ERROR: "${{ github.event.inputs.fail_on_security_summary_error || 'false' }}"
           INPUT_DRY_RUN: "${{ github.event.inputs.dry_run || 'false' }}"
-          WORKFLOW_RUN_ID: "${{ github.event.workflow_run.id || '' }}"
-          WORKFLOW_RUN_CONCLUSION: "${{ github.event.workflow_run.conclusion || '' }}"
         run: |
           set -euo pipefail
 
-          source_run_id="${INPUT_SOURCE_RUN_ID:-}"
-          artifact_name="${INPUT_ARTIFACT_NAME:-}"
-          artifact_paths="${INPUT_ARTIFACT_PATHS:-.outputs/artifact-hashes/input,artifacts,input,dist}"
-          verify_only="${INPUT_VERIFY_ONLY:-false}"
-          create_manifest="${INPUT_CREATE_MANIFEST:-true}"
-          create_checksums="${INPUT_CREATE_CHECKSUMS:-true}"
-          create_sbom="${INPUT_CREATE_SBOM:-true}"
-          fail_on_verify_error="${INPUT_FAIL_ON_VERIFY_ERROR:-true}"
-          dry_run="${INPUT_DRY_RUN:-false}"
-          should_run_hashes="true"
+          node <<'NODE'
+          const fs = require("node:fs");
 
-          if [[ "$EVENT_NAME" == "workflow_run" ]]; then
-            if [[ -n "${WORKFLOW_RUN_ID:-}" ]]; then
-              source_run_id="$WORKFLOW_RUN_ID"
-            fi
+          const eventName = process.env.EVENT_NAME || process.env.GITHUB_EVENT_NAME || "";
+          const eventPath = process.env.GITHUB_EVENT_PATH || "";
+          const outputFile = process.env.GITHUB_OUTPUT;
 
-            if [[ "${WORKFLOW_RUN_CONCLUSION:-}" != "success" ]]; then
-              echo "::notice::Source workflow conclusion was '${WORKFLOW_RUN_CONCLUSION:-unknown}'. Artifact hash generation will be skipped."
-              should_run_hashes="false"
-            fi
-          fi
+          function readEvent() {
+            try {
+              if (!eventPath || !fs.existsSync(eventPath)) {
+                return {};
+              }
 
-          should_download_artifacts="false"
-          if [[ -n "$source_run_id" ]]; then
-            should_download_artifacts="true"
-          fi
+              return JSON.parse(fs.readFileSync(eventPath, "utf8"));
+            } catch {
+              return {};
+            }
+          }
+
+          function bool(value, fallback = false) {
+            if (value === undefined || value === null || value === "") {
+              return fallback;
+            }
+
+            return ["true", "1", "yes", "y", "on"].includes(String(value).toLowerCase());
+          }
+
+          function cleanNumber(value) {
+            const normalized = String(value || "").trim();
+
+            if (!/^[0-9]+$/.test(normalized)) {
+              return "";
+            }
+
+            return normalized;
+          }
+
+          function write(values) {
+            const lines = Object.entries(values).map(([key, value]) => `${key}=${value}`);
+            fs.appendFileSync(outputFile, `${lines.join("\n")}\n`);
+          }
+
+          const event = readEvent();
+
+          const inputMode = String(process.env.INPUT_MODE || "auto").trim() || "auto";
+          const dryRun = bool(process.env.INPUT_DRY_RUN, false);
+          const runRepoManagementInput = bool(process.env.INPUT_RUN_REPO_MANAGEMENT, true);
+          const runAiAssistantInput = bool(process.env.INPUT_RUN_AI_ASSISTANT, false);
+          const runSecurityTriageInput = bool(process.env.INPUT_RUN_SECURITY_TRIAGE, false);
+          const runSecuritySummaryInput = bool(process.env.INPUT_RUN_SECURITY_SUMMARY, true);
+          const failOnRepoManagementError = bool(process.env.INPUT_FAIL_ON_REPO_MANAGEMENT_ERROR, true);
+          const failOnSecuritySummaryError = bool(process.env.INPUT_FAIL_ON_SECURITY_SUMMARY_ERROR, false);
+
+          let itemKind = "none";
+          let itemNumber = "";
+          let scriptEventName = eventName;
+
+          const manualPullRequestNumber = cleanNumber(process.env.INPUT_PULL_REQUEST_NUMBER);
+          const manualIssueNumber = cleanNumber(process.env.INPUT_ISSUE_NUMBER);
+
+          if (manualPullRequestNumber) {
+            itemKind = "pull_request";
+            itemNumber = manualPullRequestNumber;
+            scriptEventName = "pull_request";
+          } else if (manualIssueNumber) {
+            itemKind = "issue";
+            itemNumber = manualIssueNumber;
+            scriptEventName = "issues";
+          } else if (event.pull_request && event.pull_request.number) {
+            itemKind = "pull_request";
+            itemNumber = cleanNumber(event.pull_request.number);
+            scriptEventName = "pull_request";
+          } else if (event.issue && event.issue.number) {
+            itemNumber = cleanNumber(event.issue.number);
+
+            if (event.issue.pull_request) {
+              itemKind = "pull_request";
+              scriptEventName = "pull_request";
+            } else {
+              itemKind = "issue";
+              scriptEventName = "issues";
+            }
+          }
+
+          const hasItem = Boolean(itemNumber);
+
+          let shouldRunRepoManagement = false;
+          let shouldRunAiAssistant = false;
+          let shouldRunSecurityTriage = false;
+          let shouldRunSecuritySummary = false;
+
+          switch (inputMode) {
+            case "auto":
+              shouldRunRepoManagement = runRepoManagementInput;
+              shouldRunAiAssistant = runAiAssistantInput && hasItem;
+              shouldRunSecurityTriage = runSecurityTriageInput && hasItem;
+              shouldRunSecuritySummary = runSecuritySummaryInput;
+              break;
+
+            case "all":
+              shouldRunRepoManagement = runRepoManagementInput;
+              shouldRunAiAssistant = runAiAssistantInput && hasItem;
+              shouldRunSecurityTriage = runSecurityTriageInput && hasItem;
+              shouldRunSecuritySummary = runSecuritySummaryInput;
+              break;
+
+            case "repo-management":
+              shouldRunRepoManagement = true;
+              break;
+
+            case "ai-assistant":
+              shouldRunAiAssistant = hasItem;
+              break;
+
+            case "security-triage":
+              shouldRunSecurityTriage = hasItem;
+              break;
+
+            case "security-summary":
+              shouldRunSecuritySummary = true;
+              break;
+
+            case "summarize-only":
+              shouldRunSecuritySummary = true;
+              break;
+
+            default:
+              console.error(`Unsupported mode: ${inputMode}`);
+              process.exit(1);
+          }
+
+          if (eventName === "schedule") {
+            shouldRunRepoManagement = false;
+            shouldRunAiAssistant = false;
+            shouldRunSecurityTriage = false;
+            shouldRunSecuritySummary = true;
+          }
+
+          write({
+            mode: inputMode,
+            dry_run: dryRun ? "true" : "false",
+            item_kind: itemKind,
+            item_number: itemNumber,
+            has_item: hasItem ? "true" : "false",
+            script_event_name: scriptEventName,
+            should_run_repo_management: shouldRunRepoManagement ? "true" : "false",
+            should_run_ai_assistant: shouldRunAiAssistant ? "true" : "false",
+            should_run_security_triage: shouldRunSecurityTriage ? "true" : "false",
+            should_run_security_summary: shouldRunSecuritySummary ? "true" : "false",
+            fail_on_repo_management_error: failOnRepoManagementError ? "true" : "false",
+            fail_on_security_summary_error: failOnSecuritySummaryError ? "true" : "false",
+          });
+          NODE
+
+      - name: Write preflight summary
+        run: |
+          set -euo pipefail
 
           {
-            echo "source_run_id=$source_run_id"
-            echo "artifact_name=$artifact_name"
-            echo "artifact_paths=$artifact_paths"
-            echo "verify_only=$verify_only"
-            echo "create_manifest=$create_manifest"
-            echo "create_checksums=$create_checksums"
-            echo "create_sbom=$create_sbom"
-            echo "fail_on_verify_error=$fail_on_verify_error"
-            echo "dry_run=$dry_run"
-            echo "should_download_artifacts=$should_download_artifacts"
-            echo "should_run_hashes=$should_run_hashes"
-          } >> "$GITHUB_OUTPUT"
-
-          {
-            echo "## Aerealith AI Artifact Hashes"
+            echo "## Aerealith AI Repository Assistant"
             echo ""
             echo "| Setting | Value |"
             echo "|---|---|"
-            echo "| Event | \`$EVENT_NAME\` |"
-            echo "| Source run ID | \`${source_run_id:-none}\` |"
-            echo "| Artifact name filter | \`${artifact_name:-none}\` |"
-            echo "| Artifact paths | \`$artifact_paths\` |"
-            echo "| Verify only | \`$verify_only\` |"
-            echo "| Create manifest | \`$create_manifest\` |"
-            echo "| Create checksums | \`$create_checksums\` |"
-            echo "| Create SBOM | \`$create_sbom\` |"
-            echo "| Fail on verify error | \`$fail_on_verify_error\` |"
-            echo "| Dry run | \`$dry_run\` |"
-            echo "| Download artifacts | \`$should_download_artifacts\` |"
-            echo "| Run hashes | \`$should_run_hashes\` |"
+            echo "| Mode | \`${{ steps.context.outputs.mode }}\` |"
+            echo "| Dry run | \`${{ steps.context.outputs.dry_run }}\` |"
+            echo "| Item kind | \`${{ steps.context.outputs.item_kind }}\` |"
+            echo "| Item number | \`${{ steps.context.outputs.item_number || 'none' }}\` |"
+            echo "| Has item | \`${{ steps.context.outputs.has_item }}\` |"
+            echo "| Repo management | \`${{ steps.context.outputs.should_run_repo_management }}\` |"
+            echo "| AI assistant | \`${{ steps.context.outputs.should_run_ai_assistant }}\` |"
+            echo "| Security triage | \`${{ steps.context.outputs.should_run_security_triage }}\` |"
+            echo "| Security summary | \`${{ steps.context.outputs.should_run_security_summary }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  artifact-hashes:
-    name: Generate artifact hashes
+  repository-management:
+    name: Repository management
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 25
     needs:
       - preflight
 
-    if: needs.preflight.outputs.should_run_hashes == 'true'
+    if: needs.preflight.outputs.should_run_repo_management == 'true'
 
     env:
       GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
       GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
       REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
       PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
-      ARTIFACT_HASH_SOURCE_RUN_ID: ${{ needs.preflight.outputs.source_run_id }}
-      ARTIFACT_HASH_ARTIFACT_NAME: ${{ needs.preflight.outputs.artifact_name }}
-      ARTIFACT_HASH_PATHS: ${{ needs.preflight.outputs.artifact_paths }}
-      ARTIFACT_HASH_VERIFY_ONLY: ${{ needs.preflight.outputs.verify_only }}
-      ARTIFACT_HASH_CREATE_MANIFEST: ${{ needs.preflight.outputs.create_manifest }}
-      ARTIFACT_HASH_CREATE_CHECKSUMS: ${{ needs.preflight.outputs.create_checksums }}
-      ARTIFACT_HASH_CREATE_SBOM: ${{ needs.preflight.outputs.create_sbom }}
-      ARTIFACT_HASH_FAIL_ON_VERIFY_ERROR: ${{ needs.preflight.outputs.fail_on_verify_error }}
+      ITEM_KIND: ${{ needs.preflight.outputs.item_kind }}
+      ITEM_NUMBER: ${{ needs.preflight.outputs.item_number }}
+      HAS_ITEM: ${{ needs.preflight.outputs.has_item }}
+      SCRIPT_EVENT_NAME: ${{ needs.preflight.outputs.script_event_name }}
+      FAIL_ON_REPO_MANAGEMENT_ERROR: ${{ needs.preflight.outputs.fail_on_repo_management_error }}
 
     steps:
-      - name: Checkout repository automation
+      - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Enable Corepack and pnpm
+        if: hashFiles('package.json') != ''
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(
+            node -e "
+              const fs = require('node:fs');
+              const file = 'package.json';
+
+              if (!fs.existsSync(file)) {
+                console.log('pnpm@latest');
+                process.exit(0);
+              }
+
+              const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+              console.log(pkg.packageManager || 'pnpm@latest');
+            "
+          )"
+
+          corepack prepare "$PACKAGE_MANAGER" --activate
+          pnpm --version
+
+      - name: Resolve pnpm store path
+        if: hashFiles('package.json') != ''
+        id: pnpm_store
+        run: |
+          set -euo pipefail
+          echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pnpm cache
+        if: hashFiles('package.json') != ''
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: hashFiles('pnpm-lock.yaml') != ''
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare repository management output
+        run: |
+          set -euo pipefail
+          mkdir -p "$REPO_OUTPUT_DIR"
+
+      - name: Create item-scoped event payload
+        id: item_event
+        if: needs.preflight.outputs.has_item == 'true'
+        run: |
+          set -euo pipefail
+
+          event_file="$RUNNER_TEMP/repo-assistant-item-event.json"
+
+          ITEM_KIND="$ITEM_KIND" ITEM_NUMBER="$ITEM_NUMBER" node <<'NODE' > "$event_file"
+          const itemKind = process.env.ITEM_KIND || "none";
+          const itemNumber = Number(process.env.ITEM_NUMBER || 0);
+
+          const repository = {
+            full_name: process.env.GITHUB_REPOSITORY || "",
+            html_url: `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${process.env.GITHUB_REPOSITORY || ""}`,
+          };
+
+          const payload = {
+            action: "repository_assistant",
+            repository,
+            sender: {
+              login: process.env.GITHUB_ACTOR || "",
+            },
+          };
+
+          if (itemKind === "pull_request") {
+            payload.pull_request = {
+              number: itemNumber,
+              state: "open",
+              draft: false,
+              html_url: `${repository.html_url}/pull/${itemNumber}`,
+            };
+          } else if (itemKind === "issue") {
+            payload.issue = {
+              number: itemNumber,
+              state: "open",
+              html_url: `${repository.html_url}/issues/${itemNumber}`,
+            };
+          }
+
+          console.log(JSON.stringify(payload, null, 2));
+          NODE
+
+          {
+            echo "event_path=$event_file"
+            echo "event_name=$SCRIPT_EVENT_NAME"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Created item-scoped event payload: $event_file"
+
+      - name: Skip item-scoped repository automation when no item exists
+        if: needs.preflight.outputs.has_item != 'true'
+        run: |
+          set -euo pipefail
+
+          cat > "$REPO_OUTPUT_DIR/repository-management-skipped.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "repo-management-skipped",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "event_name": "$GITHUB_EVENT_NAME",
+            "status": "skipped",
+            "ok": true,
+            "reason": "No issue or pull request number was available. Item-scoped scripts such as assign-labels were skipped.",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          cat > "$REPO_OUTPUT_DIR/repository-management-skipped.md" <<MD
+          # Aerealith AI Repository Management
+
+          - Status: \`skipped\`
+          - OK: \`true\`
+          - Reason: \`No issue or pull request number was available. Item-scoped scripts were skipped.\`
+
+          This prevents \`.github/scripts/repo/assign-labels.js\` from failing during manual repository-wide runs.
+          MD
+
+          cat "$REPO_OUTPUT_DIR/repository-management-skipped.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run item-scoped repository management
+        if: needs.preflight.outputs.has_item == 'true'
+        env:
+          SCRIPT_EVENT_PATH: ${{ steps.item_event.outputs.event_path }}
+          SCRIPT_EVENT_NAME_RESOLVED: ${{ steps.item_event.outputs.event_name }}
+        run: |
+          set -euo pipefail
+
+          run_item_script() {
+            local file="$1"
+            shift || true
+
+            if [[ ! -f "$file" ]]; then
+              echo "::notice::Skipping missing script: $file"
+              return 0
+            fi
+
+            echo "::group::$file"
+
+            set +e
+            GITHUB_EVENT_NAME="$SCRIPT_EVENT_NAME_RESOLVED" \
+            GITHUB_EVENT_PATH="$SCRIPT_EVENT_PATH" \
+              node "$file" "$@"
+            local status=$?
+            set -e
+
+            echo "::endgroup::"
+
+            if [[ "$status" -ne 0 ]]; then
+              echo "::warning::Repository management script failed: $file"
+
+              if [[ "$FAIL_ON_REPO_MANAGEMENT_ERROR" == "true" ]]; then
+                exit "$status"
+              fi
+            fi
+          }
+
+          run_item_script ".github/scripts/repo/assign-labels.js"
+          run_item_script ".github/scripts/repo/assign-milestones.js"
+          run_item_script ".github/scripts/repo/assign-assignees.js"
+
+          if [[ "$ITEM_KIND" == "pull_request" ]]; then
+            run_item_script ".github/scripts/repo/assign-reviewers.js"
+            run_item_script ".github/scripts/repo/link-issues-prs.js"
+            run_item_script ".github/scripts/repo/enforce-pr-rules.js"
+          fi
+
+      - name: Summarize repository management
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [[ -f ".github/scripts/repo/summarize-repo-management.js" ]]; then
+            set +e
+            node ".github/scripts/repo/summarize-repo-management.js" \
+              --input-dir "$REPO_OUTPUT_DIR" \
+              --output "$REPO_OUTPUT_DIR/summarize-repo-management.json" \
+              --summary "$REPO_OUTPUT_DIR/summarize-repo-management.md" \
+              --no-fail-on-error
+            status=$?
+            set -e
+
+            if [[ "$status" -ne 0 ]]; then
+              echo "::warning::Repository management summary script failed with status $status."
+            fi
+          else
+            echo "::notice::Skipping missing script: .github/scripts/repo/summarize-repo-management.js"
+          fi
+
+          if [[ -f "$REPO_OUTPUT_DIR/summarize-repo-management.md" ]]; then
+            cat "$REPO_OUTPUT_DIR/summarize-repo-management.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload repository management artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: repository-management-${{ github.run_id }}
+          path: |
+            artifacts/repo/**
+          if-no-files-found: ignore
+          retention-days: 21
+
+  security-summary:
+    name: Security summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs:
+      - preflight
+
+    if: needs.preflight.outputs.should_run_security_summary == 'true'
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      FAIL_ON_SECURITY_SUMMARY_ERROR: ${{ needs.preflight.outputs.fail_on_security_summary_error }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Enable Corepack and pnpm
+        if: hashFiles('package.json') != ''
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          PACKAGE_MANAGER="$(
+            node -e "
+              const fs = require('node:fs');
+              const file = 'package.json';
+
+              if (!fs.existsSync(file)) {
+                console.log('pnpm@latest');
+                process.exit(0);
+              }
+
+              const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+              console.log(pkg.packageManager || 'pnpm@latest');
+            "
+          )"
+
+          corepack prepare "$PACKAGE_MANAGER" --activate
+          pnpm --version
+
+      - name: Resolve pnpm store path
+        if: hashFiles('package.json') != ''
+        id: pnpm_store
+        run: |
+          set -euo pipefail
+          echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pnpm cache
+        if: hashFiles('package.json') != ''
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: hashFiles('pnpm-lock.yaml') != ''
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare security output
+        run: |
+          set -euo pipefail
+          mkdir -p "$SECURITY_OUTPUT_DIR"
+
+      - name: Run security summary scripts
+        run: |
+          set -euo pipefail
+
+          run_security_summary() {
+            local file="$1"
+            shift || true
+
+            if [[ ! -f "$file" ]]; then
+              echo "::notice::Skipping missing script: $file"
+              return 0
+            fi
+
+            echo "::group::$file"
+
+            set +e
+            node "$file" "$@"
+            local status=$?
+            set -e
+
+            echo "::endgroup::"
+
+            if [[ "$status" -ne 0 ]]; then
+              echo "::warning::Security summary script failed: $file"
+
+              if [[ "$FAIL_ON_SECURITY_SUMMARY_ERROR" == "true" ]]; then
+                exit "$status"
+              fi
+            fi
+          }
+
+          run_security_summary ".github/scripts/security/summarize-codeql.js" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-codeql.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-codeql.md" \
+            --no-fail-on-error
+
+          run_security_summary ".github/scripts/security/summarize-container-scan.js" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-container-scan.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-container-scan.md" \
+            --no-fail-on-error
+
+          run_security_summary ".github/scripts/security/summarize-dependencies.js" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-dependencies.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-dependencies.md" \
+            --no-fail-on-error
+
+          run_security_summary ".github/scripts/security/summarize-secrets-scan.js" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-secrets-scan.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-secrets-scan.md" \
+            --no-fail-on-error
+
+          run_security_summary ".github/scripts/security/summarize-sonarqube.js" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-sonarqube.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-sonarqube.md" \
+            --no-fail-on-error
+
+          run_security_summary ".github/scripts/security/summarize-security.js" \
+            --input-dir "$SECURITY_OUTPUT_DIR" \
+            --output "$SECURITY_OUTPUT_DIR/summarize-security.json" \
+            --summary "$SECURITY_OUTPUT_DIR/summarize-security.md" \
+            --no-fail-on-error
+
+      - name: Write security summary output
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [[ -f "$SECURITY_OUTPUT_DIR/summarize-security.md" ]]; then
+            cat "$SECURITY_OUTPUT_DIR/summarize-security.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          {
+            echo ""
+            echo "## Security Summary Output Files"
+            echo ""
+            echo "| File | Size |"
+            echo "|---|---:|"
+
+            if [[ -d "$SECURITY_OUTPUT_DIR" ]]; then
+              while IFS= read -r file; do
+                size="$(wc -c < "$file" | xargs)"
+                echo "| \`$file\` | \`$size\` bytes |"
+              done < <(find "$SECURITY_OUTPUT_DIR" -type f | sort)
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload security summary artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: repository-assistant-security-summary-${{ github.run_id }}
+          path: |
+            artifacts/security/**
+          if-no-files-found: ignore
+          retention-days: 21
+
+  ai-assistant:
+    name: AI assistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - preflight
+
+    if: needs.preflight.outputs.should_run_ai_assistant == 'true'
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      ITEM_KIND: ${{ needs.preflight.outputs.item_kind }}
+      ITEM_NUMBER: ${{ needs.preflight.outputs.item_number }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
           fetch-depth: 1
           persist-credentials: false
 
@@ -229,403 +806,131 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
 
-      - name: Prepare artifact directories
+      - name: Prepare AI output
+        run: |
+          set -euo pipefail
+          mkdir -p "$AI_OUTPUT_DIR"
+
+      - name: Run AI assistant script when available
         run: |
           set -euo pipefail
 
-          mkdir -p "$ARTIFACT_HASH_INPUT_DIR"
-          mkdir -p "$ARTIFACT_HASH_OUTPUT_DIR"
+          script=""
 
-      - name: Download artifacts from source run
-        if: needs.preflight.outputs.should_download_artifacts == 'true'
-        env:
-          SOURCE_RUN_ID: ${{ needs.preflight.outputs.source_run_id }}
-          ARTIFACT_NAME: ${{ needs.preflight.outputs.artifact_name }}
-        run: |
-          set -euo pipefail
-
-          echo "Downloading artifacts from run: $SOURCE_RUN_ID"
-
-          set +e
-
-          if [[ -n "${ARTIFACT_NAME:-}" ]]; then
-            gh run download "$SOURCE_RUN_ID" \
-              --repo "$GITHUB_REPOSITORY" \
-              --name "$ARTIFACT_NAME" \
-              --dir "$ARTIFACT_HASH_INPUT_DIR"
-            download_status=$?
-          else
-            gh run download "$SOURCE_RUN_ID" \
-              --repo "$GITHUB_REPOSITORY" \
-              --dir "$ARTIFACT_HASH_INPUT_DIR"
-            download_status=$?
-          fi
-
-          set -e
-
-          if [[ "$download_status" -ne 0 ]]; then
-            echo "::warning::Unable to download artifacts from run $SOURCE_RUN_ID. Continuing with local staged paths."
-          fi
-
-          find "$ARTIFACT_HASH_INPUT_DIR" -type f | sort | sed 's#^#Downloaded: #' || true
-
-      - name: Stage local artifact paths
-        run: |
-          set -euo pipefail
-
-          mkdir -p "$ARTIFACT_HASH_INPUT_DIR/local"
-
-          IFS=',' read -ra paths <<< "${ARTIFACT_HASH_PATHS:-}"
-
-          for raw_path in "${paths[@]}"; do
-            artifact_path="$(printf '%s' "$raw_path" | xargs)"
-
-            if [[ -z "$artifact_path" ]]; then
-              continue
+          for candidate in \
+            ".github/scripts/ai/repo-assistant.js" \
+            ".github/scripts/ai/summarize-repo-assistant.js" \
+            ".github/scripts/repo/ai-repo-assistant.js"; do
+            if [[ -f "$candidate" ]]; then
+              script="$candidate"
+              break
             fi
-
-            if [[ "$artifact_path" == "$ARTIFACT_HASH_INPUT_DIR"* ]]; then
-              continue
-            fi
-
-            if [[ "$artifact_path" == "$ARTIFACT_HASH_OUTPUT_DIR"* ]]; then
-              continue
-            fi
-
-            shopt -s nullglob globstar
-            matches=( $artifact_path )
-            shopt -u nullglob globstar
-
-            if [[ "${#matches[@]}" -eq 0 ]]; then
-              echo "::notice::No local artifacts matched: $artifact_path"
-              continue
-            fi
-
-            for match in "${matches[@]}"; do
-              if [[ ! -e "$match" ]]; then
-                continue
-              fi
-
-              if [[ "$match" == "$ARTIFACT_HASH_OUTPUT_DIR"* ]]; then
-                continue
-              fi
-
-              destination="$ARTIFACT_HASH_INPUT_DIR/local/$match"
-              mkdir -p "$(dirname "$destination")"
-
-              if [[ -d "$match" ]]; then
-                mkdir -p "$destination"
-
-                if command -v rsync >/dev/null 2>&1; then
-                  rsync -a \
-                    --exclude '.git' \
-                    --exclude 'node_modules' \
-                    --exclude '.nx' \
-                    --exclude '.turbo' \
-                    --exclude '.next/cache' \
-                    "$match/" "$destination/"
-                else
-                  cp -R "$match/." "$destination/"
-                fi
-              else
-                cp "$match" "$destination"
-              fi
-            done
           done
 
-          file_count="$(find "$ARTIFACT_HASH_INPUT_DIR" -type f | wc -l | xargs)"
-          echo "Prepared $file_count file(s) for hashing."
-
-          if [[ "$file_count" == "0" ]]; then
-            echo "::warning::No artifact files were found to hash."
-          fi
-
-      - name: Verify existing artifact hashes
-        if: needs.preflight.outputs.verify_only == 'true'
-        run: |
-          set -euo pipefail
-
-          if [[ ! -f ".github/scripts/artifacts/verify-artifacts.js" ]]; then
-            echo "::warning::Missing script: .github/scripts/artifacts/verify-artifacts.js"
-            exit 0
-          fi
-
-          find_first_named_file() {
-            local file_name="$1"
-
-            find "$ARTIFACT_HASH_INPUT_DIR" "$ARTIFACT_HASH_OUTPUT_DIR" \
-              -type f \
-              -name "$file_name" \
-              2>/dev/null | sort | head -n 1 || true
-          }
-
-          find_first_sbom_file() {
-            find "$ARTIFACT_HASH_INPUT_DIR" "$ARTIFACT_HASH_OUTPUT_DIR" \
-              -type f \
-              \( -iname "*sbom*.json" -o -iname "*.spdx.json" -o -iname "*.cdx.json" -o -iname "*cyclonedx*.json" \) \
-              2>/dev/null | sort | head -n 1 || true
-          }
-
-          manifest_file="$(find_first_named_file "artifact-manifest.json")"
-          checksums_json_file="$(find_first_named_file "checksums.json")"
-          hash_report_file="$(find_first_named_file "artifact-hashes.json")"
-          sha256_file="$(find_first_named_file "SHA256SUMS")"
-          sha512_file="$(find_first_named_file "SHA512SUMS")"
-          sbom_file="$(find_first_sbom_file)"
-
-          verify_args=(
-            --output "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.json"
-            --summary "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.md"
-            --no-print
-          )
-
-          if [[ -n "$manifest_file" && -f "$manifest_file" ]]; then
-            verify_args+=(--manifest "$manifest_file")
-          else
-            verify_args+=(--no-manifest)
-          fi
-
-          if [[ -n "$checksums_json_file" && -f "$checksums_json_file" ]]; then
-            verify_args+=(--checksums-json "$checksums_json_file")
-          else
-            verify_args+=(--no-checksums-json)
-          fi
-
-          if [[ -n "$hash_report_file" && -f "$hash_report_file" ]]; then
-            verify_args+=(--hash-report "$hash_report_file")
-          else
-            verify_args+=(--no-hash-report)
-          fi
-
-          if [[ -n "$sha256_file" && -f "$sha256_file" ]]; then
-            verify_args+=(--sha256 "$sha256_file")
-          fi
-
-          if [[ -n "$sha512_file" && -f "$sha512_file" ]]; then
-            verify_args+=(--sha512 "$sha512_file")
-          fi
-
-          if [[ -z "$sha256_file" && -z "$sha512_file" ]]; then
-            verify_args+=(--no-sums)
-          fi
-
-          if [[ -n "$sbom_file" && -f "$sbom_file" ]]; then
-            verify_args+=(--sbom "$sbom_file")
-          else
-            verify_args+=(--no-sbom)
-          fi
-
-          if [[ "$ARTIFACT_HASH_FAIL_ON_VERIFY_ERROR" != "true" ]]; then
-            verify_args+=(--no-fail-on-error)
-          fi
-
-          set +e
-          node ".github/scripts/artifacts/verify-artifacts.js" "${verify_args[@]}"
-          status=$?
-          set -e
-
-          if [[ "$status" -ne 0 && "$ARTIFACT_HASH_FAIL_ON_VERIFY_ERROR" == "true" ]]; then
-            exit "$status"
-          fi
-
-          if [[ "$status" -ne 0 ]]; then
-            echo "::warning::Artifact verification failed, but fail_on_verify_error is false."
-          fi
-
-      - name: Create artifact manifest
-        if: needs.preflight.outputs.verify_only != 'true' && needs.preflight.outputs.create_manifest == 'true'
-        run: |
-          set -euo pipefail
-
-          if [[ ! -f ".github/scripts/artifacts/create-artifact-manifest.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/artifacts/create-artifact-manifest.js"
-            exit 0
-          fi
-
-          node ".github/scripts/artifacts/create-artifact-manifest.js" \
-            --include "$ARTIFACT_HASH_INPUT_DIR" \
-            --output "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.json" \
-            --summary "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.md" \
-            --sha256 "$ARTIFACT_HASH_OUTPUT_DIR/SHA256SUMS" \
-            --sha512 "$ARTIFACT_HASH_OUTPUT_DIR/SHA512SUMS" \
-            --include-hidden \
-            --no-print
-
-      - name: Create artifact checksums
-        if: needs.preflight.outputs.verify_only != 'true' && needs.preflight.outputs.create_checksums == 'true'
-        run: |
-          set -euo pipefail
-
-          if [[ ! -f ".github/scripts/artifacts/create-checksums.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/artifacts/create-checksums.js"
-            exit 0
-          fi
-
-          node ".github/scripts/artifacts/create-checksums.js" \
-            --include "$ARTIFACT_HASH_INPUT_DIR" \
-            --json "$ARTIFACT_HASH_OUTPUT_DIR/checksums.json" \
-            --summary "$ARTIFACT_HASH_OUTPUT_DIR/checksums.md" \
-            --sha256 "$ARTIFACT_HASH_OUTPUT_DIR/SHA256SUMS" \
-            --sha512 "$ARTIFACT_HASH_OUTPUT_DIR/SHA512SUMS" \
-            --include-hidden \
-            --no-print
-
-      - name: Hash artifacts
-        if: needs.preflight.outputs.verify_only != 'true'
-        run: |
-          set -euo pipefail
-
-          if [[ ! -f ".github/scripts/artifacts/hash-artifacts.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/artifacts/hash-artifacts.js"
-            exit 0
-          fi
-
-          hash_args=(
-            --include "$ARTIFACT_HASH_INPUT_DIR"
-            --output "$ARTIFACT_HASH_OUTPUT_DIR/hash-artifacts.json"
-            --summary "$ARTIFACT_HASH_OUTPUT_DIR/hash-artifacts.md"
-            --hashes "$ARTIFACT_HASH_OUTPUT_DIR/ARTIFACT-HASHES.txt"
-            --include-hidden
-            --no-print
-          )
-
-          if [[ -f "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.json" ]]; then
-            hash_args+=(--manifest "$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.json")
-          fi
-
-          node ".github/scripts/artifacts/hash-artifacts.js" "${hash_args[@]}"
-
-      - name: Create artifact SBOM
-        if: needs.preflight.outputs.verify_only != 'true' && needs.preflight.outputs.create_sbom == 'true'
-        run: |
-          set -euo pipefail
-
-          if [[ ! -f ".github/scripts/artifacts/create-sbom.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/artifacts/create-sbom.js"
-            exit 0
-          fi
-
-          node ".github/scripts/artifacts/create-sbom.js" \
-            --source "$GITHUB_WORKSPACE" \
-            --output "$ARTIFACT_HASH_OUTPUT_DIR/sbom.json" \
-            --summary "$ARTIFACT_HASH_OUTPUT_DIR/sbom.md" \
-            --no-fail-if-empty \
-            --no-print
-
-      - name: Verify generated artifact hashes
-        if: needs.preflight.outputs.verify_only != 'true'
-        run: |
-          set -euo pipefail
-
-          if [[ ! -f ".github/scripts/artifacts/verify-artifacts.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/artifacts/verify-artifacts.js"
-            exit 0
-          fi
-
-          manifest_file="$ARTIFACT_HASH_OUTPUT_DIR/artifact-manifest.json"
-          checksums_json_file="$ARTIFACT_HASH_OUTPUT_DIR/checksums.json"
-          hash_report_file="$ARTIFACT_HASH_OUTPUT_DIR/hash-artifacts.json"
-          sha256_file="$ARTIFACT_HASH_OUTPUT_DIR/SHA256SUMS"
-          sha512_file="$ARTIFACT_HASH_OUTPUT_DIR/SHA512SUMS"
-          sbom_file="$ARTIFACT_HASH_OUTPUT_DIR/sbom.json"
-
-          verify_args=(
-            --output "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.json"
-            --summary "$ARTIFACT_HASH_OUTPUT_DIR/verify-artifacts.md"
-            --no-print
-          )
-
-          if [[ -f "$manifest_file" ]]; then
-            verify_args+=(--manifest "$manifest_file")
-          else
-            verify_args+=(--no-manifest)
-          fi
-
-          if [[ -f "$checksums_json_file" ]]; then
-            verify_args+=(--checksums-json "$checksums_json_file")
-          else
-            verify_args+=(--no-checksums-json)
-          fi
-
-          if [[ -f "$hash_report_file" ]]; then
-            verify_args+=(--hash-report "$hash_report_file")
-          else
-            verify_args+=(--no-hash-report)
-          fi
-
-          if [[ -f "$sha256_file" ]]; then
-            verify_args+=(--sha256 "$sha256_file")
-          fi
-
-          if [[ -f "$sha512_file" ]]; then
-            verify_args+=(--sha512 "$sha512_file")
-          fi
-
-          if [[ ! -f "$sha256_file" && ! -f "$sha512_file" ]]; then
-            verify_args+=(--no-sums)
-          fi
-
-          if [[ -f "$sbom_file" ]]; then
-            verify_args+=(--sbom "$sbom_file")
-          else
-            verify_args+=(--no-sbom)
-          fi
-
-          if [[ "$ARTIFACT_HASH_FAIL_ON_VERIFY_ERROR" != "true" ]]; then
-            verify_args+=(--no-fail-on-error)
-          fi
-
-          set +e
-          node ".github/scripts/artifacts/verify-artifacts.js" "${verify_args[@]}"
-          status=$?
-          set -e
-
-          if [[ "$status" -ne 0 && "$ARTIFACT_HASH_FAIL_ON_VERIFY_ERROR" == "true" ]]; then
-            exit "$status"
-          fi
-
-          if [[ "$status" -ne 0 ]]; then
-            echo "::warning::Artifact verification failed, but fail_on_verify_error is false."
-          fi
-
-      - name: Write artifact hash job summary
-        if: always()
-        run: |
-          set -euo pipefail
-
+          if [[ -z "$script" ]]; then
+            echo "::notice::No AI assistant script found. Skipping."
+            cat > "$AI_OUTPUT_DIR/ai-assistant-skipped.json" <<JSON
           {
-            echo "## Artifact Hash Output"
-            echo ""
-            echo "| File | Size |"
-            echo "|---|---:|"
+            "schema_version": 1,
+            "type": "ai-assistant-skipped",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "item_kind": "$ITEM_KIND",
+            "item_number": "$ITEM_NUMBER",
+            "status": "skipped",
+            "ok": true,
+            "reason": "No AI assistant script was found.",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+            exit 0
+          fi
 
-            if [[ -d "$ARTIFACT_HASH_OUTPUT_DIR" ]]; then
-              while IFS= read -r file; do
-                size="$(wc -c < "$file" | xargs)"
-                echo "| \`$file\` | \`$size\` bytes |"
-              done < <(find "$ARTIFACT_HASH_OUTPUT_DIR" -type f | sort)
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          node "$script"
 
-      - name: Upload artifact hash reports
+      - name: Upload AI assistant artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: artifact-hashes-${{ github.run_id }}
+          name: repository-assistant-ai-${{ github.run_id }}
           path: |
-            artifacts/artifact-hashes/**
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Upload staged artifact input snapshot
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: artifact-hash-input-${{ github.run_id }}
-          path: |
-            .outputs/artifact-hashes/input/**
+            artifacts/ai/**
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 21
+
+  security-triage:
+    name: Security triage
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - preflight
+
+    if: needs.preflight.outputs.should_run_security_triage == 'true'
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
+      ITEM_KIND: ${{ needs.preflight.outputs.item_kind }}
+      ITEM_NUMBER: ${{ needs.preflight.outputs.item_number }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Prepare security triage output
+        run: |
+          set -euo pipefail
+          mkdir -p "$SECURITY_OUTPUT_DIR/triage"
+
+      - name: Run security triage script when available
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/security/create-security-issues.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/security/create-security-issues.js"
+
+            cat > "$SECURITY_OUTPUT_DIR/triage/security-triage-skipped.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "security-triage-skipped",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "item_kind": "$ITEM_KIND",
+            "item_number": "$ITEM_NUMBER",
+            "status": "skipped",
+            "ok": true,
+            "reason": "Security triage script was not found.",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+            exit 0
+          fi
+
+          node ".github/scripts/security/create-security-issues.js" \
+            --output "$SECURITY_OUTPUT_DIR/triage/create-security-issues.json" \
+            --summary "$SECURITY_OUTPUT_DIR/triage/create-security-issues.md"
+
+      - name: Upload security triage artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: repository-assistant-security-triage-${{ github.run_id }}
+          path: |
+            artifacts/security/triage/**
+          if-no-files-found: ignore
+          retention-days: 21
 
   finalize:
     name: Finalize
@@ -633,35 +938,43 @@ jobs:
     timeout-minutes: 5
     needs:
       - preflight
-      - artifact-hashes
+      - repository-management
+      - security-summary
+      - ai-assistant
+      - security-triage
 
     if: always()
 
     steps:
-      - name: Write final artifact hash summary
+      - name: Write final repository assistant summary
         run: |
           set -euo pipefail
 
           {
-            echo "## Aerealith AI Artifact Hashes Result"
+            echo "## Aerealith AI Repository Assistant Result"
             echo ""
             echo "| Job | Result |"
             echo "|---|---|"
             echo "| Preflight | \`${{ needs.preflight.result }}\` |"
-            echo "| Artifact hashes | \`${{ needs.artifact-hashes.result }}\` |"
+            echo "| Repository management | \`${{ needs.repository-management.result }}\` |"
+            echo "| Security summary | \`${{ needs.security-summary.result }}\` |"
+            echo "| AI assistant | \`${{ needs.ai-assistant.result }}\` |"
+            echo "| Security triage | \`${{ needs.security-triage.result }}\` |"
             echo ""
             echo "| Decision | Value |"
             echo "|---|---|"
-            echo "| Source run ID | \`${{ needs.preflight.outputs.source_run_id || 'none' }}\` |"
-            echo "| Artifact name filter | \`${{ needs.preflight.outputs.artifact_name || 'none' }}\` |"
-            echo "| Verify only | \`${{ needs.preflight.outputs.verify_only || 'unknown' }}\` |"
-            echo "| Create manifest | \`${{ needs.preflight.outputs.create_manifest || 'unknown' }}\` |"
-            echo "| Create checksums | \`${{ needs.preflight.outputs.create_checksums || 'unknown' }}\` |"
-            echo "| Create SBOM | \`${{ needs.preflight.outputs.create_sbom || 'unknown' }}\` |"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode || 'unknown' }}\` |"
             echo "| Dry run | \`${{ needs.preflight.outputs.dry_run || 'unknown' }}\` |"
+            echo "| Item kind | \`${{ needs.preflight.outputs.item_kind || 'unknown' }}\` |"
+            echo "| Item number | \`${{ needs.preflight.outputs.item_number || 'none' }}\` |"
+            echo "| Has item | \`${{ needs.preflight.outputs.has_item || 'unknown' }}\` |"
+            echo "| Repo management | \`${{ needs.preflight.outputs.should_run_repo_management || 'unknown' }}\` |"
+            echo "| AI assistant | \`${{ needs.preflight.outputs.should_run_ai_assistant || 'unknown' }}\` |"
+            echo "| Security triage | \`${{ needs.preflight.outputs.should_run_security_triage || 'unknown' }}\` |"
+            echo "| Security summary | \`${{ needs.preflight.outputs.should_run_security_summary || 'unknown' }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Enforce artifact hash result
+      - name: Enforce repository assistant result
         run: |
           set -euo pipefail
 
@@ -686,6 +999,9 @@ jobs:
           }
 
           check_required_job "Preflight" "${{ needs.preflight.result }}"
-          check_optional_job "Artifact hashes" "${{ needs.artifact-hashes.result }}"
+          check_optional_job "Repository management" "${{ needs.repository-management.result }}"
+          check_optional_job "Security summary" "${{ needs.security-summary.result }}"
+          check_optional_job "AI assistant" "${{ needs.ai-assistant.result }}"
+          check_optional_job "Security triage" "${{ needs.security-triage.result }}"
 
-          echo "Artifact hash workflow completed."
+          echo "Repository assistant workflow completed."
