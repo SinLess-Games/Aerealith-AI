@@ -106,8 +106,7 @@ permissions:
   security-events: read
 
 concurrency:
-  group: >-
-    dependency-management-${{ github.event.pull_request.number || github.ref_name || github.run_id }}
+  group: dependency-management-${{ github.workflow }}-${{ github.ref_name || github.run_id }}
   cancel-in-progress: true
 
 defaults:
@@ -118,6 +117,7 @@ env:
   PROJECT_NAME: Aerealith AI
   NODE_VERSION: "24"
   FORCE_COLOR: "1"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CI: "true"
   NX_DAEMON: "false"
   NEXT_TELEMETRY_DISABLED: "1"
@@ -271,13 +271,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Review dependency changes
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: ${{ needs.preflight.outputs.audit_level }}
           comment-summary-in-pr: false
@@ -303,27 +303,54 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
+          package-manager-cache: false
 
-      - name: Enable Corepack
+      - name: Enable Corepack and pnpm
         run: |
           set -euo pipefail
 
           corepack enable
 
-          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
-          corepack prepare "$PACKAGE_MANAGER" --activate
+          PACKAGE_MANAGER="$(
+            node -e "
+              const fs = require('node:fs');
+              const file = 'package.json';
 
+              if (!fs.existsSync(file)) {
+                console.log('pnpm@latest');
+                process.exit(0);
+              }
+
+              const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+              console.log(pkg.packageManager || 'pnpm@latest');
+            "
+          )"
+
+          corepack prepare "$PACKAGE_MANAGER" --activate
           pnpm --version
+
+      - name: Resolve pnpm store path
+        id: pnpm_store
+        run: |
+          set -euo pipefail
+          echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pnpm store cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm_store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
       - name: Prepare output directories
         run: |
@@ -583,18 +610,26 @@ jobs:
             fi
 
             echo "::group::$file"
+
             if ! node "$file" "$@"; then
               echo "::warning::Summary script reported a non-zero exit: $file"
             fi
+
             echo "::endgroup::"
           }
 
-          run_optional_summary ".github/scripts/security/summarize-dependencies.js" \
-            --report-file "$SECURITY_OUTPUT_DIR/pnpm-audit.json" \
-            --input-dir "$DEPENDENCY_OUTPUT_DIR" \
-            --output "$SECURITY_OUTPUT_DIR/summarize-dependencies.json" \
-            --summary "$SECURITY_OUTPUT_DIR/summarize-dependencies.md" \
+          dependency_args=(
+            --input-dir "$DEPENDENCY_OUTPUT_DIR"
+            --output "$SECURITY_OUTPUT_DIR/summarize-dependencies.json"
+            --summary "$SECURITY_OUTPUT_DIR/summarize-dependencies.md"
             --no-fail-on-error
+          )
+
+          if [[ -f "$SECURITY_OUTPUT_DIR/pnpm-audit.json" ]]; then
+            dependency_args+=(--report-file "$SECURITY_OUTPUT_DIR/pnpm-audit.json")
+          fi
+
+          run_optional_summary ".github/scripts/security/summarize-dependencies.js" "${dependency_args[@]}"
 
           run_optional_summary ".github/scripts/security/summarize-security.js" \
             --input-dir "$SECURITY_OUTPUT_DIR" \
@@ -625,7 +660,7 @@ jobs:
 
       - name: Upload dependency management artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dependency-management-${{ github.run_id }}
           path: |
