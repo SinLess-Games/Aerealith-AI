@@ -1634,7 +1634,7 @@ async function enrichInput(args, input) {
   return enriched;
 }
 
-function regexFromPattern(pattern, flags = "gi") {
+function regexFromPattern(pattern) {
   const source = normalizeString(pattern);
 
   if (!source) return null;
@@ -1659,7 +1659,7 @@ function extractIssueNumbersFromText(text, pattern, sourceName) {
   let regex = null;
 
   try {
-    regex = regexFromPattern(pattern, "gi");
+    regex = regexFromPattern(pattern);
   } catch {
     return matches;
   }
@@ -2218,6 +2218,7 @@ function createReport(
 
 function escapeMarkdown(value) {
   return String(value ?? "")
+    .replace(/\\/g, "\\\\")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
