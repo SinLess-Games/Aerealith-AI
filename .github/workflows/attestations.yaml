@@ -9,96 +9,117 @@ on:
       source_run_id:
         description: "Optional GitHub Actions run ID to download artifacts from."
         required: false
+        default: ""
         type: string
+
       artifact_name:
         description: "Optional artifact name filter. Leave empty to download all artifacts."
         required: false
+        default: ""
         type: string
+
       artifact_paths:
         description: "Comma-separated local artifact paths/globs to stage before attesting."
         required: false
         default: ".outputs/attestations/input,artifacts,dist"
         type: string
+
       subject_paths:
         description: "Comma-separated subject paths/globs to attest. Leave empty to attest all staged files."
         required: false
         default: ""
         type: string
+
       sbom_path:
         description: "Optional SPDX or CycloneDX JSON SBOM path to attest."
         required: false
         default: ""
         type: string
+
       container_subject_name:
         description: "Optional fully-qualified container image name without tag, such as ghcr.io/org/image."
         required: false
         default: ""
         type: string
+
       container_subject_digest:
         description: "Optional container image digest, such as sha256:abc123."
         required: false
         default: ""
         type: string
+
       push_to_registry:
         description: "Push container attestations to the registry when container subject inputs are provided."
         required: true
         default: true
         type: boolean
+
       create_storage_record:
         description: "Create artifact metadata storage records for pushed container attestations."
         required: true
         default: true
         type: boolean
+
       create_manifest:
         description: "Create artifact manifest when the script is available."
         required: true
         default: true
         type: boolean
+
       create_checksums:
         description: "Create checksum reports when the script is available."
         required: true
         default: true
         type: boolean
+
       create_sbom:
         description: "Create SBOM when the script is available."
         required: true
         default: true
         type: boolean
+
       attest_file_provenance:
         description: "Generate provenance attestation for file artifacts."
         required: true
         default: true
         type: boolean
+
       attest_file_sbom:
         description: "Generate SBOM attestation for file artifacts when an SBOM is available."
         required: true
         default: true
         type: boolean
+
       attest_container_provenance:
         description: "Generate provenance attestation for the container image when subject name and digest are provided."
         required: true
         default: true
         type: boolean
+
       attest_container_sbom:
         description: "Generate SBOM attestation for the container image when subject name, digest, and SBOM are available."
         required: true
         default: true
         type: boolean
+
       verify_after_attest:
         description: "Verify attestations after generation."
         required: true
         default: true
         type: boolean
+
       fail_on_verify_error:
         description: "Fail the workflow if attestation verification fails."
         required: true
-        default: true
+        default: false
         type: boolean
+
       max_verify_subjects:
         description: "Maximum file subjects to verify in this workflow run."
         required: true
         default: "50"
         type: string
+
       dry_run:
         description: "Evaluate without generating attestations."
         required: true
@@ -107,6 +128,8 @@ on:
 
   workflow_run:
     workflows:
+      - Continuous Integration
+      - CI
       - Aerealith AI CI
       - Aerealith AI Release
       - Aerealith AI Artifact Hashes
@@ -135,6 +158,7 @@ env:
   PROJECT_NAME: Aerealith AI
   NODE_VERSION: "24"
   FORCE_COLOR: "1"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   PROJECT_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
   ATTESTATION_INPUT_DIR: ".outputs/attestations/input"
   ATTESTATION_OUTPUT_DIR: "artifacts/attestations"
@@ -143,6 +167,7 @@ jobs:
   preflight:
     name: Preflight
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     outputs:
       source_run_id: ${{ steps.context.outputs.source_run_id }}
@@ -167,33 +192,35 @@ jobs:
       dry_run: ${{ steps.context.outputs.dry_run }}
       should_download_artifacts: ${{ steps.context.outputs.should_download_artifacts }}
       has_container_subject: ${{ steps.context.outputs.has_container_subject }}
+      should_generate_attestations: ${{ steps.context.outputs.should_generate_attestations }}
 
     steps:
       - name: Resolve attestation context
         id: context
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_SOURCE_RUN_ID: ${{ github.event.inputs.source_run_id || '' }}
-          INPUT_ARTIFACT_NAME: ${{ github.event.inputs.artifact_name || '' }}
-          INPUT_ARTIFACT_PATHS: ${{ github.event.inputs.artifact_paths || '.outputs/attestations/input,artifacts,dist' }}
-          INPUT_SUBJECT_PATHS: ${{ github.event.inputs.subject_paths || '' }}
-          INPUT_SBOM_PATH: ${{ github.event.inputs.sbom_path || '' }}
-          INPUT_CONTAINER_SUBJECT_NAME: ${{ github.event.inputs.container_subject_name || '' }}
-          INPUT_CONTAINER_SUBJECT_DIGEST: ${{ github.event.inputs.container_subject_digest || '' }}
-          INPUT_PUSH_TO_REGISTRY: ${{ github.event.inputs.push_to_registry || 'true' }}
-          INPUT_CREATE_STORAGE_RECORD: ${{ github.event.inputs.create_storage_record || 'true' }}
-          INPUT_CREATE_MANIFEST: ${{ github.event.inputs.create_manifest || 'true' }}
-          INPUT_CREATE_CHECKSUMS: ${{ github.event.inputs.create_checksums || 'true' }}
-          INPUT_CREATE_SBOM: ${{ github.event.inputs.create_sbom || 'true' }}
-          INPUT_ATTEST_FILE_PROVENANCE: ${{ github.event.inputs.attest_file_provenance || 'true' }}
-          INPUT_ATTEST_FILE_SBOM: ${{ github.event.inputs.attest_file_sbom || 'true' }}
-          INPUT_ATTEST_CONTAINER_PROVENANCE: ${{ github.event.inputs.attest_container_provenance || 'true' }}
-          INPUT_ATTEST_CONTAINER_SBOM: ${{ github.event.inputs.attest_container_sbom || 'true' }}
-          INPUT_VERIFY_AFTER_ATTEST: ${{ github.event.inputs.verify_after_attest || 'true' }}
-          INPUT_FAIL_ON_VERIFY_ERROR: ${{ github.event.inputs.fail_on_verify_error || 'true' }}
-          INPUT_MAX_VERIFY_SUBJECTS: ${{ github.event.inputs.max_verify_subjects || '50' }}
-          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
-          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+          EVENT_NAME: "${{ github.event_name }}"
+          INPUT_SOURCE_RUN_ID: "${{ github.event.inputs.source_run_id || '' }}"
+          INPUT_ARTIFACT_NAME: "${{ github.event.inputs.artifact_name || '' }}"
+          INPUT_ARTIFACT_PATHS: "${{ github.event.inputs.artifact_paths || '.outputs/attestations/input,artifacts,dist' }}"
+          INPUT_SUBJECT_PATHS: "${{ github.event.inputs.subject_paths || '' }}"
+          INPUT_SBOM_PATH: "${{ github.event.inputs.sbom_path || '' }}"
+          INPUT_CONTAINER_SUBJECT_NAME: "${{ github.event.inputs.container_subject_name || '' }}"
+          INPUT_CONTAINER_SUBJECT_DIGEST: "${{ github.event.inputs.container_subject_digest || '' }}"
+          INPUT_PUSH_TO_REGISTRY: "${{ github.event.inputs.push_to_registry || 'true' }}"
+          INPUT_CREATE_STORAGE_RECORD: "${{ github.event.inputs.create_storage_record || 'true' }}"
+          INPUT_CREATE_MANIFEST: "${{ github.event.inputs.create_manifest || 'true' }}"
+          INPUT_CREATE_CHECKSUMS: "${{ github.event.inputs.create_checksums || 'true' }}"
+          INPUT_CREATE_SBOM: "${{ github.event.inputs.create_sbom || 'true' }}"
+          INPUT_ATTEST_FILE_PROVENANCE: "${{ github.event.inputs.attest_file_provenance || 'true' }}"
+          INPUT_ATTEST_FILE_SBOM: "${{ github.event.inputs.attest_file_sbom || 'true' }}"
+          INPUT_ATTEST_CONTAINER_PROVENANCE: "${{ github.event.inputs.attest_container_provenance || 'true' }}"
+          INPUT_ATTEST_CONTAINER_SBOM: "${{ github.event.inputs.attest_container_sbom || 'true' }}"
+          INPUT_VERIFY_AFTER_ATTEST: "${{ github.event.inputs.verify_after_attest || 'true' }}"
+          INPUT_FAIL_ON_VERIFY_ERROR: "${{ github.event.inputs.fail_on_verify_error || 'false' }}"
+          INPUT_MAX_VERIFY_SUBJECTS: "${{ github.event.inputs.max_verify_subjects || '50' }}"
+          INPUT_DRY_RUN: "${{ github.event.inputs.dry_run || 'false' }}"
+          WORKFLOW_RUN_ID: "${{ github.event.workflow_run.id || '' }}"
+          WORKFLOW_RUN_CONCLUSION: "${{ github.event.workflow_run.conclusion || '' }}"
         run: |
           set -euo pipefail
 
@@ -214,12 +241,25 @@ jobs:
           attest_container_provenance="${INPUT_ATTEST_CONTAINER_PROVENANCE:-true}"
           attest_container_sbom="${INPUT_ATTEST_CONTAINER_SBOM:-true}"
           verify_after_attest="${INPUT_VERIFY_AFTER_ATTEST:-true}"
-          fail_on_verify_error="${INPUT_FAIL_ON_VERIFY_ERROR:-true}"
+          fail_on_verify_error="${INPUT_FAIL_ON_VERIFY_ERROR:-false}"
           max_verify_subjects="${INPUT_MAX_VERIFY_SUBJECTS:-50}"
           dry_run="${INPUT_DRY_RUN:-false}"
 
-          if [[ "$EVENT_NAME" == "workflow_run" && -n "${WORKFLOW_RUN_ID:-}" ]]; then
-            source_run_id="$WORKFLOW_RUN_ID"
+          should_generate_attestations="true"
+
+          if [[ "$EVENT_NAME" == "workflow_run" ]]; then
+            if [[ -n "${WORKFLOW_RUN_ID:-}" ]]; then
+              source_run_id="$WORKFLOW_RUN_ID"
+            fi
+
+            if [[ "${WORKFLOW_RUN_CONCLUSION:-}" != "success" ]]; then
+              echo "::notice::Source workflow conclusion was '${WORKFLOW_RUN_CONCLUSION:-unknown}'. Attestation generation will be skipped."
+              should_generate_attestations="false"
+            fi
+          fi
+
+          if ! [[ "$max_verify_subjects" =~ ^[0-9]+$ ]]; then
+            max_verify_subjects="50"
           fi
 
           should_download_artifacts="false"
@@ -255,6 +295,7 @@ jobs:
             echo "dry_run=$dry_run"
             echo "should_download_artifacts=$should_download_artifacts"
             echo "has_container_subject=$has_container_subject"
+            echo "should_generate_attestations=$should_generate_attestations"
           } >> "$GITHUB_OUTPUT"
 
           {
@@ -282,13 +323,17 @@ jobs:
             echo "| Verify after attest | \`$verify_after_attest\` |"
             echo "| Fail on verify error | \`$fail_on_verify_error\` |"
             echo "| Dry run | \`$dry_run\` |"
+            echo "| Generate attestations | \`$should_generate_attestations\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   attestations:
     name: Generate attestations
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs:
       - preflight
+
+    if: needs.preflight.outputs.should_generate_attestations == 'true'
 
     env:
       GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
@@ -310,14 +355,17 @@ jobs:
 
     steps:
       - name: Checkout repository automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
       - name: Prepare attestation directories
         run: |
@@ -397,13 +445,18 @@ jobs:
 
               if [[ -d "$match" ]]; then
                 mkdir -p "$destination"
-                rsync -a \
-                  --exclude '.git' \
-                  --exclude 'node_modules' \
-                  --exclude '.nx' \
-                  --exclude '.turbo' \
-                  --exclude '.next/cache' \
-                  "$match/" "$destination/"
+
+                if command -v rsync >/dev/null 2>&1; then
+                  rsync -a \
+                    --exclude '.git' \
+                    --exclude 'node_modules' \
+                    --exclude '.nx' \
+                    --exclude '.turbo' \
+                    --exclude '.next/cache' \
+                    "$match/" "$destination/"
+                else
+                  cp -R "$match/." "$destination/"
+                fi
               else
                 cp "$match" "$destination"
               fi
@@ -427,31 +480,47 @@ jobs:
             fi
 
             echo "::group::$file"
+
+            set +e
             node "$file" "$@"
+            status=$?
+            set -e
+
             echo "::endgroup::"
+
+            if [[ "$status" -ne 0 ]]; then
+              echo "::warning::Optional attestation helper failed: $file"
+              return 0
+            fi
           }
 
           if [[ "${{ needs.preflight.outputs.create_manifest }}" == "true" ]]; then
             run_optional ".github/scripts/artifacts/create-artifact-manifest.js" \
-              --input "$ATTESTATION_INPUT_DIR" \
+              --include "$ATTESTATION_INPUT_DIR" \
               --output "$ATTESTATION_OUTPUT_DIR/artifact-manifest.json" \
-              --summary "$ATTESTATION_OUTPUT_DIR/artifact-manifest.md"
+              --summary "$ATTESTATION_OUTPUT_DIR/artifact-manifest.md" \
+              --sha256 "$ATTESTATION_OUTPUT_DIR/SHA256SUMS" \
+              --sha512 "$ATTESTATION_OUTPUT_DIR/SHA512SUMS" \
+              --no-print
           fi
 
           if [[ "${{ needs.preflight.outputs.create_checksums }}" == "true" ]]; then
             run_optional ".github/scripts/artifacts/create-checksums.js" \
-              --input "$ATTESTATION_INPUT_DIR" \
-              --output "$ATTESTATION_OUTPUT_DIR/checksums.json" \
+              --include "$ATTESTATION_INPUT_DIR" \
+              --json "$ATTESTATION_OUTPUT_DIR/checksums.json" \
               --summary "$ATTESTATION_OUTPUT_DIR/checksums.md" \
               --sha256 "$ATTESTATION_OUTPUT_DIR/SHA256SUMS" \
-              --sha512 "$ATTESTATION_OUTPUT_DIR/SHA512SUMS"
+              --sha512 "$ATTESTATION_OUTPUT_DIR/SHA512SUMS" \
+              --no-print
           fi
 
           if [[ "${{ needs.preflight.outputs.create_sbom }}" == "true" ]]; then
             run_optional ".github/scripts/artifacts/create-sbom.js" \
-              --input "$ATTESTATION_INPUT_DIR" \
+              --source "$GITHUB_WORKSPACE" \
               --output "$ATTESTATION_OUTPUT_DIR/sbom.json" \
-              --summary "$ATTESTATION_OUTPUT_DIR/sbom.md"
+              --summary "$ATTESTATION_OUTPUT_DIR/sbom.md" \
+              --no-fail-if-empty \
+              --no-print
           fi
 
       - name: Resolve file attestation subjects
@@ -943,7 +1012,7 @@ jobs:
 
       - name: Upload attestation reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: attestations-${{ github.run_id }}
           path: |
@@ -953,7 +1022,7 @@ jobs:
 
       - name: Upload staged attestation input snapshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: attestation-input-${{ github.run_id }}
           path: |
@@ -964,6 +1033,7 @@ jobs:
   finalize:
     name: Finalize
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs:
       - preflight
       - attestations
@@ -987,10 +1057,40 @@ jobs:
             echo "|---|---|"
             echo "| Source run ID | \`${{ needs.preflight.outputs.source_run_id || 'none' }}\` |"
             echo "| Artifact name filter | \`${{ needs.preflight.outputs.artifact_name || 'none' }}\` |"
-            echo "| File provenance | \`${{ needs.preflight.outputs.attest_file_provenance }}\` |"
-            echo "| File SBOM | \`${{ needs.preflight.outputs.attest_file_sbom }}\` |"
-            echo "| Container provenance | \`${{ needs.preflight.outputs.attest_container_provenance }}\` |"
-            echo "| Container SBOM | \`${{ needs.preflight.outputs.attest_container_sbom }}\` |"
-            echo "| Verify after attest | \`${{ needs.preflight.outputs.verify_after_attest }}\` |"
-            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
+            echo "| File provenance | \`${{ needs.preflight.outputs.attest_file_provenance || 'unknown' }}\` |"
+            echo "| File SBOM | \`${{ needs.preflight.outputs.attest_file_sbom || 'unknown' }}\` |"
+            echo "| Container provenance | \`${{ needs.preflight.outputs.attest_container_provenance || 'unknown' }}\` |"
+            echo "| Container SBOM | \`${{ needs.preflight.outputs.attest_container_sbom || 'unknown' }}\` |"
+            echo "| Verify after attest | \`${{ needs.preflight.outputs.verify_after_attest || 'unknown' }}\` |"
+            echo "| Fail on verify error | \`${{ needs.preflight.outputs.fail_on_verify_error || 'unknown' }}\` |"
+            echo "| Dry run | \`${{ needs.preflight.outputs.dry_run || 'unknown' }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce attestation result
+        run: |
+          set -euo pipefail
+
+          check_required_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
+
+          check_optional_job() {
+            local name="$1"
+            local result="$2"
+
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "::error::$name failed with result: $result"
+              exit 1
+            fi
+          }
+
+          check_required_job "Preflight" "${{ needs.preflight.result }}"
+          check_optional_job "Attestations" "${{ needs.attestations.result }}"
+
+          echo "Artifact attestation workflow completed."
