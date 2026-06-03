@@ -1080,14 +1080,15 @@ jobs:
               if not dockerfile.is_file():
                   continue
 
-              context = "." if dockerfile.parent == workspace else dockerfile.parent.relative_to(workspace).as_posix()
-              context_slug = "root" if context == "." else slugify(context)
+              dockerfile_parent = dockerfile.parent.relative_to(workspace).as_posix()
 
-              if dockerfile.name == "Dockerfile":
-                  image_suffix = context_slug
+              if dockerfile_parent == ".":
+                  image_suffix = "root"
               else:
-                  dockerfile_suffix = slugify(dockerfile.name)
-                  image_suffix = slugify(f"{context_slug}-{dockerfile_suffix}")
+                  image_suffix = slugify(dockerfile_parent)
+
+              if dockerfile.name != "Dockerfile":
+                  image_suffix = slugify(f"{image_suffix}-{dockerfile.name}")
 
               image_name = f"ghcr.io/{owner}/{repo}"
 
@@ -1097,8 +1098,8 @@ jobs:
               entries.append(
                   {
                       "name": image_suffix,
-                      "context": context,
-                      "dockerfile": str(relative),
+                      "context": ".",
+                      "dockerfile": relative.as_posix(),
                       "image": image_name,
                   }
               )
