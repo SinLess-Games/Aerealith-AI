@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect } from "react";
 
-import { initFaro, type FaroClientConfig } from '../utils/faro';
+import { initFaro, type FaroClientConfig } from "../utils/faro";
 
 export type FaroProviderProps = {
   children: ReactNode;
@@ -38,7 +38,7 @@ export function FaroProvider({
     });
   }, [enabled, config]);
 
-  return <>{children}</>;
+  return children;
 }
 
 export default FaroProvider;
