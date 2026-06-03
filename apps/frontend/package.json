@@ -32,7 +32,7 @@
     "@helix-ai/ui": "workspace:*",
     "@helix-ai/db": "workspace:*",
     "@mui/material": "^7.3.5",
-    "next": "15.5.16",
+    "next": "15.5.18",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "server-only": "^0.0.1"
