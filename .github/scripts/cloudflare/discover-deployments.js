@@ -13,6 +13,7 @@
 //   - artifacts/cloudflare/deploy-staging.json
 //   - artifacts/cloudflare/deploy-production.json
 //   - artifacts/ci/cloudflare-targets.json
+//   - optional extra input files/directories
 //
 // Output:
 //   - artifacts/cloudflare/deployments.json
@@ -23,6 +24,7 @@
 //   - No external dependencies.
 //   - Does not deploy anything.
 //   - Does not mutate Cloudflare.
+//   - Accepts --stage and --alias for workflow compatibility.
 //   - Can scan Cloudflare deployment logs for URLs missed by structured reports.
 // =============================================================================
 
@@ -68,12 +70,13 @@ const DEFAULT_LOG_ROOTS = [
   "artifacts/cloudflare/deploy-production/logs",
 ];
 
+const KNOWN_ENVIRONMENTS = new Set(["preview", "staging", "production"]);
 const TRUE_VALUES = new Set(["true", "1", "yes", "y", "on", "enabled"]);
 const FALSE_VALUES = new Set(["false", "0", "no", "n", "off", "disabled"]);
 
 const URL_PATTERN = /https?:\/\/[^\s"'<>]+/g;
 const SECRET_OUTPUT_PATTERN =
-  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/g;
+  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|password\s*=\s*[^\s]+|--password\s+[^\s]+|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/gi;
 
 function normalizeString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
@@ -135,9 +138,28 @@ function parseArgs(argv = process.argv.slice(2)) {
     input_files: normalizeStringList(
       process.env.CLOUDFLARE_DEPLOYMENTS_INPUT_FILES,
     ),
+    input_dirs: normalizeStringList(
+      process.env.CLOUDFLARE_DEPLOYMENTS_INPUT_DIRS,
+    ),
     log_roots: normalizeStringList(
       process.env.CLOUDFLARE_DEPLOYMENTS_LOG_ROOTS,
     ),
+
+    deployment_stage:
+      process.env.CLOUDFLARE_DEPLOYMENT_STAGE ||
+      process.env.CLOUDFLARE_STAGE ||
+      "",
+    alias:
+      process.env.CLOUDFLARE_DEPLOYMENT_ALIAS ||
+      process.env.CLOUDFLARE_PREVIEW_ALIAS ||
+      "",
+    preview_ref: process.env.CLOUDFLARE_PREVIEW_REF || "",
+    pull_request_number: process.env.CLOUDFLARE_PULL_REQUEST_NUMBER || "",
+    project_name:
+      process.env.CLOUDFLARE_PROJECT_NAME ||
+      process.env.CLOUDFLARE_PAGES_PROJECT_NAME ||
+      "",
+    output_root: process.env.CLOUDFLARE_OUTPUT_DIR || "",
 
     output_file:
       process.env.CLOUDFLARE_DEPLOYMENTS_OUTPUT_FILE || DEFAULT_OUTPUT_FILE,
@@ -200,7 +222,9 @@ function parseArgs(argv = process.argv.slice(2)) {
     ),
 
     dry_run: normalizeBoolean(
-      process.env.DRY_RUN || process.env.PROJECT_SYNC_DRY_RUN,
+      process.env.CLOUDFLARE_DRY_RUN ||
+        process.env.DRY_RUN ||
+        process.env.PROJECT_SYNC_DRY_RUN,
       false,
     ),
     write_summary_file: normalizeBoolean(
@@ -218,43 +242,53 @@ function parseArgs(argv = process.argv.slice(2)) {
     const arg = argv[index];
 
     if (arg === "--repo" || arg === "--repository") {
-      args.repository = argv[index + 1];
+      args.repository = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--preview") {
-      args.preview_file = argv[index + 1];
+      args.preview_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--staging") {
-      args.staging_file = argv[index + 1];
+      args.staging_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--production") {
-      args.production_file = argv[index + 1];
+      args.production_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--targets" || arg === "--cloudflare-targets") {
-      args.targets_file = argv[index + 1];
+      args.targets_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--input" || arg === "-i") {
-      args.input_files.push(argv[index + 1]);
+      args.input_files.push(requireValue(argv, index, arg));
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--input-dir" || arg === "--input-dirs") {
+      args.input_dirs.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--log-root" || arg === "--log-roots") {
-      args.log_roots.push(...normalizeStringList(argv[index + 1]));
+      args.log_roots.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
@@ -264,31 +298,82 @@ function parseArgs(argv = process.argv.slice(2)) {
       arg === "--environments" ||
       arg === "--env"
     ) {
-      args.environments.push(...normalizeStringList(argv[index + 1]));
+      args.environments.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--stage" || arg === "--deployment-stage") {
+      args.deployment_stage = requireValue(argv, index, arg);
+      args.environments.push(...normalizeStringList(args.deployment_stage));
+      index += 1;
+      continue;
+    }
+
+    if (
+      arg === "--alias" ||
+      arg === "--deployment-alias" ||
+      arg === "--preview-alias"
+    ) {
+      args.alias = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--preview-ref" || arg === "--ref-name") {
+      args.preview_ref = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--pull-request-number" || arg === "--pr-number") {
+      args.pull_request_number = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--project-name" || arg === "--cloudflare-project") {
+      args.project_name = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--output-root") {
+      args.output_root = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--include-target" || arg === "--include-targets") {
-      args.include_targets.push(...normalizeStringList(argv[index + 1]));
+      args.include_targets.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-target" || arg === "--exclude-targets") {
-      args.exclude_targets.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_targets.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--include-type" || arg === "--include-types") {
-      args.include_types.push(...normalizeStringList(argv[index + 1]));
+      args.include_types.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-type" || arg === "--exclude-types") {
-      args.exclude_types.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_types.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
@@ -323,9 +408,19 @@ function parseArgs(argv = process.argv.slice(2)) {
       continue;
     }
 
+    if (arg === "--redact-logs") {
+      args.redact_logs = true;
+      continue;
+    }
+
+    if (arg === "--no-redact-logs") {
+      args.redact_logs = false;
+      continue;
+    }
+
     if (arg === "--max-log-files") {
       args.max_log_files = normalizeInteger(
-        argv[index + 1],
+        requireValue(argv, index, arg),
         args.max_log_files,
       );
       index += 1;
@@ -334,7 +429,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     if (arg === "--max-urls-per-log") {
       args.max_urls_per_log = normalizeInteger(
-        argv[index + 1],
+        requireValue(argv, index, arg),
         args.max_urls_per_log,
       );
       index += 1;
@@ -356,14 +451,20 @@ function parseArgs(argv = process.argv.slice(2)) {
       continue;
     }
 
+    if (arg === "--no-fail-on-error") {
+      args.fail_on_failed_deployment = false;
+      args.fail_on_blocked_deployment = false;
+      continue;
+    }
+
     if (arg === "--output" || arg === "-o") {
-      args.output_file = argv[index + 1];
+      args.output_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--summary") {
-      args.summary_file = argv[index + 1];
+      args.summary_file = requireValue(argv, index, arg);
       args.write_summary_file = true;
       index += 1;
       continue;
@@ -397,27 +498,93 @@ function parseArgs(argv = process.argv.slice(2)) {
     throw new Error(`Unknown argument: ${arg}`);
   }
 
+  normalizeArgs(args);
+
+  return args;
+}
+
+function requireValue(argv, index, arg) {
+  const value = argv[index + 1];
+
+  if (value === undefined || String(value).startsWith("--")) {
+    throw new Error(`Missing value for argument: ${arg}`);
+  }
+
+  return value;
+}
+
+function normalizeArgs(args) {
   if (!args.log_roots.length) {
     args.log_roots = [...DEFAULT_LOG_ROOTS];
   }
 
+  args.deployment_stage = normalizeString(args.deployment_stage).toLowerCase();
+  args.alias = normalizeString(args.alias);
+  args.preview_ref = normalizeString(args.preview_ref);
+  args.pull_request_number = normalizeString(args.pull_request_number);
+  args.project_name = normalizeString(args.project_name);
+  args.output_root = toPosixPath(args.output_root);
+
   args.environments = [
-    ...new Set(args.environments.map((item) => item.toLowerCase())),
+    ...new Set(
+      args.environments
+        .map((item) => normalizeString(item).toLowerCase())
+        .filter(Boolean),
+    ),
   ];
-  args.include_targets = [...new Set(args.include_targets)];
-  args.exclude_targets = [...new Set(args.exclude_targets)];
+
+  if (
+    args.deployment_stage &&
+    KNOWN_ENVIRONMENTS.has(args.deployment_stage) &&
+    !args.environments.length
+  ) {
+    args.environments.push(args.deployment_stage);
+  }
+
+  if (args.output_root && args.deployment_stage) {
+    const stageInputFile = toPosixPath(
+      path.join(args.output_root, `deploy-${args.deployment_stage}.json`),
+    );
+    const genericInputFile = toPosixPath(
+      path.join(args.output_root, "deployment.json"),
+    );
+    const stageLogRoot = toPosixPath(path.join(args.output_root, "logs"));
+
+    args.input_files.push(stageInputFile, genericInputFile);
+    args.log_roots.push(stageLogRoot);
+  }
+
+  args.include_targets = [
+    ...new Set(args.include_targets.map(normalizeString)),
+  ];
+  args.exclude_targets = [
+    ...new Set(args.exclude_targets.map(normalizeString)),
+  ];
   args.include_types = [
-    ...new Set(args.include_types.map((item) => item.toLowerCase())),
+    ...new Set(
+      args.include_types
+        .map((item) => normalizeString(item).toLowerCase())
+        .filter(Boolean),
+    ),
   ];
   args.exclude_types = [
-    ...new Set(args.exclude_types.map((item) => item.toLowerCase())),
+    ...new Set(
+      args.exclude_types
+        .map((item) => normalizeString(item).toLowerCase())
+        .filter(Boolean),
+    ),
   ];
-  args.input_files = [...new Set(args.input_files.filter(Boolean))];
-  args.log_roots = [...new Set(args.log_roots.map(toPosixPath))];
+  args.input_files = [
+    ...new Set(args.input_files.map(toPosixPath).filter(Boolean)),
+  ];
+  args.input_dirs = [
+    ...new Set(args.input_dirs.map(toPosixPath).filter(Boolean)),
+  ];
+  args.log_roots = [
+    ...new Set(args.log_roots.map(toPosixPath).filter(Boolean)),
+  ];
   args.max_log_files = Math.max(0, args.max_log_files);
   args.max_urls_per_log = Math.max(0, args.max_urls_per_log);
-
-  return args;
 }
 
 function printHelp() {
@@ -430,7 +597,8 @@ Usage:
 Examples:
   node .github/scripts/cloudflare/discover-deployments.js
   node .github/scripts/cloudflare/discover-deployments.js --environment production
-  node .github/scripts/cloudflare/discover-deployments.js --include-target web --scan-logs
+  node .github/scripts/cloudflare/discover-deployments.js --stage preview --alias main
+  node .github/scripts/cloudflare/discover-deployments.js --include-target frontend --scan-logs
   node .github/scripts/cloudflare/discover-deployments.js --include-undeployed
 
 Options:
@@ -440,8 +608,15 @@ Options:
       --production <file>                 Production deployment report file.
       --targets <file>                    cloudflare-targets.json detector file.
   -i, --input <file>                      Additional Cloudflare deployment report JSON file.
+      --input-dir <path,list>             Additional directories to scan for JSON reports.
       --log-root <path,list>              Log roots to scan for deployment URLs.
       --environment <list>                Environment filter: preview, staging, production.
+      --stage <stage>                     Stage alias for --environment.
+      --alias <alias>                     Deployment alias, such as preview branch alias.
+      --preview-ref <ref>                 Preview branch/ref metadata.
+      --pull-request-number <number>      Pull request number metadata.
+      --project-name <name>               Cloudflare project name metadata.
+      --output-root <path>                Stage output root to scan for reports/logs.
       --include-target <list>             Include only target names.
       --exclude-target <list>             Exclude target names.
       --include-type <list>               Include only pages/worker target types.
@@ -452,6 +627,8 @@ Options:
       --no-scan-logs                      Do not scan logs.
       --include-orphan-urls               Include URLs found in logs but not mapped to a target. Default.
       --no-orphan-urls                    Drop unmapped log URLs.
+      --redact-logs                       Redact secrets from scanned logs. Default.
+      --no-redact-logs                    Do not redact scanned logs before URL extraction.
       --max-log-files <number>            Maximum log files to scan. Default: 500.
       --max-urls-per-log <number>         Maximum URLs kept per log file. Default: 25.
       --fail-if-empty                     Exit non-zero if no deployments are discovered.
@@ -509,6 +686,10 @@ function toRelativePath(filePath, repoRoot) {
 
 function isFile(filePath) {
   return fs.existsSync(filePath) && fs.statSync(filePath).isFile();
+}
+
+function isDirectory(filePath) {
+  return fs.existsSync(filePath) && fs.statSync(filePath).isDirectory();
 }
 
 function ensureDir(dirPath, dryRun = false) {
@@ -657,14 +838,36 @@ function cleanUrl(url) {
 function normalizeStatus(value, fallback = "unknown") {
   const status = normalizeString(value, fallback).toLowerCase();
 
-  if (["deployed", "passed", "success", "ok"].includes(status))
+  if (["deployed", "passed", "success", "ok", "done"].includes(status))
     return "deployed";
   if (["failed", "failure", "error"].includes(status)) return "failed";
   if (["blocked", "cancelled", "canceled"].includes(status)) return "blocked";
-  if (["planned", "skipped", "dry-run"].includes(status)) return "planned";
+  if (["planned", "skipped", "dry-run", "dry_run"].includes(status))
+    return "planned";
   if (["empty", "none"].includes(status)) return "empty";
+  if (["not-deployed", "not_deployed"].includes(status)) return "not-deployed";
 
   return status;
+}
+
+function environmentFromReportType(type) {
+  const value = normalizeString(type).toLowerCase();
+
+  if (value.includes("preview")) return "preview";
+  if (value.includes("staging")) return "staging";
+  if (value.includes("production")) return "production";
+
+  return "unknown";
+}
+
+function environmentFromFile(filePath) {
+  const value = normalizeString(filePath).toLowerCase();
+
+  if (value.includes("preview")) return "preview";
+  if (value.includes("staging")) return "staging";
+  if (value.includes("production")) return "production";
+
+  return "unknown";
 }
 
 function safeId(value) {
@@ -688,26 +891,66 @@ function shouldIncludeDeployment(deployment, args) {
   if (
     args.environments.length &&
     !args.environments.includes(deployment.environment)
-  )
+  ) {
     return false;
+  }
+
   if (
     args.include_targets.length &&
     !args.include_targets.includes(deployment.name)
-  )
+  ) {
     return false;
+  }
+
   if (args.exclude_targets.includes(deployment.name)) return false;
+
   if (
     args.include_types.length &&
     !args.include_types.includes(deployment.type)
-  )
+  ) {
     return false;
+  }
+
   if (args.exclude_types.includes(deployment.type)) return false;
 
   return true;
 }
 
-function inputFiles(args) {
+function walkFiles(targetPath, repoRoot, files = []) {
+  const absolutePath = resolvePath(targetPath, repoRoot);
+
+  if (!fs.existsSync(absolutePath)) return files;
+
+  const stat = fs.statSync(absolutePath);
+
+  if (stat.isFile()) {
+    files.push(absolutePath);
+    return files;
+  }
+
+  if (!stat.isDirectory()) return files;
+
+  for (const entry of fs.readdirSync(absolutePath, { withFileTypes: true })) {
+    walkFiles(path.join(absolutePath, entry.name), repoRoot, files);
+  }
+
+  return files;
+}
+
+function jsonFilesFromDirs(inputDirs, repoRoot) {
   return [
+    ...new Set(
+      inputDirs
+        .flatMap((inputDir) => walkFiles(inputDir, repoRoot))
+        .filter(isFile)
+        .filter((file) => path.extname(file).toLowerCase() === ".json")
+        .map((file) => toRelativePath(file, repoRoot)),
+    ),
+  ];
+}
+
+function inputFiles(args, repoRoot) {
+  const base = [
     {
       key: "preview",
       file: args.preview_file,
@@ -720,95 +963,233 @@ function inputFiles(args) {
       key: "production",
       file: args.production_file,
     },
-    ...args.input_files.map((file, index) => ({
-      key: `extra-${index + 1}`,
-      file,
-    })),
   ];
+
+  const extraFiles = [
+    ...args.input_files,
+    ...jsonFilesFromDirs(args.input_dirs, repoRoot),
+  ].map((file, index) => ({
+    key: `extra-${index + 1}`,
+    file,
+  }));
+
+  return [...base, ...extraFiles];
 }
 
-function normalizeReportDeployment(deployment, report, sourceFile) {
+function extractDeploymentRecords(report) {
+  if (!report || typeof report !== "object") return [];
+
+  if (Array.isArray(report.deployments)) return report.deployments;
+  if (Array.isArray(report.deployment_results))
+    return report.deployment_results;
+  if (Array.isArray(report.results)) {
+    const deployResults = report.results.filter(
+      (result) =>
+        result.kind === "deploy" ||
+        result.kind === "deployment" ||
+        result.target_name ||
+        result.target_id ||
+        extractUrls(
+          result.urls || "",
+          result.stdout_preview || "",
+          result.stderr_preview || "",
+        ).length,
+    );
+
+    if (deployResults.length) return deployResults;
+  }
+
+  if (report.deployment && typeof report.deployment === "object") {
+    return [report.deployment];
+  }
+
+  if (
+    report.name ||
+    report.target_name ||
+    report.target_id ||
+    report.url ||
+    report.urls ||
+    report.status
+  ) {
+    return [report];
+  }
+
+  return [];
+}
+
+function normalizeDeploymentType(record, report) {
+  const raw = normalizeString(
+    record.type ||
+      record.primary_type ||
+      record.target_type ||
+      report.config?.type ||
+      report.target_type ||
+      "unknown",
+  ).toLowerCase();
+
+  if (raw === "pages" || raw === "page" || raw.includes("pages")) {
+    return "pages";
+  }
+
+  if (
+    raw === "worker" ||
+    raw === "workers" ||
+    raw === "service-worker" ||
+    raw.includes("worker")
+  ) {
+    return "worker";
+  }
+
+  return raw || "unknown";
+}
+
+function normalizeReportDeployment(record, report, sourceFile, args) {
   const environment = normalizeString(
-    deployment.environment ||
+    record.environment ||
+      record.stage ||
+      record.deployment_stage ||
       report.config?.environment ||
-      environmentFromReportType(report.type),
+      report.config?.stage ||
+      args.deployment_stage ||
+      environmentFromReportType(report.type) ||
+      environmentFromFile(sourceFile),
     "unknown",
   ).toLowerCase();
-  const type = normalizeString(
-    deployment.type || deployment.primary_type || "unknown",
-  ).toLowerCase();
+
+  const type = normalizeDeploymentType(record, report);
   const name = normalizeString(
-    deployment.name || deployment.target_name || "cloudflare-target",
+    record.name ||
+      record.target_name ||
+      record.project_name ||
+      report.config?.project_name ||
+      args.project_name ||
+      "cloudflare-target",
   );
-  const root = toPosixPath(deployment.root || ".");
+  const root = toPosixPath(record.root || record.project_root || ".");
+
+  const targetId = normalizeString(record.id || record.target_id || "");
+  const urls = extractUrls(
+    ...(Array.isArray(record.urls) ? record.urls : []),
+    record.url || "",
+    record.primary_url || "",
+    record.deployment_url || "",
+    record.stdout_preview || "",
+    record.stderr_preview || "",
+    report.url || "",
+    ...(Array.isArray(report.urls) ? report.urls : []),
+  );
+
+  const reportStatus = normalizeStatus(report.status);
+  const recordStatus = normalizeStatus(
+    record.status || record.conclusion,
+    reportStatus,
+  );
+  const success =
+    record.success === true ||
+    record.ok === true ||
+    recordStatus === "deployed" ||
+    recordStatus === "success" ||
+    recordStatus === "passed";
+  const failed =
+    record.success === false ||
+    record.ok === false ||
+    recordStatus === "failed" ||
+    reportStatus === "failed";
+  const blocked =
+    recordStatus === "blocked" ||
+    reportStatus === "blocked" ||
+    report.blocked === true;
+  const planned =
+    recordStatus === "planned" ||
+    reportStatus === "planned" ||
+    report.config?.dry_run === true ||
+    args.dry_run === true;
+  const deployed =
+    !failed && !blocked && !planned && (success || urls.length > 0);
+
+  const status = blocked
+    ? "blocked"
+    : failed
+      ? "failed"
+      : deployed
+        ? "deployed"
+        : planned
+          ? "planned"
+          : recordStatus;
 
   return {
-    id: normalizeString(
-      deployment.id ||
-        deployment.target_id ||
-        deploymentKey(environment, type, name, root),
-    ),
+    id: targetId || deploymentKey(environment, type, name, root),
     key: deploymentKey(environment, type, name, root),
     source: "deployment-report",
     source_file: sourceFile,
     report_type: report.type || "unknown",
-    report_status: normalizeStatus(report.status),
+    report_status: reportStatus,
     environment,
-    branch: normalizeString(
-      report.config?.branch || report.github?.branch || "",
+    stage: normalizeString(
+      record.stage || args.deployment_stage || environment,
     ),
-    commit: normalizeString(report.github?.sha || ""),
-    short_commit: normalizeString(report.github?.short_sha || ""),
+    alias: normalizeString(record.alias || args.alias),
+    preview_ref: normalizeString(record.preview_ref || args.preview_ref),
+    pull_request_number: normalizeString(
+      record.pull_request_number || args.pull_request_number,
+    ),
+    branch: normalizeString(
+      record.branch ||
+        report.config?.branch ||
+        report.github?.branch ||
+        args.preview_ref ||
+        "",
+    ),
+    commit: normalizeString(record.commit || report.github?.sha || ""),
+    short_commit: normalizeString(
+      record.short_commit || report.github?.short_sha || "",
+    ),
     workflow: normalizeString(report.github?.workflow || ""),
     run_id: normalizeString(report.github?.run_id || ""),
     name,
     type,
     root,
-    config_file: toPosixPath(deployment.config_file || ""),
-    target_id: normalizeString(deployment.id || deployment.target_id || ""),
-    target_types: Array.isArray(deployment.target_types)
-      ? deployment.target_types.map(String)
+    config_file: toPosixPath(
+      record.config_file || report.config?.config_file || "",
+    ),
+    target_id: targetId,
+    target_types: Array.isArray(record.target_types)
+      ? record.target_types.map(String)
       : [type],
-    affected: Boolean(deployment.affected),
+    affected: Boolean(record.affected),
     pages_build_output_dir: toPosixPath(
-      deployment.pages_build_output_dir || "",
+      record.pages_build_output_dir ||
+        report.config?.pages_build_output_dir ||
+        "",
     ),
     wrangler_environment: normalizeString(
-      deployment.wrangler_environment || "",
+      record.wrangler_environment || report.config?.wrangler_environment || "",
     ),
-    has_config_environment: Boolean(deployment.has_config_environment),
+    has_config_environment: Boolean(record.has_config_environment),
     resource_counts: {
-      d1_databases: Number(deployment.d1_databases || 0),
-      kv_namespaces: Number(deployment.kv_namespaces || 0),
-      r2_buckets: Number(deployment.r2_buckets || 0),
-      queue_producers: Number(deployment.queue_producers || 0),
-      queue_consumers: Number(deployment.queue_consumers || 0),
-      durable_objects: Number(deployment.durable_objects || 0),
+      d1_databases: Number(record.d1_databases || 0),
+      kv_namespaces: Number(record.kv_namespaces || 0),
+      r2_buckets: Number(record.r2_buckets || 0),
+      queue_producers: Number(record.queue_producers || 0),
+      queue_consumers: Number(record.queue_consumers || 0),
+      durable_objects: Number(record.durable_objects || 0),
     },
-    status: "unknown",
-    deployed: false,
-    blocked: false,
-    failed: false,
-    planned: false,
-    urls: [],
-    primary_url: "",
+    status,
+    deployed,
+    blocked,
+    failed,
+    planned,
+    urls,
+    primary_url: urls[0] || "",
     commands: [],
     build_results: [],
     deploy_results: [],
     validation: null,
-    skipped_reason: "",
+    skipped_reason: normalizeString(
+      record.skipped_reason || record.reason || "",
+    ),
     notes: [],
   };
-}
-
-function environmentFromReportType(type) {
-  const value = normalizeString(type).toLowerCase();
-
-  if (value.includes("preview")) return "preview";
-  if (value.includes("staging")) return "staging";
-  if (value.includes("production")) return "production";
-
-  return "unknown";
 }
 
 function resultBelongsToDeployment(result, deployment, reportDeploymentCount) {
@@ -819,14 +1200,16 @@ function resultBelongsToDeployment(result, deployment, reportDeploymentCount) {
     result.target_id &&
     deployment.target_id &&
     result.target_id === deployment.target_id
-  )
+  ) {
     return true;
+  }
   if (
     result.target_name &&
     deployment.name &&
     result.target_name === deployment.name
-  )
+  ) {
     return true;
+  }
   if (reportDeploymentCount === 1) return true;
 
   return false;
@@ -844,8 +1227,8 @@ function attachReportEvidence(deployment, report) {
   const buildResults = matchingResults.filter(
     (result) => result.kind === "build",
   );
-  const deployResults = matchingResults.filter(
-    (result) => result.kind === "deploy",
+  const deployResults = matchingResults.filter((result) =>
+    ["deploy", "deployment"].includes(result.kind),
   );
   const skippedTarget = (report.skipped_targets || []).find((item) => {
     return (
@@ -868,9 +1251,6 @@ function attachReportEvidence(deployment, report) {
     ...(deployResults.length
       ? deployResults.map((result) => result.stderr_preview || "")
       : []),
-    ...(Array.isArray(report.urls) && (report.deployments || []).length <= 1
-      ? report.urls
-      : []),
   );
 
   const hasFailure = matchingResults.some(
@@ -879,7 +1259,6 @@ function attachReportEvidence(deployment, report) {
   const hasDeploySuccess = deployResults.some(
     (result) => result.status === "passed" || result.success === true,
   );
-  const reportStatus = normalizeStatus(report.status);
 
   deployment.commands = matchingResults.map((result) => ({
     id: result.id || "",
@@ -901,27 +1280,25 @@ function attachReportEvidence(deployment, report) {
     (result) => result.id || result.display || result.status || "deploy",
   );
   deployment.validation = validation || null;
-  deployment.skipped_reason = skippedTarget?.reason || "";
+  deployment.skipped_reason =
+    skippedTarget?.reason || deployment.skipped_reason || "";
   deployment.urls = [...new Set([...deployment.urls, ...urls])];
-  deployment.primary_url = deployment.urls[0] || "";
-  deployment.failed = hasFailure || reportStatus === "failed";
-  deployment.blocked = Boolean(report.blocked) || reportStatus === "blocked";
-  deployment.planned =
-    reportStatus === "planned" || report.config?.dry_run === true;
-  deployment.deployed =
+  deployment.primary_url = deployment.primary_url || deployment.urls[0] || "";
+
+  if (hasFailure) {
+    deployment.failed = true;
+    deployment.status = "failed";
+  }
+
+  if (
+    hasDeploySuccess &&
     !deployment.failed &&
     !deployment.blocked &&
-    hasDeploySuccess &&
-    !deployment.planned;
-  deployment.status = deployment.blocked
-    ? "blocked"
-    : deployment.failed
-      ? "failed"
-      : deployment.deployed
-        ? "deployed"
-        : deployment.planned
-          ? "planned"
-          : reportStatus;
+    !deployment.planned
+  ) {
+    deployment.deployed = true;
+    deployment.status = "deployed";
+  }
 
   if (deployment.skipped_reason) {
     deployment.status =
@@ -936,11 +1313,12 @@ function deploymentsFromReportInput(input, args) {
   const report = input.data;
 
   if (!report) return [];
-  if (!Array.isArray(report.deployments)) return [];
 
-  return report.deployments
-    .map((deployment) =>
-      normalizeReportDeployment(deployment, report, input.file),
+  const records = extractDeploymentRecords(report);
+
+  return records
+    .map((record) =>
+      normalizeReportDeployment(record, report, input.file, args),
     )
     .map((deployment) => attachReportEvidence(deployment, report))
     .filter((deployment) => shouldIncludeDeployment(deployment, args));
@@ -955,12 +1333,6 @@ function deploymentsFromTargetsInput(input, args) {
   const matrix = Array.isArray(data.deployment_matrix)
     ? data.deployment_matrix
     : [];
-  const matrixByTarget = new Map(
-    matrix.map((item) => [
-      item.id || `${item.type}:${item.name}:${item.root}`,
-      item,
-    ]),
-  );
   const deployments = [];
 
   for (const target of targets) {
@@ -973,7 +1345,9 @@ function deploymentsFromTargetsInput(input, args) {
 
     for (const environment of environments) {
       const matrixEntry =
-        matrixByTarget.get(target.id) ||
+        matrix.find(
+          (item) => item.id === target.id && item.environment === environment,
+        ) ||
         matrix.find(
           (item) =>
             item.name === target.name && item.environment === environment,
@@ -983,7 +1357,10 @@ function deploymentsFromTargetsInput(input, args) {
         matrixEntry.type || baseType || "unknown",
       ).toLowerCase();
       const name = normalizeString(
-        target.name || matrixEntry.name || "cloudflare-target",
+        target.name ||
+          matrixEntry.name ||
+          args.project_name ||
+          "cloudflare-target",
       );
       const root = toPosixPath(target.root || matrixEntry.root || ".");
 
@@ -999,6 +1376,10 @@ function deploymentsFromTargetsInput(input, args) {
         report_type: data.type || "cloudflare-targets",
         report_status: normalizeStatus(data.status || "detected"),
         environment,
+        stage: args.deployment_stage || environment,
+        alias: args.alias,
+        preview_ref: args.preview_ref,
+        pull_request_number: args.pull_request_number,
         branch: "",
         commit: "",
         short_commit: "",
@@ -1058,6 +1439,58 @@ function deploymentsFromTargetsInput(input, args) {
   return deployments;
 }
 
+function mergeDeployment(left, right) {
+  const preferred =
+    left.source === "deployment-report" || right.source !== "deployment-report"
+      ? left
+      : right;
+  const secondary = preferred === left ? right : left;
+
+  const urls = [...new Set([...(left.urls || []), ...(right.urls || [])])];
+  const commands = [...(left.commands || []), ...(right.commands || [])];
+  const notes = [...new Set([...(left.notes || []), ...(right.notes || [])])];
+
+  return {
+    ...secondary,
+    ...preferred,
+    id: preferred.id || secondary.id,
+    urls,
+    primary_url:
+      preferred.primary_url || secondary.primary_url || urls[0] || "",
+    commands,
+    build_results: [
+      ...new Set([
+        ...(left.build_results || []),
+        ...(right.build_results || []),
+      ]),
+    ],
+    deploy_results: [
+      ...new Set([
+        ...(left.deploy_results || []),
+        ...(right.deploy_results || []),
+      ]),
+    ],
+    notes,
+    failed: left.failed || right.failed,
+    blocked: left.blocked || right.blocked,
+    planned: left.planned || right.planned,
+    deployed: left.deployed || right.deployed,
+    status:
+      left.failed || right.failed
+        ? "failed"
+        : left.blocked || right.blocked
+          ? "blocked"
+          : left.deployed || right.deployed
+            ? "deployed"
+            : preferred.status || secondary.status,
+    source:
+      left.source === "deployment-report" ||
+      right.source === "deployment-report"
+        ? "deployment-report"
+        : preferred.source,
+  };
+}
+
 function dedupeDeployments(deployments) {
   const seen = new Map();
 
@@ -1076,46 +1509,7 @@ function dedupeDeployments(deployments) {
       continue;
     }
 
-    const existing = seen.get(key);
-    const preferred =
-      existing.source === "deployment-report" ? existing : deployment;
-    const secondary = preferred === existing ? deployment : existing;
-
-    seen.set(key, {
-      ...secondary,
-      ...preferred,
-      id: preferred.id || secondary.id,
-      urls: [
-        ...new Set([...(existing.urls || []), ...(deployment.urls || [])]),
-      ],
-      primary_url:
-        preferred.primary_url ||
-        secondary.primary_url ||
-        existing.urls?.[0] ||
-        deployment.urls?.[0] ||
-        "",
-      commands: [...(existing.commands || []), ...(deployment.commands || [])],
-      build_results: [
-        ...new Set([
-          ...(existing.build_results || []),
-          ...(deployment.build_results || []),
-        ]),
-      ],
-      deploy_results: [
-        ...new Set([
-          ...(existing.deploy_results || []),
-          ...(deployment.deploy_results || []),
-        ]),
-      ],
-      notes: [
-        ...new Set([...(existing.notes || []), ...(deployment.notes || [])]),
-      ],
-      source:
-        existing.source === "deployment-report" ||
-        deployment.source === "deployment-report"
-          ? "deployment-report"
-          : preferred.source,
-    });
+    seen.set(key, mergeDeployment(seen.get(key), deployment));
   }
 
   return [...seen.values()].sort((left, right) => {
@@ -1126,27 +1520,6 @@ function dedupeDeployments(deployments) {
       left.root.localeCompare(right.root)
     );
   });
-}
-
-function walkFiles(targetPath, repoRoot, files = []) {
-  const absolutePath = resolvePath(targetPath, repoRoot);
-
-  if (!fs.existsSync(absolutePath)) return files;
-
-  const stat = fs.statSync(absolutePath);
-
-  if (stat.isFile()) {
-    files.push(absolutePath);
-    return files;
-  }
-
-  if (!stat.isDirectory()) return files;
-
-  for (const entry of fs.readdirSync(absolutePath, { withFileTypes: true })) {
-    walkFiles(path.join(absolutePath, entry.name), repoRoot, files);
-  }
-
-  return files;
 }
 
 function isLogFile(filePath) {
@@ -1187,7 +1560,13 @@ function attachLogUrls(deployments, logUrlRecords, args) {
   const deploymentsByToken = new Map();
 
   for (const deployment of deployments) {
-    const tokens = [deployment.id, deployment.target_id, deployment.name]
+    const tokens = [
+      deployment.id,
+      deployment.target_id,
+      deployment.name,
+      deployment.alias,
+      deployment.preview_ref,
+    ]
       .map((token) => safeId(token))
       .filter(Boolean);
 
@@ -1201,7 +1580,7 @@ function attachLogUrls(deployments, logUrlRecords, args) {
   for (const record of logUrlRecords) {
     const safeFile = safeId(record.file);
     const matchedDeployment = [...deploymentsByToken.entries()].find(
-      ([token]) => safeFile.includes(token),
+      ([token]) => token && safeFile.includes(token),
     )?.[1];
 
     if (matchedDeployment) {
@@ -1339,7 +1718,7 @@ function collectNotices(inputs, deployments, orphanUrls) {
 
 function createDiscovery(args, repoRoot) {
   const github = getGitMetadata(repoRoot);
-  const deploymentInputs = inputFiles(args).map((input) =>
+  const deploymentInputs = inputFiles(args, repoRoot).map((input) =>
     readJsonInput(input.file, repoRoot, input.key),
   );
   const targetsInput = readJsonInput(
@@ -1399,8 +1778,17 @@ function createDiscovery(args, repoRoot) {
         resolvePath(args.targets_file, repoRoot),
         repoRoot,
       ),
+      deployment_stage: args.deployment_stage,
+      alias: args.alias,
+      preview_ref: args.preview_ref,
+      pull_request_number: args.pull_request_number,
+      project_name: args.project_name,
+      output_root: args.output_root,
       input_files: args.input_files.map((file) =>
         toRelativePath(resolvePath(file, repoRoot), repoRoot),
+      ),
+      input_dirs: args.input_dirs.map((dir) =>
+        toRelativePath(resolvePath(dir, repoRoot), repoRoot),
       ),
       log_roots: args.log_roots,
       output_file: toRelativePath(
@@ -1418,6 +1806,7 @@ function createDiscovery(args, repoRoot) {
       include_undeployed_targets: args.include_undeployed_targets,
       scan_logs: args.scan_logs,
       include_orphan_urls: args.include_orphan_urls,
+      redact_logs: args.redact_logs,
       max_log_files: args.max_log_files,
       max_urls_per_log: args.max_urls_per_log,
       dry_run: args.dry_run,
@@ -1515,6 +1904,14 @@ function createMarkdownSummary(discovery) {
     `- Workflow: \`${discovery.github.workflow || "unknown"}\``,
     `- Run: \`${discovery.github.run_id || "unknown"}\``,
     "",
+    "## ⚙️ Discovery Context",
+    "",
+    `- Stage: \`${discovery.config.deployment_stage || "not set"}\``,
+    `- Alias: \`${discovery.config.alias || "not set"}\``,
+    `- Preview ref: \`${discovery.config.preview_ref || "not set"}\``,
+    `- Pull request: \`${discovery.config.pull_request_number || "not set"}\``,
+    `- Cloudflare project: \`${discovery.config.project_name || "not set"}\``,
+    "",
     "## 📊 Totals",
     "",
     `- Deployment reports available: \`${discovery.totals.deployment_reports_available}\``,
@@ -1561,7 +1958,7 @@ function createMarkdownSummary(discovery) {
     for (const deployment of discovery.deployments.slice(0, 200)) {
       const url = deployment.primary_url ? deployment.primary_url : "none";
       lines.push(
-        `| \`${deployment.environment}\` | \`${deployment.status}\` | \`${deployment.name}\` | \`${deployment.type}\` | \`${deployment.branch || "unknown"}\` | ${url} | \`${deployment.source}\` |`,
+        `| \`${deployment.environment}\` | \`${deployment.status}\` | \`${escapeMarkdown(deployment.name)}\` | \`${deployment.type}\` | \`${escapeMarkdown(deployment.branch || "unknown")}\` | ${url} | \`${deployment.source}\` |`,
       );
     }
 
@@ -1644,6 +2041,14 @@ function createMarkdownSummary(discovery) {
     `| \`cloudflare-targets\` | \`${discovery.inputs.cloudflare_targets.file}\` | \`${discovery.inputs.cloudflare_targets.available ? "true" : "false"}\` | \`${discovery.inputs.cloudflare_targets.status || "unknown"}\` | ${discovery.inputs.cloudflare_targets.error || ""} |`,
   );
 
+  lines.push("");
+  lines.push("## 📤 Outputs");
+  lines.push("");
+  lines.push(`- JSON report: \`${discovery.config.output_file}\``);
+  lines.push(
+    `- Markdown summary: \`${discovery.config.summary_file || "not written"}\``,
+  );
+
   return `${lines.join("\n").trim()}\n`;
 }
 
@@ -1663,7 +2068,10 @@ function setGitHubOutput(name, value) {
 
   const rendered = typeof value === "string" ? value : JSON.stringify(value);
 
-  fs.appendFileSync(outputFile, `${name}<<EOF\n${rendered}\nEOF\n`);
+  fs.appendFileSync(
+    outputFile,
+    `${name}<<EOF\n${redactOutput(rendered)}\nEOF\n`,
+  );
   return true;
 }
 
@@ -1674,6 +2082,11 @@ function writeGitHubOutputs(discovery) {
     discovery.config.summary_file || "",
   );
   setGitHubOutput("cloudflare_deployments_status", discovery.status);
+  setGitHubOutput(
+    "cloudflare_deployments_stage",
+    discovery.config.deployment_stage || "",
+  );
+  setGitHubOutput("cloudflare_deployments_alias", discovery.config.alias || "");
   setGitHubOutput(
     "cloudflare_deployments_count",
     String(discovery.totals.deployments),
