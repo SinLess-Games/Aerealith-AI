@@ -7,6 +7,13 @@
 //   Publish Docker image references produced by Docker build discovery/build
 //   artifacts, local config, or direct CLI inputs.
 //
+// Behavior:
+//   - Publishes target refs using a version tag by default.
+//   - Does not default target refs to git SHA/hash tags.
+//   - Uses package.json version when no release/version env is provided.
+//   - Writes artifacts/docker/hashes.json with image IDs, repo digests,
+//     pushed digests, and source/target refs.
+//
 // Input:
 //   - .github/docker/publish-images.json
 //   - .github/docker/publish-images.jsonc
@@ -18,6 +25,7 @@
 // Output:
 //   - artifacts/docker/publish-images.json
 //   - artifacts/docker/publish-images.md
+//   - artifacts/docker/hashes.json
 //
 // Notes:
 //   - CommonJS only.
@@ -25,8 +33,8 @@
 //   - Uses Docker CLI.
 //   - Push is enabled by default because this script is only for publishing.
 //   - Docker login is optional.
-//   - Dry-run mode reports docker tag/push commands without mutating Docker.
-//   - Secrets are redacted from logs, reports, and GitHub outputs.
+//   - Dry-run mode reports docker tag/push/hash commands without mutating Docker.
+//   - Secrets are redacted from logs, reports, summaries, hashes, and outputs.
 // =============================================================================
 
 const fs = require("node:fs");
@@ -79,6 +87,7 @@ const DEFAULT_BUILD_REPORT_FILE = "artifacts/docker/build-images.json";
 const DEFAULT_DOCKERFILES_FILE = "artifacts/ci/dockerfiles.json";
 const DEFAULT_OUTPUT_FILE = "artifacts/docker/publish-images.json";
 const DEFAULT_SUMMARY_FILE = "artifacts/docker/publish-images.md";
+const DEFAULT_HASHES_FILE = "artifacts/docker/hashes.json";
 
 const DEFAULT_REGISTRY = "ghcr.io";
 const DEFAULT_IMAGE_NAMESPACE = "sinless-games";
@@ -149,6 +158,8 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.DOCKER_PUBLISH_IMAGES_OUTPUT_FILE || DEFAULT_OUTPUT_FILE,
     summary_file:
       process.env.DOCKER_PUBLISH_IMAGES_SUMMARY_FILE || DEFAULT_SUMMARY_FILE,
+    hashes_file:
+      process.env.DOCKER_PUBLISH_IMAGES_HASHES_FILE || DEFAULT_HASHES_FILE,
 
     registry:
       process.env.DOCKER_PUBLISH_IMAGES_REGISTRY ||
@@ -158,6 +169,19 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.DOCKER_PUBLISH_IMAGES_NAMESPACE ||
       process.env.DOCKER_IMAGE_NAMESPACE ||
       DEFAULT_IMAGE_NAMESPACE,
+
+    version:
+      process.env.DOCKER_PUBLISH_IMAGES_VERSION ||
+      process.env.CONTAINER_VERSION ||
+      process.env.RELEASE_VERSION ||
+      process.env.VERSION ||
+      "",
+    version_tag:
+      process.env.DOCKER_PUBLISH_IMAGES_VERSION_TAG ||
+      process.env.CONTAINER_VERSION_TAG ||
+      process.env.RELEASE_TAG_NAME ||
+      process.env.RELEASE_TAG ||
+      "",
 
     source_image:
       process.env.DOCKER_PUBLISH_SOURCE_IMAGE ||
@@ -218,6 +242,14 @@ function parseArgs(argv = process.argv.slice(2)) {
     ),
     inspect_local: normalizeBoolean(
       process.env.DOCKER_PUBLISH_IMAGES_INSPECT_LOCAL,
+      false,
+    ),
+    collect_hashes: normalizeBoolean(
+      process.env.DOCKER_PUBLISH_IMAGES_COLLECT_HASHES,
+      true,
+    ),
+    also_latest: normalizeBoolean(
+      process.env.DOCKER_PUBLISH_IMAGES_ALSO_LATEST,
       false,
     ),
 
@@ -317,6 +349,28 @@ function parseArgs(argv = process.argv.slice(2)) {
     if (arg === "--namespace") {
       args.namespace = argv[index + 1];
       index += 1;
+      continue;
+    }
+
+    if (arg === "--version") {
+      args.version = argv[index + 1];
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--version-tag") {
+      args.version_tag = argv[index + 1];
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--also-latest") {
+      args.also_latest = true;
+      continue;
+    }
+
+    if (arg === "--no-latest") {
+      args.also_latest = false;
       continue;
     }
 
@@ -472,6 +526,22 @@ function parseArgs(argv = process.argv.slice(2)) {
       continue;
     }
 
+    if (arg === "--collect-hashes") {
+      args.collect_hashes = true;
+      continue;
+    }
+
+    if (arg === "--no-collect-hashes") {
+      args.collect_hashes = false;
+      continue;
+    }
+
+    if (arg === "--hashes" || arg === "--hashes-file") {
+      args.hashes_file = argv[index + 1];
+      index += 1;
+      continue;
+    }
+
     if (arg === "--login") {
       args.login = true;
       continue;
@@ -595,6 +665,8 @@ function parseArgs(argv = process.argv.slice(2)) {
   args.target_tags = [
     ...new Set(args.target_tags.map(normalizeTag).filter(Boolean)),
   ];
+  args.version = normalizeVersion(args.version);
+  args.version_tag = normalizeVersionTag(args.version_tag || args.version);
   args.include_images = [...new Set(args.include_images)];
   args.exclude_images = [...new Set(args.exclude_images)];
   args.include_projects = [...new Set(args.include_projects)];
@@ -617,7 +689,8 @@ Usage:
 Examples:
   node .github/scripts/docker/publish-images.js --dry-run
   node .github/scripts/docker/publish-images.js --login
-  node .github/scripts/docker/publish-images.js --source-image aerealith-api:local --target-image ghcr.io/sinless-games/aerealith-api:latest
+  node .github/scripts/docker/publish-images.js --version 2.10.0
+  node .github/scripts/docker/publish-images.js --source-image aerealith-api:local --target-image ghcr.io/sinless-games/aerealith-api:2.10.0
   node .github/scripts/docker/publish-images.js --build-report artifacts/docker/build-images.json --registry ghcr.io --namespace sinless-games
 
 Options:
@@ -627,14 +700,18 @@ Options:
       --dockerfiles <file>             Dockerfiles artifact. Default: artifacts/ci/dockerfiles.json.
       --registry <registry>            Target registry. Default: ghcr.io.
       --namespace <namespace>          Target namespace/org. Default: sinless-games.
+      --version <version>              Version number used as default target tag.
+      --version-tag <tag>              Explicit version tag used as default target tag.
+      --also-latest                    Publish latest in addition to the version tag.
+      --no-latest                      Do not add latest automatically. Default.
       --image <image>                  Source image shorthand.
       --image-name <name>              Image name for generated target refs.
       --source-image <ref>             Source image ref.
       --target-image <ref>             Target image ref.
       --source-ref <list>              Source image ref list.
       --target-ref <list>              Target image ref list.
-  -t, --tag <list>                     Source or generated tags.
-      --target-tag <list>              Target tags.
+  -t, --tag <list>                     Source tags.
+      --target-tag <list>              Target tags. Overrides automatic version tag.
       --include <list>                 Include image names.
       --exclude <list>                 Exclude image names.
       --include-project <list>         Include project names.
@@ -652,6 +729,9 @@ Options:
       --pull                           Pull source images before publishing.
       --verify                         Verify target refs after push.
       --inspect-local                  Inspect source refs locally before publish.
+      --collect-hashes                 Write hashes.json. Default.
+      --no-collect-hashes              Do not write hashes.json.
+      --hashes <file>                  Hashes JSON output file. Default: artifacts/docker/hashes.json.
       --login                          Run docker login before publish.
       --login-registry <registry>      Registry for docker login.
       --login-username <username>      Registry username.
@@ -823,6 +903,67 @@ function readJsonFile(filePath, repoRoot, fallback = null) {
     stripJsonc(fs.readFileSync(absolutePath, "utf8")),
     fallback,
   );
+}
+
+function readPackageVersion(repoRoot) {
+  const packageJsonPath = resolvePath("package.json", repoRoot);
+  const packageJson = readJsonFile(packageJsonPath, repoRoot, null);
+
+  return normalizeVersion(packageJson?.version || "");
+}
+
+function normalizeVersion(value) {
+  const normalized = normalizeString(value)
+    .replace(/^refs\/tags\//, "")
+    .replace(/^v/i, "");
+
+  const match = normalized.match(/^(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/);
+
+  return match ? match[1] : normalized;
+}
+
+function normalizeVersionTag(value) {
+  return normalizeTag(normalizeVersion(value));
+}
+
+function isHashLikeTag(tag) {
+  const value = normalizeString(tag).toLowerCase();
+
+  if (/^sha256-[a-f0-9]{12,}$/.test(value)) return true;
+  if (/^sha256[.-]?[a-f0-9]{12,}$/.test(value)) return true;
+  if (/^[a-f0-9]{12,64}$/.test(value)) return true;
+  if (/^[a-f0-9]{7,11}$/.test(value) && !/^\d+\.\d+/.test(value)) return true;
+
+  return false;
+}
+
+function isVersionLikeTag(tag) {
+  return /^\d+\.\d+\.\d+(?:-[0-9a-z.-]+)?$/i.test(normalizeString(tag));
+}
+
+function applyVersionDefaults(args, repoRoot) {
+  const packageVersion = readPackageVersion(repoRoot);
+  const version = normalizeVersion(
+    args.version || args.version_tag || packageVersion,
+  );
+  const versionTag = normalizeVersionTag(args.version_tag || version);
+
+  args.version = version;
+  args.version_tag = versionTag;
+
+  if (!args.target_tags.length && versionTag) {
+    args.target_tags.push(versionTag);
+  }
+
+  if (args.also_latest && !args.target_tags.includes("latest")) {
+    args.target_tags.push("latest");
+  }
+
+  args.target_tags = [
+    ...new Set(args.target_tags.map(normalizeTag).filter(Boolean)),
+  ];
+
+  return args;
 }
 
 function parseYamlScalar(value) {
@@ -1000,6 +1141,7 @@ function normalizeTag(value) {
     .toLowerCase()
     .replace(/^refs\/heads\//, "")
     .replace(/^refs\/tags\//, "")
+    .replace(/^v(?=\d+\.\d+\.\d+)/i, "")
     .replace(/[^a-z0-9_.-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
@@ -1200,6 +1342,8 @@ function directRecord(args) {
     target_refs: args.target_refs,
     tags: args.tags,
     target_tags: args.target_tags,
+    version: args.version,
+    version_tag: args.version_tag,
     registry: args.registry,
     namespace: args.namespace,
     source_type: "direct",
@@ -1237,14 +1381,28 @@ function createPublishRefs(record, args) {
   )
     .map(normalizeTag)
     .filter(Boolean);
+  const versionTag = normalizeVersionTag(
+    record.version_tag ||
+      record.versionTag ||
+      record.version ||
+      args.version_tag,
+  );
+  const nonHashRecordTags = recordTags.filter(
+    (tag) => !isHashLikeTag(tag) && (isVersionLikeTag(tag) || tag === "latest"),
+  );
+  const nonHashSourceTags = sourceTags.filter(
+    (tag) => !isHashLikeTag(tag) && (isVersionLikeTag(tag) || tag === "latest"),
+  );
 
   const effectiveTargetTags = targetTags.length
     ? targetTags
-    : recordTags.length
-      ? recordTags
-      : sourceTags.length
-        ? sourceTags
-        : ["latest"];
+    : versionTag
+      ? [versionTag]
+      : nonHashRecordTags.length
+        ? nonHashRecordTags
+        : nonHashSourceTags.length
+          ? nonHashSourceTags
+          : ["latest"];
 
   const targetRepository =
     record.target_image || record.targetImage
@@ -1291,15 +1449,22 @@ function createPublishRefs(record, args) {
     const primarySourceRef = cleanSourceRefs[0];
 
     for (const targetRef of cleanTargetRefs) {
-      const matchedByTag = cleanSourceRefs.find(
-        (sourceRef) => imageTag(sourceRef) === imageTag(targetRef),
+      const targetTag = imageTag(targetRef);
+      const matchedByVersionTag = cleanSourceRefs.find((sourceRef) => {
+        const tag = imageTag(sourceRef);
+        return targetTag && tag === targetTag && !isHashLikeTag(tag);
+      });
+      const matchedByAnyTag = cleanSourceRefs.find(
+        (sourceRef) => imageTag(sourceRef) === targetTag,
       );
+      const sourceRef =
+        matchedByVersionTag || matchedByAnyTag || primarySourceRef;
 
       refs.push({
-        source_ref: matchedByTag || primarySourceRef,
+        source_ref: sourceRef,
         target_ref: targetRef,
-        tag: imageTag(targetRef) || imageTag(matchedByTag || primarySourceRef),
-        retag_required: (matchedByTag || primarySourceRef) !== targetRef,
+        tag: imageTag(targetRef) || imageTag(sourceRef),
+        retag_required: sourceRef !== targetRef,
       });
     }
   }
@@ -1336,6 +1501,8 @@ function normalizePublishPlan(record, args, sourceType = "config") {
     namespace: normalizeImagePathPart(
       record.target_namespace || record.namespace || args.namespace,
     ),
+    version: normalizeVersion(record.version || args.version),
+    version_tag: normalizeVersionTag(record.version_tag || args.version_tag),
     enabled: normalizeBoolean(record.enabled, true),
     retag: normalizeBoolean(record.retag, args.retag),
     push: normalizeBoolean(record.push, args.push),
@@ -1519,6 +1686,12 @@ function validatePlan(plan) {
 
     if (ref.target_ref && !imageHasTag(ref.target_ref)) {
       warnings.push(`Target image ref has no explicit tag: ${ref.target_ref}`);
+    }
+
+    if (ref.target_ref && isHashLikeTag(imageTag(ref.target_ref))) {
+      warnings.push(
+        `Target image ref still appears to use a hash-like tag: ${ref.target_ref}`,
+      );
     }
   }
 
@@ -1734,6 +1907,114 @@ function dockerCommand(repoRoot, args, dockerArgs) {
   );
 }
 
+function parseDockerPushDigest(command) {
+  const text = `${command?.stdout || ""}\n${command?.stderr || ""}`;
+  const digestMatch = text.match(/digest:\s*(sha256:[a-f0-9]{64})/i);
+
+  return digestMatch ? digestMatch[1].toLowerCase() : "";
+}
+
+function parseImageInspectJson(command) {
+  const output = normalizeString(command?.stdout);
+
+  if (!output) return null;
+
+  const parsed = safeJsonParse(output, null);
+
+  if (Array.isArray(parsed)) return parsed[0] || null;
+
+  return parsed;
+}
+
+function inspectImageHash(ref, args, repoRoot) {
+  const startedAt = new Date();
+
+  if (!args.collect_hashes) {
+    return {
+      ref,
+      status: "skipped",
+      success: true,
+      image_id: "",
+      image_hash: "",
+      repo_digests: [],
+      repo_tags: [],
+      command: null,
+      errors: [],
+      started_at: startedAt.toISOString(),
+      ended_at: new Date().toISOString(),
+      duration_ms: 0,
+    };
+  }
+
+  if (args.dry_run) {
+    return {
+      ref,
+      status: "planned",
+      success: true,
+      image_id: "",
+      image_hash: "",
+      repo_digests: [],
+      repo_tags: [],
+      command: null,
+      errors: [],
+      started_at: startedAt.toISOString(),
+      ended_at: new Date().toISOString(),
+      duration_ms: 0,
+    };
+  }
+
+  const command = dockerCommand(repoRoot, args, ["image", "inspect", ref]);
+  const endedAt = new Date();
+
+  if (!command.success) {
+    return {
+      ref,
+      status: "failed",
+      success: false,
+      image_id: "",
+      image_hash: "",
+      repo_digests: [],
+      repo_tags: [],
+      command: sanitizeCommand(command),
+      errors: [
+        command.error ||
+          command.stderr ||
+          `Failed to inspect Docker image hash for ${ref}.`,
+      ],
+      started_at: startedAt.toISOString(),
+      ended_at: endedAt.toISOString(),
+      duration_ms: endedAt.getTime() - startedAt.getTime(),
+    };
+  }
+
+  const metadata = parseImageInspectJson(command);
+  const imageId = normalizeString(metadata?.Id);
+  const imageHash = imageId.replace(/^sha256:/, "");
+
+  return {
+    ref,
+    status: "inspected",
+    success: true,
+    image_id: imageId,
+    image_hash: imageHash,
+    repo_digests: Array.isArray(metadata?.RepoDigests)
+      ? metadata.RepoDigests.map(normalizeString).filter(Boolean)
+      : [],
+    repo_tags: Array.isArray(metadata?.RepoTags)
+      ? metadata.RepoTags.map(normalizeString).filter(Boolean)
+      : [],
+    os: normalizeString(metadata?.Os),
+    architecture: normalizeString(metadata?.Architecture),
+    docker_version: normalizeString(metadata?.DockerVersion),
+    created: normalizeString(metadata?.Created),
+    command: sanitizeCommand(command),
+    errors: [],
+    started_at: startedAt.toISOString(),
+    ended_at: endedAt.toISOString(),
+    duration_ms: endedAt.getTime() - startedAt.getTime(),
+  };
+}
+
 function publishRef(ref, plan, args, repoRoot) {
   const startedAt = new Date();
 
@@ -1753,6 +2034,9 @@ function publishRef(ref, plan, args, repoRoot) {
     tag_command: null,
     push_command: null,
     verify_command: null,
+    source_hash: null,
+    target_hash: null,
+    pushed_digest: "",
     errors: [],
     warnings: [],
   };
@@ -1814,11 +2098,14 @@ function publishRef(ref, plan, args, repoRoot) {
       }
     }
 
+    result.source_hash = inspectImageHash(ref.source_ref, args, repoRoot);
+
     if (plan.push) {
       const pushCommand = dockerCommand(repoRoot, args, [
         "push",
         ref.target_ref,
       ]);
+      result.pushed_digest = parseDockerPushDigest(pushCommand);
       result.push_command = sanitizeCommand(pushCommand);
 
       if (!pushCommand.success) {
@@ -1831,6 +2118,8 @@ function publishRef(ref, plan, args, repoRoot) {
         return result;
       }
     }
+
+    result.target_hash = inspectImageHash(ref.target_ref, args, repoRoot);
 
     if (plan.verify_after_publish && plan.push) {
       const verifyCommand = dockerCommand(repoRoot, args, [
@@ -1883,6 +2172,8 @@ function publishImage(plan, args, repoRoot) {
     project: plan.project,
     registry: plan.registry,
     namespace: plan.namespace,
+    version: plan.version,
+    version_tag: plan.version_tag,
     status: "pending",
     success: false,
     dry_run: args.dry_run,
@@ -2114,6 +2405,122 @@ function groupResults(results, key) {
   );
 }
 
+function createHashesReport(args, repoRoot, report) {
+  const github = getGitMetadata(repoRoot);
+  const imageEntries = report.results.map((result) => ({
+    name: result.name,
+    project: result.project,
+    registry: result.registry,
+    namespace: result.namespace,
+    version: result.version || args.version,
+    version_tag: result.version_tag || args.version_tag,
+    status: result.status,
+    success: result.success,
+    refs: result.ref_results.map((refResult) => ({
+      source_ref: refResult.source_ref,
+      target_ref: refResult.target_ref,
+      tag: refResult.tag,
+      status: refResult.status,
+      success: refResult.success,
+      pushed_digest: refResult.pushed_digest || "",
+      source: refResult.source_hash
+        ? {
+            image_id: refResult.source_hash.image_id || "",
+            image_hash: refResult.source_hash.image_hash || "",
+            repo_digests: refResult.source_hash.repo_digests || [],
+            repo_tags: refResult.source_hash.repo_tags || [],
+            os: refResult.source_hash.os || "",
+            architecture: refResult.source_hash.architecture || "",
+          }
+        : null,
+      target: refResult.target_hash
+        ? {
+            image_id: refResult.target_hash.image_id || "",
+            image_hash: refResult.target_hash.image_hash || "",
+            repo_digests: refResult.target_hash.repo_digests || [],
+            repo_tags: refResult.target_hash.repo_tags || [],
+            os: refResult.target_hash.os || "",
+            architecture: refResult.target_hash.architecture || "",
+          }
+        : null,
+    })),
+  }));
+
+  const allImageIds = [
+    ...new Set(
+      imageEntries.flatMap((image) =>
+        image.refs.flatMap((ref) => [
+          ref.source?.image_id || "",
+          ref.target?.image_id || "",
+        ]),
+      ),
+    ),
+  ].filter(Boolean);
+
+  const allImageHashes = [
+    ...new Set(
+      imageEntries.flatMap((image) =>
+        image.refs.flatMap((ref) => [
+          ref.source?.image_hash || "",
+          ref.target?.image_hash || "",
+        ]),
+      ),
+    ),
+  ].filter(Boolean);
+
+  const allRepoDigests = [
+    ...new Set(
+      imageEntries.flatMap((image) =>
+        image.refs.flatMap((ref) => [
+          ...(ref.source?.repo_digests || []),
+          ...(ref.target?.repo_digests || []),
+        ]),
+      ),
+    ),
+  ].filter(Boolean);
+
+  const pushedDigests = [
+    ...new Set(
+      imageEntries.flatMap((image) =>
+        image.refs.map((ref) => ref.pushed_digest || ""),
+      ),
+    ),
+  ].filter(Boolean);
+
+  return {
+    schema_version: 1,
+    type: "docker-image-hashes",
+    project: PROJECT_NAME,
+    repository: args.repository,
+    created_at: new Date().toISOString(),
+    github,
+    config: {
+      version: args.version,
+      version_tag: args.version_tag,
+      hashes_file: toRelativePath(
+        resolvePath(args.hashes_file, repoRoot),
+        repoRoot,
+      ),
+      dry_run: args.dry_run,
+      collect_hashes: args.collect_hashes,
+    },
+    totals: {
+      images: imageEntries.length,
+      refs: imageEntries.reduce((sum, image) => sum + image.refs.length, 0),
+      image_ids: allImageIds.length,
+      image_hashes: allImageHashes.length,
+      repo_digests: allRepoDigests.length,
+      pushed_digests: pushedDigests.length,
+      ok: report.totals.ok && !report.blocked,
+    },
+    image_ids: allImageIds,
+    image_hashes: allImageHashes,
+    repo_digests: allRepoDigests,
+    pushed_digests: pushedDigests,
+    images: imageEntries,
+  };
+}
+
 function createReport(args, repoRoot, plans, execution) {
   const github = getGitMetadata(repoRoot);
   const totals = summarizeResults(execution.results);
@@ -2164,13 +2571,22 @@ function createReport(args, repoRoot, plans, execution) {
       summary_file: args.write_summary_file
         ? toRelativePath(resolvePath(args.summary_file, repoRoot), repoRoot)
         : null,
+      hashes_file: toRelativePath(
+        resolvePath(args.hashes_file, repoRoot),
+        repoRoot,
+      ),
       registry: args.registry,
       namespace: args.namespace,
+      version: args.version,
+      version_tag: args.version_tag,
+      target_tags: args.target_tags,
+      also_latest: args.also_latest,
       retag: args.retag,
       push: args.push,
       pull_before_publish: args.pull_before_publish,
       verify_after_publish: args.verify_after_publish,
       inspect_local: args.inspect_local,
+      collect_hashes: args.collect_hashes,
       max_images: args.max_images,
       max_refs: args.max_refs,
       dry_run: args.dry_run,
@@ -2194,6 +2610,8 @@ function createReport(args, repoRoot, plans, execution) {
       project: plan.project,
       registry: plan.registry,
       namespace: plan.namespace,
+      version: plan.version,
+      version_tag: plan.version_tag,
       retag: plan.retag,
       push: plan.push,
       pull_before_publish: plan.pull_before_publish,
@@ -2232,6 +2650,7 @@ function createMarkdownSummary(report) {
     `- Status: \`${report.status}\``,
     `- Dry run: \`${report.config.dry_run ? "true" : "false"}\``,
     `- Blocked: \`${report.blocked ? "true" : "false"}\``,
+    `- Version tag: \`${report.config.version_tag || "none"}\``,
     `- Selected images: \`${report.discovery.selected_images}\``,
     `- Published: \`${report.totals.published}\``,
     `- Tagged: \`${report.totals.tagged}\``,
@@ -2251,11 +2670,15 @@ function createMarkdownSummary(report) {
     "",
     `- Registry: \`${report.config.registry}\``,
     `- Namespace: \`${report.config.namespace}\``,
+    `- Version: \`${report.config.version || "unknown"}\``,
+    `- Version tag: \`${report.config.version_tag || "unknown"}\``,
+    `- Target tags: \`${report.config.target_tags.join(", ") || "none"}\``,
     `- Retag: \`${report.config.retag ? "true" : "false"}\``,
     `- Push: \`${report.config.push ? "true" : "false"}\``,
     `- Pull first: \`${report.config.pull_before_publish ? "true" : "false"}\``,
     `- Verify after publish: \`${report.config.verify_after_publish ? "true" : "false"}\``,
     `- Inspect local: \`${report.config.inspect_local ? "true" : "false"}\``,
+    `- Collect hashes: \`${report.config.collect_hashes ? "true" : "false"}\``,
     `- Duration: \`${report.totals.duration_human}\``,
     "",
   ];
@@ -2363,6 +2786,14 @@ function createMarkdownSummary(report) {
   lines.push(
     `- Dockerfiles available: \`${report.config.dockerfiles_available ? "true" : "false"}\``,
   );
+  lines.push("");
+  lines.push("## 📤 Outputs");
+  lines.push("");
+  lines.push(`- JSON report: \`${report.config.output_file}\``);
+  lines.push(
+    `- Markdown summary: \`${report.config.summary_file || "not written"}\``,
+  );
+  lines.push(`- Hashes report: \`${report.config.hashes_file}\``);
 
   return `${lines.join("\n").trim()}\n`;
 }
@@ -2390,16 +2821,29 @@ function setGitHubOutput(name, value) {
   return true;
 }
 
-function writeGitHubOutputs(report) {
+function writeGitHubOutputs(report, hashesReport) {
   setGitHubOutput("docker_publish_images_file", report.config.output_file);
   setGitHubOutput(
     "docker_publish_images_summary_file",
     report.config.summary_file || "",
   );
+  setGitHubOutput(
+    "docker_publish_images_hashes_file",
+    report.config.hashes_file,
+  );
   setGitHubOutput("docker_publish_images_status", report.status);
   setGitHubOutput(
     "docker_publish_images_ok",
     report.totals.ok && !report.blocked ? "true" : "false",
+  );
+  setGitHubOutput("docker_publish_images_version", report.config.version || "");
+  setGitHubOutput(
+    "docker_publish_images_version_tag",
+    report.config.version_tag || "",
+  );
+  setGitHubOutput(
+    "docker_publish_images_target_tags",
+    report.config.target_tags.join(","),
   );
   setGitHubOutput(
     "docker_publish_images_selected",
@@ -2448,16 +2892,41 @@ function writeGitHubOutputs(report) {
     "docker_publish_images_failures_json",
     JSON.stringify(report.failures),
   );
+
+  if (hashesReport) {
+    setGitHubOutput(
+      "docker_publish_images_hashes_json",
+      JSON.stringify(hashesReport),
+    );
+    setGitHubOutput(
+      "docker_publish_images_image_ids_json",
+      JSON.stringify(hashesReport.image_ids),
+    );
+    setGitHubOutput(
+      "docker_publish_images_repo_digests_json",
+      JSON.stringify(hashesReport.repo_digests),
+    );
+    setGitHubOutput(
+      "docker_publish_images_pushed_digests_json",
+      JSON.stringify(hashesReport.pushed_digests),
+    );
+  }
 }
 
 async function main() {
   const args = parseArgs();
   const repoRoot = findRepoRoot();
 
+  applyVersionDefaults(args, repoRoot);
+
   const outputFile = resolvePath(args.output_file, repoRoot);
   const summaryFile = resolvePath(args.summary_file, repoRoot);
+  const hashesFile = resolvePath(args.hashes_file, repoRoot);
 
   logger.info("Preparing Docker image publish.");
+  logger.info(
+    `Using Docker target version tag: ${args.version_tag || "none"}.`,
+  );
 
   const plans = createPlans(args, repoRoot);
 
@@ -2489,12 +2958,20 @@ async function main() {
       : await executePlans(plans, args, repoRoot);
 
   const report = createReport(args, repoRoot, plans, execution);
+  const hashesReport = createHashesReport(args, repoRoot, report);
   const json = `${JSON.stringify(report, null, 2)}\n`;
+  const hashesJson = `${JSON.stringify(hashesReport, null, 2)}\n`;
   const markdown = createMarkdownSummary(report);
 
   writeTextFile(outputFile, json, {
     dry_run: args.dry_run,
   });
+
+  if (args.collect_hashes) {
+    writeTextFile(hashesFile, hashesJson, {
+      dry_run: args.dry_run,
+    });
+  }
 
   if (args.write_summary_file) {
     writeTextFile(summaryFile, markdown, {
@@ -2502,7 +2979,7 @@ async function main() {
     });
   }
 
-  writeGitHubOutputs(report);
+  writeGitHubOutputs(report, hashesReport);
 
   if (args.write_step_summary) {
     appendGitHubStepSummary(markdown);
