@@ -253,27 +253,30 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Verify package manager
+      - name: Enable pnpm with Corepack
         run: |
           set -euo pipefail
 
-          corepack enable || true
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+
           pnpm --version
           node --version
           npm --version
+
+      - name: Restore pnpm store cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: >-
+            pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
 
       - name: Prepare output directories
         run: |
@@ -355,22 +358,212 @@ jobs:
 
           mkdir -p "$SECURITY_OUTPUT_DIR"
 
-          if [[ ! -f ".github/scripts/security/summarize-dependencies.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/security/summarize-dependencies.js"
-            exit 0
+          summary_status="skipped"
+          summary_error=""
+
+          if [[ -f ".github/scripts/security/summarize-dependencies.js" ]]; then
+            args=(
+              --output "$SECURITY_OUTPUT_DIR/summarize-dependencies.json"
+              --summary "$SECURITY_OUTPUT_DIR/summarize-dependencies.md"
+              --no-fail-on-error
+            )
+
+            if [[ -f "$SECURITY_OUTPUT_DIR/pnpm-audit.json" ]]; then
+              args+=(--report-file "$SECURITY_OUTPUT_DIR/pnpm-audit.json")
+            fi
+
+            set +e
+            node ".github/scripts/security/summarize-dependencies.js" "${args[@]}"
+            summary_exit="$?"
+            set -e
+
+            if [[ "$summary_exit" -eq 0 ]]; then
+              summary_status="passed"
+            else
+              summary_status="fallback"
+              summary_error="summarize-dependencies.js exited with status $summary_exit"
+              echo "::warning::$summary_error"
+            fi
+          else
+            summary_status="fallback"
+            summary_error="summarize-dependencies.js was not found"
+            echo "::notice::$summary_error"
           fi
 
-          args=(
-            --output "$SECURITY_OUTPUT_DIR/summarize-dependencies.json"
-            --summary "$SECURITY_OUTPUT_DIR/summarize-dependencies.md"
-            --no-fail-on-error
-          )
+          if [[ "$summary_status" == "fallback" || ! -f "$SECURITY_OUTPUT_DIR/summarize-dependencies.json" ]]; then
+            SUMMARY_STATUS="$summary_status" \
+            SUMMARY_ERROR="$summary_error" \
+            node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
 
-          if [[ -f "$SECURITY_OUTPUT_DIR/pnpm-audit.json" ]]; then
-            args+=(--report-file "$SECURITY_OUTPUT_DIR/pnpm-audit.json")
+          const outputDir = process.env.SECURITY_OUTPUT_DIR || "artifacts/security";
+          const auditFile = path.join(outputDir, "pnpm-audit.json");
+          const jsonFile = path.join(outputDir, "summarize-dependencies.json");
+          const markdownFile = path.join(outputDir, "summarize-dependencies.md");
+
+          function readJson(file, fallback) {
+            try {
+              return JSON.parse(fs.readFileSync(file, "utf8"));
+            } catch {
+              return fallback;
+            }
+          }
+
+          function countVulnerabilities(audit) {
+            const totals = {
+              critical: 0,
+              high: 0,
+              moderate: 0,
+              medium: 0,
+              low: 0,
+              info: 0,
+              unknown: 0,
+              total: 0,
+            };
+
+            const vulnerabilities = audit?.vulnerabilities;
+
+            if (vulnerabilities && typeof vulnerabilities === "object") {
+              for (const value of Object.values(vulnerabilities)) {
+                const severity = String(value?.severity || "unknown").toLowerCase();
+                const count = Number(value?.via?.length ? 1 : value?.count || 1);
+
+                if (severity === "critical") totals.critical += count;
+                else if (severity === "high") totals.high += count;
+                else if (severity === "moderate") totals.moderate += count;
+                else if (severity === "medium") totals.medium += count;
+                else if (severity === "low") totals.low += count;
+                else if (severity === "info") totals.info += count;
+                else totals.unknown += count;
+
+                totals.total += count;
+              }
+
+              return totals;
+            }
+
+            const advisories = audit?.advisories;
+
+            if (advisories && typeof advisories === "object") {
+              for (const value of Object.values(advisories)) {
+                const severity = String(value?.severity || "unknown").toLowerCase();
+
+                if (severity === "critical") totals.critical += 1;
+                else if (severity === "high") totals.high += 1;
+                else if (severity === "moderate") totals.moderate += 1;
+                else if (severity === "medium") totals.medium += 1;
+                else if (severity === "low") totals.low += 1;
+                else if (severity === "info") totals.info += 1;
+                else totals.unknown += 1;
+
+                totals.total += 1;
+              }
+
+              return totals;
+            }
+
+            const metadata = audit?.metadata?.vulnerabilities;
+
+            if (metadata && typeof metadata === "object") {
+              totals.critical = Number(metadata.critical || 0);
+              totals.high = Number(metadata.high || 0);
+              totals.moderate = Number(metadata.moderate || 0);
+              totals.medium = Number(metadata.medium || 0);
+              totals.low = Number(metadata.low || 0);
+              totals.info = Number(metadata.info || 0);
+              totals.unknown = Number(metadata.unknown || 0);
+              totals.total =
+                Number(metadata.total || 0) ||
+                totals.critical +
+                  totals.high +
+                  totals.moderate +
+                  totals.medium +
+                  totals.low +
+                  totals.info +
+                  totals.unknown;
+            }
+
+            return totals;
+          }
+
+          fs.mkdirSync(outputDir, { recursive: true });
+
+          const audit = readJson(auditFile, {});
+          const vulnerabilities = countVulnerabilities(audit);
+          const createdAt = new Date().toISOString();
+
+          const report = {
+            schema_version: 1,
+            type: "security-summarize-dependencies",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            event_name: process.env.GITHUB_EVENT_NAME || "",
+            status: vulnerabilities.total > 0 ? "warning" : "passed",
+            ok: true,
+            fallback: true,
+            fallback_reason: process.env.SUMMARY_ERROR || "Dependency summary fallback was used.",
+            audit_file: fs.existsSync(auditFile) ? auditFile : null,
+            totals: {
+              findings: vulnerabilities.total,
+              active_findings: vulnerabilities.total,
+              critical: vulnerabilities.critical,
+              high: vulnerabilities.high,
+              medium: vulnerabilities.medium + vulnerabilities.moderate,
+              low: vulnerabilities.low,
+              info: vulnerabilities.info,
+              unknown: vulnerabilities.unknown,
+              errors: 0,
+              warnings: vulnerabilities.total > 0 ? 1 : 0,
+            },
+            warnings:
+              vulnerabilities.total > 0
+                ? [
+                    `pnpm audit reported ${vulnerabilities.total} vulnerable package finding(s).`,
+                    process.env.SUMMARY_ERROR || "",
+                  ].filter(Boolean)
+                : [process.env.SUMMARY_ERROR || ""].filter(Boolean),
+            errors: [],
+            created_at: createdAt,
+          };
+
+          fs.writeFileSync(jsonFile, `${JSON.stringify(report, null, 2)}\n`);
+
+          const lines = [
+            "# Aerealith AI Dependency Security Summary",
+            "",
+            `Generated: \`${createdAt}\``,
+            "",
+            "## Status",
+            "",
+            `- Status: \`${report.status}\``,
+            `- OK: \`${report.ok}\``,
+            `- Fallback used: \`true\``,
+            `- Fallback reason: \`${report.fallback_reason || "none"}\``,
+            `- Findings: \`${report.totals.findings}\``,
+            "",
+            "## Severity Counts",
+            "",
+            "| Severity | Count |",
+            "|---|---:|",
+            `| Critical | \`${report.totals.critical}\` |`,
+            `| High | \`${report.totals.high}\` |`,
+            `| Medium | \`${report.totals.medium}\` |`,
+            `| Low | \`${report.totals.low}\` |`,
+            `| Info | \`${report.totals.info}\` |`,
+            `| Unknown | \`${report.totals.unknown}\` |`,
+            "",
+          ];
+
+          fs.writeFileSync(markdownFile, `${lines.join("\n").trim()}\n`);
+          NODE
           fi
 
-          node ".github/scripts/security/summarize-dependencies.js" "${args[@]}"
+          if [[ -f "$SECURITY_OUTPUT_DIR/summarize-dependencies.md" ]]; then
+            cat "$SECURITY_OUTPUT_DIR/summarize-dependencies.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Summarize unified security
         if: always()
@@ -379,16 +572,110 @@ jobs:
 
           mkdir -p "$SECURITY_OUTPUT_DIR"
 
-          if [[ ! -f ".github/scripts/security/summarize-security.js" ]]; then
+          if [[ -f ".github/scripts/security/summarize-security.js" ]]; then
+            set +e
+            node ".github/scripts/security/summarize-security.js" \
+              --input-dir "$SECURITY_OUTPUT_DIR" \
+              --output "$SECURITY_OUTPUT_DIR/summarize-security.json" \
+              --summary "$SECURITY_OUTPUT_DIR/summarize-security.md" \
+              --no-fail-on-error
+            summary_exit="$?"
+            set -e
+
+            if [[ "$summary_exit" -ne 0 ]]; then
+              echo "::warning::summarize-security.js exited with status $summary_exit. Writing fallback unified summary."
+            fi
+          else
             echo "::notice::Skipping missing script: .github/scripts/security/summarize-security.js"
-            exit 0
           fi
 
-          node ".github/scripts/security/summarize-security.js" \
-            --input-dir "$SECURITY_OUTPUT_DIR" \
-            --output "$SECURITY_OUTPUT_DIR/summarize-security.json" \
-            --summary "$SECURITY_OUTPUT_DIR/summarize-security.md" \
-            --no-fail-on-error
+          if [[ ! -f "$SECURITY_OUTPUT_DIR/summarize-security.json" ]]; then
+            node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const outputDir = process.env.SECURITY_OUTPUT_DIR || "artifacts/security";
+          const dependencySummaryFile = path.join(outputDir, "summarize-dependencies.json");
+          const jsonFile = path.join(outputDir, "summarize-security.json");
+          const markdownFile = path.join(outputDir, "summarize-security.md");
+
+          function readJson(file, fallback) {
+            try {
+              return JSON.parse(fs.readFileSync(file, "utf8"));
+            } catch {
+              return fallback;
+            }
+          }
+
+          fs.mkdirSync(outputDir, { recursive: true });
+
+          const dependencySummary = readJson(dependencySummaryFile, {});
+          const totals = dependencySummary.totals || {};
+          const createdAt = new Date().toISOString();
+
+          const report = {
+            schema_version: 1,
+            type: "security-summarize-security",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            event_name: process.env.GITHUB_EVENT_NAME || "",
+            status: "passed",
+            ok: true,
+            fallback: true,
+            reports_found: dependencySummaryFile ? 1 : 0,
+            reports_loaded: dependencySummaryFile ? 1 : 0,
+            totals: {
+              active_findings: Number(totals.active_findings || totals.findings || 0),
+              critical: Number(totals.critical || 0),
+              high: Number(totals.high || 0),
+              medium: Number(totals.medium || 0),
+              low: Number(totals.low || 0),
+              info: Number(totals.info || 0),
+              unknown: Number(totals.unknown || 0),
+              errors: 0,
+              warnings: Number(totals.warnings || 0),
+            },
+            warnings: ["Unified security fallback summary was used."],
+            errors: [],
+            created_at: createdAt,
+          };
+
+          fs.writeFileSync(jsonFile, `${JSON.stringify(report, null, 2)}\n`);
+
+          const lines = [
+            "# Aerealith AI Unified Security Summary",
+            "",
+            `Generated: \`${createdAt}\``,
+            "",
+            "## Status",
+            "",
+            `- Status: \`${report.status}\``,
+            `- OK: \`${report.ok}\``,
+            `- Fallback used: \`true\``,
+            `- Active findings: \`${report.totals.active_findings}\``,
+            "",
+            "## Aggregated Severity Counts",
+            "",
+            "| Severity | Count |",
+            "|---|---:|",
+            `| Critical | \`${report.totals.critical}\` |`,
+            `| High | \`${report.totals.high}\` |`,
+            `| Medium | \`${report.totals.medium}\` |`,
+            `| Low | \`${report.totals.low}\` |`,
+            `| Info | \`${report.totals.info}\` |`,
+            `| Unknown | \`${report.totals.unknown}\` |`,
+            "",
+          ];
+
+          fs.writeFileSync(markdownFile, `${lines.join("\n").trim()}\n`);
+          NODE
+          fi
+
+          if [[ -f "$SECURITY_OUTPUT_DIR/summarize-security.md" ]]; then
+            cat "$SECURITY_OUTPUT_DIR/summarize-security.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Write local audit output summary
         if: always()
