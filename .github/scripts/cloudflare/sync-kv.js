@@ -71,6 +71,7 @@ const DEFAULT_SUMMARY_FILE = "artifacts/cloudflare/sync-kv.md";
 
 const CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4";
 const DEFAULT_ENVIRONMENT = "production";
+const DEFAULT_STAGE = "";
 
 const MAX_KV_KEY_BYTES = 512;
 const MAX_KV_VALUE_BYTES = 25 * 1024 * 1024;
@@ -79,9 +80,10 @@ const DEFAULT_DELETE_BATCH_SIZE = 5000;
 
 const TRUE_VALUES = new Set(["true", "1", "yes", "y", "on", "enabled"]);
 const FALSE_VALUES = new Set(["false", "0", "no", "n", "off", "disabled"]);
+const KNOWN_DEPLOYMENT_STAGES = new Set(["preview", "staging", "production"]);
 
 const SECRET_OUTPUT_PATTERN =
-  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/g;
+  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|password\s*=\s*[^\s]+|--password\s+[^\s]+|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/gi;
 
 const DEFAULT_EXCLUDE_PATTERNS = [
   ".git/",
@@ -147,6 +149,16 @@ function normalizeStringList(value) {
   ];
 }
 
+function requireArgValue(argv, index, arg) {
+  const value = argv[index + 1];
+
+  if (value === undefined || String(value).startsWith("--")) {
+    throw new Error(`Missing value for argument: ${arg}`);
+  }
+
+  return value;
+}
+
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     repository: process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
@@ -166,8 +178,42 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.CLOUDFLARE_ENVIRONMENT ||
       DEFAULT_ENVIRONMENT,
 
-    account_id: process.env.CLOUDFLARE_ACCOUNT_ID || "",
-    api_token: process.env.CLOUDFLARE_API_TOKEN || "",
+    deployment_stage:
+      process.env.CLOUDFLARE_KV_SYNC_STAGE ||
+      process.env.CLOUDFLARE_DEPLOYMENT_STAGE ||
+      process.env.CLOUDFLARE_STAGE ||
+      DEFAULT_STAGE,
+
+    deployment_alias:
+      process.env.CLOUDFLARE_KV_SYNC_ALIAS ||
+      process.env.CLOUDFLARE_DEPLOYMENT_ALIAS ||
+      process.env.CLOUDFLARE_PREVIEW_ALIAS ||
+      "",
+
+    preview_ref:
+      process.env.CLOUDFLARE_KV_SYNC_PREVIEW_REF ||
+      process.env.CLOUDFLARE_PREVIEW_REF ||
+      "",
+
+    pull_request_number:
+      process.env.CLOUDFLARE_KV_SYNC_PULL_REQUEST_NUMBER ||
+      process.env.CLOUDFLARE_PULL_REQUEST_NUMBER ||
+      "",
+
+    cloudflare_project_name:
+      process.env.CLOUDFLARE_KV_SYNC_PROJECT_NAME ||
+      process.env.CLOUDFLARE_PROJECT_NAME ||
+      process.env.CLOUDFLARE_PAGES_PROJECT_NAME ||
+      "",
+
+    account_id:
+      process.env.CLOUDFLARE_KV_SYNC_ACCOUNT_ID ||
+      process.env.CLOUDFLARE_ACCOUNT_ID ||
+      "",
+    api_token:
+      process.env.CLOUDFLARE_KV_SYNC_API_TOKEN ||
+      process.env.CLOUDFLARE_API_TOKEN ||
+      "",
 
     namespace_id:
       process.env.CLOUDFLARE_KV_NAMESPACE_ID ||
@@ -269,6 +315,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     dry_run: normalizeBoolean(
       process.env.CLOUDFLARE_KV_SYNC_DRY_RUN ||
+        process.env.CLOUDFLARE_DRY_RUN ||
         process.env.DRY_RUN ||
         process.env.PROJECT_SYNC_DRY_RUN,
       false,
@@ -288,109 +335,157 @@ function parseArgs(argv = process.argv.slice(2)) {
     const arg = argv[index];
 
     if (arg === "--repo" || arg === "--repository") {
-      args.repository = argv[index + 1];
+      args.repository = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--config") {
-      args.config_file = argv[index + 1];
+      args.config_file = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--targets" || arg === "--cloudflare-targets") {
-      args.cloudflare_targets_file = argv[index + 1];
+      args.cloudflare_targets_file = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--environment" || arg === "--env") {
-      args.environment = argv[index + 1];
+      args.environment = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--stage" || arg === "--deployment-stage") {
+      args.deployment_stage = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--alias" || arg === "--deployment-alias") {
+      args.deployment_alias = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--preview-ref") {
+      args.preview_ref = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--pull-request-number" || arg === "--pr-number") {
+      args.pull_request_number = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--project-name" || arg === "--cloudflare-project-name") {
+      args.cloudflare_project_name = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--account-id") {
-      args.account_id = argv[index + 1];
+      args.account_id = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--api-token") {
+      args.api_token = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--namespace-id") {
-      args.namespace_id = argv[index + 1];
+      args.namespace_id = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--namespace" || arg === "--namespace-name") {
-      args.namespace_name = argv[index + 1];
+      args.namespace_name = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--binding") {
-      args.binding = argv[index + 1];
+      args.binding = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--source") {
-      args.source = argv[index + 1];
+      args.source = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--source-key") {
-      args.source_key = argv[index + 1];
+      args.source_key = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--prefix") {
-      args.prefix = argv[index + 1];
+      args.prefix = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--include-namespace" || arg === "--include-namespaces") {
-      args.include_namespaces.push(...normalizeStringList(argv[index + 1]));
+      args.include_namespaces.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-namespace" || arg === "--exclude-namespaces") {
-      args.exclude_namespaces.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_namespaces.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--include-binding" || arg === "--include-bindings") {
-      args.include_bindings.push(...normalizeStringList(argv[index + 1]));
+      args.include_bindings.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-binding" || arg === "--exclude-bindings") {
-      args.exclude_bindings.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_bindings.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--include-target" || arg === "--include-targets") {
-      args.include_targets.push(...normalizeStringList(argv[index + 1]));
+      args.include_targets.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-target" || arg === "--exclude-targets") {
-      args.exclude_targets.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_targets.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude") {
-      args.exclude.push(argv[index + 1]);
+      args.exclude.push(requireArgValue(argv, index, arg));
       index += 1;
       continue;
     }
@@ -440,6 +535,11 @@ function parseArgs(argv = process.argv.slice(2)) {
       continue;
     }
 
+    if (arg === "--no-allow-empty-source") {
+      args.allow_empty_source = false;
+      continue;
+    }
+
     if (arg === "--fail-if-empty") {
       args.fail_if_empty = true;
       continue;
@@ -467,7 +567,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     if (arg === "--max-namespaces") {
       args.max_namespaces = normalizeInteger(
-        argv[index + 1],
+        requireArgValue(argv, index, arg),
         args.max_namespaces,
       );
       index += 1;
@@ -475,14 +575,17 @@ function parseArgs(argv = process.argv.slice(2)) {
     }
 
     if (arg === "--max-entries") {
-      args.max_entries = normalizeInteger(argv[index + 1], args.max_entries);
+      args.max_entries = normalizeInteger(
+        requireArgValue(argv, index, arg),
+        args.max_entries,
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--write-batch-size") {
       args.write_batch_size = normalizeInteger(
-        argv[index + 1],
+        requireArgValue(argv, index, arg),
         args.write_batch_size,
       );
       index += 1;
@@ -491,7 +594,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     if (arg === "--delete-batch-size") {
       args.delete_batch_size = normalizeInteger(
-        argv[index + 1],
+        requireArgValue(argv, index, arg),
         args.delete_batch_size,
       );
       index += 1;
@@ -499,19 +602,22 @@ function parseArgs(argv = process.argv.slice(2)) {
     }
 
     if (arg === "--retry-count") {
-      args.retry_count = normalizeInteger(argv[index + 1], args.retry_count);
+      args.retry_count = normalizeInteger(
+        requireArgValue(argv, index, arg),
+        args.retry_count,
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--output" || arg === "-o") {
-      args.output_file = argv[index + 1];
+      args.output_file = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--summary") {
-      args.summary_file = argv[index + 1];
+      args.summary_file = requireArgValue(argv, index, arg);
       args.write_summary_file = true;
       index += 1;
       continue;
@@ -549,6 +655,19 @@ function parseArgs(argv = process.argv.slice(2)) {
     args.environment,
     DEFAULT_ENVIRONMENT,
   ).toLowerCase();
+
+  args.deployment_stage = normalizeString(
+    args.deployment_stage || args.environment,
+    args.environment,
+  ).toLowerCase();
+
+  if (
+    KNOWN_DEPLOYMENT_STAGES.has(args.deployment_stage) &&
+    (!args.environment || args.environment === DEFAULT_ENVIRONMENT)
+  ) {
+    args.environment = args.deployment_stage;
+  }
+
   args.exclude = [...new Set([...DEFAULT_EXCLUDE_PATTERNS, ...args.exclude])];
   args.include_namespaces = [...new Set(args.include_namespaces)];
   args.exclude_namespaces = [...new Set(args.exclude_namespaces)];
@@ -580,6 +699,7 @@ Usage:
 
 Examples:
   node .github/scripts/cloudflare/sync-kv.js --config .github/cloudflare/kv-sync.json --dry-run
+  node .github/scripts/cloudflare/sync-kv.js --environment preview --stage preview
   node .github/scripts/cloudflare/sync-kv.js --namespace-id <id> --source .github/cloudflare/kv/public.json
   node .github/scripts/cloudflare/sync-kv.js --binding AEREALITH_PUBLIC_KV --source content/kv --prefix public/
   node .github/scripts/cloudflare/sync-kv.js --config .github/cloudflare/kv-sync.yaml --delete-missing
@@ -589,7 +709,13 @@ Options:
       --config <file>                        KV sync config file.
       --targets <file>                       cloudflare-targets.json detector file.
       --environment <name>                   Environment name. Default: production.
+      --stage <name>                         Deployment stage, such as preview, staging, or production.
+      --alias <name>                         Deployment alias, such as preview alias or branch alias.
+      --preview-ref <ref>                    Preview source ref.
+      --pull-request-number <number>         Pull request number for preview sync.
+      --project-name <name>                  Cloudflare project name metadata.
       --account-id <id>                      Cloudflare account ID.
+      --api-token <token>                    Cloudflare API token. Prefer environment secrets.
       --namespace-id <id>                    Direct KV namespace ID.
       --namespace <name>                     Direct KV namespace name.
       --binding <name>                       Direct KV binding name.
@@ -612,6 +738,7 @@ Options:
       --require-credentials                  Require API token. Default.
       --no-require-credentials               Do not require credentials.
       --allow-empty-source                   Allow empty source without error.
+      --no-allow-empty-source                Treat empty source as invalid. Default.
       --fail-if-empty                        Exit non-zero if no namespace plans are selected.
       --fail-on-error                        Exit non-zero on sync failure. Default.
       --no-fail-on-error                     Do not fail when sync has errors.
@@ -774,10 +901,6 @@ function stripJsonc(input) {
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/^\s*\/\/.*$/gm, "")
     .replace(/,\s*([}\]])/g, "$1");
-}
-
-function readTextFile(filePath, repoRoot) {
-  return fs.readFileSync(resolvePath(filePath, repoRoot), "utf8");
 }
 
 function readJsonFile(filePath, repoRoot, fallback = null) {
@@ -1306,12 +1429,20 @@ function loadSourceEntries(namespacePlan, repoRoot, args) {
 }
 
 function resolveConfigEnvironmentValue(item, args, ...keys) {
-  const env = args.environment;
   const environments = item.environments || item.env || {};
+  const environmentKeys = [
+    args.environment,
+    args.deployment_stage,
+    DEFAULT_ENVIRONMENT,
+  ].filter(Boolean);
 
-  if (environments && typeof environments === "object" && environments[env]) {
-    for (const key of keys) {
-      if (environments[env][key] !== undefined) return environments[env][key];
+  if (environments && typeof environments === "object") {
+    for (const env of environmentKeys) {
+      if (!environments[env]) continue;
+
+      for (const key of keys) {
+        if (environments[env][key] !== undefined) return environments[env][key];
+      }
     }
   }
 
@@ -1320,6 +1451,17 @@ function resolveConfigEnvironmentValue(item, args, ...keys) {
   }
 
   return "";
+}
+
+function safeId(value) {
+  return (
+    normalizeString(value, "kv-sync")
+      .toLowerCase()
+      .replace(/^@/, "")
+      .replace(/[^a-z0-9_.:-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "kv-sync"
+  );
 }
 
 function normalizeNamespacePlan(item, args, source = "config") {
@@ -1353,11 +1495,13 @@ function normalizeNamespacePlan(item, args, source = "config") {
 
   return {
     id: safeId(
-      `${source}-${args.environment}-${name || binding || namespaceId || "kv"}`,
+      `${source}-${args.deployment_stage || args.environment}-${name || binding || namespaceId || "kv"}`,
     ),
     source_type: source,
     target_name: normalizeString(item.target_name || item.target || ""),
     environment: args.environment,
+    deployment_stage: args.deployment_stage,
+    deployment_alias: args.deployment_alias,
     namespace_id: namespaceId,
     namespace_name: name,
     binding,
@@ -1394,17 +1538,6 @@ function normalizeNamespacePlan(item, args, source = "config") {
       true,
     ),
   };
-}
-
-function safeId(value) {
-  return (
-    normalizeString(value, "kv-sync")
-      .toLowerCase()
-      .replace(/^@/, "")
-      .replace(/[^a-z0-9_.:-]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "") || "kv-sync"
-  );
 }
 
 function extractConfigPlans(config, args) {
@@ -1556,7 +1689,7 @@ function dedupeNamespacePlans(plans) {
   for (const plan of plans) {
     const key =
       plan.namespace_id ||
-      `${plan.namespace_name}:${plan.binding}:${plan.source}`;
+      `${plan.environment}:${plan.deployment_stage}:${plan.namespace_name}:${plan.binding}:${plan.source}`;
 
     if (!seen.has(key)) {
       seen.set(key, plan);
@@ -1579,6 +1712,7 @@ function dedupeNamespacePlans(plans) {
   return [...seen.values()].sort((left, right) => {
     return (
       left.environment.localeCompare(right.environment) ||
+      left.deployment_stage.localeCompare(right.deployment_stage) ||
       (left.namespace_name || left.binding || left.namespace_id).localeCompare(
         right.namespace_name || right.binding || right.namespace_id,
       )
@@ -1986,6 +2120,8 @@ async function syncNamespace(namespacePlan, args, repoRoot) {
     source_type: namespacePlan.source_type,
     target_name: namespacePlan.target_name,
     environment: namespacePlan.environment,
+    deployment_stage: namespacePlan.deployment_stage,
+    deployment_alias: namespacePlan.deployment_alias,
     namespace_id: namespacePlan.namespace_id,
     namespace_name: namespacePlan.namespace_name,
     binding: namespacePlan.binding,
@@ -2282,6 +2418,11 @@ function createReport(args, repoRoot, plans, execution) {
         ? toRelativePath(resolvePath(args.summary_file, repoRoot), repoRoot)
         : null,
       environment: args.environment,
+      deployment_stage: args.deployment_stage,
+      deployment_alias: args.deployment_alias,
+      preview_ref: args.preview_ref,
+      pull_request_number: args.pull_request_number,
+      cloudflare_project_name: args.cloudflare_project_name,
       delete_missing: args.delete_missing,
       compare_values: args.compare_values,
       require_credentials: args.require_credentials,
@@ -2309,6 +2450,8 @@ function createReport(args, repoRoot, plans, execution) {
       source_type: plan.source_type,
       target_name: plan.target_name,
       environment: plan.environment,
+      deployment_stage: plan.deployment_stage,
+      deployment_alias: plan.deployment_alias,
       namespace_id: plan.namespace_id,
       namespace_name: plan.namespace_name,
       binding: plan.binding,
@@ -2320,6 +2463,7 @@ function createReport(args, repoRoot, plans, execution) {
     totals,
     groups: {
       by_environment: groupResults(execution.results, "environment"),
+      by_stage: groupResults(execution.results, "deployment_stage"),
       by_status: groupResults(execution.results, "status"),
       by_source_type: groupResults(execution.results, "source_type"),
     },
@@ -2346,6 +2490,8 @@ function createMarkdownSummary(report) {
     "",
     `- Status: \`${report.status}\``,
     `- Environment: \`${report.config.environment}\``,
+    `- Stage: \`${report.config.deployment_stage || "not set"}\``,
+    `- Alias: \`${report.config.deployment_alias || "not set"}\``,
     `- Dry run: \`${report.config.dry_run ? "true" : "false"}\``,
     `- Blocked: \`${report.blocked ? "true" : "false"}\``,
     "",
@@ -2393,12 +2539,14 @@ function createMarkdownSummary(report) {
   if (!report.selected_namespaces.length) {
     lines.push("No KV namespaces were selected.");
   } else {
-    lines.push("| Namespace | Binding | Source | Prefix | Delete Missing |");
-    lines.push("|---|---|---|---|---:|");
+    lines.push(
+      "| Namespace | Binding | Environment | Stage | Source | Prefix | Delete Missing |",
+    );
+    lines.push("|---|---|---|---|---|---|---:|");
 
     for (const namespace of report.selected_namespaces) {
       lines.push(
-        `| \`${namespace.namespace_name || namespace.namespace_id || "unknown"}\` | \`${namespace.binding || "none"}\` | \`${namespace.source || "inline"}\` | \`${namespace.prefix || ""}\` | \`${namespace.delete_missing ? "true" : "false"}\` |`,
+        `| \`${namespace.namespace_name || namespace.namespace_id || "unknown"}\` | \`${namespace.binding || "none"}\` | \`${namespace.environment || "unknown"}\` | \`${namespace.deployment_stage || "none"}\` | \`${namespace.source || "inline"}\` | \`${namespace.prefix || ""}\` | \`${namespace.delete_missing ? "true" : "false"}\` |`,
       );
     }
   }
@@ -2411,13 +2559,13 @@ function createMarkdownSummary(report) {
     lines.push("No namespace sync results were produced.");
   } else {
     lines.push(
-      "| Status | Namespace | Binding | Entries | Writes | Deletes | Duration |",
+      "| Status | Namespace | Binding | Stage | Entries | Writes | Deletes | Duration |",
     );
-    lines.push("|---|---|---|---:|---:|---:|---:|");
+    lines.push("|---|---|---|---|---:|---:|---:|---:|");
 
     for (const result of report.results) {
       lines.push(
-        `| \`${result.status}\` | \`${result.namespace_name || result.namespace_id || "unknown"}\` | \`${result.binding || "none"}\` | \`${result.totals.source_entries}\` | \`${result.totals.planned_writes}\` | \`${result.totals.planned_deletes}\` | \`${formatDuration(result.duration_ms)}\` |`,
+        `| \`${result.status}\` | \`${result.namespace_name || result.namespace_id || "unknown"}\` | \`${result.binding || "none"}\` | \`${result.deployment_stage || "none"}\` | \`${result.totals.source_entries}\` | \`${result.totals.planned_writes}\` | \`${result.totals.planned_deletes}\` | \`${formatDuration(result.duration_ms)}\` |`,
       );
     }
   }
@@ -2478,6 +2626,14 @@ function createMarkdownSummary(report) {
     `- Cloudflare targets available: \`${report.config.cloudflare_targets_available ? "true" : "false"}\``,
   );
 
+  lines.push("");
+  lines.push("## 📤 Outputs");
+  lines.push("");
+  lines.push(`- JSON report: \`${report.config.output_file}\``);
+  lines.push(
+    `- Markdown summary: \`${report.config.summary_file || "not written"}\``,
+  );
+
   return `${lines.join("\n").trim()}\n`;
 }
 
@@ -2497,7 +2653,10 @@ function setGitHubOutput(name, value) {
 
   const rendered = typeof value === "string" ? value : JSON.stringify(value);
 
-  fs.appendFileSync(outputFile, `${name}<<EOF\n${rendered}\nEOF\n`);
+  fs.appendFileSync(
+    outputFile,
+    `${name}<<EOF\n${redactOutput(rendered)}\nEOF\n`,
+  );
   return true;
 }
 
@@ -2513,6 +2672,8 @@ function writeGitHubOutputs(report) {
     report.totals.ok && !report.blocked ? "true" : "false",
   );
   setGitHubOutput("cloudflare_kv_sync_environment", report.config.environment);
+  setGitHubOutput("cloudflare_kv_sync_stage", report.config.deployment_stage);
+  setGitHubOutput("cloudflare_kv_sync_alias", report.config.deployment_alias);
   setGitHubOutput(
     "cloudflare_kv_sync_namespaces",
     String(report.totals.namespaces),
