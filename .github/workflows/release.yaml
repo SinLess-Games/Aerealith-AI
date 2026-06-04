@@ -20,7 +20,7 @@ on:
           - announcement-only
           - summarize-only
       release_type:
-        description: "Release type. Auto allows the release label script to decide."
+        description: "Release type. Auto defaults to patch unless a version or tag is provided."
         required: true
         default: "auto"
         type: choice
@@ -66,7 +66,7 @@ on:
         default: false
         type: boolean
       generate_notes:
-        description: "Allow GitHub to generate release notes when supported."
+        description: "Use GitHub-generated release notes when no local changelog is available."
         required: true
         default: true
         type: boolean
@@ -125,7 +125,7 @@ permissions:
 
 concurrency:
   group: >-
-    release-${{ github.event.release.tag_name || github.ref_name || github.run_id }}
+    release-${{ github.workflow }}-${{ github.event.release.tag_name || github.ref_name || github.run_id }}
   cancel-in-progress: false
 
 defaults:
@@ -136,6 +136,7 @@ env:
   PROJECT_NAME: Aerealith AI
   NODE_VERSION: "24"
   FORCE_COLOR: "1"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CI: "true"
   NX_DAEMON: "false"
   NEXT_TELEMETRY_DISABLED: "1"
@@ -162,7 +163,6 @@ jobs:
       discussion_category_name: ${{ steps.context.outputs.discussion_category_name }}
       dry_run: ${{ steps.context.outputs.dry_run }}
       should_validate_source: ${{ steps.context.outputs.should_validate_source }}
-      should_detect_release_label: ${{ steps.context.outputs.should_detect_release_label }}
       should_determine_version: ${{ steps.context.outputs.should_determine_version }}
       should_build_changelog: ${{ steps.context.outputs.should_build_changelog }}
       should_create_tag: ${{ steps.context.outputs.should_create_tag }}
@@ -223,6 +223,10 @@ jobs:
           deploy_production="${INPUT_DEPLOY_PRODUCTION:-false}"
           dry_run="${INPUT_DRY_RUN:-false}"
 
+          if [[ "$tag_prefix" == "V" ]]; then
+            tag_prefix="v"
+          fi
+
           if [[ -z "$target_ref" ]]; then
             target_ref="${REF_NAME:-$SHA}"
           fi
@@ -243,6 +247,8 @@ jobs:
 
           if [[ -n "$tag_name" && -z "$version" ]]; then
             version="${tag_name#"$tag_prefix"}"
+            version="${version#v}"
+            version="${version#V}"
           fi
 
           case "$mode" in
@@ -264,7 +270,6 @@ jobs:
           esac
 
           should_validate_source="false"
-          should_detect_release_label="false"
           should_determine_version="false"
           should_build_changelog="false"
           should_create_tag="false"
@@ -275,39 +280,39 @@ jobs:
           case "$mode" in
             release)
               should_validate_source="true"
-              should_detect_release_label="true"
               should_determine_version="true"
               should_build_changelog="true"
               should_create_tag="true"
               should_create_github_release="true"
+
               if [[ -n "$discussion_category_name" ]]; then
                 should_post_announcement="true"
               fi
               ;;
             prepare)
               should_validate_source="true"
-              should_detect_release_label="true"
               should_determine_version="true"
               should_build_changelog="true"
               ;;
             tag-only)
               should_validate_source="true"
-              should_detect_release_label="true"
               should_determine_version="true"
               should_create_tag="true"
               ;;
             github-release-only)
               should_validate_source="true"
+              should_determine_version="true"
               should_build_changelog="true"
               should_create_github_release="true"
               ;;
             changelog-only)
               should_validate_source="true"
-              should_detect_release_label="true"
               should_determine_version="true"
               should_build_changelog="true"
               ;;
             announcement-only)
+              should_determine_version="true"
+
               if [[ -n "$discussion_category_name" ]]; then
                 should_post_announcement="true"
               fi
@@ -317,12 +322,8 @@ jobs:
               ;;
           esac
 
-          if [[ -n "$tag_name" ]]; then
-            should_determine_version="false"
-
-            if [[ "$mode" == "release" || "$mode" == "tag-only" ]]; then
-              should_create_tag="true"
-            fi
+          if [[ -n "$version" || -n "$tag_name" ]]; then
+            should_determine_version="true"
           fi
 
           if [[ "$dry_run" == "true" ]]; then
@@ -352,7 +353,6 @@ jobs:
             echo "discussion_category_name=$discussion_category_name"
             echo "dry_run=$dry_run"
             echo "should_validate_source=$should_validate_source"
-            echo "should_detect_release_label=$should_detect_release_label"
             echo "should_determine_version=$should_determine_version"
             echo "should_build_changelog=$should_build_changelog"
             echo "should_create_tag=$should_create_tag"
@@ -377,6 +377,7 @@ jobs:
             echo "| Release type | \`$release_type\` |"
             echo "| Version | \`${version:-auto}\` |"
             echo "| Tag | \`${tag_name:-auto}\` |"
+            echo "| Tag prefix | \`$tag_prefix\` |"
             echo "| Target ref | \`${target_ref:-none}\` |"
             echo "| Draft | \`$draft\` |"
             echo "| Prerelease | \`$prerelease\` |"
@@ -395,19 +396,14 @@ jobs:
     needs:
       - preflight
 
-    environment:
-      name: release
-      url: ${{ steps.github_release.outputs.release_url || '' }}
-
     outputs:
       version: ${{ steps.resolve_release.outputs.version }}
       tag_name: ${{ steps.resolve_release.outputs.tag_name }}
       release_url: ${{ steps.github_release.outputs.release_url }}
 
     env:
-      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
-      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
-      REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
       PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
       RELEASE_MODE: ${{ needs.preflight.outputs.mode }}
       RELEASE_TYPE: ${{ needs.preflight.outputs.release_type }}
@@ -423,32 +419,21 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.preflight.outputs.target_ref }}
           fetch-depth: 0
           persist-credentials: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Enable Corepack
-        if: hashFiles('package.json') != ''
-        run: |
-          set -euo pipefail
-
-          corepack enable
-
-          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
-          corepack prepare "$PACKAGE_MANAGER" --activate
-
-          pnpm --version || true
 
       - name: Prepare release output directory
         run: |
           set -euo pipefail
+
           mkdir -p "$RELEASE_OUTPUT_DIR"
 
       - name: Validate release source
@@ -456,173 +441,278 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! -f ".github/scripts/release/validate-release-source.js" ]]; then
-            echo "::warning::Missing script: .github/scripts/release/validate-release-source.js"
-            exit 0
+          mkdir -p "$RELEASE_OUTPUT_DIR"
+
+          validation_status="passed"
+          validation_ok="true"
+          validation_error=""
+
+          if ! git rev-parse --verify "$RELEASE_TARGET_REF^{commit}" >/dev/null 2>&1; then
+            validation_status="failed"
+            validation_ok="false"
+            validation_error="Target ref could not be resolved as a commit: $RELEASE_TARGET_REF"
           fi
 
-          node ".github/scripts/release/validate-release-source.js" \
-            --mode "$RELEASE_MODE" \
-            --target-ref "$RELEASE_TARGET_REF" \
-            --output "$RELEASE_OUTPUT_DIR/validate-release-source.json" \
-            --summary "$RELEASE_OUTPUT_DIR/validate-release-source.md"
+          current_sha="$(git rev-parse HEAD)"
+          target_sha="$(git rev-parse "$RELEASE_TARGET_REF^{commit}" 2>/dev/null || true)"
+          current_branch="$(git branch --show-current || true)"
 
-      - name: Detect release label
-        if: needs.preflight.outputs.should_detect_release_label == 'true'
-        run: |
-          set -euo pipefail
-
-          if [[ ! -f ".github/scripts/release/detect-release-label.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/release/detect-release-label.js"
-            exit 0
-          fi
-
-          node ".github/scripts/release/detect-release-label.js" \
-            --release-type "$RELEASE_TYPE" \
-            --target-ref "$RELEASE_TARGET_REF" \
-            --output "$RELEASE_OUTPUT_DIR/detect-release-label.json" \
-            --summary "$RELEASE_OUTPUT_DIR/detect-release-label.md"
-
-      - name: Determine release version
-        if: needs.preflight.outputs.should_determine_version == 'true'
-        run: |
-          set -euo pipefail
-
-          if [[ ! -f ".github/scripts/release/determine-release-version.js" ]]; then
-            echo "::warning::Missing script: .github/scripts/release/determine-release-version.js"
-            exit 0
-          fi
-
-          detected_release_type="$(node <<'NODE'
-          const fs = require("node:fs");
-
-          const file = "artifacts/release/detect-release-label.json";
-
-          if (!fs.existsSync(file)) {
-            process.exit(0);
+          cat > "$RELEASE_OUTPUT_DIR/validate-release-source.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "validate-release-source",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "event_name": "$GITHUB_EVENT_NAME",
+            "mode": "$RELEASE_MODE",
+            "target_ref": "$RELEASE_TARGET_REF",
+            "current_branch": "$current_branch",
+            "current_sha": "$current_sha",
+            "target_sha": "$target_sha",
+            "status": "$validation_status",
+            "ok": $validation_ok,
+            "error": "$validation_error",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
+          JSON
 
-          const data = JSON.parse(fs.readFileSync(file, "utf8"));
-          const value =
-            data.release_type ||
-            data.release?.type ||
-            data.label?.release_type ||
-            data.detected_release_type ||
-            "";
+          {
+            echo "# Aerealith AI Release Source Validation"
+            echo ""
+            echo "Generated: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo ""
+            echo "## Status"
+            echo ""
+            echo "- Status: \`$validation_status\`"
+            echo "- OK: \`$validation_ok\`"
+            echo "- Mode: \`$RELEASE_MODE\`"
+            echo "- Target ref: \`$RELEASE_TARGET_REF\`"
+            echo "- Target SHA: \`${target_sha:-unknown}\`"
 
-          if (value) {
-            console.log(value);
-          }
-          NODE
-          )"
+            if [[ -n "$validation_error" ]]; then
+              echo "- Error: \`$validation_error\`"
+            fi
+          } > "$RELEASE_OUTPUT_DIR/validate-release-source.md"
 
-          effective_release_type="$RELEASE_TYPE"
+          cat "$RELEASE_OUTPUT_DIR/validate-release-source.md" >> "$GITHUB_STEP_SUMMARY"
 
-          if [[ "$effective_release_type" == "auto" && -n "${detected_release_type:-}" ]]; then
-            effective_release_type="$detected_release_type"
+          if [[ "$validation_ok" != "true" ]]; then
+            echo "::error::$validation_error"
+            exit 1
           fi
-
-          if [[ "$effective_release_type" == "auto" ]]; then
-            effective_release_type="patch"
-          fi
-
-          node ".github/scripts/release/determine-release-version.js" \
-            --release-type "$effective_release_type" \
-            --version "$RELEASE_VERSION_OVERRIDE" \
-            --tag-prefix "$RELEASE_TAG_PREFIX" \
-            --prerelease-identifier "$RELEASE_PRERELEASE_IDENTIFIER" \
-            --target-ref "$RELEASE_TARGET_REF" \
-            --output "$RELEASE_OUTPUT_DIR/determine-release-version.json" \
-            --summary "$RELEASE_OUTPUT_DIR/determine-release-version.md"
 
       - name: Resolve release version and tag
         id: resolve_release
         run: |
           set -euo pipefail
 
-          version="${RELEASE_VERSION_OVERRIDE:-}"
-          tag_name="${RELEASE_TAG_NAME:-}"
+          mkdir -p "$RELEASE_OUTPUT_DIR"
 
-          if [[ -f "$RELEASE_OUTPUT_DIR/determine-release-version.json" ]]; then
-            resolved_version="$(node <<'NODE'
+          git fetch --tags --force
+
+          node <<'NODE'
           const fs = require("node:fs");
+          const cp = require("node:child_process");
+          const path = require("node:path");
 
-          const file = "artifacts/release/determine-release-version.json";
-          const data = JSON.parse(fs.readFileSync(file, "utf8"));
+          const outputDir = process.env.RELEASE_OUTPUT_DIR || "artifacts/release";
+          const outputFile = path.join(outputDir, "determine-release-version.json");
+          const summaryFile = path.join(outputDir, "determine-release-version.md");
 
-          const value =
-            data.version ||
-            data.next_version ||
-            data.release_version ||
-            data.release?.version ||
-            data.versioning?.version ||
-            "";
+          const rawReleaseType = process.env.RELEASE_TYPE || "auto";
+          const releaseType = rawReleaseType === "auto" ? "patch" : rawReleaseType;
+          const tagPrefix = process.env.RELEASE_TAG_PREFIX || "v";
+          const prereleaseIdentifier = process.env.RELEASE_PRERELEASE_IDENTIFIER || "rc";
+          const versionOverride = process.env.RELEASE_VERSION_OVERRIDE || "";
+          const tagOverride = process.env.RELEASE_TAG_NAME || "";
+          const mode = process.env.RELEASE_MODE || "release";
+          const targetRef = process.env.RELEASE_TARGET_REF || "HEAD";
+          const createdAt = new Date().toISOString();
 
-          if (value) {
-            console.log(value);
+          function run(command) {
+            return cp.execSync(command, {
+              encoding: "utf8",
+              stdio: ["ignore", "pipe", "ignore"],
+            }).trim();
+          }
+
+          function escapeRegExp(value) {
+            return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          }
+
+          function cleanVersion(value) {
+            return String(value || "")
+              .trim()
+              .replace(new RegExp(`^${escapeRegExp(tagPrefix)}`), "")
+              .replace(/^v/i, "");
+          }
+
+          function parseVersion(value) {
+            const clean = cleanVersion(value);
+            const match = clean.match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/);
+
+            if (!match) {
+              return null;
+            }
+
+            return {
+              major: Number(match[1]),
+              minor: Number(match[2]),
+              patch: Number(match[3]),
+              prerelease: match[4] || "",
+              raw: clean,
+            };
+          }
+
+          function compareVersions(left, right) {
+            for (const key of ["major", "minor", "patch"]) {
+              if (left[key] > right[key]) return 1;
+              if (left[key] < right[key]) return -1;
+            }
+
+            if (!left.prerelease && right.prerelease) return 1;
+            if (left.prerelease && !right.prerelease) return -1;
+
+            return left.raw.localeCompare(right.raw, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            });
+          }
+
+          function getTags() {
+            try {
+              return run("git tag --list").split(/\r?\n/).filter(Boolean);
+            } catch {
+              return [];
+            }
+          }
+
+          function getLatestVersionTag() {
+            const parsed = getTags()
+              .map((tag) => ({
+                tag,
+                version: parseVersion(tag),
+              }))
+              .filter((entry) => entry.version);
+
+            parsed.sort((left, right) => compareVersions(right.version, left.version));
+
+            return parsed[0] || null;
+          }
+
+          function bumpVersion(latest, type) {
+            const base = latest?.version || {
+              major: 0,
+              minor: 1,
+              patch: 0,
+              prerelease: "",
+              raw: "0.1.0",
+            };
+
+            let major = base.major;
+            let minor = base.minor;
+            let patch = base.patch;
+            let prerelease = "";
+
+            switch (type) {
+              case "major":
+                major += 1;
+                minor = 0;
+                patch = 0;
+                break;
+              case "minor":
+                minor += 1;
+                patch = 0;
+                break;
+              case "prerelease":
+                patch += 1;
+                prerelease = `${prereleaseIdentifier}.0`;
+                break;
+              case "patch":
+              default:
+                patch += 1;
+                break;
+            }
+
+            return `${major}.${minor}.${patch}${prerelease ? `-${prerelease}` : ""}`;
+          }
+
+          fs.mkdirSync(outputDir, { recursive: true });
+
+          const latest = getLatestVersionTag();
+
+          let version = cleanVersion(versionOverride);
+          let tagName = tagOverride.trim();
+
+          if (!version && tagName) {
+            version = cleanVersion(tagName);
+          }
+
+          if (!version) {
+            version = bumpVersion(latest, releaseType);
+          }
+
+          if (!tagName) {
+            tagName = `${tagPrefix}${version}`;
+          }
+
+          const parsedVersion = parseVersion(version);
+
+          if (!parsedVersion && mode !== "summarize-only") {
+            throw new Error(`Resolved version is not valid semver: ${version}`);
+          }
+
+          const report = {
+            schema_version: 1,
+            type: "determine-release-version",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            event_name: process.env.GITHUB_EVENT_NAME || "",
+            mode,
+            requested_release_type: rawReleaseType,
+            effective_release_type: releaseType,
+            version,
+            tag_name: tagName,
+            tag_prefix: tagPrefix,
+            prerelease_identifier: prereleaseIdentifier,
+            target_ref: targetRef,
+            latest_tag: latest?.tag || "",
+            latest_version: latest?.version?.raw || "",
+            created_at: createdAt,
+          };
+
+          fs.writeFileSync(outputFile, `${JSON.stringify(report, null, 2)}\n`);
+
+          const lines = [
+            "# Aerealith AI Release Version",
+            "",
+            `Generated: \`${createdAt}\``,
+            "",
+            "## Resolved Release",
+            "",
+            `- Version: \`${version}\``,
+            `- Tag: \`${tagName}\``,
+            `- Release type: \`${releaseType}\``,
+            `- Latest tag: \`${latest?.tag || "none"}\``,
+            `- Target ref: \`${targetRef}\``,
+            "",
+          ];
+
+          fs.writeFileSync(summaryFile, `${lines.join("\n").trim()}\n`);
+
+          const githubOutput = process.env.GITHUB_OUTPUT;
+
+          if (githubOutput) {
+            fs.appendFileSync(githubOutput, `version=${version}\n`);
+            fs.appendFileSync(githubOutput, `tag_name=${tagName}\n`);
           }
           NODE
-          )"
 
-            resolved_tag="$(node <<'NODE'
-          const fs = require("node:fs");
-
-          const file = "artifacts/release/determine-release-version.json";
-          const data = JSON.parse(fs.readFileSync(file, "utf8"));
-
-          const value =
-            data.tag_name ||
-            data.tag ||
-            data.release_tag ||
-            data.release?.tag_name ||
-            data.versioning?.tag_name ||
-            "";
-
-          if (value) {
-            console.log(value);
-          }
-          NODE
-          )"
-
-            if [[ -z "$version" && -n "${resolved_version:-}" ]]; then
-              version="$resolved_version"
-            fi
-
-            if [[ -z "$tag_name" && -n "${resolved_tag:-}" ]]; then
-              tag_name="$resolved_tag"
-            fi
-          fi
-
-          if [[ -n "$tag_name" && -z "$version" ]]; then
-            version="${tag_name#"$RELEASE_TAG_PREFIX"}"
-          fi
-
-          if [[ -n "$version" && -z "$tag_name" ]]; then
-            clean_version="${version#"$RELEASE_TAG_PREFIX"}"
-            tag_name="${RELEASE_TAG_PREFIX}${clean_version}"
-          fi
-
-          if [[ -z "$version" || -z "$tag_name" ]]; then
-            if [[ "$RELEASE_MODE" == "summarize-only" || "$PROJECT_SYNC_DRY_RUN" == "true" ]]; then
-              version="${version:-0.0.0-dry-run.${GITHUB_RUN_NUMBER}}"
-              tag_name="${tag_name:-${RELEASE_TAG_PREFIX}${version}}"
-            else
-              echo "::error::Unable to resolve release version or tag."
-              exit 1
-            fi
-          fi
-
-          {
-            echo "version=$version"
-            echo "tag_name=$tag_name"
-          } >> "$GITHUB_OUTPUT"
-
-          {
-            echo "## Resolved Release"
-            echo ""
-            echo "- Version: \`$version\`"
-            echo "- Tag: \`$tag_name\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$RELEASE_OUTPUT_DIR/determine-release-version.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build changelog
         if: needs.preflight.outputs.should_build_changelog == 'true'
@@ -632,17 +722,59 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! -f ".github/scripts/release/build-changelog.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/release/build-changelog.js"
-            exit 0
+          mkdir -p "$RELEASE_OUTPUT_DIR"
+
+          git fetch --tags --force
+
+          previous_tag="$(git tag --list 'v*' --sort=-v:refname | grep -v "^${RELEASE_TAG}$" | head -n 1 || true)"
+
+          if [[ -n "$previous_tag" ]]; then
+            range="$previous_tag..HEAD"
+          else
+            range="HEAD"
           fi
 
-          node ".github/scripts/release/build-changelog.js" \
-            --version "$RELEASE_VERSION" \
-            --tag "$RELEASE_TAG" \
-            --target-ref "$RELEASE_TARGET_REF" \
-            --output "$RELEASE_OUTPUT_DIR/build-changelog.json" \
-            --summary "$RELEASE_OUTPUT_DIR/CHANGELOG.md"
+          commit_log="$(git log "$range" --pretty=format:'- %s (`%h`)' --no-merges || true)"
+
+          if [[ -z "$commit_log" ]]; then
+            commit_log="- No non-merge commits found for this release range."
+          fi
+
+          {
+            echo "# Aerealith AI ${RELEASE_TAG}"
+            echo ""
+            echo "Generated: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo ""
+            echo "## Release"
+            echo ""
+            echo "- Version: \`${RELEASE_VERSION}\`"
+            echo "- Tag: \`${RELEASE_TAG}\`"
+            echo "- Previous tag: \`${previous_tag:-none}\`"
+            echo "- Target ref: \`${RELEASE_TARGET_REF}\`"
+            echo ""
+            echo "## Changes"
+            echo ""
+            echo "$commit_log"
+          } > "$RELEASE_OUTPUT_DIR/CHANGELOG.md"
+
+          cat > "$RELEASE_OUTPUT_DIR/build-changelog.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "build-changelog",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "version": "$RELEASE_VERSION",
+            "tag_name": "$RELEASE_TAG",
+            "previous_tag": "$previous_tag",
+            "target_ref": "$RELEASE_TARGET_REF",
+            "summary": "$RELEASE_OUTPUT_DIR/CHANGELOG.md",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          cat "$RELEASE_OUTPUT_DIR/CHANGELOG.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create release tag
         if: needs.preflight.outputs.should_create_tag == 'true'
@@ -652,22 +784,64 @@ jobs:
         run: |
           set -euo pipefail
 
+          mkdir -p "$RELEASE_OUTPUT_DIR"
+
           if [[ "$PROJECT_SYNC_DRY_RUN" == "true" ]]; then
             echo "::notice::Dry run enabled. Skipping release tag creation."
+
+            cat > "$RELEASE_OUTPUT_DIR/create-release-tag.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "create-release-tag",
+            "status": "skipped",
+            "ok": true,
+            "dry_run": true,
+            "version": "$RELEASE_VERSION",
+            "tag_name": "$RELEASE_TAG",
+            "target_ref": "$RELEASE_TARGET_REF",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
             exit 0
           fi
 
-          if [[ ! -f ".github/scripts/release/create-release-tag.js" ]]; then
-            echo "::error::Missing script: .github/scripts/release/create-release-tag.js"
-            exit 1
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git rev-parse "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Tag already exists: $RELEASE_TAG"
+            tag_status="existing"
+          else
+            git tag -a "$RELEASE_TAG" -m "Aerealith AI $RELEASE_TAG" "$RELEASE_TARGET_REF"
+            git push origin "$RELEASE_TAG"
+            tag_status="created"
           fi
 
-          node ".github/scripts/release/create-release-tag.js" \
-            --version "$RELEASE_VERSION" \
-            --tag "$RELEASE_TAG" \
-            --target-ref "$RELEASE_TARGET_REF" \
-            --output "$RELEASE_OUTPUT_DIR/create-release-tag.json" \
-            --summary "$RELEASE_OUTPUT_DIR/create-release-tag.md"
+          cat > "$RELEASE_OUTPUT_DIR/create-release-tag.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "create-release-tag",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "status": "$tag_status",
+            "ok": true,
+            "version": "$RELEASE_VERSION",
+            "tag_name": "$RELEASE_TAG",
+            "target_ref": "$RELEASE_TARGET_REF",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          {
+            echo "## Release Tag"
+            echo ""
+            echo "- Status: \`$tag_status\`"
+            echo "- Tag: \`$RELEASE_TAG\`"
+            echo "- Version: \`$RELEASE_VERSION\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create GitHub release
         id: github_release
@@ -678,65 +852,115 @@ jobs:
         run: |
           set -euo pipefail
 
+          mkdir -p "$RELEASE_OUTPUT_DIR"
+
           if [[ "$PROJECT_SYNC_DRY_RUN" == "true" ]]; then
             echo "::notice::Dry run enabled. Skipping GitHub release creation."
             echo "release_url=" >> "$GITHUB_OUTPUT"
+
+            cat > "$RELEASE_OUTPUT_DIR/create-github-release.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "create-github-release",
+            "status": "skipped",
+            "ok": true,
+            "dry_run": true,
+            "version": "$RELEASE_VERSION",
+            "tag_name": "$RELEASE_TAG",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
             exit 0
           fi
 
-          if [[ ! -f ".github/scripts/release/create-github-release.js" ]]; then
-            echo "::error::Missing script: .github/scripts/release/create-github-release.js"
-            exit 1
-          fi
-
           notes_file="$RELEASE_OUTPUT_DIR/CHANGELOG.md"
+          release_title="Aerealith AI $RELEASE_TAG"
 
-          if [[ ! -f "$notes_file" ]]; then
-            notes_file=""
-          fi
-
-          args=(
-            --version "$RELEASE_VERSION"
-            --tag "$RELEASE_TAG"
-            --name "Aerealith AI $RELEASE_TAG"
-            --draft "$RELEASE_DRAFT"
-            --prerelease "$RELEASE_PRERELEASE"
-            --generate-notes "$RELEASE_GENERATE_NOTES"
-            --output "$RELEASE_OUTPUT_DIR/create-github-release.json"
-            --summary "$RELEASE_OUTPUT_DIR/create-github-release.md"
+          release_args=(
+            "$RELEASE_TAG"
+            --title "$release_title"
+            --verify-tag
           )
 
-          if [[ -n "$notes_file" ]]; then
-            args+=(--notes-file "$notes_file")
+          if [[ -f "$notes_file" ]]; then
+            release_args+=(--notes-file "$notes_file")
+          elif [[ "$RELEASE_GENERATE_NOTES" == "true" ]]; then
+            release_args+=(--generate-notes)
+          else
+            release_args+=(--notes "Aerealith AI $RELEASE_TAG")
           fi
 
-          node ".github/scripts/release/create-github-release.js" "${args[@]}"
+          if [[ "$RELEASE_DRAFT" == "true" ]]; then
+            release_args+=(--draft)
+          fi
 
-          release_url="$(node <<'NODE'
-          const fs = require("node:fs");
+          if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+            release_args+=(--prerelease)
+          fi
 
-          const file = "artifacts/release/create-github-release.json";
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GitHub release already exists: $RELEASE_TAG"
 
-          if (!fs.existsSync(file)) {
-            process.exit(0);
-          }
+            edit_args=(
+              "$RELEASE_TAG"
+              --repo "$GITHUB_REPOSITORY"
+              --title "$release_title"
+            )
 
-          const data = JSON.parse(fs.readFileSync(file, "utf8"));
-          const value =
-            data.release_url ||
-            data.html_url ||
-            data.url ||
-            data.release?.html_url ||
-            data.github_release?.html_url ||
-            "";
+            if [[ -f "$notes_file" ]]; then
+              edit_args+=(--notes-file "$notes_file")
+            fi
 
-          if (value) {
-            console.log(value);
-          }
-          NODE
-          )"
+            if [[ "$RELEASE_DRAFT" == "true" ]]; then
+              edit_args+=(--draft=true)
+            else
+              edit_args+=(--draft=false)
+            fi
+
+            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+              edit_args+=(--prerelease=true)
+            else
+              edit_args+=(--prerelease=false)
+            fi
+
+            gh release edit "${edit_args[@]}"
+            release_status="updated"
+          else
+            gh release create "${release_args[@]}" --repo "$GITHUB_REPOSITORY"
+            release_status="created"
+          fi
+
+          release_url="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url --jq '.url')"
 
           echo "release_url=$release_url" >> "$GITHUB_OUTPUT"
+
+          cat > "$RELEASE_OUTPUT_DIR/create-github-release.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "create-github-release",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "status": "$release_status",
+            "ok": true,
+            "version": "$RELEASE_VERSION",
+            "tag_name": "$RELEASE_TAG",
+            "release_url": "$release_url",
+            "draft": "$RELEASE_DRAFT",
+            "prerelease": "$RELEASE_PRERELEASE",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          {
+            echo "## GitHub Release"
+            echo ""
+            echo "- Status: \`$release_status\`"
+            echo "- Tag: \`$RELEASE_TAG\`"
+            echo "- URL: $release_url"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Post release discussion announcement
         if: needs.preflight.outputs.should_post_announcement == 'true'
@@ -747,65 +971,175 @@ jobs:
         run: |
           set -euo pipefail
 
+          mkdir -p "$RELEASE_OUTPUT_DIR"
+
+          announcement_file="$RELEASE_OUTPUT_DIR/release-announcement.md"
+
+          {
+            echo "# Aerealith AI ${RELEASE_TAG}"
+            echo ""
+            echo "A new Aerealith AI release has been prepared."
+            echo ""
+            echo "- Version: \`${RELEASE_VERSION}\`"
+            echo "- Tag: \`${RELEASE_TAG}\`"
+            echo "- Release: ${RELEASE_URL:-not created in this run}"
+            echo ""
+            if [[ -f "$RELEASE_OUTPUT_DIR/CHANGELOG.md" ]]; then
+              echo "## Changelog"
+              echo ""
+              cat "$RELEASE_OUTPUT_DIR/CHANGELOG.md"
+            fi
+          } > "$announcement_file"
+
           if [[ "$PROJECT_SYNC_DRY_RUN" == "true" ]]; then
             echo "::notice::Dry run enabled. Skipping release discussion announcement."
             exit 0
           fi
 
-          if [[ ! -f ".github/scripts/release/post-discussion-announcement.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/release/post-discussion-announcement.js"
+          if [[ -z "${RELEASE_DISCUSSION_CATEGORY_NAME:-}" ]]; then
+            echo "::notice::No discussion category configured. Skipping announcement."
             exit 0
           fi
 
-          node ".github/scripts/release/post-discussion-announcement.js" \
-            --version "$RELEASE_VERSION" \
-            --tag "$RELEASE_TAG" \
-            --release-url "$RELEASE_URL" \
-            --category "$RELEASE_DISCUSSION_CATEGORY_NAME" \
-            --notes-file "$RELEASE_OUTPUT_DIR/CHANGELOG.md" \
-            --output "$RELEASE_OUTPUT_DIR/post-discussion-announcement.json" \
-            --summary "$RELEASE_OUTPUT_DIR/post-discussion-announcement.md"
+          owner="${GITHUB_REPOSITORY%%/*}"
+          repo_name="${GITHUB_REPOSITORY#*/}"
+
+          repo_data="$(gh api graphql \
+            -f query='
+              query($owner: String!, $name: String!) {
+                repository(owner: $owner, name: $name) {
+                  id
+                  discussionCategories(first: 50) {
+                    nodes {
+                      id
+                      name
+                    }
+                  }
+                }
+              }
+            ' \
+            -F owner="$owner" \
+            -F name="$repo_name")"
+
+          repository_id="$(printf '%s' "$repo_data" | jq -r '.data.repository.id // empty')"
+          category_id="$(printf '%s' "$repo_data" | jq -r --arg category "$RELEASE_DISCUSSION_CATEGORY_NAME" '.data.repository.discussionCategories.nodes[]? | select(.name == $category) | .id' | head -n 1)"
+
+          if [[ -z "$repository_id" || -z "$category_id" ]]; then
+            echo "::warning::Discussion category was not found: $RELEASE_DISCUSSION_CATEGORY_NAME"
+            exit 0
+          fi
+
+          announcement_body="$(cat "$announcement_file")"
+
+          set +e
+          discussion_response="$(gh api graphql \
+            -f query='
+              mutation($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
+                createDiscussion(input: {
+                  repositoryId: $repositoryId,
+                  categoryId: $categoryId,
+                  title: $title,
+                  body: $body
+                }) {
+                  discussion {
+                    url
+                  }
+                }
+              }
+            ' \
+            -F repositoryId="$repository_id" \
+            -F categoryId="$category_id" \
+            -F title="Aerealith AI ${RELEASE_TAG}" \
+            -F body="$announcement_body")"
+          announcement_status="$?"
+          set -e
+
+          if [[ "$announcement_status" -ne 0 ]]; then
+            echo "::warning::Failed to create release discussion announcement."
+            exit 0
+          fi
+
+          discussion_url="$(printf '%s' "$discussion_response" | jq -r '.data.createDiscussion.discussion.url // empty')"
+
+          cat > "$RELEASE_OUTPUT_DIR/post-discussion-announcement.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "post-discussion-announcement",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "status": "created",
+            "ok": true,
+            "version": "$RELEASE_VERSION",
+            "tag_name": "$RELEASE_TAG",
+            "discussion_url": "$discussion_url",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          {
+            echo "## Release Discussion Announcement"
+            echo ""
+            echo "- Category: \`$RELEASE_DISCUSSION_CATEGORY_NAME\`"
+            echo "- URL: ${discussion_url:-unknown}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Summarize release
         if: always() && needs.preflight.outputs.should_summarize_release == 'true'
         env:
           RELEASE_VERSION: ${{ steps.resolve_release.outputs.version || needs.preflight.outputs.version }}
           RELEASE_TAG: ${{ steps.resolve_release.outputs.tag_name || needs.preflight.outputs.tag_name }}
+          RELEASE_URL: ${{ steps.github_release.outputs.release_url || '' }}
         run: |
           set -euo pipefail
 
-          if [[ ! -f ".github/scripts/release/summarize-release.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/release/summarize-release.js"
+          mkdir -p "$RELEASE_OUTPUT_DIR"
 
-            cat > "$RELEASE_OUTPUT_DIR/summarize-release.md" <<EOF
-          # Aerealith AI Release Summary
+          release_version="${RELEASE_VERSION:-unknown}"
+          release_tag="${RELEASE_TAG:-unknown}"
+          release_url="${RELEASE_URL:-}"
 
-          - Mode: \`${RELEASE_MODE}\`
-          - Version: \`${RELEASE_VERSION:-unknown}\`
-          - Tag: \`${RELEASE_TAG:-unknown}\`
-          - Dry run: \`${PROJECT_SYNC_DRY_RUN}\`
-          EOF
+          cat > "$RELEASE_OUTPUT_DIR/summarize-release.json" <<JSON
+          {
+            "schema_version": 1,
+            "type": "summarize-release",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "event_name": "$GITHUB_EVENT_NAME",
+            "mode": "$RELEASE_MODE",
+            "version": "$release_version",
+            "tag_name": "$release_tag",
+            "release_url": "$release_url",
+            "dry_run": "$PROJECT_SYNC_DRY_RUN",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
 
-            cat "$RELEASE_OUTPUT_DIR/summarize-release.md" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
+          {
+            echo "# Aerealith AI Release Summary"
+            echo ""
+            echo "Generated: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo ""
+            echo "## Status"
+            echo ""
+            echo "- Mode: \`$RELEASE_MODE\`"
+            echo "- Version: \`$release_version\`"
+            echo "- Tag: \`$release_tag\`"
+            echo "- Release URL: ${release_url:-\`none\`}"
+            echo "- Dry run: \`$PROJECT_SYNC_DRY_RUN\`"
+          } > "$RELEASE_OUTPUT_DIR/summarize-release.md"
 
-          node ".github/scripts/release/summarize-release.js" \
-            --input-dir "$RELEASE_OUTPUT_DIR" \
-            --version "${RELEASE_VERSION:-}" \
-            --tag "${RELEASE_TAG:-}" \
-            --output "$RELEASE_OUTPUT_DIR/summarize-release.json" \
-            --summary "$RELEASE_OUTPUT_DIR/summarize-release.md" \
-            --no-fail-on-error
-
-          if [[ -f "$RELEASE_OUTPUT_DIR/summarize-release.md" ]]; then
-            cat "$RELEASE_OUTPUT_DIR/summarize-release.md" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          cat "$RELEASE_OUTPUT_DIR/summarize-release.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Write release output summary
         if: always()
         run: |
           set -euo pipefail
+
+          mkdir -p "$RELEASE_OUTPUT_DIR"
 
           {
             echo "## Release Output Files"
@@ -823,7 +1157,7 @@ jobs:
 
       - name: Upload release artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-${{ github.run_id }}
           path: |
@@ -845,8 +1179,8 @@ jobs:
       needs.release.result == 'success'
 
     env:
-      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
-      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ needs.release.outputs.tag_name }}
       RELEASE_VERSION: ${{ needs.release.outputs.version }}
 
@@ -891,8 +1225,8 @@ jobs:
 
           if [[ "${{ needs.preflight.outputs.dispatch_artifact_hashes }}" == "true" ]]; then
             dispatch_workflow "artifact-hashes.yaml" \
+              -f mode=create \
               -f source_run_id="$GITHUB_RUN_ID" \
-              -f verify_only=false \
               -f create_manifest=true \
               -f create_checksums=true \
               -f create_sbom=true \
