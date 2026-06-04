@@ -137,7 +137,6 @@ jobs:
           INPUT_CREATE_SBOM: ${{ github.event.inputs.create_sbom || 'true' }}
           INPUT_CREATE_CHECKSUMS: ${{ github.event.inputs.create_checksums || 'true' }}
           INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
-          RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
         run: |
           set -euo pipefail
 
@@ -169,15 +168,25 @@ jobs:
               should_discover="true"
               should_validate="$run_validation"
               should_pack="true"
+              should_publish="false"
               ;;
             validate-only)
               should_discover="true"
               should_validate="true"
+              should_pack="false"
+              should_publish="false"
               ;;
             discover-only)
               should_discover="true"
+              should_validate="false"
+              should_pack="false"
+              should_publish="false"
               ;;
             summarize-only)
+              should_discover="false"
+              should_validate="false"
+              should_pack="false"
+              should_publish="false"
               should_summarize="true"
               ;;
             *)
@@ -276,25 +285,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-          registry-url: ${{ needs.preflight.outputs.registry_url }}
-
-      - name: Enable Corepack
-        run: |
-          set -euo pipefail
-
-          corepack enable
-
-          PACKAGE_MANAGER="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); console.log(pkg.packageManager || 'pnpm@latest');")"
-          corepack prepare "$PACKAGE_MANAGER" --activate
-
-          pnpm --version
-
       - name: Prepare output directories
         run: |
           set -euo pipefail
@@ -302,6 +292,56 @@ jobs:
           mkdir -p "$NPM_OUTPUT_DIR"
           mkdir -p "$PACKAGE_OUTPUT_DIR"
           mkdir -p "$ARTIFACT_OUTPUT_DIR"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: ${{ needs.preflight.outputs.registry_url }}
+
+      - name: Enable pnpm through Corepack
+        id: pnpm
+        run: |
+          set -euo pipefail
+
+          corepack enable
+
+          package_manager="$(node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); process.stdout.write(String(pkg.packageManager || 'pnpm@10.23.0'))")"
+
+          if [[ "$package_manager" != pnpm@* ]]; then
+            echo "::error::This workflow expects pnpm, but package.json declares packageManager=$package_manager"
+            exit 1
+          fi
+
+          corepack prepare "$package_manager" --activate
+
+          pnpm_version="$(pnpm --version)"
+          pnpm_store="$(pnpm store path --silent)"
+
+          {
+            echo "package_manager=$package_manager"
+            echo "pnpm_version=$pnpm_version"
+            echo "pnpm_store=$pnpm_store"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## pnpm"
+            echo ""
+            echo "- Package manager: \`$package_manager\`"
+            echo "- pnpm version: \`$pnpm_version\`"
+            echo "- Store path: \`$pnpm_store\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install dependencies
+        if: >-
+          needs.preflight.outputs.should_discover == 'true' ||
+          needs.preflight.outputs.should_validate == 'true' ||
+          needs.preflight.outputs.should_pack == 'true' ||
+          needs.preflight.outputs.should_publish == 'true'
+        run: |
+          set -euo pipefail
+
+          pnpm install --frozen-lockfile
 
       - name: Configure NPM authentication
         if: needs.preflight.outputs.should_publish == 'true'
@@ -323,9 +363,6 @@ jobs:
           npm whoami --registry "$NPM_CONFIG_REGISTRY" || {
             echo "::warning::npm whoami failed. Publishing may still work with automation tokens, but token validation did not pass."
           }
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
 
       - name: Discover publishable packages
         if: needs.preflight.outputs.should_discover == 'true'
@@ -404,7 +441,7 @@ jobs:
             --summary "$PACKAGE_OUTPUT_DIR/publish-packages.md"
 
       - name: Create package SBOM
-        if: needs.preflight.outputs.create_sbom == 'true' && needs.preflight.outputs.mode != 'discover-only'
+        if: needs.preflight.outputs.create_sbom == 'true' && needs.preflight.outputs.should_pack == 'true'
         run: |
           set -euo pipefail
 
@@ -419,7 +456,7 @@ jobs:
             --summary "$ARTIFACT_OUTPUT_DIR/npm-sbom.md"
 
       - name: Create package checksums
-        if: needs.preflight.outputs.create_checksums == 'true' && needs.preflight.outputs.mode != 'discover-only'
+        if: needs.preflight.outputs.create_checksums == 'true' && needs.preflight.outputs.should_pack == 'true'
         run: |
           set -euo pipefail
 
@@ -440,6 +477,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          mkdir -p "$PACKAGE_OUTPUT_DIR"
+
           if [[ ! -f ".github/scripts/npm/summarize-packages.js" ]]; then
             echo "::notice::Skipping missing script: .github/scripts/npm/summarize-packages.js"
             exit 0
@@ -453,6 +492,10 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
+
+          mkdir -p "$NPM_OUTPUT_DIR"
+          mkdir -p "$PACKAGE_OUTPUT_DIR"
+          mkdir -p "$ARTIFACT_OUTPUT_DIR"
 
           report_file="$NPM_OUTPUT_DIR/publish-npm.json"
           summary_file="$NPM_OUTPUT_DIR/publish-npm.md"
