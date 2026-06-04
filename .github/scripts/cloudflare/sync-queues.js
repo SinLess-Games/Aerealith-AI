@@ -28,6 +28,7 @@
 //   - Queue deletion is opt-in through --delete-missing.
 //   - Consumer synchronization is planned as metadata evidence unless explicit
 //     API support is enabled by configuration.
+//   - Accepts --stage as deployment metadata and as an environment fallback.
 // =============================================================================
 
 const fs = require("node:fs");
@@ -75,12 +76,13 @@ const DEFAULT_SUMMARY_FILE = "artifacts/cloudflare/sync-queues.md";
 
 const CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4";
 const DEFAULT_ENVIRONMENT = "production";
+const KNOWN_DEPLOYMENT_STAGES = new Set(["preview", "staging", "production"]);
 
 const TRUE_VALUES = new Set(["true", "1", "yes", "y", "on", "enabled"]);
 const FALSE_VALUES = new Set(["false", "0", "no", "n", "off", "disabled"]);
 
 const SECRET_OUTPUT_PATTERN =
-  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/g;
+  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|password\s*=\s*[^\s]+|--password\s+[^\s]+|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/gi;
 
 function normalizeString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
@@ -126,6 +128,16 @@ function normalizeStringList(value) {
   ];
 }
 
+function requireValue(argv, index, arg) {
+  const value = argv[index + 1];
+
+  if (value === undefined || String(value).startsWith("--")) {
+    throw new Error(`Missing value for argument: ${arg}`);
+  }
+
+  return value;
+}
+
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     repository: process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
@@ -144,6 +156,24 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.CLOUDFLARE_QUEUES_SYNC_ENVIRONMENT ||
       process.env.CLOUDFLARE_ENVIRONMENT ||
       DEFAULT_ENVIRONMENT,
+
+    deployment_stage:
+      process.env.CLOUDFLARE_QUEUES_SYNC_STAGE ||
+      process.env.CLOUDFLARE_DEPLOYMENT_STAGE ||
+      process.env.CLOUDFLARE_STAGE ||
+      "",
+    deployment_alias:
+      process.env.CLOUDFLARE_QUEUES_SYNC_ALIAS ||
+      process.env.CLOUDFLARE_DEPLOYMENT_ALIAS ||
+      process.env.CLOUDFLARE_PREVIEW_ALIAS ||
+      "",
+    preview_ref: process.env.CLOUDFLARE_PREVIEW_REF || "",
+    pull_request_number: process.env.CLOUDFLARE_PULL_REQUEST_NUMBER || "",
+    project_name:
+      process.env.CLOUDFLARE_PROJECT_NAME ||
+      process.env.CLOUDFLARE_PAGES_PROJECT_NAME ||
+      "",
+    output_root: process.env.CLOUDFLARE_OUTPUT_DIR || "",
 
     account_id: process.env.CLOUDFLARE_ACCOUNT_ID || "",
     api_token: process.env.CLOUDFLARE_API_TOKEN || "",
@@ -233,6 +263,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     dry_run: normalizeBoolean(
       process.env.CLOUDFLARE_QUEUES_SYNC_DRY_RUN ||
+        process.env.CLOUDFLARE_DRY_RUN ||
         process.env.DRY_RUN ||
         process.env.PROJECT_SYNC_DRY_RUN,
       false,
@@ -252,85 +283,152 @@ function parseArgs(argv = process.argv.slice(2)) {
     const arg = argv[index];
 
     if (arg === "--repo" || arg === "--repository") {
-      args.repository = argv[index + 1];
+      args.repository = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--config") {
-      args.config_file = argv[index + 1];
+      args.config_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--targets" || arg === "--cloudflare-targets") {
-      args.cloudflare_targets_file = argv[index + 1];
+      args.cloudflare_targets_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--environment" || arg === "--env") {
-      args.environment = argv[index + 1];
+      args.environment = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--stage" || arg === "--deployment-stage") {
+      args.deployment_stage = requireValue(argv, index, arg);
+
+      if (
+        !args.environment ||
+        args.environment === DEFAULT_ENVIRONMENT ||
+        args.environment === process.env.CLOUDFLARE_ENVIRONMENT
+      ) {
+        args.environment = args.deployment_stage;
+      }
+
+      index += 1;
+      continue;
+    }
+
+    if (
+      arg === "--alias" ||
+      arg === "--deployment-alias" ||
+      arg === "--preview-alias"
+    ) {
+      args.deployment_alias = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--preview-ref" || arg === "--ref-name") {
+      args.preview_ref = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--pull-request-number" || arg === "--pr-number") {
+      args.pull_request_number = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--project-name" || arg === "--cloudflare-project") {
+      args.project_name = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--output-root") {
+      args.output_root = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--account-id") {
-      args.account_id = argv[index + 1];
+      args.account_id = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--api-token") {
+      args.api_token = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--queue-id") {
-      args.queue_id = argv[index + 1];
+      args.queue_id = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--queue" || arg === "--queue-name") {
-      args.queue_name = argv[index + 1];
+      args.queue_name = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--binding") {
-      args.binding = argv[index + 1];
+      args.binding = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--include-queue" || arg === "--include-queues") {
-      args.include_queues.push(...normalizeStringList(argv[index + 1]));
+      args.include_queues.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-queue" || arg === "--exclude-queues") {
-      args.exclude_queues.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_queues.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--include-binding" || arg === "--include-bindings") {
-      args.include_bindings.push(...normalizeStringList(argv[index + 1]));
+      args.include_bindings.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-binding" || arg === "--exclude-bindings") {
-      args.exclude_bindings.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_bindings.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--include-target" || arg === "--include-targets") {
-      args.include_targets.push(...normalizeStringList(argv[index + 1]));
+      args.include_targets.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-target" || arg === "--exclude-targets") {
-      args.exclude_targets.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_targets.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
@@ -400,6 +498,11 @@ function parseArgs(argv = process.argv.slice(2)) {
       continue;
     }
 
+    if (arg === "--no-allow-empty-plan") {
+      args.allow_empty_plan = false;
+      continue;
+    }
+
     if (arg === "--fail-if-empty") {
       args.fail_if_empty = true;
       continue;
@@ -426,25 +529,31 @@ function parseArgs(argv = process.argv.slice(2)) {
     }
 
     if (arg === "--max-queues") {
-      args.max_queues = normalizeInteger(argv[index + 1], args.max_queues);
+      args.max_queues = normalizeInteger(
+        requireValue(argv, index, arg),
+        args.max_queues,
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--retry-count") {
-      args.retry_count = normalizeInteger(argv[index + 1], args.retry_count);
+      args.retry_count = normalizeInteger(
+        requireValue(argv, index, arg),
+        args.retry_count,
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--output" || arg === "-o") {
-      args.output_file = argv[index + 1];
+      args.output_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--summary") {
-      args.summary_file = argv[index + 1];
+      args.summary_file = requireValue(argv, index, arg);
       args.write_summary_file = true;
       index += 1;
       continue;
@@ -478,10 +587,42 @@ function parseArgs(argv = process.argv.slice(2)) {
     throw new Error(`Unknown argument: ${arg}`);
   }
 
+  normalizeArgs(args);
+
+  return args;
+}
+
+function normalizeArgs(args) {
   args.environment = normalizeString(
     args.environment,
     DEFAULT_ENVIRONMENT,
   ).toLowerCase();
+
+  args.deployment_stage = normalizeString(
+    args.deployment_stage || args.environment,
+    args.environment,
+  ).toLowerCase();
+
+  if (
+    args.deployment_stage &&
+    KNOWN_DEPLOYMENT_STAGES.has(args.deployment_stage) &&
+    (!args.environment || args.environment === DEFAULT_ENVIRONMENT)
+  ) {
+    args.environment = args.deployment_stage;
+  }
+
+  args.deployment_alias = normalizeString(args.deployment_alias);
+  args.preview_ref = normalizeString(args.preview_ref);
+  args.pull_request_number = normalizeString(args.pull_request_number);
+  args.project_name = normalizeString(args.project_name);
+  args.output_root = toPosixPath(args.output_root);
+
+  args.account_id = normalizeString(args.account_id);
+  args.api_token = normalizeString(args.api_token);
+  args.queue_id = normalizeString(args.queue_id);
+  args.queue_name = normalizeQueueName(args.queue_name);
+  args.binding = normalizeString(args.binding);
+
   args.include_queues = [...new Set(args.include_queues)];
   args.exclude_queues = [...new Set(args.exclude_queues)];
   args.include_bindings = [...new Set(args.include_bindings)];
@@ -490,8 +631,6 @@ function parseArgs(argv = process.argv.slice(2)) {
   args.exclude_targets = [...new Set(args.exclude_targets)];
   args.max_queues = Math.max(0, args.max_queues);
   args.retry_count = Math.max(0, args.retry_count);
-
-  return args;
 }
 
 function printHelp() {
@@ -505,6 +644,7 @@ Examples:
   node .github/scripts/cloudflare/sync-queues.js --config .github/cloudflare/queues-sync.json --dry-run
   node .github/scripts/cloudflare/sync-queues.js --queue aerealith-events --binding AEREALITH_EVENTS_QUEUE
   node .github/scripts/cloudflare/sync-queues.js --targets artifacts/ci/cloudflare-targets.json --environment staging
+  node .github/scripts/cloudflare/sync-queues.js --environment preview --stage preview
   node .github/scripts/cloudflare/sync-queues.js --delete-missing --include-queue aerealith-events
 
 Options:
@@ -512,7 +652,14 @@ Options:
       --config <file>                        Queue sync config file.
       --targets <file>                       cloudflare-targets.json detector file.
       --environment <name>                   Environment name. Default: production.
+      --stage <name>                         Deployment stage metadata. Also acts as environment fallback.
+      --alias <name>                         Deployment alias metadata, such as preview branch alias.
+      --preview-ref <ref>                    Preview branch/ref metadata.
+      --pull-request-number <number>         Pull request number metadata.
+      --project-name <name>                  Cloudflare project name metadata.
+      --output-root <path>                   Cloudflare output root metadata.
       --account-id <id>                      Cloudflare account ID.
+      --api-token <token>                    Cloudflare API token.
       --queue-id <id>                        Direct queue ID.
       --queue <name>                         Direct queue name.
       --binding <name>                       Direct queue binding name.
@@ -535,6 +682,7 @@ Options:
       --require-credentials                  Require API token. Default.
       --no-require-credentials               Do not require credentials.
       --allow-empty-plan                     Allow an empty plan.
+      --no-allow-empty-plan                  Warn on an empty plan. Default.
       --fail-if-empty                        Exit non-zero if no queue plans are selected.
       --fail-on-error                        Exit non-zero on sync failure. Default.
       --no-fail-on-error                     Do not fail when sync has errors.
@@ -959,6 +1107,11 @@ function normalizeQueuePlan(item, args, source = "config") {
       `${source}-${args.environment}-${queueName || binding || queueId || "queue"}`,
     ),
     source_type: source,
+    deployment_stage: args.deployment_stage,
+    deployment_alias: args.deployment_alias,
+    preview_ref: args.preview_ref,
+    pull_request_number: args.pull_request_number,
+    project_name: args.project_name,
     target_name: normalizeString(item.target_name || item.target || ""),
     environment: args.environment,
     queue_id: queueId,
@@ -1230,6 +1383,12 @@ function mergeQueuePlans(existing, next) {
   return {
     ...existing,
     ...next,
+    deployment_stage: next.deployment_stage || existing.deployment_stage,
+    deployment_alias: next.deployment_alias || existing.deployment_alias,
+    preview_ref: next.preview_ref || existing.preview_ref,
+    pull_request_number:
+      next.pull_request_number || existing.pull_request_number,
+    project_name: next.project_name || existing.project_name,
     queue_id: next.queue_id || existing.queue_id,
     queue_name: next.queue_name || existing.queue_name,
     binding: next.binding || existing.binding,
@@ -1669,6 +1828,11 @@ async function syncQueue(queuePlan, context, args) {
   const result = {
     id: queuePlan.id,
     source_type: queuePlan.source_type,
+    deployment_stage: queuePlan.deployment_stage,
+    deployment_alias: queuePlan.deployment_alias,
+    preview_ref: queuePlan.preview_ref,
+    pull_request_number: queuePlan.pull_request_number,
+    project_name: queuePlan.project_name,
     target_name: queuePlan.target_name,
     environment: queuePlan.environment,
     queue_id: queuePlan.queue_id || remoteQueue?.queue_id || "",
@@ -2019,6 +2183,12 @@ function createReport(args, repoRoot, plans, execution) {
         ? toRelativePath(resolvePath(args.summary_file, repoRoot), repoRoot)
         : null,
       environment: args.environment,
+      deployment_stage: args.deployment_stage,
+      deployment_alias: args.deployment_alias,
+      preview_ref: args.preview_ref,
+      pull_request_number: args.pull_request_number,
+      project_name: args.project_name,
+      output_root: args.output_root,
       create_missing: args.create_missing,
       update_existing: args.update_existing,
       delete_missing: args.delete_missing,
@@ -2045,6 +2215,11 @@ function createReport(args, repoRoot, plans, execution) {
     selected_queues: plans.queues.map((plan) => ({
       id: plan.id,
       source_type: plan.source_type,
+      deployment_stage: plan.deployment_stage,
+      deployment_alias: plan.deployment_alias,
+      preview_ref: plan.preview_ref,
+      pull_request_number: plan.pull_request_number,
+      project_name: plan.project_name,
       target_name: plan.target_name,
       environment: plan.environment,
       queue_id: plan.queue_id,
@@ -2102,6 +2277,9 @@ function createMarkdownSummary(report) {
     "",
     `- Status: \`${report.status}\``,
     `- Environment: \`${report.config.environment}\``,
+    `- Stage: \`${report.config.deployment_stage || "not set"}\``,
+    `- Alias: \`${report.config.deployment_alias || "not set"}\``,
+    `- Preview ref: \`${report.config.preview_ref || "not set"}\``,
     `- Dry run: \`${report.config.dry_run ? "true" : "false"}\``,
     `- Blocked: \`${report.blocked ? "true" : "false"}\``,
     "",
@@ -2150,12 +2328,14 @@ function createMarkdownSummary(report) {
   if (!report.selected_queues.length) {
     lines.push("No Cloudflare Queues were selected.");
   } else {
-    lines.push("| Queue | Binding | Source | Target | Producers | Consumers |");
-    lines.push("|---|---|---|---|---:|---:|");
+    lines.push(
+      "| Queue | Binding | Source | Target | Stage | Producers | Consumers |",
+    );
+    lines.push("|---|---|---|---|---|---:|---:|");
 
     for (const queue of report.selected_queues) {
       lines.push(
-        `| \`${queue.queue_name || queue.queue_id || "unknown"}\` | \`${queue.binding || "none"}\` | \`${queue.source_type}\` | \`${queue.target_name || "none"}\` | \`${queue.producers.length}\` | \`${queue.consumers.length}\` |`,
+        `| \`${queue.queue_name || queue.queue_id || "unknown"}\` | \`${queue.binding || "none"}\` | \`${queue.source_type}\` | \`${queue.target_name || "none"}\` | \`${queue.deployment_stage || "none"}\` | \`${queue.producers.length}\` | \`${queue.consumers.length}\` |`,
       );
     }
   }
@@ -2243,6 +2423,13 @@ function createMarkdownSummary(report) {
   lines.push(
     `- Cloudflare targets available: \`${report.config.cloudflare_targets_available ? "true" : "false"}\``,
   );
+  lines.push("");
+  lines.push("## 📤 Outputs");
+  lines.push("");
+  lines.push(`- JSON report: \`${report.config.output_file}\``);
+  lines.push(
+    `- Markdown summary: \`${report.config.summary_file || "not written"}\``,
+  );
 
   return `${lines.join("\n").trim()}\n`;
 }
@@ -2263,7 +2450,10 @@ function setGitHubOutput(name, value) {
 
   const rendered = typeof value === "string" ? value : JSON.stringify(value);
 
-  fs.appendFileSync(outputFile, `${name}<<EOF\n${rendered}\nEOF\n`);
+  fs.appendFileSync(
+    outputFile,
+    `${name}<<EOF\n${redactOutput(rendered)}\nEOF\n`,
+  );
   return true;
 }
 
@@ -2281,6 +2471,14 @@ function writeGitHubOutputs(report) {
   setGitHubOutput(
     "cloudflare_queues_sync_environment",
     report.config.environment,
+  );
+  setGitHubOutput(
+    "cloudflare_queues_sync_stage",
+    report.config.deployment_stage || "",
+  );
+  setGitHubOutput(
+    "cloudflare_queues_sync_alias",
+    report.config.deployment_alias || "",
   );
   setGitHubOutput(
     "cloudflare_queues_sync_selected",

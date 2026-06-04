@@ -71,12 +71,14 @@ const DEFAULT_OUTPUT_FILE = "artifacts/cloudflare/sync-secrets.json";
 const DEFAULT_SUMMARY_FILE = "artifacts/cloudflare/sync-secrets.md";
 
 const DEFAULT_ENVIRONMENT = "production";
+const DEFAULT_STAGE = "";
 
 const TRUE_VALUES = new Set(["true", "1", "yes", "y", "on", "enabled"]);
 const FALSE_VALUES = new Set(["false", "0", "no", "n", "off", "disabled"]);
+const KNOWN_DEPLOYMENT_STAGES = new Set(["preview", "staging", "production"]);
 
 const SECRET_OUTPUT_PATTERN =
-  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/g;
+  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|password\s*=\s*[^\s]+|--password\s+[^\s]+|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/gi;
 
 function normalizeString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
@@ -122,6 +124,16 @@ function normalizeStringList(value) {
   ];
 }
 
+function requireArgValue(argv, index, arg) {
+  const value = argv[index + 1];
+
+  if (value === undefined || String(value).startsWith("--")) {
+    throw new Error(`Missing value for argument: ${arg}`);
+  }
+
+  return value;
+}
+
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     repository: process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
@@ -140,6 +152,44 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.CLOUDFLARE_SECRETS_SYNC_ENVIRONMENT ||
       process.env.CLOUDFLARE_ENVIRONMENT ||
       DEFAULT_ENVIRONMENT,
+
+    deployment_stage:
+      process.env.CLOUDFLARE_SECRETS_SYNC_STAGE ||
+      process.env.CLOUDFLARE_DEPLOYMENT_STAGE ||
+      process.env.CLOUDFLARE_STAGE ||
+      DEFAULT_STAGE,
+
+    deployment_alias:
+      process.env.CLOUDFLARE_SECRETS_SYNC_ALIAS ||
+      process.env.CLOUDFLARE_DEPLOYMENT_ALIAS ||
+      process.env.CLOUDFLARE_PREVIEW_ALIAS ||
+      "",
+
+    preview_ref:
+      process.env.CLOUDFLARE_SECRETS_SYNC_PREVIEW_REF ||
+      process.env.CLOUDFLARE_PREVIEW_REF ||
+      "",
+
+    pull_request_number:
+      process.env.CLOUDFLARE_SECRETS_SYNC_PULL_REQUEST_NUMBER ||
+      process.env.CLOUDFLARE_PULL_REQUEST_NUMBER ||
+      "",
+
+    cloudflare_project_name:
+      process.env.CLOUDFLARE_SECRETS_SYNC_PROJECT_NAME ||
+      process.env.CLOUDFLARE_PROJECT_NAME ||
+      process.env.CLOUDFLARE_PAGES_PROJECT_NAME ||
+      "",
+
+    account_id:
+      process.env.CLOUDFLARE_SECRETS_SYNC_ACCOUNT_ID ||
+      process.env.CLOUDFLARE_ACCOUNT_ID ||
+      "",
+
+    api_token:
+      process.env.CLOUDFLARE_SECRETS_SYNC_API_TOKEN ||
+      process.env.CLOUDFLARE_API_TOKEN ||
+      "",
 
     target_id:
       process.env.CLOUDFLARE_TARGET_ID ||
@@ -248,6 +298,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     dry_run: normalizeBoolean(
       process.env.CLOUDFLARE_SECRETS_SYNC_DRY_RUN ||
+        process.env.CLOUDFLARE_DRY_RUN ||
         process.env.DRY_RUN ||
         process.env.PROJECT_SYNC_DRY_RUN,
       false,
@@ -267,103 +318,153 @@ function parseArgs(argv = process.argv.slice(2)) {
     const arg = argv[index];
 
     if (arg === "--repo" || arg === "--repository") {
-      args.repository = argv[index + 1];
+      args.repository = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--config") {
-      args.config_file = argv[index + 1];
+      args.config_file = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--targets" || arg === "--cloudflare-targets") {
-      args.cloudflare_targets_file = argv[index + 1];
+      args.cloudflare_targets_file = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--environment" || arg === "--env") {
-      args.environment = argv[index + 1];
+      args.environment = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--stage" || arg === "--deployment-stage") {
+      args.deployment_stage = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--alias" || arg === "--deployment-alias") {
+      args.deployment_alias = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--preview-ref") {
+      args.preview_ref = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--pull-request-number" || arg === "--pr-number") {
+      args.pull_request_number = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--project-name" || arg === "--cloudflare-project-name") {
+      args.cloudflare_project_name = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--account-id") {
+      args.account_id = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--api-token") {
+      args.api_token = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--target-id") {
-      args.target_id = argv[index + 1];
+      args.target_id = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--target" || arg === "--target-name") {
-      args.target_name = argv[index + 1];
+      args.target_name = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--config-file" || arg === "--target-config") {
-      args.target_config = argv[index + 1];
+      args.target_config = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--secret" || arg === "--secret-name") {
-      args.secret_name = argv[index + 1];
+      args.secret_name = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--source-env" || arg === "--secret-source-env") {
-      args.secret_source_env = argv[index + 1];
+      args.secret_source_env = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--secret-file") {
-      args.secret_file = argv[index + 1];
+      args.secret_file = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--secret-value") {
-      args.secret_value = argv[index + 1];
+      args.secret_value = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--include-target" || arg === "--include-targets") {
-      args.include_targets.push(...normalizeStringList(argv[index + 1]));
+      args.include_targets.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-target" || arg === "--exclude-targets") {
-      args.exclude_targets.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_targets.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--include-secret" || arg === "--include-secrets") {
-      args.include_secrets.push(...normalizeStringList(argv[index + 1]));
+      args.include_secrets.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-secret" || arg === "--exclude-secrets") {
-      args.exclude_secrets.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_secrets.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--wrangler-command") {
-      args.wrangler_command = argv[index + 1];
+      args.wrangler_command = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--package-manager") {
-      args.package_manager = argv[index + 1];
+      args.package_manager = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
@@ -455,20 +556,26 @@ function parseArgs(argv = process.argv.slice(2)) {
     }
 
     if (arg === "--max-targets") {
-      args.max_targets = normalizeInteger(argv[index + 1], args.max_targets);
+      args.max_targets = normalizeInteger(
+        requireArgValue(argv, index, arg),
+        args.max_targets,
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--max-secrets") {
-      args.max_secrets = normalizeInteger(argv[index + 1], args.max_secrets);
+      args.max_secrets = normalizeInteger(
+        requireArgValue(argv, index, arg),
+        args.max_secrets,
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--timeout-minutes") {
       args.timeout_minutes = normalizeInteger(
-        argv[index + 1],
+        requireArgValue(argv, index, arg),
         args.timeout_minutes,
       );
       index += 1;
@@ -476,13 +583,13 @@ function parseArgs(argv = process.argv.slice(2)) {
     }
 
     if (arg === "--output" || arg === "-o") {
-      args.output_file = argv[index + 1];
+      args.output_file = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--summary") {
-      args.summary_file = argv[index + 1];
+      args.summary_file = requireArgValue(argv, index, arg);
       args.write_summary_file = true;
       index += 1;
       continue;
@@ -520,6 +627,19 @@ function parseArgs(argv = process.argv.slice(2)) {
     args.environment,
     DEFAULT_ENVIRONMENT,
   ).toLowerCase();
+
+  args.deployment_stage = normalizeString(
+    args.deployment_stage || args.environment,
+    args.environment,
+  ).toLowerCase();
+
+  if (
+    KNOWN_DEPLOYMENT_STAGES.has(args.deployment_stage) &&
+    (!args.environment || args.environment === DEFAULT_ENVIRONMENT)
+  ) {
+    args.environment = args.deployment_stage;
+  }
+
   args.include_targets = [...new Set(args.include_targets)];
   args.exclude_targets = [...new Set(args.exclude_targets)];
   args.include_secrets = [...new Set(args.include_secrets)];
@@ -545,6 +665,7 @@ Usage:
 
 Examples:
   node .github/scripts/cloudflare/sync-secrets.js --config .github/cloudflare/secrets-sync.json --dry-run
+  node .github/scripts/cloudflare/sync-secrets.js --environment preview --stage preview
   node .github/scripts/cloudflare/sync-secrets.js --target api --secret OPENAI_API_KEY --source-env OPENAI_API_KEY
   node .github/scripts/cloudflare/sync-secrets.js --target-config apps/api/wrangler.toml --secret DATABASE_URL --source-env DATABASE_URL
   node .github/scripts/cloudflare/sync-secrets.js --delete-missing --include-target api
@@ -554,6 +675,13 @@ Options:
       --config <file>                        Secrets sync config file.
       --targets <file>                       cloudflare-targets.json detector file.
       --environment <name>                   Environment name. Default: production.
+      --stage <name>                         Deployment stage, such as preview, staging, or production.
+      --alias <name>                         Deployment alias, such as preview alias or branch alias.
+      --preview-ref <ref>                    Preview source ref.
+      --pull-request-number <number>         Pull request number for preview sync.
+      --project-name <name>                  Cloudflare project name metadata.
+      --account-id <id>                      Cloudflare account ID.
+      --api-token <token>                    Cloudflare API token. Prefer environment secrets.
       --target-id <id>                       Direct target ID.
       --target <name>                        Direct target name.
       --target-config <file>                 Direct Wrangler config file.
@@ -1034,15 +1162,17 @@ function createWranglerPrefix(args, repoRoot) {
 }
 
 function commandDisplay(command, commandArgs) {
-  return [command, ...commandArgs]
-    .map((part) => {
-      const value = String(part);
+  return redactOutput(
+    [command, ...commandArgs]
+      .map((part) => {
+        const value = String(part);
 
-      if (/^[A-Za-z0-9_./:=@,+-]+$/.test(value)) return value;
+        if (/^[A-Za-z0-9_./:=@,+-]+$/.test(value)) return value;
 
-      return JSON.stringify(value);
-    })
-    .join(" ");
+        return JSON.stringify(value);
+      })
+      .join(" "),
+  );
 }
 
 function targetFromCloudflareRecord(record, args) {
@@ -1067,6 +1197,9 @@ function targetFromCloudflareRecord(record, args) {
     config_file: toPosixPath(
       record.config_file || record.wrangler_config || "",
     ),
+    environment: args.environment,
+    deployment_stage: args.deployment_stage,
+    deployment_alias: args.deployment_alias,
     wrangler_environment: hasEnvironment ? args.environment : "",
     has_config_environment: hasEnvironment,
     source_type: "cloudflare-targets",
@@ -1091,12 +1224,20 @@ function loadCloudflareTargets(args, repoRoot) {
 }
 
 function resolveConfigEnvironmentValue(item, args, ...keys) {
-  const env = args.environment;
   const environments = item.environments || item.env || {};
+  const environmentKeys = [
+    args.environment,
+    args.deployment_stage,
+    DEFAULT_ENVIRONMENT,
+  ].filter(Boolean);
 
-  if (environments && typeof environments === "object" && environments[env]) {
-    for (const key of keys) {
-      if (environments[env][key] !== undefined) return environments[env][key];
+  if (environments && typeof environments === "object") {
+    for (const env of environmentKeys) {
+      if (!environments[env]) continue;
+
+      for (const key of keys) {
+        if (environments[env][key] !== undefined) return environments[env][key];
+      }
     }
   }
 
@@ -1210,13 +1351,16 @@ function normalizeTargetRecord(item, args) {
 
   return {
     id: safeId(
-      `config-${args.environment}-${targetName || configFile || "worker"}`,
+      `config-${args.deployment_stage || args.environment}-${targetName || configFile || "worker"}`,
     ),
     name: targetName,
     root: toPosixPath(
       normalizeString(resolveConfigEnvironmentValue(item, args, "root"), "."),
     ),
     config_file: configFile,
+    environment: args.environment,
+    deployment_stage: args.deployment_stage,
+    deployment_alias: args.deployment_alias,
     wrangler_environment: wranglerEnvironment || args.environment,
     has_config_environment: Boolean(wranglerEnvironment || args.environment),
     source_type: "config",
@@ -1274,6 +1418,7 @@ function extractTopLevelSecretPlans(config, args) {
         return {
           target_name: args.target_name,
           target_config: args.target_config,
+          wrangler_environment: args.environment,
           secret: normalizeSecretRecord(item, args),
         };
       }
@@ -1294,7 +1439,9 @@ function extractTopLevelSecretPlans(config, args) {
           ),
         ),
         wrangler_environment: normalizeString(
-          item.wrangler_environment || item.wranglerEnvironment || "",
+          item.wrangler_environment ||
+            item.wranglerEnvironment ||
+            args.environment,
         ),
         secret: normalizeSecretRecord(item, args),
       };
@@ -1376,10 +1523,12 @@ function findTargetForSecret(secretPlan, targets) {
 function createSecretTask(target, secret, args, sourceType = "config") {
   return {
     id: safeId(
-      `${args.environment}-${target.name || target.config_file}-${secret.name}`,
+      `${args.deployment_stage || args.environment}-${target.name || target.config_file}-${secret.name}`,
     ),
     source_type: sourceType,
     environment: args.environment,
+    deployment_stage: args.deployment_stage,
+    deployment_alias: args.deployment_alias,
     target_id: target.id,
     target_name: target.name,
     target_root: target.root,
@@ -1439,16 +1588,6 @@ function createPlans(args, repoRoot) {
     .filter((target) => target.config_file)
     .filter((target) => targetMatchesFilters(target, args));
 
-  const targetsByNameAndConfig = new Map();
-
-  for (const target of discoveredTargets) {
-    for (const key of [target.id, target.name, target.config_file].filter(
-      Boolean,
-    )) {
-      targetsByNameAndConfig.set(key, target);
-    }
-  }
-
   const tasks = [];
 
   for (const target of configTargets) {
@@ -1474,6 +1613,9 @@ function createPlans(args, repoRoot) {
               path.basename(path.dirname(secretPlan.target_config)),
             root: ".",
             config_file: secretPlan.target_config,
+            environment: args.environment,
+            deployment_stage: args.deployment_stage,
+            deployment_alias: args.deployment_alias,
             wrangler_environment:
               secretPlan.wrangler_environment || args.environment,
             has_config_environment: true,
@@ -1501,6 +1643,9 @@ function createPlans(args, repoRoot) {
               path.basename(path.dirname(directSecret.target_config)),
             root: ".",
             config_file: directSecret.target_config,
+            environment: args.environment,
+            deployment_stage: args.deployment_stage,
+            deployment_alias: args.deployment_alias,
             wrangler_environment: args.environment,
             has_config_environment: true,
             source_type: "direct",
@@ -1527,6 +1672,9 @@ function createPlans(args, repoRoot) {
       id: task.target_id,
       name: task.target_name,
       config_file: task.target_config,
+      environment: task.environment,
+      deployment_stage: task.deployment_stage,
+      deployment_alias: task.deployment_alias,
       wrangler_environment: task.wrangler_environment,
       has_config_environment: task.has_config_environment,
       root: task.target_root,
@@ -1585,13 +1733,13 @@ function validateCredentials(args) {
     };
   }
 
-  if (!process.env.CLOUDFLARE_API_TOKEN) {
+  if (!args.api_token) {
     errors.push("Missing CLOUDFLARE_API_TOKEN.");
   }
 
-  if (args.require_account_id && !process.env.CLOUDFLARE_ACCOUNT_ID) {
+  if (args.require_account_id && !args.account_id) {
     errors.push("Missing CLOUDFLARE_ACCOUNT_ID.");
-  } else if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
+  } else if (!args.account_id) {
     warnings.push(
       "CLOUDFLARE_ACCOUNT_ID is not set; Wrangler must infer the account.",
     );
@@ -1739,6 +1887,10 @@ function runWrangler(
     env: {
       ...process.env,
       CI: process.env.CI || "true",
+      CLOUDFLARE_API_TOKEN:
+        args.api_token || process.env.CLOUDFLARE_API_TOKEN || "",
+      CLOUDFLARE_ACCOUNT_ID:
+        args.account_id || process.env.CLOUDFLARE_ACCOUNT_ID || "",
     },
     input: options.input || undefined,
     encoding: "utf8",
@@ -1806,6 +1958,21 @@ function parseSecretList(stdout) {
     .sort();
 }
 
+function commandSummary(command) {
+  if (!command) return null;
+
+  return {
+    display: command.display,
+    status: command.status,
+    success: command.success,
+    exit_code: command.exit_code,
+    duration_ms: command.duration_ms,
+    error: redactOutput(command.error || ""),
+    stdout_preview: redactOutput(command.stdout || "").slice(0, 1000),
+    stderr_preview: redactOutput(command.stderr || "").slice(0, 2000),
+  };
+}
+
 function listRemoteSecretsForTarget(args, repoRoot, wranglerPrefix, target) {
   if (!args.list_remote && !args.delete_missing) {
     return {
@@ -1833,7 +2000,7 @@ function listRemoteSecretsForTarget(args, repoRoot, wranglerPrefix, target) {
     return {
       status: "failed",
       secrets: [],
-      command,
+      command: commandSummary(command),
       error:
         command.error || command.stderr || "Unable to list remote secrets.",
     };
@@ -1842,7 +2009,7 @@ function listRemoteSecretsForTarget(args, repoRoot, wranglerPrefix, target) {
   return {
     status: args.dry_run ? "planned" : "listed",
     secrets: parseSecretList(command.stdout),
-    command,
+    command: commandSummary(command),
     error: "",
   };
 }
@@ -1896,6 +2063,8 @@ async function syncSecretTask(task, args, repoRoot, wranglerPrefix) {
     id: task.id,
     source_type: task.source_type,
     environment: task.environment,
+    deployment_stage: task.deployment_stage,
+    deployment_alias: task.deployment_alias,
     target_id: task.target_id,
     target_name: task.target_name,
     target_config: task.target_config,
@@ -1947,12 +2116,7 @@ async function syncSecretTask(task, args, repoRoot, wranglerPrefix) {
       task,
       valueResolution.value,
     );
-    result.command = {
-      display: command.display,
-      status: command.status,
-      exit_code: command.exit_code,
-      duration_ms: command.duration_ms,
-    };
+    result.command = commandSummary(command);
 
     if (!command.success) {
       result.status = "failed";
@@ -2023,10 +2187,14 @@ async function executeSync(plans, args, repoRoot) {
     remote.push({
       target_name: target.name,
       target_config: target.config_file,
+      environment: target.environment,
+      deployment_stage: target.deployment_stage,
+      deployment_alias: target.deployment_alias,
       wrangler_environment: target.wrangler_environment,
       status: remoteListing.status,
       secrets: remoteListing.secrets,
       count: remoteListing.secrets.length,
+      command: remoteListing.command,
       error: remoteListing.error,
     });
 
@@ -2068,6 +2236,9 @@ async function executeSync(plans, args, repoRoot) {
         const deleteResult = {
           target_name: target.name,
           target_config: target.config_file,
+          environment: target.environment,
+          deployment_stage: target.deployment_stage,
+          deployment_alias: target.deployment_alias,
           wrangler_environment: target.wrangler_environment,
           secret_name: secretName,
           status: command.success
@@ -2077,12 +2248,7 @@ async function executeSync(plans, args, repoRoot) {
             : "failed",
           success: command.success,
           dry_run: args.dry_run,
-          command: {
-            display: command.display,
-            status: command.status,
-            exit_code: command.exit_code,
-            duration_ms: command.duration_ms,
-          },
+          command: commandSummary(command),
           errors: command.success
             ? []
             : [
@@ -2247,6 +2413,11 @@ function createReport(args, repoRoot, plans, execution) {
         ? toRelativePath(resolvePath(args.summary_file, repoRoot), repoRoot)
         : null,
       environment: args.environment,
+      deployment_stage: args.deployment_stage,
+      deployment_alias: args.deployment_alias,
+      preview_ref: args.preview_ref,
+      pull_request_number: args.pull_request_number,
+      cloudflare_project_name: args.cloudflare_project_name,
       require_credentials: args.require_credentials,
       require_account_id: args.require_account_id,
       allow_inline_values: args.allow_inline_values,
@@ -2268,8 +2439,8 @@ function createReport(args, repoRoot, plans, execution) {
     },
     credentials: {
       ok: execution.credentials.ok,
-      api_token_present: Boolean(process.env.CLOUDFLARE_API_TOKEN),
-      account_id_present: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID),
+      api_token_present: Boolean(args.api_token),
+      account_id_present: Boolean(args.account_id),
       warnings: execution.credentials.warnings,
       errors: execution.credentials.errors,
     },
@@ -2284,6 +2455,8 @@ function createReport(args, repoRoot, plans, execution) {
       id: task.id,
       source_type: task.source_type,
       environment: task.environment,
+      deployment_stage: task.deployment_stage,
+      deployment_alias: task.deployment_alias,
       target_name: task.target_name,
       target_config: task.target_config,
       wrangler_environment: task.wrangler_environment,
@@ -2305,6 +2478,7 @@ function createReport(args, repoRoot, plans, execution) {
       by_status: groupResults(execution.results, "status"),
       by_target: groupResults(execution.results, "target_name"),
       by_source_type: groupResults(execution.results, "source_type"),
+      by_stage: groupResults(execution.results, "deployment_stage"),
     },
     results: execution.results,
     delete_results: execution.delete_results,
@@ -2333,6 +2507,8 @@ function createMarkdownSummary(report) {
     "",
     `- Status: \`${report.status}\``,
     `- Environment: \`${report.config.environment}\``,
+    `- Stage: \`${report.config.deployment_stage || "not set"}\``,
+    `- Alias: \`${report.config.deployment_alias || "not set"}\``,
     `- Dry run: \`${report.config.dry_run ? "true" : "false"}\``,
     `- Blocked: \`${report.blocked ? "true" : "false"}\``,
     "",
@@ -2382,12 +2558,12 @@ function createMarkdownSummary(report) {
   if (!report.selected_secrets.length) {
     lines.push("No Cloudflare secrets were selected.");
   } else {
-    lines.push("| Target | Environment | Secret | Source | Required |");
-    lines.push("|---|---|---|---|---:|");
+    lines.push("| Target | Environment | Stage | Secret | Source | Required |");
+    lines.push("|---|---|---|---|---|---:|");
 
     for (const secret of report.selected_secrets) {
       lines.push(
-        `| \`${secret.target_name || secret.target_config || "unknown"}\` | \`${secret.wrangler_environment || "default"}\` | \`${secret.secret_name}\` | \`${secret.source_type_value}:${secret.source_name || "unknown"}\` | \`${secret.required ? "true" : "false"}\` |`,
+        `| \`${secret.target_name || secret.target_config || "unknown"}\` | \`${secret.wrangler_environment || "default"}\` | \`${secret.deployment_stage || "none"}\` | \`${secret.secret_name}\` | \`${secret.source_type_value}:${secret.source_name || "unknown"}\` | \`${secret.required ? "true" : "false"}\` |`,
       );
     }
   }
@@ -2400,13 +2576,13 @@ function createMarkdownSummary(report) {
     lines.push("No secret sync results were produced.");
   } else {
     lines.push(
-      "| Status | Target | Environment | Secret | Source | Duration |",
+      "| Status | Target | Environment | Stage | Secret | Source | Duration |",
     );
-    lines.push("|---|---|---|---|---|---:|");
+    lines.push("|---|---|---|---|---|---|---:|");
 
     for (const result of report.results) {
       lines.push(
-        `| \`${result.status}\` | \`${result.target_name || result.target_config || "unknown"}\` | \`${result.wrangler_environment || "default"}\` | \`${result.secret_name}\` | \`${result.source.type}:${result.source.name || "unknown"}\` | \`${formatDuration(result.duration_ms)}\` |`,
+        `| \`${result.status}\` | \`${result.target_name || result.target_config || "unknown"}\` | \`${result.wrangler_environment || "default"}\` | \`${result.deployment_stage || "none"}\` | \`${result.secret_name}\` | \`${result.source.type}:${result.source.name || "unknown"}\` | \`${formatDuration(result.duration_ms)}\` |`,
       );
     }
   }
@@ -2415,12 +2591,12 @@ function createMarkdownSummary(report) {
     lines.push("");
     lines.push("## 🗑️ Delete Results");
     lines.push("");
-    lines.push("| Status | Target | Environment | Secret | Duration |");
-    lines.push("|---|---|---|---|---:|");
+    lines.push("| Status | Target | Environment | Stage | Secret | Duration |");
+    lines.push("|---|---|---|---|---|---:|");
 
     for (const result of report.delete_results) {
       lines.push(
-        `| \`${result.status}\` | \`${result.target_name || result.target_config || "unknown"}\` | \`${result.wrangler_environment || "default"}\` | \`${result.secret_name}\` | \`${formatDuration(result.duration_ms)}\` |`,
+        `| \`${result.status}\` | \`${result.target_name || result.target_config || "unknown"}\` | \`${result.wrangler_environment || "default"}\` | \`${result.deployment_stage || "none"}\` | \`${result.secret_name}\` | \`${formatDuration(result.duration_ms)}\` |`,
       );
     }
   }
@@ -2429,12 +2605,12 @@ function createMarkdownSummary(report) {
     lines.push("");
     lines.push("## 📡 Remote Secret Inventory");
     lines.push("");
-    lines.push("| Target | Environment | Status | Count |");
-    lines.push("|---|---|---|---:|");
+    lines.push("| Target | Environment | Stage | Status | Count |");
+    lines.push("|---|---|---|---|---:|");
 
     for (const remote of report.remote) {
       lines.push(
-        `| \`${remote.target_name || remote.target_config || "unknown"}\` | \`${remote.wrangler_environment || "default"}\` | \`${remote.status}\` | \`${remote.count}\` |`,
+        `| \`${remote.target_name || remote.target_config || "unknown"}\` | \`${remote.wrangler_environment || "default"}\` | \`${remote.deployment_stage || "none"}\` | \`${remote.status}\` | \`${remote.count}\` |`,
       );
     }
   }
@@ -2494,6 +2670,14 @@ function createMarkdownSummary(report) {
     `- Cloudflare targets available: \`${report.config.cloudflare_targets_available ? "true" : "false"}\``,
   );
 
+  lines.push("");
+  lines.push("## 📤 Outputs");
+  lines.push("");
+  lines.push(`- JSON report: \`${report.config.output_file}\``);
+  lines.push(
+    `- Markdown summary: \`${report.config.summary_file || "not written"}\``,
+  );
+
   return `${lines.join("\n").trim()}\n`;
 }
 
@@ -2513,7 +2697,10 @@ function setGitHubOutput(name, value) {
 
   const rendered = typeof value === "string" ? value : JSON.stringify(value);
 
-  fs.appendFileSync(outputFile, `${name}<<EOF\n${rendered}\nEOF\n`);
+  fs.appendFileSync(
+    outputFile,
+    `${name}<<EOF\n${redactOutput(rendered)}\nEOF\n`,
+  );
   return true;
 }
 
@@ -2531,6 +2718,14 @@ function writeGitHubOutputs(report) {
   setGitHubOutput(
     "cloudflare_secrets_sync_environment",
     report.config.environment,
+  );
+  setGitHubOutput(
+    "cloudflare_secrets_sync_stage",
+    report.config.deployment_stage || "",
+  );
+  setGitHubOutput(
+    "cloudflare_secrets_sync_alias",
+    report.config.deployment_alias || "",
   );
   setGitHubOutput(
     "cloudflare_secrets_sync_targets",
