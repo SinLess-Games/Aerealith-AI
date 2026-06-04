@@ -4,15 +4,15 @@
 // Aerealith AI — Docker Image Publisher
 // -----------------------------------------------------------------------------
 // Purpose:
-//   Publish Docker image references produced by Docker build discovery/build
-//   artifacts, local config, or direct CLI inputs.
+//   Publish the Aerealith AI frontend Docker image with semantic-version tags.
 //
 // Behavior:
-//   - Publishes target refs using a version tag by default.
-//   - Does not default target refs to git SHA/hash tags.
-//   - Uses package.json version when no release/version env is provided.
-//   - Writes artifacts/docker/hashes.json with image IDs, repo digests,
-//     pushed digests, and source/target refs.
+//   - Publishes only: aerealith-ai-frontend.
+//   - Does not publish aerealith-ai-apps-frontend.
+//   - Does not use SHA/hash tags as target tags.
+//   - Uses a semantic version tag from env or package.json.
+//   - Writes artifacts/docker/hashes.json with source/target image hashes,
+//     image IDs, repo digests, pushed digests, and refs.
 //
 // Input:
 //   - .github/docker/publish-images.json
@@ -63,6 +63,12 @@ try {
 const PROJECT_NAME = "Aerealith AI";
 const DEFAULT_REPOSITORY = "SinLess-Games/Aerealith-AI";
 const DEFAULT_BRANCH = "main";
+
+const FRONTEND_IMAGE_NAME = "aerealith-ai-frontend";
+const BLOCKED_IMAGE_NAMES = new Set([
+  "aerealith-ai-apps-frontend",
+  "apps-frontend",
+]);
 
 const DEFAULT_CONFIG_CANDIDATES = [
   ".github/docker/publish-images.json",
@@ -665,12 +671,29 @@ function parseArgs(argv = process.argv.slice(2)) {
   args.target_tags = [
     ...new Set(args.target_tags.map(normalizeTag).filter(Boolean)),
   ];
+
   args.version = normalizeVersion(args.version);
   args.version_tag = normalizeVersionTag(args.version_tag || args.version);
-  args.include_images = [...new Set(args.include_images)];
-  args.exclude_images = [...new Set(args.exclude_images)];
+
+  args.include_images = [
+    ...new Set(args.include_images.map(normalizeImageName).filter(Boolean)),
+  ];
+  args.exclude_images = [
+    ...new Set(args.exclude_images.map(normalizeImageName).filter(Boolean)),
+  ];
   args.include_projects = [...new Set(args.include_projects)];
   args.exclude_projects = [...new Set(args.exclude_projects)];
+
+  if (!args.include_images.length) {
+    args.include_images = [FRONTEND_IMAGE_NAME];
+  }
+
+  for (const blocked of BLOCKED_IMAGE_NAMES) {
+    if (!args.exclude_images.includes(blocked)) {
+      args.exclude_images.push(blocked);
+    }
+  }
+
   args.max_images = Math.max(0, args.max_images);
   args.max_refs = Math.max(0, args.max_refs);
   args.timeout_minutes = Math.max(0, args.timeout_minutes);
@@ -690,7 +713,7 @@ Examples:
   node .github/scripts/docker/publish-images.js --dry-run
   node .github/scripts/docker/publish-images.js --login
   node .github/scripts/docker/publish-images.js --version 2.10.0
-  node .github/scripts/docker/publish-images.js --source-image aerealith-api:local --target-image ghcr.io/sinless-games/aerealith-api:2.10.0
+  node .github/scripts/docker/publish-images.js --source-image ghcr.io/sinless-games/aerealith-ai-frontend:sha-a729f3a --version 2.10.0
   node .github/scripts/docker/publish-images.js --build-report artifacts/docker/build-images.json --registry ghcr.io --namespace sinless-games
 
 Options:
@@ -700,19 +723,19 @@ Options:
       --dockerfiles <file>             Dockerfiles artifact. Default: artifacts/ci/dockerfiles.json.
       --registry <registry>            Target registry. Default: ghcr.io.
       --namespace <namespace>          Target namespace/org. Default: sinless-games.
-      --version <version>              Version number used as default target tag.
-      --version-tag <tag>              Explicit version tag used as default target tag.
-      --also-latest                    Publish latest in addition to the version tag.
+      --version <version>              Semantic version used as default target tag.
+      --version-tag <tag>              Explicit semantic version tag used as target tag.
+      --also-latest                    Publish latest in addition to the semantic version tag.
       --no-latest                      Do not add latest automatically. Default.
       --image <image>                  Source image shorthand.
       --image-name <name>              Image name for generated target refs.
       --source-image <ref>             Source image ref.
-      --target-image <ref>             Target image ref.
+      --target-image <ref>             Target image repository or ref.
       --source-ref <list>              Source image ref list.
       --target-ref <list>              Target image ref list.
   -t, --tag <list>                     Source tags.
-      --target-tag <list>              Target tags. Overrides automatic version tag.
-      --include <list>                 Include image names.
+      --target-tag <list>              Target tags. Hash-like tags are ignored.
+      --include <list>                 Include image names. Defaults to aerealith-ai-frontend.
       --exclude <list>                 Exclude image names.
       --include-project <list>         Include project names.
       --exclude-project <list>         Exclude project names.
@@ -919,7 +942,7 @@ function normalizeVersion(value) {
 
   const match = normalized.match(/^(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/);
 
-  return match ? match[1] : normalized;
+  return match ? match[1] : "";
 }
 
 function normalizeVersionTag(value) {
@@ -929,6 +952,7 @@ function normalizeVersionTag(value) {
 function isHashLikeTag(tag) {
   const value = normalizeString(tag).toLowerCase();
 
+  if (/^sha-[a-f0-9]{7,64}$/.test(value)) return true;
   if (/^sha256-[a-f0-9]{12,}$/.test(value)) return true;
   if (/^sha256[.-]?[a-f0-9]{12,}$/.test(value)) return true;
   if (/^[a-f0-9]{12,64}$/.test(value)) return true;
@@ -951,6 +975,13 @@ function applyVersionDefaults(args, repoRoot) {
   args.version = version;
   args.version_tag = versionTag;
 
+  const cleanTargetTags = args.target_tags
+    .map(normalizeTag)
+    .filter(Boolean)
+    .filter((tag) => !isHashLikeTag(tag));
+
+  args.target_tags = cleanTargetTags;
+
   if (!args.target_tags.length && versionTag) {
     args.target_tags.push(versionTag);
   }
@@ -959,9 +990,7 @@ function applyVersionDefaults(args, repoRoot) {
     args.target_tags.push("latest");
   }
 
-  args.target_tags = [
-    ...new Set(args.target_tags.map(normalizeTag).filter(Boolean)),
-  ];
+  args.target_tags = [...new Set(args.target_tags)];
 
   return args;
 }
@@ -1215,6 +1244,35 @@ function refsFromImageAndTags(image, tags) {
   return effectiveTags.map((tag) => `${value}:${tag}`);
 }
 
+function recordImageName(record) {
+  const explicit = normalizeImageName(
+    record.name || record.image_name || record.imageName || "",
+  );
+
+  const refDerived = [
+    ...normalizeStringList(record.source_refs || record.sourceRefs || []),
+    ...normalizeStringList(record.image_refs || record.imageRefs || []),
+    ...normalizeStringList(record.target_refs || record.targetRefs || []),
+    record.source_image || record.sourceImage || "",
+    record.image || "",
+    record.target_image || record.targetImage || "",
+  ]
+    .map(imageNameFromRef)
+    .find(Boolean);
+
+  if (refDerived && explicit !== FRONTEND_IMAGE_NAME) {
+    return refDerived;
+  }
+
+  return explicit || refDerived;
+}
+
+function shouldSkipRecord(record) {
+  const name = recordImageName(record);
+
+  return BLOCKED_IMAGE_NAMES.has(name);
+}
+
 function configImageRecords(config) {
   if (!config) return [];
 
@@ -1242,7 +1300,7 @@ function configImageRecords(config) {
     records.push(config);
   }
 
-  return records;
+  return records.filter((record) => !shouldSkipRecord(record));
 }
 
 function buildReportRecords(buildReport) {
@@ -1257,7 +1315,7 @@ function buildReportRecords(buildReport) {
 
   for (const image of selectedImages) {
     records.push({
-      name: image.name || image.image_name,
+      name: recordImageName(image) || image.name || image.image_name,
       project: image.project,
       image_refs: image.image_refs || [],
       tags: image.tags || [],
@@ -1278,7 +1336,7 @@ function buildReportRecords(buildReport) {
     }
 
     records.push({
-      name: result.name,
+      name: recordImageName(result) || result.name,
       project: result.project,
       image_refs: result.image_refs || [],
       tags: result.tags || [],
@@ -1288,7 +1346,7 @@ function buildReportRecords(buildReport) {
     });
   }
 
-  return records;
+  return records.filter((record) => !shouldSkipRecord(record));
 }
 
 function dockerfilesRecords(dockerfilesArtifact) {
@@ -1306,15 +1364,17 @@ function dockerfilesRecords(dockerfilesArtifact) {
       : []),
   ];
 
-  return records.map((record) => ({
-    name: record.name || record.image_name,
-    project: record.project,
-    image_refs: record.image_refs || [],
-    tags: record.tags || [],
-    registry: record.registry,
-    namespace: record.namespace,
-    source_type: "dockerfiles-artifact",
-  }));
+  return records
+    .map((record) => ({
+      name: recordImageName(record) || record.name || record.image_name,
+      project: record.project,
+      image_refs: record.image_refs || [],
+      tags: record.tags || [],
+      registry: record.registry,
+      namespace: record.namespace,
+      source_type: "dockerfiles-artifact",
+    }))
+    .filter((record) => !shouldSkipRecord(record));
 }
 
 function directRecord(args) {
@@ -1329,13 +1389,17 @@ function directRecord(args) {
     return null;
   }
 
+  const sourceCandidate =
+    args.source_image ||
+    args.image ||
+    args.target_image ||
+    args.source_refs[0] ||
+    args.target_refs[0] ||
+    "";
+
   return {
-    name:
-      args.image_name ||
-      imageNameFromRef(args.source_image || args.image || args.target_image),
-    project:
-      args.image_name ||
-      imageNameFromRef(args.source_image || args.image || args.target_image),
+    name: args.image_name || imageNameFromRef(sourceCandidate),
+    project: args.image_name || imageNameFromRef(sourceCandidate),
     source_image: args.source_image || args.image,
     target_image: args.target_image,
     source_refs: args.source_refs,
@@ -1350,12 +1414,7 @@ function directRecord(args) {
   };
 }
 
-function createPublishRefs(record, args) {
-  const name = normalizeImageName(
-    record.name ||
-      record.image_name ||
-      imageNameFromRef(record.source_image || record.image),
-  );
+function targetRepositoryForRecord(record, args, name) {
   const registry = normalizeRegistry(
     record.target_registry || record.registry || args.registry,
   );
@@ -1363,9 +1422,31 @@ function createPublishRefs(record, args) {
     record.target_namespace || record.namespace || args.namespace,
   );
 
+  if (record.target_image || record.targetImage) {
+    const repo = removeImageTag(record.target_image || record.targetImage);
+    const repoName = imageNameFromRef(repo);
+
+    if (BLOCKED_IMAGE_NAMES.has(repoName)) {
+      return createRepository(registry, namespace, FRONTEND_IMAGE_NAME);
+    }
+
+    if (repoName !== FRONTEND_IMAGE_NAME) {
+      return createRepository(registry, namespace, FRONTEND_IMAGE_NAME);
+    }
+
+    return repo;
+  }
+
+  return createRepository(registry, namespace, FRONTEND_IMAGE_NAME);
+}
+
+function createPublishRefs(record, args) {
+  const name = recordImageName(record);
+
   const recordTags = normalizeStringList(record.tags || record.tag || args.tags)
     .map(normalizeTag)
     .filter(Boolean);
+
   const sourceRefs = [
     ...normalizeStringList(record.source_refs || record.sourceRefs || []),
     ...normalizeStringList(record.image_refs || record.imageRefs || []),
@@ -1373,20 +1454,23 @@ function createPublishRefs(record, args) {
       record.source_image || record.sourceImage || record.image || "",
       recordTags,
     ),
-  ];
+  ].filter((ref) => imageNameFromRef(ref) === FRONTEND_IMAGE_NAME);
 
   const sourceTags = sourceRefs.map(imageTag).filter(Boolean);
-  const targetTags = normalizeStringList(
+  const requestedTargetTags = normalizeStringList(
     record.target_tags || record.targetTags || args.target_tags,
   )
     .map(normalizeTag)
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((tag) => !isHashLikeTag(tag));
+
   const versionTag = normalizeVersionTag(
     record.version_tag ||
       record.versionTag ||
       record.version ||
       args.version_tag,
   );
+
   const nonHashRecordTags = recordTags.filter(
     (tag) => !isHashLikeTag(tag) && (isVersionLikeTag(tag) || tag === "latest"),
   );
@@ -1394,8 +1478,8 @@ function createPublishRefs(record, args) {
     (tag) => !isHashLikeTag(tag) && (isVersionLikeTag(tag) || tag === "latest"),
   );
 
-  const effectiveTargetTags = targetTags.length
-    ? targetTags
+  const effectiveTargetTags = requestedTargetTags.length
+    ? requestedTargetTags
     : versionTag
       ? [versionTag]
       : nonHashRecordTags.length
@@ -1404,25 +1488,43 @@ function createPublishRefs(record, args) {
           ? nonHashSourceTags
           : ["latest"];
 
-  const targetRepository =
-    record.target_image || record.targetImage
-      ? removeImageTag(record.target_image || record.targetImage)
-      : createRepository(registry, namespace, name);
+  const targetRepository = targetRepositoryForRecord(record, args, name);
 
-  const directTargetRefs = [
-    ...normalizeStringList(record.target_refs || record.targetRefs || []),
-    ...refsFromImageAndTags(
-      record.target_image || record.targetImage || "",
-      effectiveTargetTags,
-    ),
-  ];
+  const explicitTargetRefs = normalizeStringList(
+    record.target_refs || record.targetRefs || [],
+  )
+    .map((targetRef) => {
+      const targetName = imageNameFromRef(targetRef);
 
-  const generatedTargetRefs = directTargetRefs.length
-    ? directTargetRefs
+      if (targetName !== FRONTEND_IMAGE_NAME) {
+        return "";
+      }
+
+      const targetTag = imageTag(targetRef);
+
+      if (!targetTag || isHashLikeTag(targetTag)) {
+        return "";
+      }
+
+      return `${removeImageTag(targetRef)}:${targetTag}`;
+    })
+    .filter(Boolean);
+
+  const generatedTargetRefs = explicitTargetRefs.length
+    ? explicitTargetRefs
     : effectiveTargetTags.map((tag) => `${targetRepository}:${tag}`);
 
   const cleanSourceRefs = [...new Set(sourceRefs.filter(Boolean))];
-  const cleanTargetRefs = [...new Set(generatedTargetRefs.filter(Boolean))];
+  const cleanTargetRefs = [
+    ...new Set(
+      generatedTargetRefs
+        .filter(Boolean)
+        .filter(
+          (targetRef) => imageNameFromRef(targetRef) === FRONTEND_IMAGE_NAME,
+        )
+        .filter((targetRef) => !isHashLikeTag(imageTag(targetRef))),
+    ),
+  ];
 
   const refs = [];
 
@@ -1475,25 +1577,20 @@ function createPublishRefs(record, args) {
 }
 
 function normalizePublishPlan(record, args, sourceType = "config") {
-  const name = normalizeImageName(
-    record.name ||
-      record.image_name ||
-      imageNameFromRef(
-        record.source_image || record.image || record.target_image,
-      ),
-  );
+  const resolvedName = recordImageName(record);
+
   const project = normalizeString(
-    record.project || record.project_name || record.projectName || name,
+    record.project || record.project_name || record.projectName || resolvedName,
   );
 
   const publishRefs = createPublishRefs(record, args);
 
   return {
     id: safeId(
-      `${sourceType}:${name}:${publishRefs.map((item) => item.target_ref).join(",")}`,
+      `${sourceType}:${FRONTEND_IMAGE_NAME}:${publishRefs.map((item) => item.target_ref).join(",")}`,
     ),
     source_type: record.source_type || sourceType,
-    name,
+    name: FRONTEND_IMAGE_NAME,
     project,
     registry: normalizeRegistry(
       record.target_registry || record.registry || args.registry,
@@ -1525,6 +1622,14 @@ function normalizePublishPlan(record, args, sourceType = "config") {
 function planMatchesFilters(plan, args) {
   if (!plan.enabled) return false;
 
+  if (plan.name !== FRONTEND_IMAGE_NAME) {
+    return false;
+  }
+
+  if (BLOCKED_IMAGE_NAMES.has(plan.name)) {
+    return false;
+  }
+
   if (args.include_images.length && !args.include_images.includes(plan.name)) {
     return false;
   }
@@ -1551,7 +1656,7 @@ function dedupePlans(plans) {
   const seen = new Map();
 
   for (const plan of plans) {
-    const key = `${plan.name}:${plan.project}`;
+    const key = FRONTEND_IMAGE_NAME;
 
     if (!seen.has(key)) {
       seen.set(key, plan);
@@ -1563,6 +1668,7 @@ function dedupePlans(plans) {
     seen.set(key, {
       ...existing,
       ...plan,
+      name: FRONTEND_IMAGE_NAME,
       publish_refs: dedupePublishRefs([
         ...(existing.publish_refs || []),
         ...(plan.publish_refs || []),
@@ -1593,6 +1699,14 @@ function dedupePublishRefs(refs) {
   const seen = new Map();
 
   for (const ref of refs) {
+    if (imageNameFromRef(ref.target_ref) !== FRONTEND_IMAGE_NAME) {
+      continue;
+    }
+
+    if (isHashLikeTag(imageTag(ref.target_ref))) {
+      continue;
+    }
+
     const key = `${ref.source_ref}->${ref.target_ref}`;
 
     if (!seen.has(key)) {
@@ -1627,7 +1741,7 @@ function createPlans(args, repoRoot) {
       ? dockerfilesRecords(dockerfilesArtifact)
       : []),
     ...(direct ? [direct] : []),
-  ];
+  ].filter((record) => recordImageName(record) === FRONTEND_IMAGE_NAME);
 
   const selected = dedupePlans(
     records.map((record) =>
@@ -1659,6 +1773,10 @@ function validatePlan(plan) {
   const errors = [];
   const warnings = [];
 
+  if (plan.name !== FRONTEND_IMAGE_NAME) {
+    errors.push(`Only ${FRONTEND_IMAGE_NAME} may be published.`);
+  }
+
   if (!plan.name) {
     errors.push("Publish plan is missing an image name.");
   }
@@ -1680,17 +1798,45 @@ function validatePlan(plan) {
       );
     }
 
+    if (
+      ref.source_ref &&
+      imageNameFromRef(ref.source_ref) !== FRONTEND_IMAGE_NAME
+    ) {
+      errors.push(
+        `Source image is not ${FRONTEND_IMAGE_NAME}: ${ref.source_ref}`,
+      );
+    }
+
+    if (
+      ref.target_ref &&
+      imageNameFromRef(ref.target_ref) !== FRONTEND_IMAGE_NAME
+    ) {
+      errors.push(
+        `Target image is not ${FRONTEND_IMAGE_NAME}: ${ref.target_ref}`,
+      );
+    }
+
     if (ref.source_ref && !imageHasTag(ref.source_ref)) {
       warnings.push(`Source image ref has no explicit tag: ${ref.source_ref}`);
     }
 
     if (ref.target_ref && !imageHasTag(ref.target_ref)) {
-      warnings.push(`Target image ref has no explicit tag: ${ref.target_ref}`);
+      errors.push(`Target image ref has no explicit tag: ${ref.target_ref}`);
     }
 
     if (ref.target_ref && isHashLikeTag(imageTag(ref.target_ref))) {
+      errors.push(
+        `Target image ref uses a hash-like tag instead of a semantic version: ${ref.target_ref}`,
+      );
+    }
+
+    if (
+      ref.target_ref &&
+      imageTag(ref.target_ref) !== "latest" &&
+      !isVersionLikeTag(imageTag(ref.target_ref))
+    ) {
       warnings.push(
-        `Target image ref still appears to use a hash-like tag: ${ref.target_ref}`,
+        `Target image tag is not semantic-version-like: ${ref.target_ref}`,
       );
     }
   }
@@ -2405,6 +2551,122 @@ function groupResults(results, key) {
   );
 }
 
+function createReport(args, repoRoot, plans, execution) {
+  const github = getGitMetadata(repoRoot);
+  const totals = summarizeResults(execution.results);
+  const status = execution.blocked
+    ? "blocked"
+    : totals.failed > 0 || totals.ref_failed > 0
+      ? "failed"
+      : totals.invalid > 0
+        ? "invalid"
+        : execution.results.length === 0
+          ? "empty"
+          : args.dry_run
+            ? "planned"
+            : totals.published > 0
+              ? "published"
+              : totals.tagged > 0
+                ? "tagged"
+                : "skipped";
+
+  const publishedRefs = [
+    ...new Set(
+      execution.results.flatMap((result) =>
+        result.ref_results
+          .filter((refResult) => refResult.success)
+          .map((refResult) => refResult.target_ref),
+      ),
+    ),
+  ].sort();
+
+  return {
+    schema_version: 1,
+    type: "docker-publish-images",
+    project: PROJECT_NAME,
+    repository: args.repository,
+    created_at: new Date().toISOString(),
+    github,
+    config: {
+      allowed_image: FRONTEND_IMAGE_NAME,
+      blocked_images: [...BLOCKED_IMAGE_NAMES],
+      config_file: plans.config_file || null,
+      config_available: plans.config_available,
+      build_report_file: plans.build_report_file,
+      build_report_available: plans.build_report_available,
+      dockerfiles_file: plans.dockerfiles_file,
+      dockerfiles_available: plans.dockerfiles_available,
+      output_file: toRelativePath(
+        resolvePath(args.output_file, repoRoot),
+        repoRoot,
+      ),
+      summary_file: args.write_summary_file
+        ? toRelativePath(resolvePath(args.summary_file, repoRoot), repoRoot)
+        : null,
+      hashes_file: toRelativePath(
+        resolvePath(args.hashes_file, repoRoot),
+        repoRoot,
+      ),
+      registry: args.registry,
+      namespace: args.namespace,
+      version: args.version,
+      version_tag: args.version_tag,
+      target_tags: args.target_tags,
+      also_latest: args.also_latest,
+      retag: args.retag,
+      push: args.push,
+      pull_before_publish: args.pull_before_publish,
+      verify_after_publish: args.verify_after_publish,
+      inspect_local: args.inspect_local,
+      collect_hashes: args.collect_hashes,
+      max_images: args.max_images,
+      max_refs: args.max_refs,
+      dry_run: args.dry_run,
+    },
+    docker: {
+      available: execution.docker.ok,
+      error: execution.docker.error,
+      command: execution.docker.command
+        ? sanitizeCommand(execution.docker.command)
+        : null,
+    },
+    login: execution.login,
+    discovery: {
+      discovered_images: plans.discovered_images,
+      selected_images: plans.selected_images.length,
+    },
+    selected_images: plans.selected_images.map((plan) => ({
+      id: plan.id,
+      source_type: plan.source_type,
+      name: plan.name,
+      project: plan.project,
+      registry: plan.registry,
+      namespace: plan.namespace,
+      version: plan.version,
+      version_tag: plan.version_tag,
+      retag: plan.retag,
+      push: plan.push,
+      pull_before_publish: plan.pull_before_publish,
+      verify_after_publish: plan.verify_after_publish,
+      inspect_local: plan.inspect_local,
+      publish_refs: plan.publish_refs,
+    })),
+    totals,
+    groups: {
+      by_status: groupResults(execution.results, "status"),
+      by_project: groupResults(execution.results, "project"),
+      by_registry: groupResults(execution.results, "registry"),
+    },
+    results: execution.results,
+    published_refs: publishedRefs,
+    failures: execution.results.filter((result) => !result.success),
+    stopped_early: execution.stopped_early,
+    blocked: execution.blocked,
+    block_reason: execution.block_reason,
+    status,
+  };
+}
+
 function createHashesReport(args, repoRoot, report) {
   const github = getGitMetadata(repoRoot);
   const imageEntries = report.results.map((result) => ({
@@ -2495,6 +2757,7 @@ function createHashesReport(args, repoRoot, report) {
     created_at: new Date().toISOString(),
     github,
     config: {
+      image: FRONTEND_IMAGE_NAME,
       version: args.version,
       version_tag: args.version_tag,
       hashes_file: toRelativePath(
@@ -2521,120 +2784,6 @@ function createHashesReport(args, repoRoot, report) {
   };
 }
 
-function createReport(args, repoRoot, plans, execution) {
-  const github = getGitMetadata(repoRoot);
-  const totals = summarizeResults(execution.results);
-  const status = execution.blocked
-    ? "blocked"
-    : totals.failed > 0 || totals.ref_failed > 0
-      ? "failed"
-      : totals.invalid > 0
-        ? "invalid"
-        : execution.results.length === 0
-          ? "empty"
-          : args.dry_run
-            ? "planned"
-            : totals.published > 0
-              ? "published"
-              : totals.tagged > 0
-                ? "tagged"
-                : "skipped";
-
-  const publishedRefs = [
-    ...new Set(
-      execution.results.flatMap((result) =>
-        result.ref_results
-          .filter((refResult) => refResult.success)
-          .map((refResult) => refResult.target_ref),
-      ),
-    ),
-  ].sort();
-
-  return {
-    schema_version: 1,
-    type: "docker-publish-images",
-    project: PROJECT_NAME,
-    repository: args.repository,
-    created_at: new Date().toISOString(),
-    github,
-    config: {
-      config_file: plans.config_file || null,
-      config_available: plans.config_available,
-      build_report_file: plans.build_report_file,
-      build_report_available: plans.build_report_available,
-      dockerfiles_file: plans.dockerfiles_file,
-      dockerfiles_available: plans.dockerfiles_available,
-      output_file: toRelativePath(
-        resolvePath(args.output_file, repoRoot),
-        repoRoot,
-      ),
-      summary_file: args.write_summary_file
-        ? toRelativePath(resolvePath(args.summary_file, repoRoot), repoRoot)
-        : null,
-      hashes_file: toRelativePath(
-        resolvePath(args.hashes_file, repoRoot),
-        repoRoot,
-      ),
-      registry: args.registry,
-      namespace: args.namespace,
-      version: args.version,
-      version_tag: args.version_tag,
-      target_tags: args.target_tags,
-      also_latest: args.also_latest,
-      retag: args.retag,
-      push: args.push,
-      pull_before_publish: args.pull_before_publish,
-      verify_after_publish: args.verify_after_publish,
-      inspect_local: args.inspect_local,
-      collect_hashes: args.collect_hashes,
-      max_images: args.max_images,
-      max_refs: args.max_refs,
-      dry_run: args.dry_run,
-    },
-    docker: {
-      available: execution.docker.ok,
-      error: execution.docker.error,
-      command: execution.docker.command
-        ? sanitizeCommand(execution.docker.command)
-        : null,
-    },
-    login: execution.login,
-    discovery: {
-      discovered_images: plans.discovered_images,
-      selected_images: plans.selected_images.length,
-    },
-    selected_images: plans.selected_images.map((plan) => ({
-      id: plan.id,
-      source_type: plan.source_type,
-      name: plan.name,
-      project: plan.project,
-      registry: plan.registry,
-      namespace: plan.namespace,
-      version: plan.version,
-      version_tag: plan.version_tag,
-      retag: plan.retag,
-      push: plan.push,
-      pull_before_publish: plan.pull_before_publish,
-      verify_after_publish: plan.verify_after_publish,
-      inspect_local: plan.inspect_local,
-      publish_refs: plan.publish_refs,
-    })),
-    totals,
-    groups: {
-      by_status: groupResults(execution.results, "status"),
-      by_project: groupResults(execution.results, "project"),
-      by_registry: groupResults(execution.results, "registry"),
-    },
-    results: execution.results,
-    published_refs: publishedRefs,
-    failures: execution.results.filter((result) => !result.success),
-    stopped_early: execution.stopped_early,
-    blocked: execution.blocked,
-    block_reason: execution.block_reason,
-    status,
-  };
-}
-
 function escapeMarkdown(value) {
   return String(value || "").replace(/\|/g, "\\|");
 }
@@ -2650,6 +2799,7 @@ function createMarkdownSummary(report) {
     `- Status: \`${report.status}\``,
     `- Dry run: \`${report.config.dry_run ? "true" : "false"}\``,
     `- Blocked: \`${report.blocked ? "true" : "false"}\``,
+    `- Allowed image: \`${report.config.allowed_image}\``,
     `- Version tag: \`${report.config.version_tag || "none"}\``,
     `- Selected images: \`${report.discovery.selected_images}\``,
     `- Published: \`${report.totals.published}\``,
@@ -2924,6 +3074,7 @@ async function main() {
   const hashesFile = resolvePath(args.hashes_file, repoRoot);
 
   logger.info("Preparing Docker image publish.");
+  logger.info(`Allowed Docker image: ${FRONTEND_IMAGE_NAME}.`);
   logger.info(
     `Using Docker target version tag: ${args.version_tag || "none"}.`,
   );
@@ -2931,7 +3082,9 @@ async function main() {
   const plans = createPlans(args, repoRoot);
 
   if (args.fail_if_empty && plans.selected_images.length === 0) {
-    logger.error("No Docker images were selected for publish.");
+    logger.error(
+      `No ${FRONTEND_IMAGE_NAME} Docker image was selected for publish.`,
+    );
     process.exitCode = 1;
   }
 
