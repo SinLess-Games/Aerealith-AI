@@ -218,7 +218,7 @@ jobs:
           persist-credentials: false
 
       - name: Review dependency changes
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: ${{ needs.preflight.outputs.fail_on_severity }}
           fail-on-scopes: ${{ needs.preflight.outputs.fail_on_scopes }}
@@ -254,7 +254,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
           run_install: false
@@ -416,7 +416,7 @@ jobs:
 
       - name: Upload dependency review artifacts
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dependency-review-${{ github.run_id }}
           path: |
