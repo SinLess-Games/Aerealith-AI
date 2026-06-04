@@ -60,12 +60,13 @@ const DEFAULT_SUMMARY_FILE = "artifacts/cloudflare/deploy-preview.md";
 const DEFAULT_LOG_DIR = "artifacts/cloudflare/deploy-preview/logs";
 
 const DEFAULT_ENVIRONMENT = "preview";
+const DEFAULT_STAGE = "preview";
 
 const TRUE_VALUES = new Set(["true", "1", "yes", "y", "on", "enabled"]);
 const FALSE_VALUES = new Set(["false", "0", "no", "n", "off", "disabled"]);
 
 const SECRET_OUTPUT_PATTERN =
-  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/g;
+  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|password\s*=\s*[^\s]+|--password\s+[^\s]+|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/gi;
 
 const URL_PATTERN = /https?:\/\/[^\s"'<>]+/g;
 
@@ -113,6 +114,16 @@ function normalizeStringList(value) {
   ];
 }
 
+function requireArgValue(argv, index, arg) {
+  const value = argv[index + 1];
+
+  if (value === undefined || String(value).startsWith("--")) {
+    throw new Error(`Missing value for argument: ${arg}`);
+  }
+
+  return value;
+}
+
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     repository: process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
@@ -125,9 +136,31 @@ function parseArgs(argv = process.argv.slice(2)) {
     log_dir: process.env.CLOUDFLARE_PREVIEW_LOG_DIR || DEFAULT_LOG_DIR,
 
     environment:
-      process.env.CLOUDFLARE_PREVIEW_ENVIRONMENT || DEFAULT_ENVIRONMENT,
+      process.env.CLOUDFLARE_PREVIEW_ENVIRONMENT ||
+      process.env.CLOUDFLARE_ENVIRONMENT ||
+      DEFAULT_ENVIRONMENT,
+
+    deployment_stage:
+      process.env.CLOUDFLARE_PREVIEW_STAGE ||
+      process.env.CLOUDFLARE_DEPLOYMENT_STAGE ||
+      process.env.CLOUDFLARE_STAGE ||
+      process.env.CLOUDFLARE_ENVIRONMENT ||
+      DEFAULT_STAGE,
+
+    deployment_alias:
+      process.env.CLOUDFLARE_PREVIEW_ALIAS ||
+      process.env.CLOUDFLARE_DEPLOYMENT_ALIAS ||
+      "",
+
+    preview_ref:
+      process.env.CLOUDFLARE_PREVIEW_REF ||
+      process.env.GITHUB_HEAD_REF ||
+      process.env.GITHUB_REF_NAME ||
+      DEFAULT_BRANCH,
+
     branch:
       process.env.CLOUDFLARE_PREVIEW_BRANCH ||
+      process.env.CLOUDFLARE_PREVIEW_REF ||
       process.env.GITHUB_HEAD_REF ||
       process.env.GITHUB_REF_NAME ||
       DEFAULT_BRANCH,
@@ -230,6 +263,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     dry_run: normalizeBoolean(
       process.env.CLOUDFLARE_PREVIEW_DRY_RUN ||
+        process.env.CLOUDFLARE_DRY_RUN ||
         process.env.DRY_RUN ||
         process.env.PROJECT_SYNC_DRY_RUN,
       false,
@@ -253,79 +287,106 @@ function parseArgs(argv = process.argv.slice(2)) {
     const arg = argv[index];
 
     if (arg === "--repo" || arg === "--repository") {
-      args.repository = argv[index + 1];
+      args.repository = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--input") {
-      args.input_file = argv[index + 1];
+      args.input_file = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--environment" || arg === "--env") {
-      args.environment = argv[index + 1];
+      args.environment = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--stage" || arg === "--deployment-stage") {
+      args.deployment_stage = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--alias" || arg === "--deployment-alias") {
+      args.deployment_alias = requireArgValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (
+      arg === "--ref" ||
+      arg === "--preview-ref" ||
+      arg === "--deployment-ref"
+    ) {
+      args.preview_ref = requireArgValue(argv, index, arg);
+      args.branch = args.preview_ref;
       index += 1;
       continue;
     }
 
     if (arg === "--branch") {
-      args.branch = argv[index + 1];
+      args.branch = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--target-id") {
-      args.target_id = argv[index + 1];
+      args.target_id = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--target" || arg === "--target-name") {
-      args.target_name = argv[index + 1];
+      args.target_name = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--type" || arg === "--target-type") {
-      args.target_type = argv[index + 1];
+      args.target_type = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--root" || arg === "--target-root") {
-      args.target_root = argv[index + 1];
+      args.target_root = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--config" || arg === "--target-config") {
-      args.target_config = argv[index + 1];
+      args.target_config = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--include-target" || arg === "--include-targets") {
-      args.include_targets.push(...normalizeStringList(argv[index + 1]));
+      args.include_targets.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-target" || arg === "--exclude-targets") {
-      args.exclude_targets.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_targets.push(
+        ...normalizeStringList(requireArgValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--wrangler-command") {
-      args.wrangler_command = argv[index + 1];
+      args.wrangler_command = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--package-manager") {
-      args.package_manager = argv[index + 1];
+      args.package_manager = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
@@ -341,7 +402,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     }
 
     if (arg === "--build-command") {
-      args.build_command = argv[index + 1];
+      args.build_command = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
@@ -401,14 +462,24 @@ function parseArgs(argv = process.argv.slice(2)) {
       continue;
     }
 
+    if (arg === "--no-require-worker-preview-env") {
+      args.require_worker_preview_env = false;
+      continue;
+    }
+
     if (arg === "--allow-worker-default-preview") {
       args.allow_worker_default_preview = true;
       continue;
     }
 
+    if (arg === "--no-allow-worker-default-preview") {
+      args.allow_worker_default_preview = false;
+      continue;
+    }
+
     if (arg === "--max-deployments") {
       args.max_deployments = normalizeInteger(
-        argv[index + 1],
+        requireArgValue(argv, index, arg),
         args.max_deployments,
       );
       index += 1;
@@ -417,8 +488,17 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     if (arg === "--timeout-minutes") {
       args.timeout_minutes = normalizeInteger(
-        argv[index + 1],
+        requireArgValue(argv, index, arg),
         args.timeout_minutes,
+      );
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--max-buffer-mb") {
+      args.max_buffer_mb = normalizeInteger(
+        requireArgValue(argv, index, arg),
+        args.max_buffer_mb,
       );
       index += 1;
       continue;
@@ -460,19 +540,19 @@ function parseArgs(argv = process.argv.slice(2)) {
     }
 
     if (arg === "--log-dir") {
-      args.log_dir = argv[index + 1];
+      args.log_dir = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--output" || arg === "-o") {
-      args.output_file = argv[index + 1];
+      args.output_file = requireArgValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--summary") {
-      args.summary_file = argv[index + 1];
+      args.summary_file = requireArgValue(argv, index, arg);
       args.write_summary_file = true;
       index += 1;
       continue;
@@ -510,11 +590,24 @@ function parseArgs(argv = process.argv.slice(2)) {
     args.environment,
     DEFAULT_ENVIRONMENT,
   ).toLowerCase();
-  args.branch = safeBranchName(args.branch);
-  args.target_type = args.target_type.toLowerCase();
+
+  args.deployment_stage = normalizeString(
+    args.deployment_stage || args.environment,
+    args.environment,
+  ).toLowerCase();
+
+  args.preview_ref = safeBranchName(args.preview_ref || args.branch);
+  args.branch = safeBranchName(
+    args.branch || args.preview_ref || args.deployment_alias,
+  );
+
+  args.target_type = normalizeString(args.target_type).toLowerCase();
   args.include_targets = [...new Set(args.include_targets)];
   args.exclude_targets = [...new Set(args.exclude_targets)];
-  args.package_manager = args.package_manager.toLowerCase();
+  args.package_manager = normalizeString(
+    args.package_manager,
+    "auto",
+  ).toLowerCase();
   args.max_deployments = Math.max(0, args.max_deployments);
   args.timeout_minutes = Math.max(0, args.timeout_minutes);
   args.max_buffer_mb = Math.max(1, args.max_buffer_mb);
@@ -532,6 +625,7 @@ Usage:
 Examples:
   node .github/scripts/cloudflare/deploy-preview.js
   node .github/scripts/cloudflare/deploy-preview.js --target web --environment preview
+  node .github/scripts/cloudflare/deploy-preview.js --environment preview --stage preview --alias main --ref main
   node .github/scripts/cloudflare/deploy-preview.js --all-targets --run-build
   node .github/scripts/cloudflare/deploy-preview.js --target api --allow-worker-default-preview
 
@@ -539,6 +633,9 @@ Options:
       --repo <owner/repo>                 Repository slug.
       --input <file>                      cloudflare-targets.json input file.
       --environment <name>                Deployment environment. Default: preview.
+      --stage <name>                      Deployment stage, such as preview, staging, or production.
+      --alias <name>                      Deployment alias metadata, such as branch alias.
+      --ref <ref>                         Preview source ref; also used as Pages branch unless --branch is set later.
       --branch <name>                     Preview branch name.
       --target-id <id>                    Deploy one target by detector ID.
       --target <name>                     Deploy one target by name.
@@ -561,9 +658,11 @@ Options:
       --require-account-id                Require CLOUDFLARE_ACCOUNT_ID. Default.
       --no-require-account-id             Do not require CLOUDFLARE_ACCOUNT_ID.
       --require-worker-preview-env        Require Worker preview env. Default.
+      --no-require-worker-preview-env     Do not require Worker preview env.
       --allow-worker-default-preview      Allow Worker deploy without preview env.
       --max-deployments <number>          Maximum deployments to run.
       --timeout-minutes <number>          Per-command timeout. Default: 20.
+      --max-buffer-mb <number>            Per-command output buffer in MB. Default: 64.
       --continue-on-error                 Continue after failed deployments. Default.
       --no-continue-on-error              Stop after first failure.
       --fail-on-error                     Exit non-zero on deployment failure. Default.
@@ -973,6 +1072,9 @@ function createDirectDeploymentFromEnv(args) {
     package_name: null,
     package_manager_command: "",
     environment: args.environment,
+    deployment_stage: args.deployment_stage,
+    deployment_alias: args.deployment_alias,
+    preview_ref: args.preview_ref,
     wrangler_environment: args.environment,
     has_config_environment: false,
     affected: true,
@@ -1013,6 +1115,13 @@ function normalizeDeployment(record, target = {}) {
     environment: normalizeString(
       record.environment || DEFAULT_ENVIRONMENT,
     ).toLowerCase(),
+    deployment_stage: normalizeString(
+      record.deployment_stage || record.stage || "",
+    ).toLowerCase(),
+    deployment_alias: normalizeString(
+      record.deployment_alias || record.alias || "",
+    ),
+    preview_ref: normalizeString(record.preview_ref || record.ref || ""),
     wrangler_environment:
       record.wrangler_environment === undefined ||
       record.wrangler_environment === null
@@ -1095,7 +1204,15 @@ function selectDeployments(input, args) {
       targetMap.get(entry.config_file) ||
       {};
 
-    return normalizeDeployment(entry, target);
+    return normalizeDeployment(
+      {
+        ...entry,
+        deployment_stage: entry.deployment_stage || args.deployment_stage,
+        deployment_alias: entry.deployment_alias || args.deployment_alias,
+        preview_ref: entry.preview_ref || args.preview_ref,
+      },
+      target,
+    );
   });
 
   if (!deployments.length && Array.isArray(data.targets)) {
@@ -1109,6 +1226,9 @@ function selectDeployments(input, args) {
             root: target.root,
             config_file: target.config_file,
             environment: args.environment,
+            deployment_stage: args.deployment_stage,
+            deployment_alias: args.deployment_alias,
+            preview_ref: args.preview_ref,
             wrangler_environment: target.environments?.includes?.(
               args.environment,
             )
@@ -1424,13 +1544,15 @@ function createPagesDeployCommand(deployment, args, repoRoot, wranglerPrefix) {
   }
 
   const commitMessage = process.env.GITHUB_EVENT_NAME
-    ? `${PROJECT_NAME} ${args.environment} deployment from ${process.env.GITHUB_EVENT_NAME}`
-    : `${PROJECT_NAME} ${args.environment} deployment`;
+    ? `${PROJECT_NAME} ${args.deployment_stage || args.environment} deployment from ${process.env.GITHUB_EVENT_NAME}`
+    : `${PROJECT_NAME} ${args.deployment_stage || args.environment} deployment`;
 
   wranglerArgs.push("--commit-message", commitMessage);
 
   return {
-    id: safeId(`${deployment.id}-deploy-pages-${args.environment}`),
+    id: safeId(
+      `${deployment.id}-deploy-pages-${args.deployment_stage || args.environment}`,
+    ),
     kind: "deploy",
     target_id: deployment.id,
     target_name: deployment.name,
@@ -1456,7 +1578,9 @@ function createWorkerDeployCommand(deployment, args, repoRoot, wranglerPrefix) {
   }
 
   return {
-    id: safeId(`${deployment.id}-deploy-worker-${args.environment}`),
+    id: safeId(
+      `${deployment.id}-deploy-worker-${args.deployment_stage || args.environment}`,
+    ),
     kind: "deploy",
     target_id: deployment.id,
     target_name: deployment.name,
@@ -1675,6 +1799,7 @@ function createReport(args, repoRoot, input, plan, execution) {
   const github = getGitMetadata(repoRoot);
   const totals = summarizeResults(execution.results, plan.skipped);
   const urls = resultUrls(execution.results);
+  const primaryUrl = urls[0] || "";
   const deployResults = execution.results.filter(
     (result) => result.kind === "deploy",
   );
@@ -1697,6 +1822,18 @@ function createReport(args, repoRoot, input, plan, execution) {
     project: PROJECT_NAME,
     repository: args.repository,
     created_at: new Date().toISOString(),
+    preview_url: primaryUrl,
+    deployment_url: primaryUrl,
+    url: primaryUrl,
+    cloudflare: {
+      preview_url: primaryUrl,
+      deployment_url: primaryUrl,
+      urls,
+      environment: args.environment,
+      stage: args.deployment_stage,
+      alias: args.deployment_alias,
+      ref: args.preview_ref,
+    },
     github,
     input: {
       file: input.file,
@@ -1720,6 +1857,9 @@ function createReport(args, repoRoot, input, plan, execution) {
         ? toRelativePath(resolvePath(args.log_dir, repoRoot), repoRoot)
         : null,
       environment: args.environment,
+      deployment_stage: args.deployment_stage,
+      deployment_alias: args.deployment_alias,
+      preview_ref: args.preview_ref,
       branch: args.branch,
       changed_only: args.changed_only,
       deploy_pages: args.deploy_pages,
@@ -1807,6 +1947,9 @@ function createMarkdownSummary(report) {
     "",
     `- Status: \`${report.status}\``,
     `- Environment: \`${report.config.environment}\``,
+    `- Stage: \`${report.config.deployment_stage}\``,
+    `- Alias: \`${report.config.deployment_alias || "not set"}\``,
+    `- Ref: \`${report.config.preview_ref || "not set"}\``,
     `- Branch: \`${report.config.branch}\``,
     `- Dry run: \`${report.config.dry_run ? "true" : "false"}\``,
     `- Blocked: \`${report.blocked ? "true" : "false"}\``,
@@ -1830,6 +1973,7 @@ function createMarkdownSummary(report) {
     `- Passed: \`${report.totals.passed}\``,
     `- Failed: \`${report.totals.failed}\``,
     `- Skipped: \`${report.totals.skipped}\``,
+    `- URLs: \`${report.totals.urls}\``,
     `- Duration: \`${report.totals.duration_human}\``,
     "",
     "## 🔐 Credentials",
@@ -1839,6 +1983,13 @@ function createMarkdownSummary(report) {
     `- Account ID present: \`${report.credentials.account_id_present ? "true" : "false"}\``,
     "",
   ];
+
+  if (report.preview_url) {
+    lines.push("## 🔗 Primary Preview URL");
+    lines.push("");
+    lines.push(`- ${report.preview_url}`);
+    lines.push("");
+  }
 
   if (report.block_reason) {
     lines.push(`Blocked reason: ${report.block_reason}`);
@@ -1941,6 +2092,15 @@ function createMarkdownSummary(report) {
     }
   }
 
+  lines.push("");
+  lines.push("## 📤 Outputs");
+  lines.push("");
+  lines.push(`- JSON report: \`${report.config.output_file}\``);
+  lines.push(
+    `- Markdown summary: \`${report.config.summary_file || "not written"}\``,
+  );
+  lines.push(`- Log directory: \`${report.config.log_dir || "not written"}\``);
+
   return `${lines.join("\n").trim()}\n`;
 }
 
@@ -1960,7 +2120,10 @@ function setGitHubOutput(name, value) {
 
   const rendered = typeof value === "string" ? value : JSON.stringify(value);
 
-  fs.appendFileSync(outputFile, `${name}<<EOF\n${rendered}\nEOF\n`);
+  fs.appendFileSync(
+    outputFile,
+    `${name}<<EOF\n${redactOutput(rendered)}\nEOF\n`,
+  );
   return true;
 }
 
@@ -1977,7 +2140,13 @@ function writeGitHubOutputs(report) {
     report.totals.failed === 0 && !report.blocked ? "true" : "false",
   );
   setGitHubOutput("cloudflare_preview_environment", report.config.environment);
+  setGitHubOutput("cloudflare_preview_stage", report.config.deployment_stage);
+  setGitHubOutput("cloudflare_preview_alias", report.config.deployment_alias);
+  setGitHubOutput("cloudflare_preview_ref", report.config.preview_ref);
   setGitHubOutput("cloudflare_preview_branch", report.config.branch);
+  setGitHubOutput("cloudflare_preview_url", report.preview_url || "");
+  setGitHubOutput("preview_url", report.preview_url || "");
+  setGitHubOutput("deployment_url", report.deployment_url || "");
   setGitHubOutput(
     "cloudflare_preview_selected_deployments",
     String(report.totals.selected_deployments),
