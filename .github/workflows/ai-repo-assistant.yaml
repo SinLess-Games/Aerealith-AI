@@ -33,7 +33,7 @@ on:
           - "true"
           - "false"
       run_repo_management:
-        description: "Run labels, milestones, assignees, reviewers, PR rules, and linking."
+        description: "Run repository management when a native issue or pull request event is available."
         required: true
         default: "auto"
         type: choice
@@ -94,7 +94,7 @@ permissions:
 
 concurrency:
   group: >-
-    ai-repo-assistant-${{ github.workflow }}-${{ github.ref_name || github.run_id }}
+    ai-repo-assistant-${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.ref_name || github.run_id }}
   cancel-in-progress: false
 
 defaults:
@@ -120,11 +120,15 @@ jobs:
       dry_run: ${{ steps.context.outputs.dry_run }}
       actor: ${{ steps.context.outputs.actor }}
       event_action: ${{ steps.context.outputs.event_action }}
+      item_kind: ${{ steps.context.outputs.item_kind }}
+      item_number: ${{ steps.context.outputs.item_number }}
+      issue_number: ${{ steps.context.outputs.issue_number }}
+      pull_request_number: ${{ steps.context.outputs.pull_request_number }}
       head_branch: ${{ steps.context.outputs.head_branch }}
       base_branch: ${{ steps.context.outputs.base_branch }}
-      pull_request_number: ${{ steps.context.outputs.pull_request_number }}
+      has_native_item_context: ${{ steps.context.outputs.has_native_item_context }}
+      has_native_pr_context: ${{ steps.context.outputs.has_native_pr_context }}
       is_dependency_bot: ${{ steps.context.outputs.is_dependency_bot }}
-      is_label_only_event: ${{ steps.context.outputs.is_label_only_event }}
       should_run_repo_management: ${{ steps.context.outputs.should_run_repo_management }}
       should_enforce_branch_name: ${{ steps.context.outputs.should_enforce_branch_name }}
       should_enforce_pr_rules: ${{ steps.context.outputs.should_enforce_pr_rules }}
@@ -155,9 +159,48 @@ jobs:
           event_action="$(jq -r '.action // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
           actor="$(jq -r '.sender.login // env.GITHUB_ACTOR // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
 
-          pull_request_number="$(jq -r '.pull_request.number // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
-          head_branch="$(jq -r '.pull_request.head.ref // .issue.pull_request.head.ref // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
-          base_branch="$(jq -r '.pull_request.base.ref // .issue.pull_request.base.ref // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+          issue_number=""
+          pull_request_number=""
+          item_kind="unknown"
+          item_number=""
+          head_branch=""
+          base_branch=""
+          has_native_item_context="false"
+          has_native_pr_context="false"
+
+          case "$event_name" in
+            issues)
+              issue_number="$(jq -r '.issue.number // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+              item_kind="issue"
+              item_number="$issue_number"
+              ;;
+            pull_request_target)
+              pull_request_number="$(jq -r '.pull_request.number // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+              head_branch="$(jq -r '.pull_request.head.ref // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+              base_branch="$(jq -r '.pull_request.base.ref // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+              item_kind="pull_request"
+              item_number="$pull_request_number"
+              ;;
+            issue_comment)
+              issue_number="$(jq -r '.issue.number // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+
+              if jq -e '.issue.pull_request? // empty' "$GITHUB_EVENT_PATH" >/dev/null 2>&1; then
+                pull_request_number="$issue_number"
+                item_kind="pull_request"
+                item_number="$pull_request_number"
+              else
+                item_kind="issue"
+                item_number="$issue_number"
+              fi
+              ;;
+            pull_request_review_comment)
+              pull_request_number="$(jq -r '.pull_request.number // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+              head_branch="$(jq -r '.pull_request.head.ref // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+              base_branch="$(jq -r '.pull_request.base.ref // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+              item_kind="pull_request"
+              item_number="$pull_request_number"
+              ;;
+          esac
 
           if [[ -z "$head_branch" ]]; then
             head_branch="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}"
@@ -165,6 +208,16 @@ jobs:
 
           if [[ -z "$base_branch" ]]; then
             base_branch="${GITHUB_BASE_REF:-}"
+          fi
+
+          if [[ "$event_name" == "issues" || "$event_name" == "pull_request_target" ]]; then
+            if [[ -n "$item_number" ]]; then
+              has_native_item_context="true"
+            fi
+          fi
+
+          if [[ "$event_name" == "pull_request_target" && -n "$pull_request_number" ]]; then
+            has_native_pr_context="true"
           fi
 
           comment_body="$(jq -r '.comment.body // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
@@ -187,11 +240,6 @@ jobs:
           is_dependency_bot="false"
           if printf '%s\n%s\n' "$actor" "$head_branch" | grep -Eiq 'dependabot|renovate'; then
             is_dependency_bot="true"
-          fi
-
-          is_label_only_event="false"
-          if [[ "$event_action" == "labeled" || "$event_action" == "unlabeled" ]]; then
-            is_label_only_event="true"
           fi
 
           should_run_repo_management="false"
@@ -240,7 +288,6 @@ jobs:
                   should_run_security_summary="true"
                   ;;
                 workflow_dispatch)
-                  should_run_repo_management="true"
                   should_run_security_summary="true"
                   ;;
               esac
@@ -272,23 +319,19 @@ jobs:
               ;;
           esac
 
-          if [[ "$is_label_only_event" == "true" && "$mode" == "auto" ]]; then
-            should_run_repo_management="false"
-          fi
-
-          if [[ "$should_run_repo_management" == "true" ]]; then
+          if [[ "$should_run_repo_management" == "true" && "$has_native_item_context" == "true" ]]; then
             should_assign_labels="true"
             should_assign_milestones="true"
             should_assign_assignees="true"
             should_link_issues_prs="true"
+          fi
 
-            if [[ "$event_name" == "pull_request_target" ]]; then
-              should_enforce_pr_rules="true"
-              should_assign_reviewers="true"
+          if [[ "$should_run_repo_management" == "true" && "$has_native_pr_context" == "true" ]]; then
+            should_enforce_pr_rules="true"
+            should_assign_reviewers="true"
 
-              if [[ "$is_dependency_bot" != "true" ]]; then
-                should_enforce_branch_name="true"
-              fi
+            if [[ "$is_dependency_bot" != "true" ]]; then
+              should_enforce_branch_name="true"
             fi
           fi
 
@@ -297,11 +340,15 @@ jobs:
             echo "dry_run=$dry_run"
             echo "actor=$actor"
             echo "event_action=$event_action"
+            echo "item_kind=$item_kind"
+            echo "item_number=$item_number"
+            echo "issue_number=$issue_number"
+            echo "pull_request_number=$pull_request_number"
             echo "head_branch=$head_branch"
             echo "base_branch=$base_branch"
-            echo "pull_request_number=$pull_request_number"
+            echo "has_native_item_context=$has_native_item_context"
+            echo "has_native_pr_context=$has_native_pr_context"
             echo "is_dependency_bot=$is_dependency_bot"
-            echo "is_label_only_event=$is_label_only_event"
             echo "should_run_repo_management=$should_run_repo_management"
             echo "should_enforce_branch_name=$should_enforce_branch_name"
             echo "should_enforce_pr_rules=$should_enforce_pr_rules"
@@ -325,14 +372,21 @@ jobs:
             echo "| Event | \`$event_name\` |"
             echo "| Action | \`${event_action:-none}\` |"
             echo "| Actor | \`${actor:-unknown}\` |"
+            echo "| Item kind | \`$item_kind\` |"
+            echo "| Item number | \`${item_number:-none}\` |"
+            echo "| Native item context | \`$has_native_item_context\` |"
+            echo "| Native PR context | \`$has_native_pr_context\` |"
             echo "| Head branch | \`${head_branch:-none}\` |"
             echo "| Base branch | \`${base_branch:-none}\` |"
-            echo "| Pull request | \`${pull_request_number:-none}\` |"
             echo "| Dependency bot | \`$is_dependency_bot\` |"
-            echo "| Label-only event | \`$is_label_only_event\` |"
             echo "| Repo management | \`$should_run_repo_management\` |"
+            echo "| Assign labels | \`$should_assign_labels\` |"
+            echo "| Assign milestones | \`$should_assign_milestones\` |"
+            echo "| Assign assignees | \`$should_assign_assignees\` |"
+            echo "| Assign reviewers | \`$should_assign_reviewers\` |"
             echo "| Enforce branch name | \`$should_enforce_branch_name\` |"
             echo "| Enforce PR rules | \`$should_enforce_pr_rules\` |"
+            echo "| Link issues/PRs | \`$should_link_issues_prs\` |"
             echo "| AI assistant | \`$should_run_ai\` |"
             echo "| Security triage | \`$should_run_security_triage\` |"
             echo "| Security summary | \`$should_run_security_summary\` |"
@@ -374,6 +428,40 @@ jobs:
           mkdir -p artifacts/issues
           mkdir -p artifacts/pull-requests
 
+      - name: Skip item-specific repository management without issue or PR context
+        if: needs.preflight.outputs.has_native_item_context != 'true'
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Item-Specific Repository Management Skipped"
+            echo ""
+            echo "This run does not have a native issue or pull request payload."
+            echo "Item-specific scripts such as label, milestone, assignee, reviewer, PR rule, and issue-link automation were skipped to avoid invalid runs."
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Event | \`${GITHUB_EVENT_NAME}\` |"
+            echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
+            echo "| Item kind | \`${{ needs.preflight.outputs.item_kind }}\` |"
+            echo "| Item number | \`${{ needs.preflight.outputs.item_number || 'none' }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          cat > artifacts/repo/repo-management-skipped.json <<JSON
+          {
+            "schema_version": 1,
+            "type": "repo-management-skipped",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "event_name": "$GITHUB_EVENT_NAME",
+            "mode": "${{ needs.preflight.outputs.mode }}",
+            "reason": "No native issue or pull request payload was available.",
+            "ok": true,
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
       - name: Enforce branch name
         if: needs.preflight.outputs.should_enforce_branch_name == 'true'
         run: |
@@ -389,7 +477,8 @@ jobs:
       - name: Skip branch name enforcement for dependency automation
         if: >-
           needs.preflight.outputs.should_enforce_branch_name != 'true' &&
-          needs.preflight.outputs.is_dependency_bot == 'true'
+          needs.preflight.outputs.is_dependency_bot == 'true' &&
+          needs.preflight.outputs.has_native_pr_context == 'true'
         run: |
           set -euo pipefail
 
@@ -692,12 +781,20 @@ jobs:
             echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
             echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
             echo "| Actor | \`${{ needs.preflight.outputs.actor || 'unknown' }}\` |"
+            echo "| Item kind | \`${{ needs.preflight.outputs.item_kind }}\` |"
+            echo "| Item number | \`${{ needs.preflight.outputs.item_number || 'none' }}\` |"
+            echo "| Native item context | \`${{ needs.preflight.outputs.has_native_item_context }}\` |"
+            echo "| Native PR context | \`${{ needs.preflight.outputs.has_native_pr_context }}\` |"
             echo "| Head branch | \`${{ needs.preflight.outputs.head_branch || 'none' }}\` |"
             echo "| Dependency bot | \`${{ needs.preflight.outputs.is_dependency_bot }}\` |"
-            echo "| Label-only event | \`${{ needs.preflight.outputs.is_label_only_event }}\` |"
             echo "| Repo management requested | \`${{ needs.preflight.outputs.should_run_repo_management }}\` |"
             echo "| Branch enforcement requested | \`${{ needs.preflight.outputs.should_enforce_branch_name }}\` |"
             echo "| PR rules requested | \`${{ needs.preflight.outputs.should_enforce_pr_rules }}\` |"
+            echo "| Assign labels requested | \`${{ needs.preflight.outputs.should_assign_labels }}\` |"
+            echo "| Assign milestones requested | \`${{ needs.preflight.outputs.should_assign_milestones }}\` |"
+            echo "| Assign assignees requested | \`${{ needs.preflight.outputs.should_assign_assignees }}\` |"
+            echo "| Assign reviewers requested | \`${{ needs.preflight.outputs.should_assign_reviewers }}\` |"
+            echo "| Link issues/PRs requested | \`${{ needs.preflight.outputs.should_link_issues_prs }}\` |"
             echo "| AI requested | \`${{ needs.preflight.outputs.should_run_ai }}\` |"
             echo "| Security triage requested | \`${{ needs.preflight.outputs.should_run_security_triage }}\` |"
             echo "| Security summary requested | \`${{ needs.preflight.outputs.should_run_security_summary }}\` |"
