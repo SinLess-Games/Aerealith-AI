@@ -46,12 +46,12 @@ on:
         default: true
         type: boolean
       create_sbom:
-        description: "Create package SBOM artifacts when the script is available."
+        description: "Create package SBOM artifacts."
         required: true
         default: true
         type: boolean
       create_checksums:
-        description: "Create checksum artifacts when the script is available."
+        description: "Create checksum artifacts."
         required: true
         default: true
         type: boolean
@@ -332,6 +332,14 @@ jobs:
             echo "- Store path: \`$pnpm_store\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Restore pnpm store cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm.outputs.pnpm_store }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
       - name: Install dependencies
         if: >-
           needs.preflight.outputs.should_discover == 'true' ||
@@ -369,28 +377,290 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! -f ".github/scripts/npm/discover-packages.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/npm/discover-packages.js"
-            exit 0
-          fi
+          mkdir -p "$PACKAGE_OUTPUT_DIR"
 
-          node ".github/scripts/npm/discover-packages.js" \
-            --output "$PACKAGE_OUTPUT_DIR/discover-packages.json" \
-            --summary "$PACKAGE_OUTPUT_DIR/discover-packages.md"
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const root = process.cwd();
+          const outputDir = process.env.PACKAGE_OUTPUT_DIR || "artifacts/packages";
+          const outputFile = path.join(outputDir, "discover-packages.json");
+          const summaryFile = path.join(outputDir, "discover-packages.md");
+
+          const ignoredDirs = new Set([
+            ".git",
+            ".github",
+            ".next",
+            ".nx",
+            ".turbo",
+            "artifacts",
+            "coverage",
+            "dist",
+            "node_modules",
+            "out",
+            "out-tsc",
+            "tmp",
+          ]);
+
+          function readJson(file) {
+            try {
+              return JSON.parse(fs.readFileSync(file, "utf8"));
+            } catch {
+              return null;
+            }
+          }
+
+          function toPosix(value) {
+            return String(value || "").split(path.sep).join("/");
+          }
+
+          function walk(dir, results = []) {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+            for (const entry of entries) {
+              const absolute = path.join(dir, entry.name);
+
+              if (entry.isDirectory()) {
+                if (ignoredDirs.has(entry.name)) continue;
+                walk(absolute, results);
+                continue;
+              }
+
+              if (entry.isFile() && entry.name === "package.json") {
+                results.push(absolute);
+              }
+            }
+
+            return results;
+          }
+
+          const packageFiles = walk(root).sort();
+          const packages = [];
+
+          for (const packageFile of packageFiles) {
+            const pkg = readJson(packageFile);
+            if (!pkg || typeof pkg !== "object") continue;
+
+            const packageDir = path.dirname(packageFile);
+            const relativeDir = toPosix(path.relative(root, packageDir)) || ".";
+            const isRoot = relativeDir === ".";
+
+            if (isRoot) continue;
+            if (!pkg.name || !pkg.version) continue;
+            if (pkg.private === true) continue;
+
+            packages.push({
+              name: String(pkg.name),
+              version: String(pkg.version),
+              package_dir: relativeDir,
+              package_json: toPosix(path.relative(root, packageFile)),
+              private: Boolean(pkg.private),
+              publish_config: pkg.publishConfig || {},
+              main: pkg.main || "",
+              module: pkg.module || "",
+              types: pkg.types || "",
+              exports: pkg.exports || null,
+              files: Array.isArray(pkg.files) ? pkg.files : [],
+              scripts: pkg.scripts || {},
+            });
+          }
+
+          const report = {
+            schema_version: 1,
+            type: "npm-package-discovery",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            created_at: new Date().toISOString(),
+            totals: {
+              package_json_files: packageFiles.length,
+              publishable_packages: packages.length,
+            },
+            packages,
+            ok: true,
+            warnings: packages.length ? [] : ["No publishable npm packages were discovered."],
+            errors: [],
+          };
+
+          const lines = [
+            "# Aerealith AI NPM Package Discovery",
+            "",
+            `Generated: \`${report.created_at}\``,
+            "",
+            "## Status",
+            "",
+            `- Package files scanned: \`${report.totals.package_json_files}\``,
+            `- Publishable packages: \`${report.totals.publishable_packages}\``,
+            "",
+            "## Packages",
+            "",
+          ];
+
+          if (!packages.length) {
+            lines.push("No publishable packages were discovered.");
+          } else {
+            lines.push("| Package | Version | Directory |");
+            lines.push("|---|---:|---|");
+
+            for (const pkg of packages) {
+              lines.push(`| \`${pkg.name}\` | \`${pkg.version}\` | \`${pkg.package_dir}\` |`);
+            }
+          }
+
+          fs.mkdirSync(outputDir, { recursive: true });
+          fs.writeFileSync(outputFile, `${JSON.stringify(report, null, 2)}\n`);
+          fs.writeFileSync(summaryFile, `${lines.join("\n").trim()}\n`);
+
+          console.log(`Discovered ${packages.length} publishable package(s).`);
+          NODE
 
       - name: Validate packages
         if: needs.preflight.outputs.should_validate == 'true'
         run: |
           set -euo pipefail
 
-          if [[ ! -f ".github/scripts/npm/validate-packages.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/npm/validate-packages.js"
-            exit 0
-          fi
+          mkdir -p "$PACKAGE_OUTPUT_DIR"
 
-          node ".github/scripts/npm/validate-packages.js" \
-            --output "$PACKAGE_OUTPUT_DIR/validate-packages.json" \
-            --summary "$PACKAGE_OUTPUT_DIR/validate-packages.md"
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const outputDir = process.env.PACKAGE_OUTPUT_DIR || "artifacts/packages";
+          const discoveryFile = path.join(outputDir, "discover-packages.json");
+          const outputFile = path.join(outputDir, "validate-packages.json");
+          const summaryFile = path.join(outputDir, "validate-packages.md");
+
+          function readJson(file) {
+            try {
+              return JSON.parse(fs.readFileSync(file, "utf8"));
+            } catch {
+              return null;
+            }
+          }
+
+          const discovery = readJson(discoveryFile) || { packages: [] };
+          const packages = Array.isArray(discovery.packages) ? discovery.packages : [];
+
+          const errors = [];
+          const warnings = [];
+          const packageResults = [];
+
+          const packageNamePattern = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
+          const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+
+          for (const pkg of packages) {
+            const packageErrors = [];
+            const packageWarnings = [];
+
+            if (!packageNamePattern.test(pkg.name || "")) {
+              packageErrors.push(`Invalid package name: ${pkg.name || "<missing>"}`);
+            }
+
+            if (!versionPattern.test(pkg.version || "")) {
+              packageErrors.push(`Invalid semantic version for ${pkg.name}: ${pkg.version || "<missing>"}`);
+            }
+
+            if (!fs.existsSync(pkg.package_json || "")) {
+              packageErrors.push(`Missing package.json at ${pkg.package_json}`);
+            }
+
+            if (!pkg.main && !pkg.exports) {
+              packageWarnings.push(`Package ${pkg.name} has no main or exports field.`);
+            }
+
+            if (pkg.private === true) {
+              packageErrors.push(`Package ${pkg.name} is private and should not be published.`);
+            }
+
+            packageResults.push({
+              name: pkg.name,
+              version: pkg.version,
+              package_dir: pkg.package_dir,
+              ok: packageErrors.length === 0,
+              errors: packageErrors,
+              warnings: packageWarnings,
+            });
+
+            errors.push(...packageErrors);
+            warnings.push(...packageWarnings);
+          }
+
+          const report = {
+            schema_version: 1,
+            type: "npm-package-validation",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            created_at: new Date().toISOString(),
+            totals: {
+              packages: packages.length,
+              valid: packageResults.filter((item) => item.ok).length,
+              invalid: packageResults.filter((item) => !item.ok).length,
+              errors: errors.length,
+              warnings: warnings.length,
+            },
+            packages: packageResults,
+            ok: errors.length === 0,
+            errors,
+            warnings,
+          };
+
+          const lines = [
+            "# Aerealith AI NPM Package Validation",
+            "",
+            `Generated: \`${report.created_at}\``,
+            "",
+            "## Status",
+            "",
+            `- Packages: \`${report.totals.packages}\``,
+            `- Valid: \`${report.totals.valid}\``,
+            `- Invalid: \`${report.totals.invalid}\``,
+            `- Errors: \`${report.totals.errors}\``,
+            `- Warnings: \`${report.totals.warnings}\``,
+            "",
+            "## Packages",
+            "",
+          ];
+
+          if (!packageResults.length) {
+            lines.push("No packages were validated.");
+          } else {
+            lines.push("| Status | Package | Version | Directory |");
+            lines.push("|---|---|---:|---|");
+
+            for (const pkg of packageResults) {
+              lines.push(`| \`${pkg.ok ? "valid" : "invalid"}\` | \`${pkg.name}\` | \`${pkg.version}\` | \`${pkg.package_dir}\` |`);
+            }
+          }
+
+          if (errors.length) {
+            lines.push("");
+            lines.push("## Errors");
+            lines.push("");
+            for (const error of errors) lines.push(`- ${error}`);
+          }
+
+          if (warnings.length) {
+            lines.push("");
+            lines.push("## Warnings");
+            lines.push("");
+            for (const warning of warnings) lines.push(`- ${warning}`);
+          }
+
+          fs.mkdirSync(outputDir, { recursive: true });
+          fs.writeFileSync(outputFile, `${JSON.stringify(report, null, 2)}\n`);
+          fs.writeFileSync(summaryFile, `${lines.join("\n").trim()}\n`);
+
+          if (errors.length) {
+            console.error(`Package validation failed with ${errors.length} error(s).`);
+            process.exit(1);
+          }
+
+          console.log(`Validated ${packages.length} package(s).`);
+          NODE
 
       - name: Build publishable packages
         if: needs.preflight.outputs.should_pack == 'true' || needs.preflight.outputs.should_publish == 'true'
@@ -413,64 +683,492 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! -f ".github/scripts/npm/pack-packages.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/npm/pack-packages.js"
-            exit 0
-          fi
+          mkdir -p "$PACKAGE_OUTPUT_DIR"
+          mkdir -p "$ARTIFACT_OUTPUT_DIR"
 
-          node ".github/scripts/npm/pack-packages.js" \
-            --output "$PACKAGE_OUTPUT_DIR/pack-packages.json" \
-            --summary "$PACKAGE_OUTPUT_DIR/pack-packages.md"
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const childProcess = require("node:child_process");
+
+          const outputDir = process.env.PACKAGE_OUTPUT_DIR || "artifacts/packages";
+          const artifactDir = process.env.ARTIFACT_OUTPUT_DIR || "artifacts/npm-artifacts";
+          const discoveryFile = path.join(outputDir, "discover-packages.json");
+          const outputFile = path.join(outputDir, "pack-packages.json");
+          const summaryFile = path.join(outputDir, "pack-packages.md");
+
+          function readJson(file) {
+            try {
+              return JSON.parse(fs.readFileSync(file, "utf8"));
+            } catch {
+              return null;
+            }
+          }
+
+          function redact(value) {
+            return String(value || "").replace(/(npm_[A-Za-z0-9_-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,})/g, "[REDACTED]");
+          }
+
+          const discovery = readJson(discoveryFile) || { packages: [] };
+          const packages = Array.isArray(discovery.packages) ? discovery.packages : [];
+          const results = [];
+
+          fs.mkdirSync(outputDir, { recursive: true });
+          fs.mkdirSync(artifactDir, { recursive: true });
+
+          for (const pkg of packages) {
+            const startedAt = Date.now();
+
+            const command = childProcess.spawnSync(
+              "npm",
+              ["pack", pkg.package_dir, "--pack-destination", artifactDir, "--json"],
+              {
+                cwd: process.cwd(),
+                encoding: "utf8",
+                stdio: ["ignore", "pipe", "pipe"],
+                maxBuffer: 32 * 1024 * 1024,
+              },
+            );
+
+            const stdout = redact(command.stdout || "");
+            const stderr = redact(command.stderr || "");
+            let tarballs = [];
+
+            try {
+              const parsed = JSON.parse(stdout || "[]");
+              tarballs = Array.isArray(parsed)
+                ? parsed.map((item) => item.filename).filter(Boolean)
+                : [];
+            } catch {
+              tarballs = [];
+            }
+
+            results.push({
+              name: pkg.name,
+              version: pkg.version,
+              package_dir: pkg.package_dir,
+              status: command.status === 0 ? "packed" : "failed",
+              success: command.status === 0,
+              exit_code: command.status,
+              tarballs: tarballs.map((file) => path.join(artifactDir, file).split(path.sep).join("/")),
+              stdout,
+              stderr,
+              duration_ms: Date.now() - startedAt,
+            });
+          }
+
+          const failed = results.filter((item) => !item.success);
+          const packed = results.filter((item) => item.success);
+
+          const report = {
+            schema_version: 1,
+            type: "npm-package-pack",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            created_at: new Date().toISOString(),
+            totals: {
+              packages: results.length,
+              packed: packed.length,
+              failed: failed.length,
+              tarballs: results.reduce((sum, item) => sum + item.tarballs.length, 0),
+            },
+            results,
+            ok: failed.length === 0,
+            errors: failed.map((item) => `${item.name} failed to pack.`),
+            warnings: [],
+          };
+
+          const lines = [
+            "# Aerealith AI NPM Package Pack",
+            "",
+            `Generated: \`${report.created_at}\``,
+            "",
+            "## Status",
+            "",
+            `- Packages: \`${report.totals.packages}\``,
+            `- Packed: \`${report.totals.packed}\``,
+            `- Failed: \`${report.totals.failed}\``,
+            `- Tarballs: \`${report.totals.tarballs}\``,
+            "",
+            "## Results",
+            "",
+          ];
+
+          if (!results.length) {
+            lines.push("No packages were packed.");
+          } else {
+            lines.push("| Status | Package | Version | Tarballs |");
+            lines.push("|---|---|---:|---:|");
+
+            for (const result of results) {
+              lines.push(`| \`${result.status}\` | \`${result.name}\` | \`${result.version}\` | \`${result.tarballs.length}\` |`);
+            }
+          }
+
+          fs.writeFileSync(outputFile, `${JSON.stringify(report, null, 2)}\n`);
+          fs.writeFileSync(summaryFile, `${lines.join("\n").trim()}\n`);
+
+          if (failed.length) {
+            console.error(`${failed.length} package(s) failed to pack.`);
+            process.exit(1);
+          }
+
+          console.log(`Packed ${packed.length} package(s).`);
+          NODE
 
       - name: Publish packages
         if: needs.preflight.outputs.should_publish == 'true'
         run: |
           set -euo pipefail
 
-          if [[ ! -f ".github/scripts/npm/publish-packages.js" ]]; then
-            echo "::error::Missing script: .github/scripts/npm/publish-packages.js"
-            exit 1
-          fi
+          mkdir -p "$PACKAGE_OUTPUT_DIR"
 
-          node ".github/scripts/npm/publish-packages.js" \
-            --tag "$NPM_PUBLISH_TAG" \
-            --access "$NPM_PUBLISH_ACCESS" \
-            --registry "$NPM_CONFIG_REGISTRY" \
-            --provenance "$NPM_PUBLISH_PROVENANCE" \
-            --output "$PACKAGE_OUTPUT_DIR/publish-packages.json" \
-            --summary "$PACKAGE_OUTPUT_DIR/publish-packages.md"
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const childProcess = require("node:child_process");
+
+          const outputDir = process.env.PACKAGE_OUTPUT_DIR || "artifacts/packages";
+          const artifactDir = process.env.ARTIFACT_OUTPUT_DIR || "artifacts/npm-artifacts";
+          const discoveryFile = path.join(outputDir, "discover-packages.json");
+          const packFile = path.join(outputDir, "pack-packages.json");
+          const outputFile = path.join(outputDir, "publish-packages.json");
+          const summaryFile = path.join(outputDir, "publish-packages.md");
+
+          const npmTag = process.env.NPM_PUBLISH_TAG || "latest";
+          const access = process.env.NPM_PUBLISH_ACCESS || "public";
+          const registry = process.env.NPM_CONFIG_REGISTRY || "https://registry.npmjs.org";
+          const provenance = String(process.env.NPM_PUBLISH_PROVENANCE || "true") === "true";
+          const dryRun = String(process.env.NPM_PUBLISH_DRY_RUN || "false") === "true";
+
+          function readJson(file) {
+            try {
+              return JSON.parse(fs.readFileSync(file, "utf8"));
+            } catch {
+              return null;
+            }
+          }
+
+          function redact(value) {
+            return String(value || "").replace(/(npm_[A-Za-z0-9_-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,})/g, "[REDACTED]");
+          }
+
+          const discovery = readJson(discoveryFile) || { packages: [] };
+          const packReport = readJson(packFile) || { results: [] };
+          const packages = Array.isArray(discovery.packages) ? discovery.packages : [];
+          const packResults = Array.isArray(packReport.results) ? packReport.results : [];
+
+          const publishTargets = [];
+
+          for (const pkg of packages) {
+            const packResult = packResults.find(
+              (item) => item.name === pkg.name && item.version === pkg.version,
+            );
+
+            const tarball = Array.isArray(packResult?.tarballs) ? packResult.tarballs[0] : "";
+
+            publishTargets.push({
+              name: pkg.name,
+              version: pkg.version,
+              package_dir: pkg.package_dir,
+              target: tarball || pkg.package_dir,
+              target_type: tarball ? "tarball" : "directory",
+            });
+          }
+
+          const results = [];
+
+          for (const target of publishTargets) {
+            const startedAt = Date.now();
+
+            const args = [
+              "publish",
+              target.target,
+              "--tag",
+              npmTag,
+              "--access",
+              access,
+              "--registry",
+              registry,
+              "--json",
+            ];
+
+            if (provenance && !dryRun) {
+              args.push("--provenance");
+            }
+
+            if (dryRun) {
+              args.push("--dry-run");
+            }
+
+            const command = childProcess.spawnSync("npm", args, {
+              cwd: process.cwd(),
+              encoding: "utf8",
+              stdio: ["ignore", "pipe", "pipe"],
+              maxBuffer: 32 * 1024 * 1024,
+              env: {
+                ...process.env,
+                NODE_AUTH_TOKEN: process.env.NODE_AUTH_TOKEN || "",
+              },
+            });
+
+            const stdout = redact(command.stdout || "");
+            const stderr = redact(command.stderr || "");
+            const combined = `${stdout}\n${stderr}`.toLowerCase();
+
+            const alreadyPublished =
+              combined.includes("previously published") ||
+              combined.includes("cannot publish over") ||
+              combined.includes("you cannot publish over the previously published versions");
+
+            const success = command.status === 0 || alreadyPublished;
+
+            results.push({
+              name: target.name,
+              version: target.version,
+              package_dir: target.package_dir,
+              target: target.target,
+              target_type: target.target_type,
+              tag: npmTag,
+              access,
+              registry,
+              provenance,
+              dry_run,
+              status: command.status === 0
+                ? dryRun
+                  ? "planned"
+                  : "published"
+                : alreadyPublished
+                  ? "already-published"
+                  : "failed",
+              success,
+              exit_code: command.status,
+              stdout,
+              stderr,
+              duration_ms: Date.now() - startedAt,
+            });
+          }
+
+          const failed = results.filter((item) => !item.success);
+          const published = results.filter((item) => item.status === "published");
+          const planned = results.filter((item) => item.status === "planned");
+          const alreadyPublished = results.filter((item) => item.status === "already-published");
+
+          const report = {
+            schema_version: 1,
+            type: "npm-package-publish",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            created_at: new Date().toISOString(),
+            config: {
+              tag: npmTag,
+              access,
+              registry,
+              provenance,
+              dry_run,
+            },
+            totals: {
+              packages: results.length,
+              published: published.length,
+              planned: planned.length,
+              already_published: alreadyPublished.length,
+              failed: failed.length,
+            },
+            results,
+            ok: failed.length === 0,
+            errors: failed.map((item) => `${item.name}@${item.version} failed to publish.`),
+            warnings: alreadyPublished.map((item) => `${item.name}@${item.version} is already published.`),
+          };
+
+          const lines = [
+            "# Aerealith AI NPM Package Publish",
+            "",
+            `Generated: \`${report.created_at}\``,
+            "",
+            "## Status",
+            "",
+            `- Packages: \`${report.totals.packages}\``,
+            `- Published: \`${report.totals.published}\``,
+            `- Planned: \`${report.totals.planned}\``,
+            `- Already published: \`${report.totals.already_published}\``,
+            `- Failed: \`${report.totals.failed}\``,
+            "",
+            "## Results",
+            "",
+          ];
+
+          if (!results.length) {
+            lines.push("No packages were published.");
+          } else {
+            lines.push("| Status | Package | Version | Target |");
+            lines.push("|---|---|---:|---|");
+
+            for (const result of results) {
+              lines.push(`| \`${result.status}\` | \`${result.name}\` | \`${result.version}\` | \`${result.target}\` |`);
+            }
+          }
+
+          fs.writeFileSync(outputFile, `${JSON.stringify(report, null, 2)}\n`);
+          fs.writeFileSync(summaryFile, `${lines.join("\n").trim()}\n`);
+
+          if (failed.length) {
+            console.error(`${failed.length} package(s) failed to publish.`);
+            process.exit(1);
+          }
+
+          console.log(`Published/planned ${published.length + planned.length} package(s).`);
+          NODE
 
       - name: Create package SBOM
         if: needs.preflight.outputs.create_sbom == 'true' && needs.preflight.outputs.should_pack == 'true'
         run: |
           set -euo pipefail
 
-          if [[ ! -f ".github/scripts/artifacts/create-sbom.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/artifacts/create-sbom.js"
-            exit 0
-          fi
+          mkdir -p "$ARTIFACT_OUTPUT_DIR"
 
-          node ".github/scripts/artifacts/create-sbom.js" \
-            --input "$PACKAGE_OUTPUT_DIR" \
-            --output "$ARTIFACT_OUTPUT_DIR/npm-sbom.json" \
-            --summary "$ARTIFACT_OUTPUT_DIR/npm-sbom.md"
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const packageOutputDir = process.env.PACKAGE_OUTPUT_DIR || "artifacts/packages";
+          const artifactOutputDir = process.env.ARTIFACT_OUTPUT_DIR || "artifacts/npm-artifacts";
+          const discoveryFile = path.join(packageOutputDir, "discover-packages.json");
+          const outputFile = path.join(artifactOutputDir, "npm-sbom.json");
+          const summaryFile = path.join(artifactOutputDir, "npm-sbom.md");
+
+          function readJson(file) {
+            try {
+              return JSON.parse(fs.readFileSync(file, "utf8"));
+            } catch {
+              return null;
+            }
+          }
+
+          const discovery = readJson(discoveryFile) || { packages: [] };
+          const packages = Array.isArray(discovery.packages) ? discovery.packages : [];
+
+          const report = {
+            bomFormat: "CycloneDX",
+            specVersion: "1.5",
+            serialNumber: `urn:uuid:${process.env.GITHUB_RUN_ID || Date.now()}`,
+            version: 1,
+            metadata: {
+              timestamp: new Date().toISOString(),
+              component: {
+                type: "application",
+                name: process.env.PROJECT_NAME || "Aerealith AI",
+                version: process.env.GITHUB_REF_NAME || "",
+              },
+            },
+            components: packages.map((pkg) => ({
+              type: "library",
+              name: pkg.name,
+              version: pkg.version,
+              purl: `pkg:npm/${encodeURIComponent(pkg.name)}@${encodeURIComponent(pkg.version)}`,
+              properties: [
+                {
+                  name: "package_dir",
+                  value: pkg.package_dir,
+                },
+              ],
+            })),
+          };
+
+          const lines = [
+            "# Aerealith AI NPM SBOM",
+            "",
+            `Generated: \`${report.metadata.timestamp}\``,
+            "",
+            `- Components: \`${report.components.length}\``,
+          ];
+
+          fs.writeFileSync(outputFile, `${JSON.stringify(report, null, 2)}\n`);
+          fs.writeFileSync(summaryFile, `${lines.join("\n").trim()}\n`);
+          NODE
 
       - name: Create package checksums
         if: needs.preflight.outputs.create_checksums == 'true' && needs.preflight.outputs.should_pack == 'true'
         run: |
           set -euo pipefail
 
-          if [[ ! -f ".github/scripts/artifacts/create-checksums.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/artifacts/create-checksums.js"
-            exit 0
+          mkdir -p "$ARTIFACT_OUTPUT_DIR"
+
+          sha256_file="$ARTIFACT_OUTPUT_DIR/SHA256SUMS"
+          sha512_file="$ARTIFACT_OUTPUT_DIR/SHA512SUMS"
+          checksum_json="$ARTIFACT_OUTPUT_DIR/npm-checksums.json"
+          checksum_md="$ARTIFACT_OUTPUT_DIR/npm-checksums.md"
+
+          : > "$sha256_file"
+          : > "$sha512_file"
+
+          if compgen -G "$ARTIFACT_OUTPUT_DIR/*.tgz" > /dev/null; then
+            sha256sum "$ARTIFACT_OUTPUT_DIR"/*.tgz > "$sha256_file"
+            sha512sum "$ARTIFACT_OUTPUT_DIR"/*.tgz > "$sha512_file"
           fi
 
-          node ".github/scripts/artifacts/create-checksums.js" \
-            --input "$PACKAGE_OUTPUT_DIR" \
-            --output "$ARTIFACT_OUTPUT_DIR/npm-checksums.json" \
-            --summary "$ARTIFACT_OUTPUT_DIR/npm-checksums.md" \
-            --sha256 "$ARTIFACT_OUTPUT_DIR/SHA256SUMS" \
-            --sha512 "$ARTIFACT_OUTPUT_DIR/SHA512SUMS"
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const artifactOutputDir = process.env.ARTIFACT_OUTPUT_DIR || "artifacts/npm-artifacts";
+          const sha256File = path.join(artifactOutputDir, "SHA256SUMS");
+          const sha512File = path.join(artifactOutputDir, "SHA512SUMS");
+          const outputFile = path.join(artifactOutputDir, "npm-checksums.json");
+          const summaryFile = path.join(artifactOutputDir, "npm-checksums.md");
+
+          function parseChecksumFile(file) {
+            if (!fs.existsSync(file)) return [];
+
+            return fs
+              .readFileSync(file, "utf8")
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .map((line) => {
+                const [hash, ...fileParts] = line.split(/\s+/);
+                return {
+                  hash,
+                  file: fileParts.join(" "),
+                };
+              });
+          }
+
+          const sha256 = parseChecksumFile(sha256File);
+          const sha512 = parseChecksumFile(sha512File);
+
+          const report = {
+            schema_version: 1,
+            type: "npm-package-checksums",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            created_at: new Date().toISOString(),
+            totals: {
+              sha256: sha256.length,
+              sha512: sha512.length,
+            },
+            sha256,
+            sha512,
+            ok: true,
+          };
+
+          const lines = [
+            "# Aerealith AI NPM Package Checksums",
+            "",
+            `Generated: \`${report.created_at}\``,
+            "",
+            `- SHA256 entries: \`${report.totals.sha256}\``,
+            `- SHA512 entries: \`${report.totals.sha512}\``,
+          ];
+
+          fs.writeFileSync(outputFile, `${JSON.stringify(report, null, 2)}\n`);
+          fs.writeFileSync(summaryFile, `${lines.join("\n").trim()}\n`);
+          NODE
 
       - name: Summarize packages
         if: always() && needs.preflight.outputs.should_summarize == 'true'
@@ -479,14 +1177,109 @@ jobs:
 
           mkdir -p "$PACKAGE_OUTPUT_DIR"
 
-          if [[ ! -f ".github/scripts/npm/summarize-packages.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/npm/summarize-packages.js"
-            exit 0
-          fi
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
 
-          node ".github/scripts/npm/summarize-packages.js" \
-            --output "$PACKAGE_OUTPUT_DIR/summarize-packages.json" \
-            --summary "$PACKAGE_OUTPUT_DIR/summarize-packages.md"
+          const packageOutputDir = process.env.PACKAGE_OUTPUT_DIR || "artifacts/packages";
+          const artifactOutputDir = process.env.ARTIFACT_OUTPUT_DIR || "artifacts/npm-artifacts";
+          const outputFile = path.join(packageOutputDir, "summarize-packages.json");
+          const summaryFile = path.join(packageOutputDir, "summarize-packages.md");
+
+          function readJson(file) {
+            try {
+              return JSON.parse(fs.readFileSync(file, "utf8"));
+            } catch {
+              return null;
+            }
+          }
+
+          function fileInfo(file) {
+            if (!fs.existsSync(file)) return null;
+
+            const stat = fs.statSync(file);
+
+            return {
+              file,
+              size_bytes: stat.size,
+            };
+          }
+
+          const files = [
+            "discover-packages.json",
+            "validate-packages.json",
+            "pack-packages.json",
+            "publish-packages.json",
+          ]
+            .map((file) => path.join(packageOutputDir, file))
+            .map(fileInfo)
+            .filter(Boolean);
+
+          const artifactFiles = fs.existsSync(artifactOutputDir)
+            ? fs
+                .readdirSync(artifactOutputDir)
+                .map((file) => path.join(artifactOutputDir, file))
+                .filter((file) => fs.statSync(file).isFile())
+                .map(fileInfo)
+                .filter(Boolean)
+            : [];
+
+          const discovery = readJson(path.join(packageOutputDir, "discover-packages.json"));
+          const validation = readJson(path.join(packageOutputDir, "validate-packages.json"));
+          const pack = readJson(path.join(packageOutputDir, "pack-packages.json"));
+          const publish = readJson(path.join(packageOutputDir, "publish-packages.json"));
+
+          const report = {
+            schema_version: 1,
+            type: "npm-package-summary",
+            project: process.env.PROJECT_NAME || "Aerealith AI",
+            repository: process.env.GITHUB_REPOSITORY || "",
+            run_id: process.env.GITHUB_RUN_ID || "",
+            run_attempt: process.env.GITHUB_RUN_ATTEMPT || "",
+            created_at: new Date().toISOString(),
+            totals: {
+              discovered: discovery?.totals?.publishable_packages || 0,
+              validated: validation?.totals?.packages || 0,
+              packed: pack?.totals?.packed || 0,
+              published: publish?.totals?.published || 0,
+              planned: publish?.totals?.planned || 0,
+              already_published: publish?.totals?.already_published || 0,
+              failed_publish: publish?.totals?.failed || 0,
+              files: files.length + artifactFiles.length,
+            },
+            files,
+            artifact_files: artifactFiles,
+            ok: true,
+          };
+
+          const lines = [
+            "# Aerealith AI NPM Package Summary",
+            "",
+            `Generated: \`${report.created_at}\``,
+            "",
+            "## Totals",
+            "",
+            `- Discovered: \`${report.totals.discovered}\``,
+            `- Validated: \`${report.totals.validated}\``,
+            `- Packed: \`${report.totals.packed}\``,
+            `- Published: \`${report.totals.published}\``,
+            `- Planned: \`${report.totals.planned}\``,
+            `- Already published: \`${report.totals.already_published}\``,
+            `- Failed publish: \`${report.totals.failed_publish}\``,
+            "",
+            "## Files",
+            "",
+            "| File | Size |",
+            "|---|---:|",
+          ];
+
+          for (const file of [...files, ...artifactFiles]) {
+            lines.push(`| \`${file.file}\` | \`${file.size_bytes}\` bytes |`);
+          }
+
+          fs.writeFileSync(outputFile, `${JSON.stringify(report, null, 2)}\n`);
+          fs.writeFileSync(summaryFile, `${lines.join("\n").trim()}\n`);
+          NODE
 
       - name: Write NPM publish report
         if: always()
