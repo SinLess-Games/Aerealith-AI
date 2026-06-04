@@ -17,6 +17,11 @@
     "build": "tsc -p tsconfig.lib.json",
     "prepublishOnly": "pnpm build"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SinLess-Games/Aerealith-AI",
+    "directory": "libs/config"
+  },
   "publishConfig": {
     "access": "public"
   },

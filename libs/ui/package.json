@@ -11,6 +11,11 @@
     "dist",
     "package.json"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SinLess-Games/Aerealith-AI",
+    "directory": "libs/ui"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
     "prepublishOnly": "pnpm build"
