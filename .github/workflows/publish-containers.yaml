@@ -131,7 +131,6 @@ jobs:
           INPUT_CREATE_SBOM: ${{ github.event.inputs.create_sbom || 'true' }}
           INPUT_CREATE_PROVENANCE: ${{ github.event.inputs.create_provenance || 'true' }}
           INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
-          RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
         run: |
           set -euo pipefail
 
@@ -169,8 +168,13 @@ jobs:
               ;;
             discover-only)
               should_discover="true"
+              should_build="false"
+              should_publish="false"
               ;;
             summarize-only)
+              should_discover="false"
+              should_build="false"
+              should_publish="false"
               should_summarize="true"
               ;;
             *)
@@ -275,10 +279,11 @@ jobs:
           fi
 
           node ".github/scripts/docker/discover-images.js" \
-            --output "$CONTAINER_OUTPUT_DIR/discover-images.json" \
-            --summary "$CONTAINER_OUTPUT_DIR/discover-images.md"
+            --output "$CONTAINER_OUTPUT_DIR/discover-images.raw.json" \
+            --summary "$CONTAINER_OUTPUT_DIR/discover-images.raw.md" \
+            --no-fail-on-error
 
-      - name: Resolve image matrix
+      - name: Resolve one-image-per-app matrix
         id: matrix
         run: |
           set -euo pipefail
@@ -296,7 +301,8 @@ jobs:
           platforms = os.environ.get("CONTAINER_PLATFORMS", "linux/amd64")
 
           output_dir = Path(os.environ.get("CONTAINER_OUTPUT_DIR", "artifacts/docker"))
-          discovery_file = output_dir / "discover-images.json"
+          raw_discovery_file = output_dir / "discover-images.raw.json"
+          normalized_discovery_file = output_dir / "discover-images.json"
 
           ignored_parts = {
               ".git",
@@ -312,53 +318,155 @@ jobs:
               "test-output",
           }
 
+          app_root_markers = {
+              "apps",
+              "app",
+              "packages",
+              "package",
+              "libs",
+              "lib",
+              "services",
+              "service",
+              "workers",
+              "worker",
+              "frontend",
+              "backend",
+          }
+
+          blocked_image_names = {
+              f"{repo}-apps-frontend",
+              f"{repo}-packages-frontend",
+          }
+
           def slugify(value: str) -> str:
-              value = value.lower()
+              value = str(value or "").lower()
               value = re.sub(r"[^a-z0-9]+", "-", value)
               value = value.strip("-")
               return value or "root"
 
-          def normalize_entry(entry):
-              dockerfile = entry.get("dockerfile") or entry.get("file") or entry.get("path") or "Dockerfile"
-              context = entry.get("context") or str(Path(dockerfile).parent)
+          def as_posix(value) -> str:
+              return Path(str(value or ".")).as_posix()
+
+          def app_name_from_context(context: str) -> str:
+              context = as_posix(context)
+              parts = [part for part in context.split("/") if part and part != "."]
+
+              if not parts:
+                  return "frontend"
+
+              for marker in ("apps", "packages", "services", "workers"):
+                  if marker in parts:
+                      index = parts.index(marker)
+                      if index + 1 < len(parts):
+                          return slugify(parts[index + 1])
+
+              if len(parts) >= 2 and parts[0] in app_root_markers:
+                  return slugify(parts[1])
+
+              return slugify(parts[-1])
+
+          def dockerfile_priority(entry: dict) -> tuple:
+              dockerfile = entry["dockerfile"]
+              context = entry["context"]
+              dockerfile_name = Path(dockerfile).name
+
+              exact_dockerfile = 0 if dockerfile_name == "Dockerfile" else 1
+              apps_preferred = 0 if context.startswith("apps/") else 1
+              packages_preferred = 0 if context.startswith("packages/") else 1
+              context_depth = len([part for part in context.split("/") if part and part != "."])
+
+              return (
+                  exact_dockerfile,
+                  apps_preferred,
+                  packages_preferred,
+                  context_depth,
+                  dockerfile,
+              )
+
+          def normalize_entry(entry: dict) -> dict | None:
+              dockerfile = (
+                  entry.get("dockerfile")
+                  or entry.get("file")
+                  or entry.get("path")
+                  or "Dockerfile"
+              )
+
+              dockerfile_path = Path(str(dockerfile))
+              context = entry.get("context") or dockerfile_path.parent.as_posix()
+
               if context in ("", "."):
                   context = "."
 
-              name = entry.get("name") or entry.get("image_name") or slugify(Path(dockerfile).parent.as_posix())
-              if name in ("", "."):
-                  name = "root"
+              context = as_posix(context)
+              dockerfile = as_posix(dockerfile)
 
-              image_suffix = slugify(name)
-              base_name = repo if image_suffix == "root" else f"{repo}-{image_suffix}"
+              explicit_name = (
+                  entry.get("app")
+                  or entry.get("app_name")
+                  or entry.get("application")
+                  or entry.get("name")
+                  or entry.get("image_name")
+                  or ""
+              )
+
+              if explicit_name:
+                  explicit_slug = slugify(explicit_name)
+
+                  if explicit_slug in {"root", "dockerfile", "apps-frontend", "packages-frontend"}:
+                      app_slug = app_name_from_context(context)
+                  elif explicit_slug.startswith(f"{repo}-"):
+                      app_slug = explicit_slug.removeprefix(f"{repo}-")
+                  else:
+                      app_slug = explicit_slug
+              else:
+                  app_slug = app_name_from_context(context)
+
+              if app_slug in {"root", "app", "apps", "package", "packages"}:
+                  app_slug = "frontend"
+
+              image_name = f"{repo}-{app_slug}"
+
+              if image_name in blocked_image_names:
+                  image_name = f"{repo}-frontend"
+                  app_slug = "frontend"
+
+              dockerfile_abs = workspace / dockerfile
+
+              if not dockerfile_abs.exists() or not dockerfile_abs.is_file():
+                  return None
 
               return {
-                  "name": image_suffix,
+                  "name": image_name,
+                  "app": app_slug,
                   "context": context,
                   "dockerfile": dockerfile,
                   "platforms": entry.get("platforms") or platforms,
-                  "ghcr_image": f"ghcr.io/{owner}/{base_name}",
-                  "dockerhub_image": f"docker.io/{image_namespace}/{base_name}",
+                  "ghcr_image": f"ghcr.io/{owner}/{image_name}",
+                  "dockerhub_image": f"docker.io/{image_namespace}/{image_name}",
               }
 
           entries = []
 
-          if discovery_file.exists():
+          if raw_discovery_file.exists():
               try:
-                  data = json.loads(discovery_file.read_text())
+                  data = json.loads(raw_discovery_file.read_text())
                   raw_entries = (
                       data.get("images")
                       or data.get("docker_images")
                       or data.get("container_images")
                       or data.get("discoveries")
+                      or data.get("selected_images")
                       or []
                   )
 
                   if isinstance(raw_entries, list):
                       for item in raw_entries:
                           if isinstance(item, dict):
-                              entries.append(normalize_entry(item))
-              except Exception:
-                  entries = []
+                              normalized = normalize_entry(item)
+                              if normalized:
+                                  entries.append(normalized)
+              except Exception as error:
+                  print(f"::warning::Failed to parse raw discovery file: {error}", file=os.sys.stderr)
 
           if not entries:
               for dockerfile in sorted(workspace.rglob("Dockerfile*")):
@@ -370,40 +478,63 @@ jobs:
                   if not dockerfile.is_file():
                       continue
 
-                  context = "." if dockerfile.parent == workspace else dockerfile.parent.relative_to(workspace).as_posix()
-                  context_slug = "root" if context == "." else slugify(context)
+                  context = (
+                      "."
+                      if dockerfile.parent == workspace
+                      else dockerfile.parent.relative_to(workspace).as_posix()
+                  )
 
-                  if dockerfile.name == "Dockerfile":
-                      image_suffix = context_slug
-                  else:
-                      image_suffix = slugify(f"{context_slug}-{dockerfile.name}")
-
-                  base_name = repo if image_suffix == "root" else f"{repo}-{image_suffix}"
-
-                  entries.append(
+                  normalized = normalize_entry(
                       {
-                          "name": image_suffix,
-                          "context": context,
                           "dockerfile": relative.as_posix(),
+                          "context": context,
                           "platforms": platforms,
-                          "ghcr_image": f"ghcr.io/{owner}/{base_name}",
-                          "dockerhub_image": f"docker.io/{image_namespace}/{base_name}",
                       }
                   )
 
-          unique = []
-          seen = set()
+                  if normalized:
+                      entries.append(normalized)
+
+          by_app = {}
 
           for entry in entries:
-              key = (entry["dockerfile"], entry["context"])
-              if key in seen:
-                  continue
-              seen.add(key)
-              unique.append(entry)
+              key = entry["name"]
 
-          unique.sort(key=lambda item: item["dockerfile"])
+              if key not in by_app:
+                  by_app[key] = entry
+                  continue
+
+              current = by_app[key]
+
+              if dockerfile_priority(entry) < dockerfile_priority(current):
+                  by_app[key] = entry
+
+          unique = sorted(by_app.values(), key=lambda item: item["name"])
 
           matrix = {"include": unique}
+
+          normalized_report = {
+              "schema_version": 1,
+              "type": "container-image-discovery",
+              "project": os.environ.get("PROJECT_NAME", "Aerealith AI"),
+              "repository": os.environ.get("GITHUB_REPOSITORY", ""),
+              "run_id": os.environ.get("GITHUB_RUN_ID", ""),
+              "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+              "one_image_per_app": True,
+              "naming": {
+                  "rule": "repo + app folder name",
+                  "example": f"{repo}-frontend",
+              },
+              "totals": {
+                  "raw_entries": len(entries),
+                  "selected_images": len(unique),
+              },
+              "images": unique,
+              "matrix": matrix,
+          }
+
+          output_dir.mkdir(parents=True, exist_ok=True)
+          normalized_discovery_file.write_text(json.dumps(normalized_report, indent=2) + "\n")
 
           print(f"has_images={'true' if unique else 'false'}")
           print(f"image_count={len(unique)}")
@@ -417,6 +548,7 @@ jobs:
           {
             echo "## Container Image Discovery"
             echo ""
+            echo "- One image per app: \`true\`"
             echo "- Has images: \`${{ steps.matrix.outputs.has_images }}\`"
             echo "- Image count: \`${{ steps.matrix.outputs.image_count }}\`"
             echo ""
@@ -464,6 +596,46 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Resolve semantic version
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
+          REF_NAME: ${{ github.ref_name || '' }}
+          REF_TYPE: ${{ github.ref_type || '' }}
+        run: |
+          set -euo pipefail
+
+          raw_version=""
+
+          if [[ -n "$RELEASE_TAG" ]]; then
+            raw_version="$RELEASE_TAG"
+          elif [[ "$REF_TYPE" == "tag" ]]; then
+            raw_version="$REF_NAME"
+          elif [[ -f package.json ]]; then
+            raw_version="$(node -e "const pkg=require('./package.json'); process.stdout.write(String(pkg.version || '0.0.0'))")"
+          else
+            raw_version="0.0.0"
+          fi
+
+          version="$(printf '%s' "$raw_version" | sed -E 's#^refs/tags/##; s#^[vV]##')"
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::warning::Resolved version '$version' is not semantic. Falling back to 0.0.0."
+            version="0.0.0"
+          fi
+
+          {
+            echo "version=$version"
+            echo "version_tag=$version"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Semantic Container Version"
+            echo ""
+            echo "- Image: \`${{ matrix.name }}\`"
+            echo "- Version: \`$version\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -515,18 +687,17 @@ jobs:
         with:
           images: ${{ steps.images.outputs.images }}
           flavor: |
-            latest=${{ env.PUSH_LATEST }}
+            latest=false
           tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=ref,event=pr
-            type=sha,prefix=sha-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.version.outputs.version_tag }}
+            type=raw,value=latest,enable=${{ env.PUSH_LATEST == 'true' && github.ref_name == github.event.repository.default_branch }}
           labels: |
-            org.opencontainers.image.title=Aerealith AI ${{ matrix.name }}
+            org.opencontainers.image.title=Aerealith AI ${{ matrix.app }}
             org.opencontainers.image.description=Aerealith AI container image built from ${{ matrix.dockerfile }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.ref.name=${{ matrix.name }}
 
       - name: Build and optionally publish image
         id: build
@@ -543,15 +714,17 @@ jobs:
           provenance: ${{ env.CREATE_PROVENANCE == 'true' }}
           sbom: ${{ env.CREATE_SBOM == 'true' }}
 
-      - name: Write image build report
+      - name: Write image build report and hashes
         if: always()
         run: |
           set -euo pipefail
 
           mkdir -p "$CONTAINER_OUTPUT_DIR/images"
+          mkdir -p "$CONTAINER_OUTPUT_DIR/hashes"
 
           report_file="$CONTAINER_OUTPUT_DIR/images/${{ matrix.name }}.json"
           summary_file="$CONTAINER_OUTPUT_DIR/images/${{ matrix.name }}.md"
+          hash_file="$CONTAINER_OUTPUT_DIR/hashes/${{ matrix.name }}.hashes.json"
 
           cat > "$report_file" <<JSON
           {
@@ -561,18 +734,41 @@ jobs:
             "repository": "$GITHUB_REPOSITORY",
             "run_id": "$GITHUB_RUN_ID",
             "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "one_image_per_app": true,
             "image": {
               "name": "${{ matrix.name }}",
+              "app": "${{ matrix.app }}",
               "context": "${{ matrix.context }}",
               "dockerfile": "${{ matrix.dockerfile }}",
               "platforms": "${{ matrix.platforms }}",
               "ghcr_image": "${{ matrix.ghcr_image }}",
               "dockerhub_image": "${{ matrix.dockerhub_image }}",
+              "version": "${{ steps.version.outputs.version }}",
+              "version_tag": "${{ steps.version.outputs.version_tag }}",
               "digest": "${{ steps.build.outputs.digest || '' }}",
               "metadata": ${{ steps.build.outputs.metadata || '{}' }}
             },
             "publish_enabled": ${{ env.PUBLISH_ENABLED == 'true' && 'true' || 'false' }},
             "registry_target": "$REGISTRY_TARGET",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          cat > "$hash_file" <<JSON
+          {
+            "schema_version": 1,
+            "type": "container-image-hashes",
+            "project": "$PROJECT_NAME",
+            "repository": "$GITHUB_REPOSITORY",
+            "run_id": "$GITHUB_RUN_ID",
+            "run_attempt": "$GITHUB_RUN_ATTEMPT",
+            "image": "${{ matrix.name }}",
+            "app": "${{ matrix.app }}",
+            "version": "${{ steps.version.outputs.version }}",
+            "version_tag": "${{ steps.version.outputs.version_tag }}",
+            "digest": "${{ steps.build.outputs.digest || '' }}",
+            "tags": ${{ toJSON(steps.meta.outputs.tags) }},
+            "metadata": ${{ steps.build.outputs.metadata || '{}' }},
             "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           JSON
@@ -585,11 +781,13 @@ jobs:
             echo "## Image"
             echo ""
             echo "- Name: \`${{ matrix.name }}\`"
+            echo "- App: \`${{ matrix.app }}\`"
             echo "- Dockerfile: \`${{ matrix.dockerfile }}\`"
             echo "- Context: \`${{ matrix.context }}\`"
             echo "- Platforms: \`${{ matrix.platforms }}\`"
             echo "- Registry target: \`$REGISTRY_TARGET\`"
             echo "- Published: \`$PUBLISH_ENABLED\`"
+            echo "- Version: \`${{ steps.version.outputs.version }}\`"
             echo "- Digest: \`${{ steps.build.outputs.digest || 'none' }}\`"
             echo ""
             echo "## Tags"
@@ -608,6 +806,7 @@ jobs:
           name: container-image-${{ matrix.name }}-${{ github.run_id }}
           path: |
             artifacts/docker/images/${{ matrix.name }}.*
+            artifacts/docker/hashes/${{ matrix.name }}.hashes.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -623,8 +822,8 @@ jobs:
     if: always() && needs.preflight.outputs.should_summarize == 'true'
 
     env:
-      GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
-      GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
       PROJECT_SYNC_DRY_RUN: ${{ needs.preflight.outputs.dry_run }}
 
     steps:
@@ -666,6 +865,71 @@ jobs:
             --summary "$CONTAINER_OUTPUT_DIR/summarize-images.md" \
             --no-fail-on-error
 
+      - name: Consolidate image hashes
+        if: always()
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$CONTAINER_OUTPUT_DIR"
+
+          python <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          input_root = Path("artifacts/downloaded-container-artifacts")
+          output_file = Path(os.environ.get("CONTAINER_OUTPUT_DIR", "artifacts/docker")) / "hashes.json"
+
+          hash_files = sorted(input_root.rglob("*.hashes.json"))
+          images = []
+
+          for file in hash_files:
+              try:
+                  data = json.loads(file.read_text())
+                  if isinstance(data, dict):
+                      images.append(data)
+              except Exception as error:
+                  print(f"::warning::Failed to parse hash file {file}: {error}")
+
+          digests = sorted(
+              {
+                  image.get("digest", "")
+                  for image in images
+                  if image.get("digest")
+              }
+          )
+
+          tags = sorted(
+              {
+                  tag.strip()
+                  for image in images
+                  for tag in str(image.get("tags", "")).splitlines()
+                  if tag.strip()
+              }
+          )
+
+          report = {
+              "schema_version": 1,
+              "type": "container-image-hashes",
+              "project": os.environ.get("PROJECT_NAME", "Aerealith AI"),
+              "repository": os.environ.get("GITHUB_REPOSITORY", ""),
+              "run_id": os.environ.get("GITHUB_RUN_ID", ""),
+              "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+              "one_image_per_app": True,
+              "created_at": os.popen("date -u +%Y-%m-%dT%H:%M:%SZ").read().strip(),
+              "totals": {
+                  "images": len(images),
+                  "digests": len(digests),
+                  "tags": len(tags),
+              },
+              "digests": digests,
+              "tags": tags,
+              "images": images,
+          }
+
+          output_file.write_text(json.dumps(report, indent=2) + "\n")
+          PY
+
       - name: Write container publishing summary
         if: always()
         run: |
@@ -684,6 +948,7 @@ jobs:
             echo "|---|---|"
             echo "| Mode | \`${{ needs.preflight.outputs.mode }}\` |"
             echo "| Registry | \`${{ needs.preflight.outputs.registry }}\` |"
+            echo "| One image per app | \`true\` |"
             echo "| Image count | \`${{ needs.discover-images.outputs.image_count || '0' }}\` |"
             echo "| Publish enabled | \`${{ needs.preflight.outputs.publish_enabled }}\` |"
             echo "| Dry run | \`${{ needs.preflight.outputs.dry_run }}\` |"
