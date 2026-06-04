@@ -270,8 +270,8 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
       GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
       REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
       NPM_CONFIG_REGISTRY: ${{ needs.preflight.outputs.registry_url }}
       NPM_CONFIG_PROVENANCE: ${{ needs.preflight.outputs.provenance }}
       NPM_PUBLISH_TAG: ${{ needs.preflight.outputs.npm_tag }}
