@@ -30,6 +30,7 @@
 //   - Requires CLOUDFLARE_API_TOKEN for real remote migrations.
 //   - Requires CLOUDFLARE_ACCOUNT_ID by default for remote migrations.
 //   - Dry-run mode plans and reports without mutating D1.
+//   - Accepts --stage as workflow metadata and as an environment fallback.
 // =============================================================================
 
 const fs = require("node:fs");
@@ -96,12 +97,13 @@ const DEFAULT_MIGRATION_DIRS = [
 
 const DEFAULT_ENVIRONMENT = "production";
 const DEFAULT_PACKAGE_MANAGER = "auto";
+const KNOWN_DEPLOYMENT_STAGES = new Set(["preview", "staging", "production"]);
 
 const TRUE_VALUES = new Set(["true", "1", "yes", "y", "on", "enabled"]);
 const FALSE_VALUES = new Set(["false", "0", "no", "n", "off", "disabled"]);
 
 const SECRET_OUTPUT_PATTERN =
-  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/g;
+  /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|password\s*=\s*[^\s]+|--password\s+[^\s]+|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/gi;
 
 const DEFAULT_EXCLUDE_PATTERNS = [
   ".git/",
@@ -167,6 +169,16 @@ function normalizeStringList(value) {
   ];
 }
 
+function requireValue(argv, index, arg) {
+  const value = argv[index + 1];
+
+  if (value === undefined || String(value).startsWith("--")) {
+    throw new Error(`Missing value for argument: ${arg}`);
+  }
+
+  return value;
+}
+
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     repository: process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
@@ -185,6 +197,24 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.CLOUDFLARE_D1_MIGRATIONS_ENVIRONMENT ||
       process.env.CLOUDFLARE_ENVIRONMENT ||
       DEFAULT_ENVIRONMENT,
+
+    deployment_stage:
+      process.env.CLOUDFLARE_D1_MIGRATIONS_STAGE ||
+      process.env.CLOUDFLARE_DEPLOYMENT_STAGE ||
+      process.env.CLOUDFLARE_STAGE ||
+      "",
+    deployment_alias:
+      process.env.CLOUDFLARE_D1_MIGRATIONS_ALIAS ||
+      process.env.CLOUDFLARE_DEPLOYMENT_ALIAS ||
+      process.env.CLOUDFLARE_PREVIEW_ALIAS ||
+      "",
+    preview_ref: process.env.CLOUDFLARE_PREVIEW_REF || "",
+    pull_request_number: process.env.CLOUDFLARE_PULL_REQUEST_NUMBER || "",
+    project_name:
+      process.env.CLOUDFLARE_PROJECT_NAME ||
+      process.env.CLOUDFLARE_PAGES_PROJECT_NAME ||
+      "",
+    output_root: process.env.CLOUDFLARE_OUTPUT_DIR || "",
 
     database_name:
       process.env.CLOUDFLARE_D1_DATABASE_NAME ||
@@ -314,6 +344,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     dry_run: normalizeBoolean(
       process.env.CLOUDFLARE_D1_MIGRATIONS_DRY_RUN ||
+        process.env.CLOUDFLARE_DRY_RUN ||
         process.env.DRY_RUN ||
         process.env.PROJECT_SYNC_DRY_RUN,
       false,
@@ -333,61 +364,110 @@ function parseArgs(argv = process.argv.slice(2)) {
     const arg = argv[index];
 
     if (arg === "--repo" || arg === "--repository") {
-      args.repository = argv[index + 1];
+      args.repository = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--config") {
-      args.config_file = argv[index + 1];
+      args.config_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--targets" || arg === "--cloudflare-targets") {
-      args.cloudflare_targets_file = argv[index + 1];
+      args.cloudflare_targets_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--environment" || arg === "--env") {
-      args.environment = argv[index + 1];
+      args.environment = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--stage" || arg === "--deployment-stage") {
+      args.deployment_stage = requireValue(argv, index, arg);
+
+      if (
+        !args.environment ||
+        args.environment === DEFAULT_ENVIRONMENT ||
+        args.environment === process.env.CLOUDFLARE_ENVIRONMENT
+      ) {
+        args.environment = args.deployment_stage;
+      }
+
+      index += 1;
+      continue;
+    }
+
+    if (
+      arg === "--alias" ||
+      arg === "--deployment-alias" ||
+      arg === "--preview-alias"
+    ) {
+      args.deployment_alias = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--preview-ref" || arg === "--ref-name") {
+      args.preview_ref = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--pull-request-number" || arg === "--pr-number") {
+      args.pull_request_number = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--project-name" || arg === "--cloudflare-project") {
+      args.project_name = requireValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--output-root") {
+      args.output_root = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--database" || arg === "--database-name") {
-      args.database_name = argv[index + 1];
+      args.database_name = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--database-id") {
-      args.database_id = argv[index + 1];
+      args.database_id = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--binding") {
-      args.binding = argv[index + 1];
+      args.binding = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--target-id") {
-      args.target_id = argv[index + 1];
+      args.target_id = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--target" || arg === "--target-name") {
-      args.target_name = argv[index + 1];
+      args.target_name = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--target-config" || arg === "--config-file") {
-      args.target_config = argv[index + 1];
+      args.target_config = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
@@ -397,55 +477,73 @@ function parseArgs(argv = process.argv.slice(2)) {
       arg === "--migrations-dir" ||
       arg === "--migration-dir"
     ) {
-      args.migrations.push(...normalizeStringList(argv[index + 1]));
+      args.migrations.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--include-database" || arg === "--include-databases") {
-      args.include_databases.push(...normalizeStringList(argv[index + 1]));
+      args.include_databases.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-database" || arg === "--exclude-databases") {
-      args.exclude_databases.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_databases.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--include-binding" || arg === "--include-bindings") {
-      args.include_bindings.push(...normalizeStringList(argv[index + 1]));
+      args.include_bindings.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-binding" || arg === "--exclude-bindings") {
-      args.exclude_bindings.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_bindings.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--include-target" || arg === "--include-targets") {
-      args.include_targets.push(...normalizeStringList(argv[index + 1]));
+      args.include_targets.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude-target" || arg === "--exclude-targets") {
-      args.exclude_targets.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_targets.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--include" || arg === "--include-migration") {
-      args.include_migrations.push(...normalizeStringList(argv[index + 1]));
+      args.include_migrations.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
 
     if (arg === "--exclude" || arg === "--exclude-migration") {
-      args.exclude_migrations.push(...normalizeStringList(argv[index + 1]));
+      args.exclude_migrations.push(
+        ...normalizeStringList(requireValue(argv, index, arg)),
+      );
       index += 1;
       continue;
     }
@@ -464,6 +562,11 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     if (arg === "--preview") {
       args.preview = true;
+      continue;
+    }
+
+    if (arg === "--no-preview") {
+      args.preview = false;
       continue;
     }
 
@@ -554,7 +657,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     if (arg === "--max-databases") {
       args.max_databases = normalizeInteger(
-        argv[index + 1],
+        requireValue(argv, index, arg),
         args.max_databases,
       );
       index += 1;
@@ -563,7 +666,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     if (arg === "--max-migrations") {
       args.max_migrations = normalizeInteger(
-        argv[index + 1],
+        requireValue(argv, index, arg),
         args.max_migrations,
       );
       index += 1;
@@ -572,33 +675,42 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     if (arg === "--timeout-minutes") {
       args.timeout_minutes = normalizeInteger(
-        argv[index + 1],
+        requireValue(argv, index, arg),
         args.timeout_minutes,
       );
       index += 1;
       continue;
     }
 
+    if (arg === "--max-buffer-mb") {
+      args.max_buffer_mb = normalizeInteger(
+        requireValue(argv, index, arg),
+        args.max_buffer_mb,
+      );
+      index += 1;
+      continue;
+    }
+
     if (arg === "--wrangler-command") {
-      args.wrangler_command = argv[index + 1];
+      args.wrangler_command = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--package-manager") {
-      args.package_manager = argv[index + 1];
+      args.package_manager = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--output" || arg === "-o") {
-      args.output_file = argv[index + 1];
+      args.output_file = requireValue(argv, index, arg);
       index += 1;
       continue;
     }
 
     if (arg === "--summary") {
-      args.summary_file = argv[index + 1];
+      args.summary_file = requireValue(argv, index, arg);
       args.write_summary_file = true;
       index += 1;
       continue;
@@ -632,14 +744,40 @@ function parseArgs(argv = process.argv.slice(2)) {
     throw new Error(`Unknown argument: ${arg}`);
   }
 
+  normalizeArgs(args);
+
+  return args;
+}
+
+function normalizeArgs(args) {
   args.environment = normalizeString(
     args.environment,
     DEFAULT_ENVIRONMENT,
   ).toLowerCase();
+  args.deployment_stage = normalizeString(
+    args.deployment_stage || args.environment,
+    args.environment,
+  ).toLowerCase();
+
+  if (
+    args.deployment_stage &&
+    KNOWN_DEPLOYMENT_STAGES.has(args.deployment_stage) &&
+    (!args.environment || args.environment === DEFAULT_ENVIRONMENT)
+  ) {
+    args.environment = args.deployment_stage;
+  }
+
+  args.deployment_alias = normalizeString(args.deployment_alias);
+  args.preview_ref = normalizeString(args.preview_ref);
+  args.pull_request_number = normalizeString(args.pull_request_number);
+  args.project_name = normalizeString(args.project_name);
+  args.output_root = toPosixPath(args.output_root);
+
   args.package_manager = normalizeString(
     args.package_manager,
     DEFAULT_PACKAGE_MANAGER,
   ).toLowerCase();
+
   args.migrations = [
     ...new Set([
       ...(args.migrations_dir ? [args.migrations_dir] : []),
@@ -664,8 +802,6 @@ function parseArgs(argv = process.argv.slice(2)) {
   if (!args.remote && !args.local) {
     args.remote = true;
   }
-
-  return args;
 }
 
 function printHelp() {
@@ -679,6 +815,7 @@ Examples:
   node .github/scripts/databases/run-d1-migrations.js --dry-run
   node .github/scripts/databases/run-d1-migrations.js --database aerealith-prod --binding DB --remote
   node .github/scripts/databases/run-d1-migrations.js --target api --environment staging
+  node .github/scripts/databases/run-d1-migrations.js --environment preview --stage preview
   node .github/scripts/databases/run-d1-migrations.js --config .github/databases/d1-migrations.json
 
 Options:
@@ -686,6 +823,12 @@ Options:
       --config <file>                       D1 migrations config file.
       --targets <file>                      cloudflare-targets.json detector file.
       --environment <name>                  Wrangler environment. Default: production.
+      --stage <name>                        Deployment stage metadata. Also acts as environment fallback.
+      --alias <name>                        Deployment alias metadata, such as preview branch alias.
+      --preview-ref <ref>                   Preview branch/ref metadata.
+      --pull-request-number <number>        Pull request number metadata.
+      --project-name <name>                 Cloudflare project name metadata.
+      --output-root <path>                  Cloudflare output root metadata.
       --database <name>                     Direct D1 database name.
       --database-id <id>                    Direct D1 database ID.
       --binding <name>                      Direct D1 binding name.
@@ -704,6 +847,7 @@ Options:
       --remote                              Apply remote D1 migrations. Default.
       --local                               Apply local D1 migrations.
       --preview                             Add Wrangler preview flag where supported.
+      --no-preview                          Do not add Wrangler preview flag.
       --list-remote                         List applied migrations before apply. Default.
       --no-list-remote                      Skip migration listing.
       --apply                               Apply pending migrations. Default.
@@ -724,6 +868,7 @@ Options:
       --max-databases <number>              Maximum database plans to run.
       --max-migrations <number>             Maximum local migrations to report.
       --timeout-minutes <number>            Per Wrangler command timeout. Default: 15.
+      --max-buffer-mb <number>              Max command output buffer in MB. Default: 64.
       --wrangler-command <command>          Custom Wrangler command prefix.
       --package-manager <auto|pnpm|npm|yarn|bun|npx>
   -o, --output <file>                       JSON output file.
@@ -1316,6 +1461,11 @@ function normalizeDatabasePlan(item, args, source = "config") {
       `${source}-${args.environment}-${targetName || databaseName || binding || databaseId || "d1"}`,
     ),
     source_type: source,
+    deployment_stage: args.deployment_stage,
+    deployment_alias: args.deployment_alias,
+    preview_ref: args.preview_ref,
+    pull_request_number: args.pull_request_number,
+    project_name: args.project_name,
     target_name: targetName,
     target_id: normalizeString(
       item.target_id || item.targetId || args.target_id,
@@ -1595,6 +1745,12 @@ function mergeDatabasePlans(existing, next) {
     target_id: next.target_id || existing.target_id,
     config_file: next.config_file || existing.config_file,
     root: next.root || existing.root,
+    deployment_stage: next.deployment_stage || existing.deployment_stage,
+    deployment_alias: next.deployment_alias || existing.deployment_alias,
+    preview_ref: next.preview_ref || existing.preview_ref,
+    pull_request_number:
+      next.pull_request_number || existing.pull_request_number,
+    project_name: next.project_name || existing.project_name,
     wrangler_environment:
       next.wrangler_environment || existing.wrangler_environment,
     database_name: next.database_name || existing.database_name,
@@ -1746,6 +1902,16 @@ function validateDatabasePlan(plan, args, repoRoot) {
   if (args.max_migrations > 0 && plan.apply_migrations) {
     warnings.push(
       "max_migrations limits the report's local migration discovery, but Wrangler applies migrations according to its configured migrations_dir.",
+    );
+  }
+
+  if (
+    args.deployment_stage === "preview" &&
+    plan.remote &&
+    !plan.wrangler_environment
+  ) {
+    warnings.push(
+      "Deployment stage is preview, but no Wrangler environment was resolved. The command may target the default D1 binding.",
     );
   }
 
@@ -2194,6 +2360,11 @@ async function runDatabaseMigrations(plan, args, repoRoot, wranglerPrefix) {
   const result = {
     id: plan.id,
     source_type: plan.source_type,
+    deployment_stage: plan.deployment_stage,
+    deployment_alias: plan.deployment_alias,
+    preview_ref: plan.preview_ref,
+    pull_request_number: plan.pull_request_number,
+    project_name: plan.project_name,
     target_name: plan.target_name,
     target_id: plan.target_id,
     target_config: plan.config_file,
@@ -2531,6 +2702,12 @@ function createReport(args, repoRoot, plans, execution) {
         ? toRelativePath(resolvePath(args.summary_file, repoRoot), repoRoot)
         : null,
       environment: args.environment,
+      deployment_stage: args.deployment_stage,
+      deployment_alias: args.deployment_alias,
+      preview_ref: args.preview_ref,
+      pull_request_number: args.pull_request_number,
+      project_name: args.project_name,
+      output_root: args.output_root,
       remote: args.remote,
       local: args.local,
       preview: args.preview,
@@ -2567,6 +2744,11 @@ function createReport(args, repoRoot, plans, execution) {
     selected_databases: plans.databases.map((plan) => ({
       id: plan.id,
       source_type: plan.source_type,
+      deployment_stage: plan.deployment_stage,
+      deployment_alias: plan.deployment_alias,
+      preview_ref: plan.preview_ref,
+      pull_request_number: plan.pull_request_number,
+      project_name: plan.project_name,
       target_name: plan.target_name,
       target_config: plan.config_file,
       environment: plan.environment,
@@ -2611,6 +2793,9 @@ function createMarkdownSummary(report) {
     "",
     `- Status: \`${report.status}\``,
     `- Environment: \`${report.config.environment}\``,
+    `- Stage: \`${report.config.deployment_stage || "not set"}\``,
+    `- Alias: \`${report.config.deployment_alias || "not set"}\``,
+    `- Preview ref: \`${report.config.preview_ref || "not set"}\``,
     `- Mode: \`${report.config.remote ? "remote" : report.config.local ? "local" : "default"}\``,
     `- Dry run: \`${report.config.dry_run ? "true" : "false"}\``,
     `- Blocked: \`${report.blocked ? "true" : "false"}\``,
@@ -2665,13 +2850,13 @@ function createMarkdownSummary(report) {
     lines.push("No D1 database migration plans were selected.");
   } else {
     lines.push(
-      "| Database | Binding | Target | Config | Migrations | Mode | Apply |",
+      "| Database | Binding | Target | Config | Stage | Env | Migrations | Mode | Apply |",
     );
-    lines.push("|---|---|---|---|---:|---|---:|");
+    lines.push("|---|---|---|---|---|---|---:|---|---:|");
 
     for (const database of report.selected_databases) {
       lines.push(
-        `| \`${database.database_name || database.database_id || database.database_argument || "unknown"}\` | \`${database.binding || "none"}\` | \`${database.target_name || "none"}\` | \`${database.target_config || "none"}\` | \`${database.migrations_discovered}\` | \`${database.remote ? "remote" : database.local ? "local" : "default"}\` | \`${database.apply_migrations ? "true" : "false"}\` |`,
+        `| \`${database.database_name || database.database_id || database.database_argument || "unknown"}\` | \`${database.binding || "none"}\` | \`${database.target_name || "none"}\` | \`${database.target_config || "none"}\` | \`${database.deployment_stage || "none"}\` | \`${database.wrangler_environment || database.environment || "none"}\` | \`${database.migrations_discovered}\` | \`${database.remote ? "remote" : database.local ? "local" : "default"}\` | \`${database.apply_migrations ? "true" : "false"}\` |`,
       );
     }
   }
@@ -2806,6 +2991,13 @@ function createMarkdownSummary(report) {
   lines.push(
     `- Apply migrations: \`${report.config.apply_migrations ? "true" : "false"}\``,
   );
+  lines.push("");
+  lines.push("## 📤 Outputs");
+  lines.push("");
+  lines.push(`- JSON report: \`${report.config.output_file}\``);
+  lines.push(
+    `- Markdown summary: \`${report.config.summary_file || "not written"}\``,
+  );
 
   return `${lines.join("\n").trim()}\n`;
 }
@@ -2826,7 +3018,10 @@ function setGitHubOutput(name, value) {
 
   const rendered = typeof value === "string" ? value : JSON.stringify(value);
 
-  fs.appendFileSync(outputFile, `${name}<<EOF\n${rendered}\nEOF\n`);
+  fs.appendFileSync(
+    outputFile,
+    `${name}<<EOF\n${redactOutput(rendered)}\nEOF\n`,
+  );
   return true;
 }
 
@@ -2844,6 +3039,14 @@ function writeGitHubOutputs(report) {
   setGitHubOutput(
     "cloudflare_d1_migrations_environment",
     report.config.environment,
+  );
+  setGitHubOutput(
+    "cloudflare_d1_migrations_stage",
+    report.config.deployment_stage || "",
+  );
+  setGitHubOutput(
+    "cloudflare_d1_migrations_alias",
+    report.config.deployment_alias || "",
   );
   setGitHubOutput(
     "cloudflare_d1_migrations_mode",
