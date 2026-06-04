@@ -43,7 +43,7 @@ on:
       tag_prefix:
         description: "Release tag prefix."
         required: true
-        default: "v"
+        default: "V"
         type: string
       prerelease_identifier:
         description: "Prerelease identifier used for prerelease mode."
