@@ -4,29 +4,17 @@
 // Aerealith AI — Docker Image Summary
 // -----------------------------------------------------------------------------
 // Purpose:
-//   Consolidate Docker discovery, build, and publish artifacts into one CI
-//   summary report for workflow summaries, release notes, and downstream jobs.
+//   Consolidate Docker discovery, build, publish, and downloaded container
+//   artifacts into one normalized CI summary report.
 //
-// Input:
-//   - .github/docker/summarize-images.json
-//   - .github/docker/summarize-images.jsonc
-//   - .github/docker/summarize-images.yaml
-//   - .github/docker/summarize-images.yml
-//   - artifacts/docker/discover-images.json
-//   - artifacts/ci/dockerfiles.json
-//   - artifacts/docker/build-images.json
-//   - artifacts/docker/publish-images.json
-//
-// Output:
-//   - artifacts/docker/summarize-images.json
-//   - artifacts/docker/summarize-images.md
-//
-// Notes:
+// Fixes:
+//   - Supports --input-dir <dir>, matching the workflow call.
+//   - Supports --no-fail-on-error.
+//   - Recursively searches downloaded artifact directories for Docker reports.
+//   - Keeps default direct artifact paths working.
+//   - Does not call Docker.
 //   - CommonJS only.
 //   - No external dependencies.
-//   - Does not call Docker.
-//   - Reads prior CI artifacts and produces a single normalized image inventory.
-//   - Secrets are redacted from logs, reports, summaries, and GitHub outputs.
 // =============================================================================
 
 const fs = require("node:fs");
@@ -75,6 +63,7 @@ const DEFAULT_CONFIG_CANDIDATES = [
   "docker/images.yml",
 ];
 
+const DEFAULT_INPUT_DIR = "artifacts/docker";
 const DEFAULT_DISCOVERY_REPORT_FILE = "artifacts/docker/discover-images.json";
 const DEFAULT_DOCKERFILES_FILE = "artifacts/ci/dockerfiles.json";
 const DEFAULT_BUILD_REPORT_FILE = "artifacts/docker/build-images.json";
@@ -136,6 +125,12 @@ function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     repository: process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
 
+    input_dir:
+      process.env.DOCKER_SUMMARIZE_IMAGES_INPUT_DIR ||
+      process.env.CONTAINER_INPUT_DIR ||
+      process.env.INPUT_DIR ||
+      "",
+
     config_file: process.env.DOCKER_SUMMARIZE_IMAGES_CONFIG_FILE || "",
     discovery_report_file:
       process.env.DOCKER_SUMMARIZE_IMAGES_DISCOVERY_REPORT_FILE ||
@@ -182,6 +177,10 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     use_config: normalizeBoolean(
       process.env.DOCKER_SUMMARIZE_IMAGES_USE_CONFIG,
+      true,
+    ),
+    use_input_dir: normalizeBoolean(
+      process.env.DOCKER_SUMMARIZE_IMAGES_USE_INPUT_DIR,
       true,
     ),
     use_discovery_report: normalizeBoolean(
@@ -268,6 +267,18 @@ function parseArgs(argv = process.argv.slice(2)) {
     if (arg === "--repo" || arg === "--repository") {
       args.repository = argv[index + 1];
       index += 1;
+      continue;
+    }
+
+    if (arg === "--input-dir") {
+      args.input_dir = argv[index + 1];
+      args.use_input_dir = true;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--no-input-dir") {
+      args.use_input_dir = false;
       continue;
     }
 
@@ -557,12 +568,15 @@ Usage:
 
 Examples:
   node .github/scripts/docker/summarize-images.js
+  node .github/scripts/docker/summarize-images.js --input-dir artifacts/downloaded-container-artifacts
   node .github/scripts/docker/summarize-images.js --build-report artifacts/docker/build-images.json
   node .github/scripts/docker/summarize-images.js --publish-report artifacts/docker/publish-images.json
   node .github/scripts/docker/summarize-images.js --fail-on-failed-images
 
 Options:
       --repo <owner/repo>                 Repository slug.
+      --input-dir <dir>                   Directory to recursively search for Docker artifacts.
+      --no-input-dir                      Disable input directory discovery.
       --config <file>                     Summary config file.
       --discovery-report <file>           Discovery report file.
       --dockerfiles <file>                Dockerfiles artifact file.
@@ -596,7 +610,9 @@ Options:
       --no-successful                     Only include failed/invalid/warning image summaries.
       --fail-if-empty                     Exit non-zero when no images are summarized.
       --fail-on-failed-images             Exit non-zero when any image failed.
+      --no-fail-on-failed-images          Do not fail when an image failed.
       --fail-on-invalid-images            Exit non-zero when any image is invalid.
+      --no-fail-on-invalid-images         Do not fail when an image is invalid.
       --fail-on-error                     Exit non-zero on summary failure. Default.
       --no-fail-on-error                  Do not fail when summary reports problems.
       --max-images <number>               Maximum image summaries.
@@ -654,6 +670,10 @@ function toRelativePath(filePath, repoRoot) {
 
 function isFile(filePath) {
   return fs.existsSync(filePath) && fs.statSync(filePath).isFile();
+}
+
+function isDirectory(dirPath) {
+  return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory();
 }
 
 function ensureDir(dirPath, dryRun = false) {
@@ -904,6 +924,125 @@ function findConfigFile(args, repoRoot) {
   return "";
 }
 
+function walkFiles(directory) {
+  const files = [];
+
+  if (!isDirectory(directory)) return files;
+
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const fullPath = path.join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...walkFiles(fullPath));
+      continue;
+    }
+
+    if (entry.isFile()) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+function discoverInputArtifacts(inputDir, repoRoot) {
+  const absoluteInputDir = resolvePath(inputDir || DEFAULT_INPUT_DIR, repoRoot);
+  const files = walkFiles(absoluteInputDir).filter((file) =>
+    /\.(json|jsonc)$/i.test(file),
+  );
+
+  const artifacts = {
+    input_dir: toRelativePath(absoluteInputDir, repoRoot),
+    available: isDirectory(absoluteInputDir),
+    files: files.map((file) => toRelativePath(file, repoRoot)).sort(),
+    discovery_report_file: "",
+    dockerfiles_file: "",
+    build_report_file: "",
+    publish_report_file: "",
+  };
+
+  function scoreFile(file, candidates) {
+    const relative = toRelativePath(file, repoRoot).toLowerCase();
+    const base = path.basename(file).toLowerCase();
+
+    let score = 0;
+
+    for (const candidate of candidates) {
+      const normalized = candidate.toLowerCase();
+
+      if (base === normalized) score += 100;
+      if (relative.endsWith(`/${normalized}`)) score += 75;
+      if (relative.includes(normalized)) score += 50;
+    }
+
+    return score;
+  }
+
+  function findBest(candidates, typeHints = []) {
+    const scored = files
+      .map((file) => {
+        let score = scoreFile(file, candidates);
+
+        if (score === 0 && typeHints.length) {
+          const data = readJsonFile(file, repoRoot, null);
+          const type = normalizeString(data?.type).toLowerCase();
+
+          for (const hint of typeHints) {
+            if (type.includes(hint.toLowerCase())) {
+              score += 90;
+            }
+          }
+        }
+
+        return { file, score };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => {
+        if (right.score !== left.score) return right.score - left.score;
+        return toRelativePath(left.file, repoRoot).localeCompare(
+          toRelativePath(right.file, repoRoot),
+        );
+      });
+
+    return scored[0]?.file || "";
+  }
+
+  artifacts.discovery_report_file = findBest(
+    ["discover-images.json", "docker-discovery.json", "discovery.json"],
+    ["discover-images", "docker-image-discovery", "docker-discovery"],
+  );
+
+  artifacts.dockerfiles_file = findBest(
+    ["dockerfiles.json", "ci-dockerfiles.json"],
+    ["dockerfiles", "dockerfile"],
+  );
+
+  artifacts.build_report_file = findBest(
+    ["build-images.json", "docker-build.json", "build.json"],
+    ["build-images", "docker-image-build", "docker-build"],
+  );
+
+  artifacts.publish_report_file = findBest(
+    ["publish-images.json", "docker-publish.json", "publish.json"],
+    ["publish-images", "docker-image-publish", "docker-publish"],
+  );
+
+  artifacts.discovery_report_file = artifacts.discovery_report_file
+    ? toRelativePath(artifacts.discovery_report_file, repoRoot)
+    : "";
+  artifacts.dockerfiles_file = artifacts.dockerfiles_file
+    ? toRelativePath(artifacts.dockerfiles_file, repoRoot)
+    : "";
+  artifacts.build_report_file = artifacts.build_report_file
+    ? toRelativePath(artifacts.build_report_file, repoRoot)
+    : "";
+  artifacts.publish_report_file = artifacts.publish_report_file
+    ? toRelativePath(artifacts.publish_report_file, repoRoot)
+    : "";
+
+  return artifacts;
+}
+
 function normalizeImageName(value) {
   return normalizeString(value)
     .toLowerCase()
@@ -1034,13 +1173,18 @@ function artifactImageRecords(artifact) {
     ...(Array.isArray(artifact.selected_images)
       ? artifact.selected_images
       : []),
+    ...(Array.isArray(artifact.matrix?.include) ? artifact.matrix.include : []),
   ];
 }
 
 function resultRecords(artifact) {
   if (!artifact) return [];
 
-  return Array.isArray(artifact.results) ? artifact.results : [];
+  return [
+    ...(Array.isArray(artifact.results) ? artifact.results : []),
+    ...(Array.isArray(artifact.builds) ? artifact.builds : []),
+    ...(Array.isArray(artifact.published) ? artifact.published : []),
+  ];
 }
 
 function failureRecords(artifact) {
@@ -1052,9 +1196,12 @@ function failureRecords(artifact) {
 function normalizeRecord(record, sourceType, phase) {
   const imageRefs = compactArray([
     ...(Array.isArray(record.image_refs) ? record.image_refs : []),
+    ...(Array.isArray(record.images) ? record.images : []),
     ...(Array.isArray(record.published_refs) ? record.published_refs : []),
     ...(Array.isArray(record.target_refs) ? record.target_refs : []),
     ...(record.image ? [record.image] : []),
+    ...(record.image_ref ? [record.image_ref] : []),
+    ...(record.ref ? [record.ref] : []),
     ...(record.target_image ? [record.target_image] : []),
     ...(record.source_image ? [record.source_image] : []),
   ]);
@@ -1082,6 +1229,7 @@ function normalizeRecord(record, sourceType, phase) {
       record.image ||
       refDerivedName ||
       record.project ||
+      record.project_name ||
       "",
   );
 
@@ -1098,6 +1246,14 @@ function normalizeRecord(record, sourceType, phase) {
     phase === "discovery" ? "discovered" : "unknown",
   ).toLowerCase();
 
+  const success =
+    record.success === undefined
+      ? status !== "failed" && status !== "invalid"
+      : Boolean(record.success);
+
+  const valid =
+    record.valid === undefined ? status !== "invalid" : Boolean(record.valid);
+
   return {
     id: safeId(`${sourceType}:${phase}:${name || refDerivedName || "image"}`),
     source_type: sourceType,
@@ -1113,20 +1269,16 @@ function normalizeRecord(record, sourceType, phase) {
     context: toPosixPath(record.context || record.root || ""),
     target: normalizeString(record.target),
     status,
-    success:
-      record.success === undefined
-        ? status !== "failed" && status !== "invalid"
-        : Boolean(record.success),
-    valid:
-      record.valid === undefined ? status !== "invalid" : Boolean(record.valid),
+    success,
+    valid,
     enabled: record.enabled === undefined ? true : Boolean(record.enabled),
     tags: compactArray(record.tags || []),
     platforms: compactArray(record.platforms || []),
     image_refs: imageRefs,
     published_refs: compactArray(record.published_refs || []),
     publish_refs: publishRefs,
-    errors: compactArray(record.errors || []),
-    warnings: compactArray(record.warnings || []),
+    errors: compactArray(record.errors || record.error || []),
+    warnings: compactArray(record.warnings || record.warning || []),
     duration_ms: Number(record.duration_ms || 0),
     totals: record.totals || {},
     raw: record,
@@ -1134,21 +1286,43 @@ function normalizeRecord(record, sourceType, phase) {
 }
 
 function collectRecords(args, repoRoot) {
+  const inputArtifacts =
+    args.use_input_dir && args.input_dir
+      ? discoverInputArtifacts(args.input_dir, repoRoot)
+      : {
+          input_dir: args.input_dir || "",
+          available: false,
+          files: [],
+          discovery_report_file: "",
+          dockerfiles_file: "",
+          build_report_file: "",
+          publish_report_file: "",
+        };
+
+  const discoveryReportFile =
+    inputArtifacts.discovery_report_file || args.discovery_report_file;
+  const dockerfilesFile =
+    inputArtifacts.dockerfiles_file || args.dockerfiles_file;
+  const buildReportFile =
+    inputArtifacts.build_report_file || args.build_report_file;
+  const publishReportFile =
+    inputArtifacts.publish_report_file || args.publish_report_file;
+
   const configFile = findConfigFile(args, repoRoot);
   const config =
     args.use_config && configFile ? readConfigFile(configFile, repoRoot) : null;
 
   const discoveryReport = args.use_discovery_report
-    ? readJsonFile(args.discovery_report_file, repoRoot, null)
+    ? readJsonFile(discoveryReportFile, repoRoot, null)
     : null;
   const dockerfilesArtifact = args.use_dockerfiles
-    ? readJsonFile(args.dockerfiles_file, repoRoot, null)
+    ? readJsonFile(dockerfilesFile, repoRoot, null)
     : null;
   const buildReport = args.use_build_report
-    ? readJsonFile(args.build_report_file, repoRoot, null)
+    ? readJsonFile(buildReportFile, repoRoot, null)
     : null;
   const publishReport = args.use_publish_report
-    ? readJsonFile(args.publish_report_file, repoRoot, null)
+    ? readJsonFile(publishReportFile, repoRoot, null)
     : null;
 
   const records = [
@@ -1182,25 +1356,34 @@ function collectRecords(args, repoRoot) {
   ];
 
   return {
+    input_dir: inputArtifacts.input_dir || null,
+    input_dir_available: inputArtifacts.available,
+    input_files: inputArtifacts.files,
+    input_discovered_files: {
+      discovery_report_file: inputArtifacts.discovery_report_file || null,
+      dockerfiles_file: inputArtifacts.dockerfiles_file || null,
+      build_report_file: inputArtifacts.build_report_file || null,
+      publish_report_file: inputArtifacts.publish_report_file || null,
+    },
     config_file: configFile,
     config_available: Boolean(config),
     discovery_report_file: toRelativePath(
-      resolvePath(args.discovery_report_file, repoRoot),
+      resolvePath(discoveryReportFile, repoRoot),
       repoRoot,
     ),
     discovery_report_available: Boolean(discoveryReport),
     dockerfiles_file: toRelativePath(
-      resolvePath(args.dockerfiles_file, repoRoot),
+      resolvePath(dockerfilesFile, repoRoot),
       repoRoot,
     ),
     dockerfiles_available: Boolean(dockerfilesArtifact),
     build_report_file: toRelativePath(
-      resolvePath(args.build_report_file, repoRoot),
+      resolvePath(buildReportFile, repoRoot),
       repoRoot,
     ),
     build_report_available: Boolean(buildReport),
     publish_report_file: toRelativePath(
-      resolvePath(args.publish_report_file, repoRoot),
+      resolvePath(publishReportFile, repoRoot),
       repoRoot,
     ),
     publish_report_available: Boolean(publishReport),
@@ -1316,12 +1499,14 @@ function mergeRecordIntoSummary(summary, record, args) {
   if (
     record.phase === "build" &&
     ["built", "pushed", "planned"].includes(record.status)
-  )
+  ) {
     summary.built = true;
+  }
   if (record.status === "pushed") summary.pushed = true;
   if (record.phase === "publish-plan") summary.publish_planned = true;
-  if (record.phase === "publish" && record.status === "published")
+  if (record.phase === "publish" && record.status === "published") {
     summary.published = true;
+  }
   if (record.status === "failed" || record.success === false)
     summary.failed = true;
   if (record.status === "invalid" || record.valid === false)
@@ -1380,46 +1565,6 @@ function finalizeImageSummary(summary, args) {
   }
 
   return summary;
-}
-
-function summarizeImages(records, args) {
-  const summaries = new Map();
-
-  for (const record of records) {
-    const key = imageKey(record);
-
-    if (
-      !record.name &&
-      !record.image_refs.length &&
-      !record.publish_refs.length
-    )
-      continue;
-
-    if (!summaries.has(key)) {
-      summaries.set(key, createEmptyImageSummary(record));
-    }
-
-    mergeRecordIntoSummary(summaries.get(key), record, args);
-  }
-
-  return [...summaries.values()]
-    .map((summary) => finalizeImageSummary(summary, args))
-    .filter((summary) => imageMatchesFilters(summary, args))
-    .filter((summary) => {
-      if (args.include_successful) return true;
-      return summary.failed || summary.invalid || summary.warnings.length > 0;
-    })
-    .sort((left, right) => {
-      const statusWeight = statusRank(left.status) - statusRank(right.status);
-
-      if (statusWeight !== 0) return statusWeight;
-
-      return (
-        left.name.localeCompare(right.name) ||
-        left.project.localeCompare(right.project)
-      );
-    })
-    .slice(0, args.max_images > 0 ? args.max_images : undefined);
 }
 
 function statusRank(status) {
@@ -1487,6 +1632,47 @@ function imageMatchesFilters(summary, args) {
   }
 
   return true;
+}
+
+function summarizeImages(records, args) {
+  const summaries = new Map();
+
+  for (const record of records) {
+    const key = imageKey(record);
+
+    if (
+      !record.name &&
+      !record.image_refs.length &&
+      !record.publish_refs.length
+    ) {
+      continue;
+    }
+
+    if (!summaries.has(key)) {
+      summaries.set(key, createEmptyImageSummary(record));
+    }
+
+    mergeRecordIntoSummary(summaries.get(key), record, args);
+  }
+
+  return [...summaries.values()]
+    .map((summary) => finalizeImageSummary(summary, args))
+    .filter((summary) => imageMatchesFilters(summary, args))
+    .filter((summary) => {
+      if (args.include_successful) return true;
+      return summary.failed || summary.invalid || summary.warnings.length > 0;
+    })
+    .sort((left, right) => {
+      const statusWeight = statusRank(left.status) - statusRank(right.status);
+
+      if (statusWeight !== 0) return statusWeight;
+
+      return (
+        left.name.localeCompare(right.name) ||
+        left.project.localeCompare(right.project)
+      );
+    })
+    .slice(0, args.max_images > 0 ? args.max_images : undefined);
 }
 
 function summarizeTotals(images, records) {
@@ -1662,6 +1848,10 @@ function createReport(args, repoRoot, sources, images) {
     created_at: new Date().toISOString(),
     github,
     config: {
+      input_dir: sources.input_dir,
+      input_dir_available: sources.input_dir_available,
+      input_files: sources.input_files,
+      input_discovered_files: sources.input_discovered_files,
       config_file: sources.config_file || null,
       config_available: sources.config_available,
       discovery_report_file: sources.discovery_report_file,
@@ -1680,6 +1870,7 @@ function createReport(args, repoRoot, sources, images) {
         ? toRelativePath(resolvePath(args.summary_file, repoRoot), repoRoot)
         : null,
       use_config: args.use_config,
+      use_input_dir: args.use_input_dir,
       use_discovery_report: args.use_discovery_report,
       use_dockerfiles: args.use_dockerfiles,
       use_build_report: args.use_build_report,
@@ -1764,6 +1955,9 @@ function createMarkdownSummary(report) {
     "",
     "## 📥 Sources",
     "",
+    `- Input dir: \`${report.config.input_dir || "not configured"}\``,
+    `- Input dir available: \`${report.config.input_dir_available ? "true" : "false"}\``,
+    `- Input files found: \`${report.config.input_files.length}\``,
     `- Config file: \`${report.config.config_file || "not found"}\``,
     `- Config available: \`${report.config.config_available ? "true" : "false"}\``,
     `- Discovery report: \`${report.config.discovery_report_file}\``,
@@ -1819,7 +2013,11 @@ function createMarkdownSummary(report) {
 
     for (const failure of report.failures) {
       lines.push(
-        `| \`${escapeMarkdown(failure.image || "unknown")}\` | \`${escapeMarkdown(failure.project || "none")}\` | \`${escapeMarkdown(failure.phase || "unknown")}\` | \`${escapeMarkdown(failure.status || "unknown")}\` | ${normalizeStringList(failure.errors).map(escapeMarkdown).join("<br>") || "No error details provided."} |`,
+        `| \`${escapeMarkdown(failure.image || "unknown")}\` | \`${escapeMarkdown(failure.project || "none")}\` | \`${escapeMarkdown(failure.phase || "unknown")}\` | \`${escapeMarkdown(failure.status || "unknown")}\` | ${
+          normalizeStringList(failure.errors)
+            .map(escapeMarkdown)
+            .join("<br>") || "No error details provided."
+        } |`,
       );
     }
   }
