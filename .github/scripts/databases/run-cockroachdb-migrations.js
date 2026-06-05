@@ -23,7 +23,8 @@
 // Notes:
 //   - CommonJS only.
 //   - No external dependencies.
-//   - Uses the CockroachDB CLI by default.
+//   - Uses CockroachDB CLI by default when available.
+//   - Falls back to psql automatically when cockroach is not installed.
 //   - Requires a stage-specific, CockroachDB, or DATABASE_URL for real migrations.
 //   - Accepts --environment and --stage for preview/staging/production workflow compatibility.
 //   - Supports dry-run planning without database credentials.
@@ -114,6 +115,8 @@ const DEFAULT_EXCLUDE_PATTERNS = [
   ".DS_Store",
   "Thumbs.db",
 ];
+
+const warnedClientFallbacks = new Set();
 
 function normalizeString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
@@ -238,7 +241,10 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.COCKROACH_MIGRATIONS_TABLE ||
       DEFAULT_MIGRATIONS_TABLE,
 
-    client: process.env.COCKROACHDB_MIGRATIONS_CLIENT || DEFAULT_CLIENT,
+    client:
+      process.env.COCKROACHDB_MIGRATIONS_CLIENT ||
+      process.env.COCKROACH_CLIENT ||
+      DEFAULT_CLIENT,
     client_command:
       process.env.COCKROACHDB_MIGRATIONS_COMMAND ||
       process.env.COCKROACH_COMMAND ||
@@ -644,7 +650,7 @@ Options:
       --database-url-env <name>             Environment variable holding database URL.
       --migrations <path,list>              Migration file or directory path.
       --table <schema.table>                Migration ledger table.
-      --client <cockroach|psql>             SQL client. Default: cockroach.
+      --client <auto|cockroach|psql>        SQL client. Default: cockroach, falls back to psql.
       --command <command>                   Custom client command.
       --include-database <list>             Include database plan names.
       --exclude-database <list>             Exclude database plan names.
@@ -725,6 +731,35 @@ function isFile(filePath) {
 
 function isDirectory(filePath) {
   return fs.existsSync(filePath) && fs.statSync(filePath).isDirectory();
+}
+
+function executableExists(command) {
+  const executable = normalizeString(command);
+
+  if (!executable) return false;
+
+  if (executable.includes("/") || executable.includes("\\")) {
+    return isFile(executable);
+  }
+
+  const pathValue = process.env.PATH || "";
+  const dirs = pathValue.split(path.delimiter).filter(Boolean);
+  const extensions =
+    process.platform === "win32"
+      ? normalizeString(process.env.PATHEXT, ".EXE;.CMD;.BAT;.COM")
+          .split(";")
+          .filter(Boolean)
+      : [""];
+
+  for (const dir of dirs) {
+    for (const extension of extensions) {
+      const candidate = path.join(dir, `${executable}${extension}`);
+
+      if (isFile(candidate)) return true;
+    }
+  }
+
+  return false;
 }
 
 function ensureDir(dirPath, dryRun = false) {
@@ -1565,7 +1600,7 @@ function splitCommandLine(value) {
   return parts;
 }
 
-function clientPrefix(plan) {
+function resolveSqlClient(plan) {
   if (plan.client_command) {
     const parsed = splitCommandLine(plan.client_command);
 
@@ -1574,22 +1609,107 @@ function clientPrefix(plan) {
         command: parsed[0],
         args: parsed.slice(1),
         client: "custom",
+        requested_client: plan.client || "custom",
+        fallback_used: false,
+        warning: "",
+        error: "",
+      };
+    }
+
+    return {
+      command: "",
+      args: [],
+      client: "custom",
+      requested_client: plan.client || "custom",
+      fallback_used: false,
+      warning: "",
+      error: "Custom SQL client command is empty or invalid.",
+    };
+  }
+
+  const requested = normalizeString(plan.client, DEFAULT_CLIENT).toLowerCase();
+
+  const knownClients = {
+    cockroach: {
+      command: "cockroach",
+      args: ["sql"],
+      client: "cockroach",
+    },
+    psql: {
+      command: "psql",
+      args: [],
+      client: "psql",
+    },
+  };
+
+  const preferred =
+    requested === "auto"
+      ? ["cockroach", "psql"]
+      : requested === "cockroach"
+        ? ["cockroach", "psql"]
+        : requested === "psql"
+          ? ["psql", "cockroach"]
+          : [requested];
+
+  for (const clientName of preferred) {
+    const known = knownClients[clientName];
+
+    if (known && executableExists(known.command)) {
+      const fallbackUsed = clientName !== requested && requested !== "auto";
+      const warning = fallbackUsed
+        ? `SQL client "${requested}" is not installed. Falling back to "${clientName}".`
+        : "";
+
+      return {
+        ...known,
+        requested_client: requested,
+        fallback_used: fallbackUsed,
+        warning,
+        error: "",
+      };
+    }
+
+    if (!known && executableExists(clientName)) {
+      return {
+        command: clientName,
+        args: [],
+        client: clientName,
+        requested_client: requested,
+        fallback_used: false,
+        warning: "",
+        error: "",
       };
     }
   }
 
-  if (plan.client === "psql") {
-    return {
-      command: "psql",
-      args: [],
-      client: "psql",
-    };
+  const installMessage =
+    requested === "cockroach" || requested === "auto"
+      ? 'Neither "cockroach" nor "psql" is installed on the runner. Install the CockroachDB CLI, install PostgreSQL client tools, or set COCKROACHDB_MIGRATIONS_CLIENT=psql with psql available.'
+      : `SQL client "${requested}" is not installed on the runner. Install it or set COCKROACHDB_MIGRATIONS_CLIENT to an available client.`;
+
+  return {
+    command: knownClients[requested]?.command || requested,
+    args: knownClients[requested]?.args || [],
+    client: knownClients[requested]?.client || requested,
+    requested_client: requested,
+    fallback_used: false,
+    warning: "",
+    error: installMessage,
+  };
+}
+
+function clientPrefix(plan) {
+  const resolved = resolveSqlClient(plan);
+
+  if (resolved.warning && !warnedClientFallbacks.has(resolved.warning)) {
+    warnedClientFallbacks.add(resolved.warning);
+    logger.warn(resolved.warning);
   }
 
   return {
-    command: "cockroach",
-    args: ["sql"],
-    client: "cockroach",
+    command: resolved.command,
+    args: resolved.args,
+    client: resolved.client,
   };
 }
 
@@ -1942,17 +2062,18 @@ function validateDatabasePlan(plan, args) {
 
   if (!args.dry_run && !plan.database_url) {
     errors.push(
-      `Database "${plan.name}" is missing a database URL. Set COCKROACH_DATABASE_URL, DATABASE_URL, or database_url_env.`,
+      `Database "${plan.name}" is missing a database URL. Set a stage-specific CockroachDB URL, COCKROACH_DATABASE_URL, COCKROACHDB_DATABASE_URL, or DATABASE_URL.`,
     );
   }
 
-  if (
-    !["cockroach", "psql", "custom"].includes(plan.client) &&
-    !plan.client_command
-  ) {
-    warnings.push(
-      `Unknown client "${plan.client}". The script will attempt to run it as configured.`,
-    );
+  const sqlClient = resolveSqlClient(plan);
+
+  if (!args.dry_run && sqlClient.error) {
+    errors.push(sqlClient.error);
+  }
+
+  if (sqlClient.warning) {
+    warnings.push(sqlClient.warning);
   }
 
   try {
@@ -2250,11 +2371,14 @@ function applyMigration(plan, migration, args, repoRoot, github) {
 async function runDatabaseMigrations(plan, args, repoRoot, github) {
   const startedAt = new Date();
   const validation = validateDatabasePlan(plan, args);
+  const sqlClient = resolveSqlClient(plan);
 
   const result = {
     id: plan.id,
     name: plan.name,
     client: plan.client,
+    effective_client: sqlClient.client,
+    requested_client: sqlClient.requested_client,
     client_command: plan.client_command ? "[configured]" : "",
     database_url_present: Boolean(plan.database_url),
     database_url_env: plan.database_url_env,
@@ -2640,23 +2764,29 @@ function createReport(args, repoRoot, plans, execution) {
       discovered_databases: plans.discovered_databases,
       selected_databases: plans.databases.length,
     },
-    selected_databases: plans.databases.map((plan) => ({
-      id: plan.id,
-      name: plan.name,
-      client: plan.client,
-      database_url_present: Boolean(plan.database_url),
-      database_url_env: plan.database_url_env,
-      migrations_table: plan.migrations_table,
-      migrations: plan.migrations,
-      migrations_discovered: plan.migrations_discovered.length,
-      transaction_mode: plan.transaction_mode,
-      create_table: plan.create_table,
-      lock_migrations: plan.lock_migrations,
-    })),
+    selected_databases: plans.databases.map((plan) => {
+      const sqlClient = resolveSqlClient(plan);
+
+      return {
+        id: plan.id,
+        name: plan.name,
+        client: plan.client,
+        effective_client: sqlClient.client,
+        requested_client: sqlClient.requested_client,
+        database_url_present: Boolean(plan.database_url),
+        database_url_env: plan.database_url_env,
+        migrations_table: plan.migrations_table,
+        migrations: plan.migrations,
+        migrations_discovered: plan.migrations_discovered.length,
+        transaction_mode: plan.transaction_mode,
+        create_table: plan.create_table,
+        lock_migrations: plan.lock_migrations,
+      };
+    }),
     totals,
     groups: {
       by_status: groupResults(execution.results, "status"),
-      by_client: groupResults(execution.results, "client"),
+      by_client: groupResults(execution.results, "effective_client"),
     },
     results: execution.results,
     failures: execution.results.filter((result) => !result.success),
@@ -2715,13 +2845,13 @@ function createMarkdownSummary(report) {
     lines.push("No database migration plans were selected.");
   } else {
     lines.push(
-      "| Database | Client | URL Present | Table | Migrations | Transactions |",
+      "| Database | Requested Client | Effective Client | URL Present | Table | Migrations | Transactions |",
     );
-    lines.push("|---|---|---:|---|---:|---|");
+    lines.push("|---|---|---|---:|---|---:|---|");
 
     for (const database of report.selected_databases) {
       lines.push(
-        `| \`${database.name}\` | \`${database.client}\` | \`${database.database_url_present ? "true" : "false"}\` | \`${database.migrations_table}\` | \`${database.migrations_discovered}\` | \`${database.transaction_mode}\` |`,
+        `| \`${database.name}\` | \`${database.requested_client || database.client}\` | \`${database.effective_client}\` | \`${database.database_url_present ? "true" : "false"}\` | \`${database.migrations_table}\` | \`${database.migrations_discovered}\` | \`${database.transaction_mode}\` |`,
       );
     }
   }
@@ -2734,13 +2864,13 @@ function createMarkdownSummary(report) {
     lines.push("No database results were produced.");
   } else {
     lines.push(
-      "| Status | Database | Local | Already Applied | Pending | Applied | Failed | Duration |",
+      "| Status | Database | Client | Local | Already Applied | Pending | Applied | Failed | Duration |",
     );
-    lines.push("|---|---|---:|---:|---:|---:|---:|---:|");
+    lines.push("|---|---|---|---:|---:|---:|---:|---:|---:|");
 
     for (const result of report.results) {
       lines.push(
-        `| \`${result.status}\` | \`${result.name}\` | \`${result.totals.local_migrations}\` | \`${result.totals.already_applied}\` | \`${result.totals.pending}\` | \`${result.totals.applied}\` | \`${result.totals.failed}\` | \`${formatDuration(result.duration_ms)}\` |`,
+        `| \`${result.status}\` | \`${result.name}\` | \`${result.effective_client || result.client}\` | \`${result.totals.local_migrations}\` | \`${result.totals.already_applied}\` | \`${result.totals.pending}\` | \`${result.totals.applied}\` | \`${result.totals.failed}\` | \`${formatDuration(result.duration_ms)}\` |`,
       );
     }
   }
@@ -2852,6 +2982,8 @@ function createMarkdownSummary(report) {
   lines.push(
     `- Config available: \`${report.config.config_available ? "true" : "false"}\``,
   );
+  lines.push(`- Environment: \`${report.config.environment || "not set"}\``);
+  lines.push(`- Stage: \`${report.config.deployment_stage || "not set"}\``);
   lines.push(
     `- Create table: \`${report.config.create_table ? "true" : "false"}\``,
   );
