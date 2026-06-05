@@ -24,7 +24,7 @@
 //   - No external dependencies.
 //   - Does not deploy anything.
 //   - Does not mutate Cloudflare.
-//   - Accepts --stage and --alias for workflow compatibility.
+//   - Accepts --stage, --alias, and --ref for workflow compatibility.
 //   - Can scan Cloudflare deployment logs for URLs missed by structured reports.
 // =============================================================================
 
@@ -153,7 +153,14 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.CLOUDFLARE_DEPLOYMENT_ALIAS ||
       process.env.CLOUDFLARE_PREVIEW_ALIAS ||
       "",
-    preview_ref: process.env.CLOUDFLARE_PREVIEW_REF || "",
+    preview_ref:
+      process.env.CLOUDFLARE_DEPLOYMENT_REF ||
+      process.env.CLOUDFLARE_PREVIEW_REF ||
+      process.env.CLOUDFLARE_STAGING_REF ||
+      process.env.CLOUDFLARE_PRODUCTION_REF ||
+      process.env.GITHUB_HEAD_REF ||
+      process.env.GITHUB_REF_NAME ||
+      "",
     pull_request_number: process.env.CLOUDFLARE_PULL_REQUEST_NUMBER || "",
     project_name:
       process.env.CLOUDFLARE_PROJECT_NAME ||
@@ -322,7 +329,14 @@ function parseArgs(argv = process.argv.slice(2)) {
       continue;
     }
 
-    if (arg === "--preview-ref" || arg === "--ref-name") {
+    if (
+      arg === "--ref" ||
+      arg === "--deployment-ref" ||
+      arg === "--preview-ref" ||
+      arg === "--staging-ref" ||
+      arg === "--production-ref" ||
+      arg === "--ref-name"
+    ) {
       args.preview_ref = requireValue(argv, index, arg);
       index += 1;
       continue;
@@ -598,6 +612,7 @@ Examples:
   node .github/scripts/cloudflare/discover-deployments.js
   node .github/scripts/cloudflare/discover-deployments.js --environment production
   node .github/scripts/cloudflare/discover-deployments.js --stage preview --alias main
+  node .github/scripts/cloudflare/discover-deployments.js --stage staging --ref main
   node .github/scripts/cloudflare/discover-deployments.js --include-target frontend --scan-logs
   node .github/scripts/cloudflare/discover-deployments.js --include-undeployed
 
@@ -613,7 +628,11 @@ Options:
       --environment <list>                Environment filter: preview, staging, production.
       --stage <stage>                     Stage alias for --environment.
       --alias <alias>                     Deployment alias, such as preview branch alias.
-      --preview-ref <ref>                 Preview branch/ref metadata.
+      --ref <ref>                         Deployment branch/ref metadata.
+      --deployment-ref <ref>              Deployment branch/ref metadata alias.
+      --preview-ref <ref>                 Preview branch/ref metadata alias.
+      --staging-ref <ref>                 Staging branch/ref metadata alias.
+      --production-ref <ref>              Production branch/ref metadata alias.
       --pull-request-number <number>      Pull request number metadata.
       --project-name <name>               Cloudflare project name metadata.
       --output-root <path>                Stage output root to scan for reports/logs.
