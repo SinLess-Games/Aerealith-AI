@@ -24,7 +24,8 @@
 //   - CommonJS only.
 //   - No external dependencies.
 //   - Uses the CockroachDB CLI by default.
-//   - Requires COCKROACH_DATABASE_URL or DATABASE_URL for real migrations.
+//   - Requires a stage-specific, CockroachDB, or DATABASE_URL for real migrations.
+//   - Accepts --environment and --stage for preview/staging/production workflow compatibility.
 //   - Supports dry-run planning without database credentials.
 //   - Tracks applied migrations with checksums.
 //   - Fails on checksum drift by default.
@@ -158,6 +159,46 @@ function normalizeStringList(value) {
   ];
 }
 
+function stageSpecificDatabaseUrl(stage) {
+  const normalizedStage = normalizeString(
+    stage ||
+      process.env.COCKROACHDB_MIGRATIONS_STAGE ||
+      process.env.COCKROACHDB_MIGRATIONS_ENVIRONMENT ||
+      process.env.CLOUDFLARE_DEPLOYMENT_STAGE ||
+      process.env.CLOUDFLARE_ENVIRONMENT ||
+      process.env.DEPLOYMENT_ENVIRONMENT ||
+      process.env.NODE_ENV,
+  )
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  const stageCandidates = normalizedStage
+    ? [
+        `${normalizedStage}_COCKROACH_DATABASE_URL`,
+        `${normalizedStage}_COCKROACHDB_DATABASE_URL`,
+        `${normalizedStage}_DATABASE_URL`,
+      ]
+    : [];
+
+  const candidates = [
+    "COCKROACHDB_MIGRATIONS_DATABASE_URL",
+    ...stageCandidates,
+    "COCKROACH_DATABASE_URL",
+    "COCKROACHDB_DATABASE_URL",
+    "COCKROACH_DATABASE_URI",
+    "DATABASE_URL",
+  ];
+
+  for (const name of candidates) {
+    const value = normalizeString(process.env[name]);
+
+    if (value) return value;
+  }
+
+  return "";
+}
+
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     repository: process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
@@ -168,16 +209,24 @@ function parseArgs(argv = process.argv.slice(2)) {
     summary_file:
       process.env.COCKROACHDB_MIGRATIONS_SUMMARY_FILE || DEFAULT_SUMMARY_FILE,
 
+    environment:
+      process.env.COCKROACHDB_MIGRATIONS_ENVIRONMENT ||
+      process.env.CLOUDFLARE_ENVIRONMENT ||
+      process.env.DEPLOYMENT_ENVIRONMENT ||
+      process.env.NODE_ENV ||
+      "",
+    deployment_stage:
+      process.env.COCKROACHDB_MIGRATIONS_STAGE ||
+      process.env.CLOUDFLARE_DEPLOYMENT_STAGE ||
+      process.env.CLOUDFLARE_STAGE ||
+      process.env.CLOUDFLARE_ENVIRONMENT ||
+      "",
+
     database_name:
       process.env.COCKROACHDB_MIGRATIONS_DATABASE_NAME ||
       process.env.COCKROACH_DATABASE_NAME ||
       DEFAULT_DATABASE_NAME,
-    database_url:
-      process.env.COCKROACH_DATABASE_URL ||
-      process.env.COCKROACHDB_DATABASE_URL ||
-      process.env.COCKROACH_DATABASE_URI ||
-      process.env.DATABASE_URL ||
-      "",
+    database_url: stageSpecificDatabaseUrl(),
     database_url_env:
       process.env.COCKROACHDB_MIGRATIONS_DATABASE_URL_ENV ||
       process.env.COCKROACH_DATABASE_URL_ENV ||
@@ -291,6 +340,28 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     if (arg === "--config") {
       args.config_file = argv[index + 1];
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--environment" || arg === "--env") {
+      args.environment = argv[index + 1];
+
+      if (!args.deployment_stage) {
+        args.deployment_stage = args.environment;
+      }
+
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--stage" || arg === "--deployment-stage") {
+      args.deployment_stage = argv[index + 1];
+
+      if (!args.environment) {
+        args.environment = args.deployment_stage;
+      }
+
       index += 1;
       continue;
     }
@@ -514,6 +585,21 @@ function parseArgs(argv = process.argv.slice(2)) {
     throw new Error(`Unknown argument: ${arg}`);
   }
 
+  args.environment = normalizeString(args.environment).toLowerCase();
+  args.deployment_stage = normalizeString(
+    args.deployment_stage || args.environment,
+  ).toLowerCase();
+
+  if (!args.environment && args.deployment_stage) {
+    args.environment = args.deployment_stage;
+  }
+
+  if (!args.database_url) {
+    args.database_url = stageSpecificDatabaseUrl(
+      args.deployment_stage || args.environment,
+    );
+  }
+
   args.client = normalizeString(args.client, DEFAULT_CLIENT).toLowerCase();
   args.transaction_mode = normalizeString(
     args.transaction_mode,
@@ -544,12 +630,15 @@ Usage:
 Examples:
   node .github/scripts/databases/run-cockroachdb-migrations.js --dry-run
   node .github/scripts/databases/run-cockroachdb-migrations.js --database-url-env DATABASE_URL
+  node .github/scripts/databases/run-cockroachdb-migrations.js --environment staging --stage staging
   node .github/scripts/databases/run-cockroachdb-migrations.js --migrations database/migrations
   node .github/scripts/databases/run-cockroachdb-migrations.js --config .github/databases/cockroachdb-migrations.json
 
 Options:
       --repo <owner/repo>                   Repository slug.
       --config <file>                       Migration config file.
+      --environment <name>                  Deployment environment metadata.
+      --stage <name>                        Deployment stage metadata.
       --database-name <name>                Database plan name.
       --database-url <url>                  Direct CockroachDB/Postgres URL.
       --database-url-env <name>             Environment variable holding database URL.
@@ -2535,6 +2624,8 @@ function createReport(args, repoRoot, plans, execution) {
       summary_file: args.write_summary_file
         ? toRelativePath(resolvePath(args.summary_file, repoRoot), repoRoot)
         : null,
+      environment: args.environment,
+      deployment_stage: args.deployment_stage,
       create_table: args.create_table,
       lock_migrations: args.lock_migrations,
       fail_on_drift: args.fail_on_drift,
