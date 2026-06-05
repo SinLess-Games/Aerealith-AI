@@ -82,7 +82,7 @@ defaults:
 
 env:
   PROJECT_NAME: Aerealith AI
-  NODE_VERSION: "24"
+  NODE_VERSION: ${{ vars.NODE_VERSION || '24' }}
   FORCE_COLOR: "1"
   CLOUDFLARE_ENVIRONMENT: staging
   CLOUDFLARE_DEPLOYMENT_STAGE: staging
@@ -121,6 +121,7 @@ jobs:
           INPUT_SYNC_SECRETS: ${{ github.event.inputs.sync_secrets || 'false' }}
           INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
           REF_NAME: ${{ github.ref_name || '' }}
+          HEAD_REF: ${{ github.head_ref || '' }}
           SHA: ${{ github.sha || '' }}
         run: |
           set -euo pipefail
@@ -128,7 +129,7 @@ jobs:
           mode="${INPUT_MODE:-deploy}"
           dry_run="${INPUT_DRY_RUN:-false}"
           environment_name="${INPUT_ENVIRONMENT_NAME:-staging}"
-          deployment_ref="${REF_NAME:-manual}"
+          deployment_ref="${REF_NAME:-${HEAD_REF:-manual}}"
 
           should_discover="false"
           should_run_cockroachdb_migrations="false"
@@ -235,16 +236,19 @@ jobs:
       REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
 
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
-      CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID || vars.CLOUDFLARE_ZONE_ID }}
+      CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME || vars.CLOUDFLARE_PROJECT_NAME || 'aerealith-ai' }}
+
       CLOUDFLARE_ENVIRONMENT: ${{ needs.preflight.outputs.environment_name }}
       CLOUDFLARE_DEPLOYMENT_STAGE: staging
       CLOUDFLARE_STAGING_REF: ${{ needs.preflight.outputs.deployment_ref }}
+      CLOUDFLARE_DEPLOYMENT_ALIAS: staging
 
-      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL || secrets.DATABASE_URL }}
-      COCKROACH_DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL }}
-      COCKROACHDB_DATABASE_URL: ${{ secrets.STAGING_COCKROACHDB_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL }}
+      STAGING_COCKROACH_DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.STAGING_COCKROACHDB_DATABASE_URL || secrets.STAGING_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.STAGING_COCKROACHDB_DATABASE_URL || secrets.STAGING_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      COCKROACH_DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.STAGING_COCKROACHDB_DATABASE_URL || secrets.STAGING_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      COCKROACHDB_DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.STAGING_COCKROACHDB_DATABASE_URL || secrets.STAGING_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
 
       CLOUDFLARE_SYNC_KV: ${{ github.event.inputs.sync_kv || 'true' }}
       CLOUDFLARE_SYNC_QUEUES: ${{ github.event.inputs.sync_queues || 'true' }}
@@ -301,13 +305,13 @@ jobs:
           fi
 
           if [[ "${{ needs.preflight.outputs.should_run_cockroachdb_migrations }}" == "true" ]]; then
-            if [[ -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
-              missing+=("STAGING_COCKROACH_DATABASE_URL or COCKROACH_DATABASE_URL or DATABASE_URL")
+            if [[ -z "${STAGING_COCKROACH_DATABASE_URL:-}" && -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
+              missing+=("STAGING_COCKROACH_DATABASE_URL or STAGING_DATABASE_URL or COCKROACH_DATABASE_URL or DATABASE_URL")
             fi
           fi
 
           if [[ "${#missing[@]}" -gt 0 ]]; then
-            printf '::error::Missing required staging secret(s): %s\n' "${missing[*]}"
+            printf '::error::Missing required staging secret or variable(s): %s\n' "${missing[*]}"
             exit 1
           fi
 
@@ -436,7 +440,15 @@ jobs:
             exit 1
           fi
 
+          deploy_input="$CLOUDFLARE_OUTPUT_DIR/discover-deployments.json"
+
+          if [[ ! -f "$deploy_input" ]]; then
+            echo "::warning::Discovery output was not found at $deploy_input. Falling back to artifacts/ci/cloudflare-targets.json."
+            deploy_input="artifacts/ci/cloudflare-targets.json"
+          fi
+
           node ".github/scripts/cloudflare/deploy-staging.js" \
+            --input "$deploy_input" \
             --environment "$CLOUDFLARE_ENVIRONMENT" \
             --stage staging \
             --ref "$CLOUDFLARE_STAGING_REF" \
