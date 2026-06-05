@@ -257,15 +257,24 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
       GH_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
       REPO_AUTOMATION_TOKEN: ${{ secrets.REPO_AUTOMATION_TOKEN || github.token }}
+
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
-      CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID || vars.CLOUDFLARE_ZONE_ID }}
+      CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME || vars.CLOUDFLARE_PROJECT_NAME || 'aerealith-ai' }}
+
       CLOUDFLARE_ENVIRONMENT: ${{ needs.preflight.outputs.environment_name }}
       CLOUDFLARE_DEPLOYMENT_STAGE: preview
       CLOUDFLARE_PREVIEW_ALIAS: ${{ needs.preflight.outputs.preview_alias }}
       CLOUDFLARE_PREVIEW_REF: ${{ needs.preflight.outputs.deployment_ref }}
       CLOUDFLARE_PULL_REQUEST_NUMBER: ${{ needs.preflight.outputs.pull_request_number }}
+
+      PREVIEW_COCKROACH_DATABASE_URL: ${{ secrets.PREVIEW_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      STAGING_COCKROACH_DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      COCKROACH_DATABASE_URL: ${{ secrets.PREVIEW_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      COCKROACHDB_DATABASE_URL: ${{ secrets.PREVIEW_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.PREVIEW_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+
       CLOUDFLARE_SYNC_KV: ${{ github.event.inputs.sync_kv || 'true' }}
       CLOUDFLARE_SYNC_QUEUES: ${{ github.event.inputs.sync_queues || 'true' }}
       CLOUDFLARE_SYNC_R2: ${{ github.event.inputs.sync_r2 || 'true' }}
@@ -319,7 +328,26 @@ jobs:
           fi
 
           if [[ "${#missing[@]}" -gt 0 ]]; then
-            printf '::error::Missing required Cloudflare secret(s): %s\n' "${missing[*]}"
+            printf '::error::Missing required Cloudflare secret or variable(s): %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: Validate CockroachDB configuration
+        if: >-
+          needs.preflight.outputs.should_run_migrations == 'true' ||
+          needs.preflight.outputs.should_sync_resources == 'true' ||
+          needs.preflight.outputs.should_deploy == 'true'
+        run: |
+          set -euo pipefail
+
+          missing=()
+
+          if [[ -z "${PREVIEW_COCKROACH_DATABASE_URL:-}" && -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
+            missing+=("PREVIEW_COCKROACH_DATABASE_URL or COCKROACH_DATABASE_URL or COCKROACHDB_DATABASE_URL or DATABASE_URL")
+          fi
+
+          if [[ "${#missing[@]}" -gt 0 ]]; then
+            printf '::error::Missing required database secret(s): %s\n' "${missing[*]}"
             exit 1
           fi
 
@@ -432,7 +460,15 @@ jobs:
             exit 1
           fi
 
+          deploy_input="$CLOUDFLARE_OUTPUT_DIR/discover-deployments.json"
+
+          if [[ ! -f "$deploy_input" ]]; then
+            echo "::warning::Discovery output was not found at $deploy_input. Falling back to artifacts/ci/cloudflare-targets.json."
+            deploy_input="artifacts/ci/cloudflare-targets.json"
+          fi
+
           node ".github/scripts/cloudflare/deploy-preview.js" \
+            --input "$deploy_input" \
             --environment "$CLOUDFLARE_ENVIRONMENT" \
             --stage preview \
             --alias "$CLOUDFLARE_PREVIEW_ALIAS" \
