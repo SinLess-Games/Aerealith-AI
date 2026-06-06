@@ -94,7 +94,7 @@ const TRUE_VALUES = new Set(["true", "1", "yes", "y", "on", "enabled"]);
 const FALSE_VALUES = new Set(["false", "0", "no", "n", "off", "disabled"]);
 
 const SECRET_OUTPUT_PATTERN =
-  /((postgres(?:ql)?:\/\/)[^\s"'<>]+|(cockroach(?:db)?:\/\/)[^\s"'<>]+|((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,})|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/g;
+  /((?:postgres(?:ql)?|cockroach(?:db)?):\/\/)[^\s"'<>]+|((?:ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,})|(Bearer\s+)[A-Za-z0-9._~+/=-]{10,}|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----/g;
 
 const DEFAULT_EXCLUDE_PATTERNS = [
   ".git/",
@@ -121,6 +121,74 @@ const warnedClientFallbacks = new Set();
 function normalizeString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
   return String(value).trim() || fallback;
+}
+
+function stripMatchingOuterQuotes(value) {
+  let output = normalizeString(value);
+
+  while (output.length >= 2) {
+    const first = output[0];
+    const last = output[output.length - 1];
+    const isWrapped =
+      (first === '"' && last === '"') ||
+      (first === "'" && last === "'") ||
+      (first === "`" && last === "`");
+
+    if (!isWrapped) break;
+
+    output = output.slice(1, -1).trim();
+  }
+
+  return output;
+}
+
+function normalizeDatabaseUrl(value) {
+  let output = normalizeString(value);
+
+  if (!output) return "";
+
+  output = output.replace(/\r?\n/g, "").trim();
+
+  if (output.startsWith("export ")) {
+    output = output.slice("export ".length).trim();
+  }
+
+  const assignmentNames = [
+    "COCKROACHDB_MIGRATIONS_DATABASE_URL",
+    "STAGING_COCKROACH_DATABASE_URL",
+    "STAGING_COCKROACHDB_DATABASE_URL",
+    "STAGING_DATABASE_URL",
+    "PRODUCTION_COCKROACH_DATABASE_URL",
+    "PRODUCTION_COCKROACHDB_DATABASE_URL",
+    "PRODUCTION_DATABASE_URL",
+    "PREVIEW_COCKROACH_DATABASE_URL",
+    "PREVIEW_COCKROACHDB_DATABASE_URL",
+    "PREVIEW_DATABASE_URL",
+    "COCKROACH_DATABASE_URL",
+    "COCKROACHDB_DATABASE_URL",
+    "COCKROACH_DATABASE_URI",
+    "DATABASE_URL",
+  ];
+
+  for (const name of assignmentNames) {
+    if (output.startsWith(`${name}=`)) {
+      output = output.slice(name.length + 1).trim();
+      break;
+    }
+  }
+
+  output = stripMatchingOuterQuotes(output);
+
+  // Cockroach Cloud URLs are commonly copied with sslmode=verify-full. If a
+  // secret was pasted as a truncated bare `?sslmode`/`&sslmode` parameter, make
+  // it a valid libpq URL instead of handing psql an invalid connection option.
+  output = output.replace(/([?&])sslmode(?=(&|$))/g, "$1sslmode=verify-full");
+
+  return output;
+}
+
+function databaseUrlFromEnv(name) {
+  return normalizeDatabaseUrl(process.env[name]);
 }
 
 function normalizeBoolean(value, fallback = false) {
@@ -194,7 +262,7 @@ function stageSpecificDatabaseUrl(stage) {
   ];
 
   for (const name of candidates) {
-    const value = normalizeString(process.env[name]);
+    const value = databaseUrlFromEnv(name);
 
     if (value) return value;
   }
@@ -229,7 +297,7 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.COCKROACHDB_MIGRATIONS_DATABASE_NAME ||
       process.env.COCKROACH_DATABASE_NAME ||
       DEFAULT_DATABASE_NAME,
-    database_url: stageSpecificDatabaseUrl(),
+    database_url: normalizeDatabaseUrl(stageSpecificDatabaseUrl()),
     database_url_env:
       process.env.COCKROACHDB_MIGRATIONS_DATABASE_URL_ENV ||
       process.env.COCKROACH_DATABASE_URL_ENV ||
@@ -379,7 +447,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     }
 
     if (arg === "--database-url") {
-      args.database_url = argv[index + 1];
+      args.database_url = normalizeDatabaseUrl(argv[index + 1]);
       index += 1;
       continue;
     }
@@ -604,6 +672,8 @@ function parseArgs(argv = process.argv.slice(2)) {
     args.database_url = stageSpecificDatabaseUrl(
       args.deployment_stage || args.environment,
     );
+  } else {
+    args.database_url = normalizeDatabaseUrl(args.database_url);
   }
 
   args.client = normalizeString(args.client, DEFAULT_CLIENT).toLowerCase();
@@ -842,12 +912,16 @@ function getGitMetadata(repoRoot) {
 function redactOutput(value) {
   return String(value || "").replace(
     SECRET_OUTPUT_PATTERN,
-    (match, postgresPrefix, cockroachPrefix) => {
-      if (postgresPrefix || cockroachPrefix) {
-        return `${postgresPrefix || cockroachPrefix}[REDACTED]`;
+    (match, databaseUrlPrefix, token, bearerPrefix) => {
+      if (databaseUrlPrefix) {
+        return `${databaseUrlPrefix}[REDACTED]`;
       }
 
-      return "[REDACTED]";
+      if (bearerPrefix) {
+        return `${bearerPrefix}[REDACTED]`;
+      }
+
+      return token ? "[REDACTED]" : "[REDACTED]";
     },
   );
 }
@@ -1235,18 +1309,16 @@ function normalizeDatabasePlan(item, args) {
     item.url_env || item.database_url_env || item.databaseUrlEnv,
     args.database_url_env,
   );
-  const directUrl = normalizeString(
+  const directUrl = normalizeDatabaseUrl(
     item.url || item.database_url || item.databaseUrl,
-    "",
   );
+  const envUrl = urlEnv ? databaseUrlFromEnv(urlEnv) : "";
 
   return {
     id: safeId(name),
     name,
     database_url:
-      directUrl ||
-      args.database_url ||
-      (urlEnv ? process.env[urlEnv] || "" : ""),
+      directUrl || envUrl || normalizeDatabaseUrl(args.database_url),
     database_url_env:
       urlEnv ||
       (args.database_url ? "" : "COCKROACH_DATABASE_URL|DATABASE_URL"),
@@ -1735,20 +1807,22 @@ function createExecuteCommand(plan, sql, repoRoot) {
       command: prefix.command,
       args: [
         ...prefix.args,
-        plan.database_url,
         "-X",
         "--set",
         "ON_ERROR_STOP=1",
+        "--dbname",
+        plan.database_url,
         "--command",
         sql,
       ],
       cwd: repoRoot,
       display: commandDisplay(prefix.command, [
         ...prefix.args,
-        "[DATABASE_URL]",
         "-X",
         "--set",
         "ON_ERROR_STOP=1",
+        "--dbname",
+        "[DATABASE_URL]",
         "--command",
         "[SQL]",
       ]),
@@ -1777,10 +1851,11 @@ function createQueryCommand(plan, sql, repoRoot) {
       command: prefix.command,
       args: [
         ...prefix.args,
-        plan.database_url,
         "-X",
         "--set",
         "ON_ERROR_STOP=1",
+        "--dbname",
+        plan.database_url,
         "--csv",
         "--command",
         sql,
@@ -1788,10 +1863,11 @@ function createQueryCommand(plan, sql, repoRoot) {
       cwd: repoRoot,
       display: commandDisplay(prefix.command, [
         ...prefix.args,
-        "[DATABASE_URL]",
         "-X",
         "--set",
         "ON_ERROR_STOP=1",
+        "--dbname",
+        "[DATABASE_URL]",
         "--csv",
         "--command",
         "[SQL]",
@@ -1829,20 +1905,22 @@ function createFileCommand(plan, filePath, repoRoot) {
       command: prefix.command,
       args: [
         ...prefix.args,
-        plan.database_url,
         "-X",
         "--set",
         "ON_ERROR_STOP=1",
+        "--dbname",
+        plan.database_url,
         "--file",
         filePath,
       ],
       cwd: repoRoot,
       display: commandDisplay(prefix.command, [
         ...prefix.args,
-        "[DATABASE_URL]",
         "-X",
         "--set",
         "ON_ERROR_STOP=1",
+        "--dbname",
+        "[DATABASE_URL]",
         "--file",
         toRelativePath(filePath, repoRoot),
       ]),
@@ -2063,6 +2141,12 @@ function validateDatabasePlan(plan, args) {
   if (!args.dry_run && !plan.database_url) {
     errors.push(
       `Database "${plan.name}" is missing a database URL. Set a stage-specific CockroachDB URL, COCKROACH_DATABASE_URL, COCKROACHDB_DATABASE_URL, or DATABASE_URL.`,
+    );
+  }
+
+  if (!args.dry_run && /^(?:["'`]|export\s+)/.test(plan.database_url || "")) {
+    errors.push(
+      `Database "${plan.name}" has a malformed database URL. Remove wrapping quotes or shell assignment text from the secret value.`,
     );
   }
 

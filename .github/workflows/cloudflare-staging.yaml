@@ -245,6 +245,8 @@ jobs:
       CLOUDFLARE_STAGING_REF: ${{ needs.preflight.outputs.deployment_ref }}
       CLOUDFLARE_DEPLOYMENT_ALIAS: staging
 
+      COCKROACHDB_MIGRATIONS_CLIENT: psql
+      COCKROACHDB_MIGRATIONS_DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.STAGING_COCKROACHDB_DATABASE_URL || secrets.STAGING_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
       STAGING_COCKROACH_DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.STAGING_COCKROACHDB_DATABASE_URL || secrets.STAGING_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
       DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.STAGING_COCKROACHDB_DATABASE_URL || secrets.STAGING_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
       COCKROACH_DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.STAGING_COCKROACHDB_DATABASE_URL || secrets.STAGING_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
@@ -304,9 +306,9 @@ jobs:
             missing+=("CLOUDFLARE_ACCOUNT_ID")
           fi
 
-          if [[ "${{ needs.preflight.outputs.should_run_cockroachdb_migrations }}" == "true" ]]; then
-            if [[ -z "${STAGING_COCKROACH_DATABASE_URL:-}" && -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
-              missing+=("STAGING_COCKROACH_DATABASE_URL or STAGING_DATABASE_URL or COCKROACH_DATABASE_URL or DATABASE_URL")
+          if [[ "${{ needs.preflight.outputs.should_run_cockroachdb_migrations }}" == "true" && "${PROJECT_SYNC_DRY_RUN:-false}" != "true" ]]; then
+            if [[ -z "${COCKROACHDB_MIGRATIONS_DATABASE_URL:-}" && -z "${STAGING_COCKROACH_DATABASE_URL:-}" && -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
+              missing+=("COCKROACHDB_MIGRATIONS_DATABASE_URL or STAGING_COCKROACH_DATABASE_URL or STAGING_DATABASE_URL or COCKROACH_DATABASE_URL or DATABASE_URL")
             fi
           fi
 
@@ -314,6 +316,77 @@ jobs:
             printf '::error::Missing required staging secret or variable(s): %s\n' "${missing[*]}"
             exit 1
           fi
+
+      - name: Ensure PostgreSQL client is available
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
+        run: |
+          set -euo pipefail
+
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+
+          psql --version
+
+      - name: Normalize CockroachDB staging database URL
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
+        run: |
+          set -euo pipefail
+
+          raw="${COCKROACHDB_MIGRATIONS_DATABASE_URL:-${STAGING_COCKROACH_DATABASE_URL:-${COCKROACH_DATABASE_URL:-${COCKROACHDB_DATABASE_URL:-${DATABASE_URL:-}}}}}"
+
+          RAW_DATABASE_URL="$raw" python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          raw = os.environ.get("RAW_DATABASE_URL", "")
+          raw = raw.replace("\r", "").replace("\n", "").strip()
+
+          if raw.startswith("export "):
+              raw = raw[len("export "):].strip()
+
+          assignment_names = [
+              "COCKROACHDB_MIGRATIONS_DATABASE_URL",
+              "STAGING_COCKROACH_DATABASE_URL",
+              "STAGING_COCKROACHDB_DATABASE_URL",
+              "STAGING_DATABASE_URL",
+              "COCKROACH_DATABASE_URL",
+              "COCKROACHDB_DATABASE_URL",
+              "DATABASE_URL",
+          ]
+
+          for name in assignment_names:
+              prefix = f"{name}="
+              if raw.startswith(prefix):
+                  raw = raw[len(prefix):].strip()
+                  break
+
+          for _ in range(3):
+              if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in {'\"', "'", "`"}:
+                  raw = raw[1:-1].strip()
+              else:
+                  break
+
+          raw = re.sub(r"([?&])sslmode(?=(&|$))", r"\1sslmode=verify-full", raw)
+
+          if not raw and os.environ.get("PROJECT_SYNC_DRY_RUN", "false") != "true":
+              print("::error::CockroachDB staging migrations are enabled, but the database URL resolved empty.")
+              sys.exit(1)
+
+          if raw:
+              print(f"::add-mask::{raw}")
+              with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+                  for key in [
+                      "COCKROACHDB_MIGRATIONS_DATABASE_URL",
+                      "STAGING_COCKROACH_DATABASE_URL",
+                      "DATABASE_URL",
+                      "COCKROACH_DATABASE_URL",
+                      "COCKROACHDB_DATABASE_URL",
+                  ]:
+                      env_file.write(f"{key}={raw}\n")
+          PY
 
       - name: Discover Cloudflare staging deployments
         id: discover
