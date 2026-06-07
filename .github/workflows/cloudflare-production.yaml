@@ -391,6 +391,132 @@ jobs:
             --output "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.json" \
             --summary "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.md"
 
+      - name: Debug production discovery artifact
+        if: always()
+        run: |
+          set -euo pipefail
+
+          file="$CLOUDFLARE_OUTPUT_DIR/discover-deployments.json"
+
+          echo "## Debug production discovery artifact"
+
+          if [[ ! -f "$file" ]]; then
+            echo "::warning::Missing discovery artifact: $file"
+
+            {
+              echo "## Debug production discovery artifact"
+              echo ""
+              echo "Discovery artifact was not found."
+              echo ""
+              echo "| Setting | Value |"
+              echo "|---|---|"
+              echo "| Expected file | \`$file\` |"
+              echo "| CLOUDFLARE_OUTPUT_DIR | \`${CLOUDFLARE_OUTPUT_DIR:-unset}\` |"
+              echo "| CLOUDFLARE_PROJECT_NAME | \`${CLOUDFLARE_PROJECT_NAME:-unset}\` |"
+              echo "| CLOUDFLARE_ENVIRONMENT | \`${CLOUDFLARE_ENVIRONMENT:-unset}\` |"
+              echo "| CLOUDFLARE_DEPLOYMENT_STAGE | \`${CLOUDFLARE_DEPLOYMENT_STAGE:-unset}\` |"
+              echo "| CLOUDFLARE_PRODUCTION_REF | \`${CLOUDFLARE_PRODUCTION_REF:-unset}\` |"
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            exit 0
+          fi
+
+          echo "Discovery artifact found: $file"
+          echo "Discovery artifact size: $(wc -c < "$file" | xargs) bytes"
+
+          echo "::group::Discovery artifact raw JSON"
+          jq '.' "$file" || cat "$file"
+          echo "::endgroup::"
+
+          echo "::group::Discovery artifact candidate deployment fields"
+          jq '{
+            type,
+            project,
+            project_name,
+            environment,
+            stage,
+            status,
+            totals,
+            counts,
+            selected_deployments,
+            target_count,
+            deployment_count,
+            targets,
+            deployment_matrix,
+            deployments,
+            deployment_targets,
+            pages,
+            workers,
+            cloudflare,
+            results,
+            projects
+          }' "$file" || true
+          echo "::endgroup::"
+
+          echo "::group::Discovery artifact array paths"
+          jq -r '
+            def path_string($p):
+              $p
+              | map(
+                  if type == "number"
+                  then "[" + tostring + "]"
+                  else "." + tostring
+                  end
+                )
+              | join("")
+              | sub("^\\."; "");
+
+            paths(type == "array") as $p
+            | "\(path_string($p)) length=\(getpath($p) | length)"
+          ' "$file" || true
+          echo "::endgroup::"
+
+          echo "::group::Discovery artifact object keys"
+          jq -r '
+            def path_string($p):
+              $p
+              | map(
+                  if type == "number"
+                  then "[" + tostring + "]"
+                  else "." + tostring
+                  end
+                )
+              | join("")
+              | sub("^\\."; "");
+
+            paths(type == "object") as $p
+            | "\(path_string($p)) keys=\((getpath($p) | keys_unsorted) | join(","))"
+          ' "$file" | head -200 || true
+          echo "::endgroup::"
+
+          {
+            echo "## Debug production discovery artifact"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| File | \`$file\` |"
+            echo "| Size | \`$(wc -c < "$file" | xargs) bytes\` |"
+            echo "| CLOUDFLARE_PROJECT_NAME | \`${CLOUDFLARE_PROJECT_NAME:-unset}\` |"
+            echo "| CLOUDFLARE_ENVIRONMENT | \`${CLOUDFLARE_ENVIRONMENT:-unset}\` |"
+            echo "| CLOUDFLARE_DEPLOYMENT_STAGE | \`${CLOUDFLARE_DEPLOYMENT_STAGE:-unset}\` |"
+            echo "| CLOUDFLARE_PRODUCTION_REF | \`${CLOUDFLARE_PRODUCTION_REF:-unset}\` |"
+            echo ""
+            echo "### Candidate deployment counts"
+            echo ""
+            echo '```json'
+            jq '{
+              targets: (.targets // [] | length),
+              deployment_matrix: (.deployment_matrix // [] | length),
+              deployments: (.deployments // [] | length),
+              deployment_targets: (.deployment_targets // [] | length),
+              pages: (.pages // [] | length),
+              workers: (.workers // [] | length),
+              results: (.results // [] | length),
+              projects: (.projects // [] | length)
+            }' "$file" || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run CockroachDB production migrations
         if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
         run: |
@@ -498,7 +624,15 @@ jobs:
             exit 1
           fi
 
+          deploy_input="$CLOUDFLARE_OUTPUT_DIR/discover-deployments.json"
+
+          if [[ ! -f "$deploy_input" ]]; then
+            echo "::warning::Discovery output was not found at $deploy_input. Falling back to artifacts/ci/cloudflare-targets.json."
+            deploy_input="artifacts/ci/cloudflare-targets.json"
+          fi
+
           node ".github/scripts/cloudflare/deploy-production.js" \
+            --input "$deploy_input" \
             --environment "$CLOUDFLARE_ENVIRONMENT" \
             --stage production \
             --ref "$CLOUDFLARE_PRODUCTION_REF" \
