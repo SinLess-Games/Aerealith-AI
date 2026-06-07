@@ -244,9 +244,12 @@ jobs:
       CLOUDFLARE_DEPLOYMENT_STAGE: production
       CLOUDFLARE_PRODUCTION_REF: ${{ needs.preflight.outputs.deployment_ref }}
 
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      COCKROACH_DATABASE_URL: ${{ secrets.COCKROACH_DATABASE_URL }}
-      COCKROACHDB_DATABASE_URL: ${{ secrets.COCKROACHDB_DATABASE_URL }}
+      COCKROACHDB_MIGRATIONS_CLIENT: psql
+      COCKROACHDB_MIGRATIONS_DATABASE_URL: ${{ secrets.PRODUCTION_COCKROACH_DATABASE_URL || secrets.PRODUCTION_COCKROACHDB_DATABASE_URL || secrets.PRODUCTION_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      PRODUCTION_COCKROACH_DATABASE_URL: ${{ secrets.PRODUCTION_COCKROACH_DATABASE_URL || secrets.PRODUCTION_COCKROACHDB_DATABASE_URL || secrets.PRODUCTION_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.PRODUCTION_COCKROACH_DATABASE_URL || secrets.PRODUCTION_COCKROACHDB_DATABASE_URL || secrets.PRODUCTION_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      COCKROACH_DATABASE_URL: ${{ secrets.PRODUCTION_COCKROACH_DATABASE_URL || secrets.PRODUCTION_COCKROACHDB_DATABASE_URL || secrets.PRODUCTION_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
+      COCKROACHDB_DATABASE_URL: ${{ secrets.PRODUCTION_COCKROACH_DATABASE_URL || secrets.PRODUCTION_COCKROACHDB_DATABASE_URL || secrets.PRODUCTION_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
 
       CLOUDFLARE_SYNC_KV: ${{ github.event.inputs.sync_kv || 'true' }}
       CLOUDFLARE_SYNC_QUEUES: ${{ github.event.inputs.sync_queues || 'true' }}
@@ -302,9 +305,9 @@ jobs:
             missing+=("CLOUDFLARE_ACCOUNT_ID")
           fi
 
-          if [[ "${{ needs.preflight.outputs.should_run_cockroachdb_migrations }}" == "true" ]]; then
-            if [[ -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
-              missing+=("COCKROACH_DATABASE_URL or COCKROACHDB_DATABASE_URL or DATABASE_URL")
+          if [[ "${{ needs.preflight.outputs.should_run_cockroachdb_migrations }}" == "true" && "${PROJECT_SYNC_DRY_RUN:-false}" != "true" ]]; then
+            if [[ -z "${COCKROACHDB_MIGRATIONS_DATABASE_URL:-}" && -z "${PRODUCTION_COCKROACH_DATABASE_URL:-}" && -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
+              missing+=("COCKROACHDB_MIGRATIONS_DATABASE_URL or PRODUCTION_COCKROACH_DATABASE_URL or PRODUCTION_DATABASE_URL or COCKROACH_DATABASE_URL or DATABASE_URL")
             fi
           fi
 
@@ -312,6 +315,63 @@ jobs:
             printf '::error::Missing required production secret(s): %s\n' "${missing[*]}"
             exit 1
           fi
+
+      - name: Ensure PostgreSQL client is available
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
+        run: |
+          set -euo pipefail
+
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+
+          psql --version
+
+      - name: Configure CockroachDB SSL certificate
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
+        env:
+          COCKROACHDB_CA_CERT: ${{ secrets.COCKROACHDB_CA_CERT }}
+        run: |
+          set -euo pipefail
+
+          cert_dir="$HOME/.postgresql"
+          cert_file="$cert_dir/root.crt"
+
+          if [[ -z "${COCKROACHDB_CA_CERT:-}" ]]; then
+            echo "::error::Missing required GitHub secret: COCKROACHDB_CA_CERT"
+            exit 1
+          fi
+
+          mkdir -p "$cert_dir"
+          chmod 700 "$cert_dir"
+
+          printf '%s\n' "$COCKROACHDB_CA_CERT" > "$cert_file"
+          chmod 600 "$cert_file"
+
+          if [[ ! -s "$cert_file" ]]; then
+            echo "::error::CockroachDB CA certificate file was not created or is empty: $cert_file"
+            exit 1
+          fi
+
+          if ! grep -q "BEGIN CERTIFICATE" "$cert_file"; then
+            echo "::error::COCKROACHDB_CA_CERT does not look like a PEM certificate."
+            exit 1
+          fi
+
+          {
+            echo "PGSSLROOTCERT=$cert_file"
+            echo "COCKROACHDB_CA_CERT_PATH=$cert_file"
+          } >> "$GITHUB_ENV"
+
+          {
+            echo "### CockroachDB SSL certificate"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Certificate path | \`$cert_file\` |"
+            echo "| PGSSLROOTCERT configured | \`true\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Discover Cloudflare production deployments
         id: discover

@@ -351,6 +351,54 @@ jobs:
             exit 1
           fi
 
+      - name: Configure CockroachDB SSL certificate
+        if: >-
+          needs.preflight.outputs.should_run_migrations == 'true' ||
+          needs.preflight.outputs.should_sync_resources == 'true' ||
+          needs.preflight.outputs.should_deploy == 'true'
+        env:
+          COCKROACHDB_CA_CERT: ${{ secrets.COCKROACHDB_CA_CERT }}
+        run: |
+          set -euo pipefail
+
+          cert_dir="$HOME/.postgresql"
+          cert_file="$cert_dir/root.crt"
+
+          if [[ -z "${COCKROACHDB_CA_CERT:-}" ]]; then
+            echo "::error::Missing required GitHub secret: COCKROACHDB_CA_CERT"
+            exit 1
+          fi
+
+          mkdir -p "$cert_dir"
+          chmod 700 "$cert_dir"
+
+          printf '%s\n' "$COCKROACHDB_CA_CERT" > "$cert_file"
+          chmod 600 "$cert_file"
+
+          if [[ ! -s "$cert_file" ]]; then
+            echo "::error::CockroachDB CA certificate file was not created or is empty: $cert_file"
+            exit 1
+          fi
+
+          if ! grep -q "BEGIN CERTIFICATE" "$cert_file"; then
+            echo "::error::COCKROACHDB_CA_CERT does not look like a PEM certificate."
+            exit 1
+          fi
+
+          {
+            echo "PGSSLROOTCERT=$cert_file"
+            echo "COCKROACHDB_CA_CERT_PATH=$cert_file"
+          } >> "$GITHUB_ENV"
+
+          {
+            echo "### CockroachDB SSL certificate"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Certificate path | \`$cert_file\` |"
+            echo "| PGSSLROOTCERT configured | \`true\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Discover Cloudflare deployments
         id: discover
         if: needs.preflight.outputs.should_discover == 'true'
