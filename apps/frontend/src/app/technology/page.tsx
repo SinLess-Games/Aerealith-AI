@@ -39,7 +39,7 @@ type LooseTechnologyCard = {
 };
 
 const Header = dynamic(
-  () => import("@aerealith-ai/ui").then((module) => module.Header),
+  () => import("@helix-ai/ui").then((module) => module.Header),
   { ssr: false },
 );
 
