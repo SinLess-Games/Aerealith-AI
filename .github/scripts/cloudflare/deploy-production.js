@@ -189,7 +189,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
     changed_only: normalizeBoolean(
       process.env.CLOUDFLARE_PRODUCTION_CHANGED_ONLY,
-      true,
+      false,
     ),
     deploy_pages: normalizeBoolean(
       process.env.CLOUDFLARE_PRODUCTION_DEPLOY_PAGES,
@@ -639,8 +639,8 @@ Options:
       --run-build                          Run build before deploy. Default.
       --no-build                           Do not run build.
       --build-command <command>            Custom build command.
-      --changed-only                       Deploy affected targets only. Default.
-      --all-targets                        Deploy all matching targets.
+      --changed-only                       Deploy affected targets only.
+      --all-targets                        Deploy all matching targets. Default for production.
       --pages / --no-pages                 Enable or disable Pages deployment.
       --workers / --no-workers             Enable or disable Worker deployment.
       --require-credentials                Require Cloudflare credentials. Default.
@@ -1097,6 +1097,94 @@ function loadCloudflareInput(args, repoRoot) {
   };
 }
 
+function arrayFromUnknown(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+
+  if (typeof value === "object") {
+    return Object.values(value).flatMap((item) => arrayFromUnknown(item));
+  }
+
+  return [];
+}
+
+function collectDeploymentRecords(data) {
+  const records = [];
+
+  const append = (value, defaults = {}) => {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      for (const item of value) append(item, defaults);
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    if (
+      value.id ||
+      value.name ||
+      value.type ||
+      value.primary_type ||
+      value.target_type ||
+      value.project_name ||
+      value.service_name ||
+      value.config_file ||
+      value.wrangler_config ||
+      value.pages_build_output_dir ||
+      value.output_dir ||
+      value.root
+    ) {
+      records.push({
+        ...defaults,
+        ...value,
+      });
+      return;
+    }
+
+    for (const [key, child] of Object.entries(value)) {
+      const lowered = key.toLowerCase();
+      const inferredType = lowered.includes("page")
+        ? "pages"
+        : lowered.includes("worker")
+          ? "worker"
+          : defaults.type;
+
+      append(child, {
+        ...defaults,
+        type: inferredType || defaults.type,
+      });
+    }
+  };
+
+  append(data.deployment_matrix);
+  append(data.deployments);
+  append(data.selected_deployments);
+  append(data.deployment_targets);
+  append(data.targets);
+  append(data.pages, { type: "pages" });
+  append(data.workers, { type: "worker" });
+  append(data.cloudflare?.deployment_matrix);
+  append(data.cloudflare?.deployments);
+  append(data.cloudflare?.deployment_targets);
+  append(data.cloudflare?.targets);
+  append(data.cloudflare?.pages, { type: "pages" });
+  append(data.cloudflare?.workers, { type: "worker" });
+  append(data.deployment_groups);
+  append(data.groups);
+
+  return records;
+}
+
+function collectTargetRecords(data) {
+  return [
+    ...arrayFromUnknown(data.targets),
+    ...arrayFromUnknown(data.cloudflare?.targets),
+    ...arrayFromUnknown(data.discovery?.targets),
+    ...arrayFromUnknown(data.target_groups),
+  ].filter((item) => item && typeof item === "object");
+}
+
 function byTargetKey(targets) {
   const map = new Map();
 
@@ -1104,9 +1192,17 @@ function byTargetKey(targets) {
     for (const key of [
       target.id,
       target.name,
+      target.target_name,
+      target.project_name,
+      target.service_name,
       `${target.name}:${target.root}`,
+      `${target.target_name}:${target.root}`,
+      `${target.project_name}:${target.root}`,
       `${target.primary_type}:${target.name}`,
+      `${target.type}:${target.name}`,
       target.config_file,
+      target.wrangler_config,
+      target.wrangler_config_file,
     ]) {
       if (key) map.set(String(key), target);
     }
@@ -1162,41 +1258,161 @@ function createDirectDeploymentFromEnv(args) {
   };
 }
 
-function normalizeDeployment(record, target = {}) {
-  const type = normalizeString(
-    record.type || record.primary_type || target.primary_type || "unknown",
+function inferDeploymentType(record, target = {}) {
+  const explicit = normalizeString(
+    record.type ||
+      record.primary_type ||
+      record.target_type ||
+      record.deployment_type ||
+      record.kind ||
+      target.primary_type ||
+      target.type ||
+      target.target_type,
   ).toLowerCase();
+
+  if (["page", "pages", "cloudflare-pages"].includes(explicit)) {
+    return "pages";
+  }
+
+  if (["worker", "workers", "cloudflare-worker"].includes(explicit)) {
+    return "worker";
+  }
+
+  if (
+    record.pages_build_output_dir ||
+    record.output_dir ||
+    record.build_output_dir ||
+    target.pages_build_output_dir ||
+    target.output_dir ||
+    target.build_output_dir
+  ) {
+    return "pages";
+  }
+
+  if (
+    record.config_file ||
+    record.wrangler_config ||
+    record.wrangler_config_file ||
+    record.main ||
+    target.config_file ||
+    target.wrangler_config ||
+    target.wrangler_config_file ||
+    target.main
+  ) {
+    return "worker";
+  }
+
+  return explicit || "unknown";
+}
+
+function normalizeDeployment(record, target = {}, args = {}) {
+  const type = inferDeploymentType(record, target);
   const name = normalizeString(
-    record.name || target.name || "cloudflare-target",
+    record.name ||
+      record.target_name ||
+      record.project_name ||
+      record.service_name ||
+      record.worker_name ||
+      record.script_name ||
+      target.name ||
+      target.target_name ||
+      target.project_name ||
+      target.service_name ||
+      "cloudflare-target",
   );
-  const root = toPosixPath(record.root || target.root || ".");
+  const root = toPosixPath(
+    record.root ||
+      record.working_directory ||
+      record.directory ||
+      record.path ||
+      target.root ||
+      target.working_directory ||
+      target.directory ||
+      target.path ||
+      ".",
+  );
+
+  const targetTypes = record.target_types ||
+    record.types ||
+    target.target_types ||
+    target.types || [type];
+
+  const environment = normalizeString(
+    record.environment ||
+      record.stage ||
+      record.deployment_stage ||
+      target.environment ||
+      target.stage ||
+      target.deployment_stage ||
+      args.environment ||
+      DEFAULT_ENVIRONMENT,
+  ).toLowerCase();
+
+  const wranglerEnvironment =
+    record.wrangler_environment === undefined ||
+    record.wrangler_environment === null
+      ? target.wrangler_environment === undefined ||
+        target.wrangler_environment === null
+        ? ""
+        : String(target.wrangler_environment)
+      : String(record.wrangler_environment);
+
+  const hasConfigEnvironment = Boolean(
+    record.has_config_environment ??
+    record.hasConfigEnvironment ??
+    target.has_config_environment ??
+    target.hasConfigEnvironment ??
+    target.environments?.includes?.(environment),
+  );
+
+  const affected = Boolean(
+    record.affected ??
+    record.changed ??
+    target.affected ??
+    target.changed ??
+    !args.changed_only,
+  );
 
   return {
     id: normalizeString(
-      record.id || target.id || safeId(`${type}-${name}-${root}`),
+      record.id ||
+        record.target_id ||
+        target.id ||
+        target.target_id ||
+        safeId(`${type}-${name}-${root}`),
     ),
     name,
     type,
-    target_types: record.target_types || target.target_types || [type],
+    target_types: Array.isArray(targetTypes) ? targetTypes : [targetTypes],
     root,
-    config_file: toPosixPath(record.config_file || target.config_file || ""),
+    config_file: toPosixPath(
+      record.config_file ||
+        record.wrangler_config ||
+        record.wrangler_config_file ||
+        target.config_file ||
+        target.wrangler_config ||
+        target.wrangler_config_file ||
+        "",
+    ),
     package_json: record.package_json || target.package_json || null,
     package_name: record.package_name || target.package_name || null,
     package_manager_command:
       record.package_manager_command || target.package_manager_command || "",
-    environment: normalizeString(
-      record.environment || DEFAULT_ENVIRONMENT,
-    ).toLowerCase(),
-    wrangler_environment:
-      record.wrangler_environment === undefined ||
-      record.wrangler_environment === null
-        ? ""
-        : String(record.wrangler_environment),
-    has_config_environment: Boolean(record.has_config_environment),
-    affected: Boolean(record.affected || target.affected),
+    environment,
+    wrangler_environment: wranglerEnvironment,
+    has_config_environment: hasConfigEnvironment,
+    affected,
     main: record.main || target.main || "",
     pages_build_output_dir:
-      record.pages_build_output_dir || target.pages_build_output_dir || "",
+      record.pages_build_output_dir ||
+      record.output_dir ||
+      record.build_output_dir ||
+      record.dist_dir ||
+      target.pages_build_output_dir ||
+      target.output_dir ||
+      target.build_output_dir ||
+      target.dist_dir ||
+      "",
     compatibility_date:
       record.compatibility_date || target.compatibility_date || "",
     d1_databases: Number(
@@ -1221,8 +1437,18 @@ function normalizeDeployment(record, target = {}) {
 }
 
 function deploymentMatchesFilters(deployment, args) {
-  if (args.environment && deployment.environment !== args.environment)
+  const deploymentEnvironment = normalizeString(
+    deployment.environment,
+    args.environment,
+  ).toLowerCase();
+
+  if (
+    args.environment &&
+    deploymentEnvironment &&
+    deploymentEnvironment !== args.environment
+  ) {
     return false;
+  }
 
   if (args.target_id && deployment.id !== args.target_id) return false;
   if (args.target_name && deployment.name !== args.target_name) return false;
@@ -1255,45 +1481,62 @@ function deploymentMatchesFilters(deployment, args) {
 
 function selectDeployments(input, args) {
   const data = input.data || {};
-  const targetMap = byTargetKey(data.targets || []);
-  const matrix = Array.isArray(data.deployment_matrix)
-    ? data.deployment_matrix
-    : [];
+  const targetRecords = collectTargetRecords(data);
+  const targetMap = byTargetKey(targetRecords);
+  const matrix = collectDeploymentRecords(data);
 
   const deployments = matrix.map((entry) => {
     const target =
       targetMap.get(entry.id) ||
+      targetMap.get(entry.target_id) ||
       targetMap.get(entry.name) ||
+      targetMap.get(entry.target_name) ||
+      targetMap.get(entry.project_name) ||
       targetMap.get(`${entry.name}:${entry.root}`) ||
+      targetMap.get(`${entry.target_name}:${entry.root}`) ||
       targetMap.get(`${entry.type}:${entry.name}`) ||
       targetMap.get(entry.config_file) ||
+      targetMap.get(entry.wrangler_config) ||
       {};
 
-    return normalizeDeployment(entry, target);
+    return normalizeDeployment(entry, target, args);
   });
 
-  if (!deployments.length && Array.isArray(data.targets)) {
-    for (const target of data.targets) {
+  if (!deployments.length && targetRecords.length) {
+    for (const target of targetRecords) {
       deployments.push(
         normalizeDeployment(
           {
             id: target.id,
-            name: target.name,
-            type: target.primary_type,
+            name: target.name || target.target_name || target.project_name,
+            type: target.primary_type || target.type || target.target_type,
             root: target.root,
-            config_file: target.config_file,
-            environment: args.environment,
+            config_file:
+              target.config_file ||
+              target.wrangler_config ||
+              target.wrangler_config_file,
+            environment:
+              target.environment ||
+              target.stage ||
+              target.deployment_stage ||
+              args.environment,
             wrangler_environment: target.environments?.includes?.(
               args.environment,
             )
               ? args.environment
-              : "",
+              : target.wrangler_environment || "",
             has_config_environment:
-              target.environments?.includes?.(args.environment) || false,
-            affected: target.affected,
-            pages_build_output_dir: target.pages_build_output_dir,
+              target.environments?.includes?.(args.environment) ||
+              target.has_config_environment ||
+              false,
+            affected: target.affected ?? target.changed ?? !args.changed_only,
+            pages_build_output_dir:
+              target.pages_build_output_dir ||
+              target.output_dir ||
+              target.build_output_dir,
           },
           target,
+          args,
         ),
       );
     }
@@ -1302,15 +1545,39 @@ function selectDeployments(input, args) {
   const direct = createDirectDeploymentFromEnv(args);
   if (direct) deployments.push(direct);
 
-  const selected = deployments
-    .filter((deployment) => deploymentMatchesFilters(deployment, args))
-    .slice(0, args.max_deployments > 0 ? args.max_deployments : undefined);
-
-  return [
+  const unique = [
     ...new Map(
-      selected.map((deployment) => [deployment.id, deployment]),
+      deployments.map((deployment) => [deployment.id, deployment]),
     ).values(),
   ];
+
+  let selected = unique.filter((deployment) =>
+    deploymentMatchesFilters(deployment, args),
+  );
+
+  if (!selected.length && args.changed_only) {
+    const relaxedArgs = {
+      ...args,
+      changed_only: false,
+    };
+
+    selected = unique.filter((deployment) =>
+      deploymentMatchesFilters(deployment, relaxedArgs),
+    );
+
+    if (selected.length) {
+      logger.warn(
+        "No production deployments matched changed-only filtering. Falling back to all production deployment targets from discovery output.",
+      );
+    }
+  }
+
+  selected = selected.slice(
+    0,
+    args.max_deployments > 0 ? args.max_deployments : undefined,
+  );
+
+  return selected;
 }
 
 function resolveTargetPath(targetRoot, targetPath, repoRoot) {
