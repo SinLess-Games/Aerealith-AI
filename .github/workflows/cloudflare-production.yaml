@@ -239,7 +239,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
-      CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+      CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME || vars.CLOUDFLARE_PROJECT_NAME || 'aerealith-ai' }}
       CLOUDFLARE_ENVIRONMENT: ${{ needs.preflight.outputs.environment_name }}
       CLOUDFLARE_DEPLOYMENT_STAGE: production
       CLOUDFLARE_PRODUCTION_REF: ${{ needs.preflight.outputs.deployment_ref }}
