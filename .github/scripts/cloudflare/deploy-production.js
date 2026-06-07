@@ -54,7 +54,14 @@ const PROJECT_NAME = "Aerealith AI";
 const DEFAULT_REPOSITORY = "SinLess-Games/Aerealith-AI";
 const DEFAULT_BRANCH = "main";
 
-const DEFAULT_INPUT_FILE = "artifacts/ci/cloudflare-targets.json";
+const DEFAULT_INPUT_FILE = process.env.CLOUDFLARE_OUTPUT_DIR
+  ? path.join(process.env.CLOUDFLARE_OUTPUT_DIR, "discover-deployments.json")
+  : "artifacts/cloudflare/production/discover-deployments.json";
+const DEFAULT_INPUT_CANDIDATES = [
+  DEFAULT_INPUT_FILE,
+  "artifacts/cloudflare/production/discover-deployments.json",
+  "artifacts/ci/cloudflare-targets.json",
+];
 const DEFAULT_OUTPUT_FILE = "artifacts/cloudflare/deploy-production.json";
 const DEFAULT_SUMMARY_FILE = "artifacts/cloudflare/deploy-production.md";
 const DEFAULT_LOG_DIR = "artifacts/cloudflare/deploy-production/logs";
@@ -1044,15 +1051,49 @@ function createPackageRunCommand(packageManager, root, script) {
   };
 }
 
+function inputCandidates(args) {
+  const candidates = [args.input_file, ...DEFAULT_INPUT_CANDIDATES];
+
+  if (process.env.CLOUDFLARE_OUTPUT_DIR) {
+    candidates.unshift(
+      path.join(process.env.CLOUDFLARE_OUTPUT_DIR, "discover-deployments.json"),
+    );
+  }
+
+  return [
+    ...new Set(candidates.map((item) => normalizeString(item)).filter(Boolean)),
+  ];
+}
+
 function loadCloudflareInput(args, repoRoot) {
-  const absolutePath = resolvePath(args.input_file, repoRoot);
-  const relativePath = toRelativePath(absolutePath, repoRoot);
-  const data = readJsonFile(absolutePath, repoRoot, null);
+  const candidates = inputCandidates(args);
+
+  for (const candidate of candidates) {
+    const absolutePath = resolvePath(candidate, repoRoot);
+    const relativePath = toRelativePath(absolutePath, repoRoot);
+    const data = readJsonFile(absolutePath, repoRoot, null);
+
+    if (data) {
+      return {
+        file: relativePath,
+        available: true,
+        data,
+        searched_files: candidates.map((item) =>
+          toRelativePath(resolvePath(item, repoRoot), repoRoot),
+        ),
+      };
+    }
+  }
+
+  const requestedPath = resolvePath(args.input_file, repoRoot);
 
   return {
-    file: relativePath,
-    available: Boolean(data),
-    data,
+    file: toRelativePath(requestedPath, repoRoot),
+    available: false,
+    data: null,
+    searched_files: candidates.map((item) =>
+      toRelativePath(resolvePath(item, repoRoot), repoRoot),
+    ),
   };
 }
 
@@ -1919,6 +1960,7 @@ function createReport(args, repoRoot, input, plan, execution) {
     input: {
       file: input.file,
       available: input.available,
+      searched_files: input.searched_files || [],
       type: input.data?.type || null,
       created_at: input.data?.created_at || null,
     },
@@ -2306,6 +2348,18 @@ function main() {
   logger.info("Preparing Cloudflare production deployment.");
 
   const input = loadCloudflareInput(args, repoRoot);
+
+  if (!input.available) {
+    logger.warn(
+      `No Cloudflare deployment discovery input found. Searched: ${(input.searched_files || []).join(", ") || input.file}.`,
+    );
+  } else if (
+    input.file !==
+    toRelativePath(resolvePath(args.input_file, repoRoot), repoRoot)
+  ) {
+    logger.info(`Using Cloudflare deployment discovery input: ${input.file}.`);
+  }
+
   const plan = createPlan(args, repoRoot, input);
 
   if (args.fail_if_empty && plan.deployments.length === 0) {
