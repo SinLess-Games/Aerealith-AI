@@ -18,16 +18,20 @@
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": false,
 
-    "customConditions": ["Helix"],
+    "customConditions": ["Aerealith", "aerealith"],
+
     "paths": {
-      "@helix-ai/ui/*": ["./libs/ui/src/*"],
-      "@helix-ai/ui": ["./libs/ui/src/index.ts"],
-      "@helix-ai/config/*": ["./libs/config/src/*"],
-      "@helix-ai/config": ["./libs/config/src/index.ts"],
-      "@helix-ai/db/*": ["./libs/db/src/*"],
-      "@helix-ai/db": ["./libs/db/src/index.ts"],
-      "@helix-ai/flags/*": ["./libs/flags/src/*"],
-      "@helix-ai/flags": ["./libs/flags/src/index.ts"]
+      "@aerealith-ai/ui": ["./libs/ui/src/index.ts"],
+      "@aerealith-ai/ui/*": ["./libs/ui/src/*"],
+
+      "@aerealith-ai/config": ["./libs/config/src/index.ts"],
+      "@aerealith-ai/config/*": ["./libs/config/src/*"],
+
+      "@aerealith-ai/db": ["./libs/db/src/index.ts"],
+      "@aerealith-ai/db/*": ["./libs/db/src/*"],
+
+      "@aerealith-ai/flags": ["./libs/flags/src/index.ts"],
+      "@aerealith-ai/flags/*": ["./libs/flags/src/*"]
     }
   }
 }

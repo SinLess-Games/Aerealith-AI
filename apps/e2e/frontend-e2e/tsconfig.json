@@ -15,9 +15,5 @@
     "**/*.d.ts"
   ],
   "exclude": ["out-tsc", "test-output", "dist", "coverage"],
-  "references": [
-    {
-      "path": "../../../libs/ui"
-    }
-  ]
+  "references": []
 }

@@ -287,24 +287,24 @@ importers:
 
   apps/frontend:
     dependencies:
+      "@aerealith-ai/config":
+        specifier: workspace:*
+        version: link:../../libs/config
+      "@aerealith-ai/db":
+        specifier: workspace:*
+        version: link:../../libs/db
+      "@aerealith-ai/flags":
+        specifier: workspace:*
+        version: link:../../libs/flags
+      "@aerealith-ai/ui":
+        specifier: workspace:*
+        version: link:../../libs/ui
       "@emotion/react":
         specifier: 11.14.0
         version: 11.14.0(@types/react@19.2.14)(react@19.2.6)
       "@emotion/styled":
         specifier: 11.14.1
         version: 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(react@19.2.6)
-      "@helix-ai/config":
-        specifier: workspace:*
-        version: link:../../libs/config
-      "@helix-ai/db":
-        specifier: workspace:*
-        version: link:../../libs/db
-      "@helix-ai/flags":
-        specifier: workspace:*
-        version: link:../../libs/flags
-      "@helix-ai/ui":
-        specifier: workspace:*
-        version: link:../../libs/ui
       "@mui/material":
         specifier: ^7.3.5
         version: 7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.6))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -336,6 +336,9 @@ importers:
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
+      tsx:
+        specifier: ^4.20.6
+        version: 4.21.0
       wrangler:
         specifier: 4.90.0
         version: 4.90.0(@cloudflare/workers-types@4.20260508.1)
@@ -351,7 +354,7 @@ importers:
 
   libs/db:
     dependencies:
-      "@helix-ai/config":
+      "@aerealith-ai/config":
         specifier: workspace:*
         version: link:../config
       "@mikro-orm/core":
@@ -369,7 +372,7 @@ importers:
 
   libs/flags:
     dependencies:
-      "@helix-ai/config":
+      "@aerealith-ai/config":
         specifier: workspace:*
         version: link:../config
       zod:
@@ -378,6 +381,12 @@ importers:
 
   libs/ui:
     dependencies:
+      "@aerealith-ai/config":
+        specifier: workspace:*
+        version: link:../config
+      "@aerealith-ai/flags":
+        specifier: workspace:*
+        version: link:../flags
       "@emotion/react":
         specifier: 11.x
         version: 11.14.0(@types/react@19.2.14)(react@19.2.6)
@@ -393,12 +402,6 @@ importers:
       "@grafana/faro-web-tracing":
         specifier: ^1.19.0
         version: 1.19.0
-      "@helix-ai/config":
-        specifier: workspace:*
-        version: link:../config
-      "@helix-ai/flags":
-        specifier: workspace:*
-        version: link:../flags
       "@mui/icons-material":
         specifier: ^7.3.5
         version: 7.3.11(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.6))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@types/react@19.2.14)(react@19.2.6)

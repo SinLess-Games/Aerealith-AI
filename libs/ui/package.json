@@ -55,8 +55,8 @@
     }
   },
   "dependencies": {
-    "@helix-ai/config": "workspace:*",
-    "@helix-ai/flags": "workspace:*",
+    "@aerealith-ai/config": "workspace:*",
+    "@aerealith-ai/flags": "workspace:*",
     "server-only": "^0.0.1"
   },
   "devDependencies": {

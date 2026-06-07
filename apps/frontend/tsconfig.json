@@ -61,7 +61,13 @@
       "path": "../../libs/ui"
     },
     {
+      "path": "../../libs/flags"
+    },
+    {
       "path": "../../libs/db"
+    },
+    {
+      "path": "../../libs/config"
     }
   ]
 }
