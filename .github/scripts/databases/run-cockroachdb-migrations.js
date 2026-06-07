@@ -7,14 +7,22 @@
 //   Discover, validate, and run ordered SQL migrations against one or more
 //   CockroachDB databases from GitHub Actions or local CI.
 //
-// Input:
-//   - .github/databases/cockroachdb-migrations.json
-//   - .github/databases/cockroachdb-migrations.jsonc
-//   - .github/databases/cockroachdb-migrations.yaml
-//   - .github/databases/cockroachdb-migrations.yml
-//   - database/migrations/**/*.sql
-//   - databases/migrations/**/*.sql
-//   - migrations/**/*.sql
+// Supported migration sources:
+//   - Plain SQL files: *.sql
+//   - MikroORM migration files: *.ts, *.js, *.cjs, *.mjs
+//     The runner extracts this.addSql(...) statements from the up() method only.
+//
+// Default migration search paths:
+//   - database/migrations
+//   - databases/migrations
+//   - db/migrations
+//   - migrations
+//   - libs/db/src/migrations
+//   - libs/db/migrations
+//   - apps/api/migrations
+//   - apps/api/src/migrations
+//   - services/api/migrations
+//   - services/api/src/migrations
 //
 // Output:
 //   - artifacts/databases/cockroachdb-migrations.json
@@ -25,9 +33,8 @@
 //   - No external dependencies.
 //   - Uses CockroachDB CLI by default when available.
 //   - Falls back to psql automatically when cockroach is not installed.
-//   - Requires a stage-specific, CockroachDB, or DATABASE_URL for real migrations.
-//   - Accepts --environment and --stage for preview/staging/production workflow compatibility.
-//   - Supports dry-run planning without database credentials.
+//   - Requires a stage-specific CockroachDB URL or DATABASE_URL for real runs.
+//   - Accepts --environment and --stage for preview/staging/production workflows.
 //   - Tracks applied migrations with checksums.
 //   - Fails on checksum drift by default.
 // =============================================================================
@@ -79,8 +86,18 @@ const DEFAULT_MIGRATION_DIRS = [
   "databases/migrations",
   "db/migrations",
   "migrations",
+  "libs/db/src/migrations",
+  "libs/db/migrations",
+  "dist/libs/db/migrations",
+  "dist/libs/db/src/migrations",
   "apps/api/migrations",
+  "apps/api/src/migrations",
+  "dist/apps/api/migrations",
+  "dist/apps/api/src/migrations",
   "services/api/migrations",
+  "services/api/src/migrations",
+  "dist/services/api/migrations",
+  "dist/services/api/src/migrations",
 ];
 
 const DEFAULT_OUTPUT_FILE = "artifacts/databases/cockroachdb-migrations.json";
@@ -92,6 +109,8 @@ const DEFAULT_CLIENT = "cockroach";
 
 const TRUE_VALUES = new Set(["true", "1", "yes", "y", "on", "enabled"]);
 const FALSE_VALUES = new Set(["false", "0", "no", "n", "off", "disabled"]);
+
+const MIGRATION_FILE_PATTERN = /\.(?:sql|ts|js|cjs|mjs)$/i;
 
 const SECRET_OUTPUT_PATTERN =
   /((?:postgres(?:ql)?|cockroach(?:db)?):\/\/)[^\s"'<>]+|((?:ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,})|(Bearer\s+)[A-Za-z0-9._~+/=-]{10,}|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----/g;
@@ -118,6 +137,51 @@ const DEFAULT_EXCLUDE_PATTERNS = [
 
 const warnedClientFallbacks = new Set();
 
+const DIST_MIGRATION_DIR_PATTERNS = [
+  "dist/libs/db/migrations/",
+  "dist/libs/db/src/migrations/",
+  "dist/apps/api/migrations/",
+  "dist/apps/api/src/migrations/",
+  "dist/services/api/migrations/",
+  "dist/services/api/src/migrations/",
+];
+
+function normalizeDirectoryPrefix(value) {
+  const normalized = toPosixPath(String(value || "").replace(/^\.\//, ""));
+
+  if (!normalized) return "";
+
+  return normalized.endsWith("/") ? normalized : `${normalized}/`;
+}
+
+function isAllowedDistMigrationPath(relativePath) {
+  const normalized = normalizeDirectoryPrefix(relativePath);
+
+  return DIST_MIGRATION_DIR_PATTERNS.some((pattern) =>
+    normalized.startsWith(pattern),
+  );
+}
+
+function excludePatternsForCandidate(candidate, repoRoot, patterns) {
+  const relativePath = normalizeDirectoryPrefix(
+    toRelativePath(resolvePath(candidate, repoRoot), repoRoot),
+  );
+
+  if (!isAllowedDistMigrationPath(relativePath)) return patterns;
+
+  return patterns.filter(
+    (pattern) => normalizeDirectoryPrefix(pattern) !== "dist/",
+  );
+}
+
+function excludePatternsForMigration(relativePath, patterns) {
+  if (!isAllowedDistMigrationPath(relativePath)) return patterns;
+
+  return patterns.filter(
+    (pattern) => normalizeDirectoryPrefix(pattern) !== "dist/",
+  );
+}
+
 function normalizeString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
   return String(value).trim() || fallback;
@@ -129,12 +193,12 @@ function stripMatchingOuterQuotes(value) {
   while (output.length >= 2) {
     const first = output[0];
     const last = output[output.length - 1];
-    const isWrapped =
+    const wrapped =
       (first === '"' && last === '"') ||
       (first === "'" && last === "'") ||
       (first === "`" && last === "`");
 
-    if (!isWrapped) break;
+    if (!wrapped) break;
 
     output = output.slice(1, -1).trim();
   }
@@ -178,10 +242,6 @@ function normalizeDatabaseUrl(value) {
   }
 
   output = stripMatchingOuterQuotes(output);
-
-  // Cockroach Cloud URLs are commonly copied with sslmode=verify-full. If a
-  // secret was pasted as a truncated bare `?sslmode`/`&sslmode` parameter, make
-  // it a valid libpq URL instead of handing psql an invalid connection option.
   output = output.replace(/([?&])sslmode(?=(&|$))/g, "$1sslmode=verify-full");
 
   return output;
@@ -707,7 +767,7 @@ Examples:
   node .github/scripts/databases/run-cockroachdb-migrations.js --dry-run
   node .github/scripts/databases/run-cockroachdb-migrations.js --database-url-env DATABASE_URL
   node .github/scripts/databases/run-cockroachdb-migrations.js --environment staging --stage staging
-  node .github/scripts/databases/run-cockroachdb-migrations.js --migrations database/migrations
+  node .github/scripts/databases/run-cockroachdb-migrations.js --migrations libs/db/src/migrations
   node .github/scripts/databases/run-cockroachdb-migrations.js --config .github/databases/cockroachdb-migrations.json
 
 Options:
@@ -1222,7 +1282,7 @@ function naturalCompare(left, right) {
 }
 
 function migrationIdFromFile(filePath) {
-  return path.basename(filePath).replace(/\.sql$/i, "");
+  return path.basename(filePath).replace(/\.(?:sql|ts|js|cjs|mjs)$/i, "");
 }
 
 function migrationWantsNoTransaction(sql) {
@@ -1232,21 +1292,365 @@ function migrationWantsNoTransaction(sql) {
   );
 }
 
-function normalizeMigrationFile(filePath, repoRoot) {
+function skipQuotedString(source, startIndex) {
+  const quote = source[startIndex];
+  let index = startIndex + 1;
+  let escaped = false;
+
+  while (index < source.length) {
+    const char = source[index];
+
+    if (escaped) {
+      escaped = false;
+      index += 1;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaped = true;
+      index += 1;
+      continue;
+    }
+
+    if (char === quote) {
+      return index + 1;
+    }
+
+    index += 1;
+  }
+
+  return source.length;
+}
+
+function skipLineComment(source, startIndex) {
+  const end = source.indexOf("\n", startIndex + 2);
+  return end === -1 ? source.length : end + 1;
+}
+
+function skipBlockComment(source, startIndex) {
+  const end = source.indexOf("*/", startIndex + 2);
+  return end === -1 ? source.length : end + 2;
+}
+
+function findMatchingBrace(source, openIndex) {
+  let depth = 0;
+  let index = openIndex;
+
+  while (index < source.length) {
+    const char = source[index];
+    const next = source[index + 1];
+
+    if (char === '"' || char === "'" || char === "`") {
+      index = skipQuotedString(source, index);
+      continue;
+    }
+
+    if (char === "/" && next === "/") {
+      index = skipLineComment(source, index);
+      continue;
+    }
+
+    if (char === "/" && next === "*") {
+      index = skipBlockComment(source, index);
+      continue;
+    }
+
+    if (char === "{") {
+      depth += 1;
+    }
+
+    if (char === "}") {
+      depth -= 1;
+
+      if (depth === 0) {
+        return index;
+      }
+    }
+
+    index += 1;
+  }
+
+  return -1;
+}
+
+function findMethodBody(source, methodName) {
+  const pattern = new RegExp(
+    `(?:override\\s+)?(?:async\\s+)?${escapeRegExp(methodName)}\\s*\\([^)]*\\)\\s*(?::\\s*[^{}]+)?\\{`,
+    "m",
+  );
+  const match = pattern.exec(source);
+
+  if (!match) return "";
+
+  const openIndex = match.index + match[0].lastIndexOf("{");
+  const closeIndex = findMatchingBrace(source, openIndex);
+
+  if (closeIndex === -1) return "";
+
+  return source.slice(openIndex + 1, closeIndex);
+}
+
+function decodeJavaScriptEscape(char) {
+  if (char === "n") return "\n";
+  if (char === "r") return "\r";
+  if (char === "t") return "\t";
+  if (char === "b") return "\b";
+  if (char === "f") return "\f";
+  if (char === "v") return "\v";
+  if (char === "0") return "\0";
+
+  return char;
+}
+
+function readJavaScriptStringLiteral(source, startIndex) {
+  const quote = source[startIndex];
+
+  if (!['"', "'", "`"].includes(quote)) {
+    return null;
+  }
+
+  let index = startIndex + 1;
+  let value = "";
+  let escaped = false;
+
+  while (index < source.length) {
+    const char = source[index];
+
+    if (escaped) {
+      value += decodeJavaScriptEscape(char);
+      escaped = false;
+      index += 1;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaped = true;
+      index += 1;
+      continue;
+    }
+
+    if (char === quote) {
+      return {
+        value,
+        end: index + 1,
+      };
+    }
+
+    value += char;
+    index += 1;
+  }
+
+  return null;
+}
+
+function skipWhitespaceAndComments(source, startIndex) {
+  let index = startIndex;
+
+  while (index < source.length) {
+    const char = source[index];
+    const next = source[index + 1];
+
+    if (/\s/.test(char)) {
+      index += 1;
+      continue;
+    }
+
+    if (char === "/" && next === "/") {
+      index = skipLineComment(source, index);
+      continue;
+    }
+
+    if (char === "/" && next === "*") {
+      index = skipBlockComment(source, index);
+      continue;
+    }
+
+    break;
+  }
+
+  return index;
+}
+
+function extractAddSqlStatements(source) {
+  const statements = [];
+  let index = 0;
+
+  while (index < source.length) {
+    const addSqlIndex = source.indexOf(".addSql", index);
+
+    if (addSqlIndex === -1) break;
+
+    const openParen = source.indexOf("(", addSqlIndex);
+
+    if (openParen === -1) break;
+
+    const literalStart = skipWhitespaceAndComments(source, openParen + 1);
+    const literal = readJavaScriptStringLiteral(source, literalStart);
+
+    if (literal && normalizeString(literal.value)) {
+      statements.push(literal.value.trim());
+      index = literal.end;
+      continue;
+    }
+
+    index = openParen + 1;
+  }
+
+  return statements;
+}
+
+function extractMikroOrmMigrationSql(source, filePath) {
+  const upBody = findMethodBody(source, "up");
+
+  if (!upBody) {
+    return {
+      sql: "",
+      statements: [],
+      warnings: [
+        `No up() method was found in MikroORM migration file: ${filePath}`,
+      ],
+    };
+  }
+
+  const statements = extractAddSqlStatements(upBody);
+  const sql = statements
+    .map((statement) => statement.trim())
+    .filter(Boolean)
+    .join("\n\n");
+
+  return {
+    sql,
+    statements,
+    warnings: statements.length
+      ? []
+      : [`No this.addSql(...) statements were found in up(): ${filePath}`],
+  };
+}
+
+function normalizeMigrationSource(filePath, repoRoot) {
   const absolutePath = resolvePath(filePath, repoRoot);
   const relativePath = toRelativePath(absolutePath, repoRoot);
-  const sql = fs.readFileSync(absolutePath, "utf8");
+  const extension = path.extname(absolutePath).toLowerCase();
+  const source = fs.readFileSync(absolutePath, "utf8");
+
+  if (extension === ".sql") {
+    return {
+      source_type: "sql",
+      sql: source,
+      statements: [],
+      warnings: [],
+      bytes: Buffer.byteLength(source),
+      source_bytes: Buffer.byteLength(source),
+      relativePath,
+    };
+  }
+
+  const extracted = extractMikroOrmMigrationSql(source, relativePath);
+  const sql = extracted.sql;
+
+  return {
+    source_type: "mikro-orm",
+    sql,
+    statements: extracted.statements,
+    warnings: extracted.warnings,
+    bytes: Buffer.byteLength(sql),
+    source_bytes: Buffer.byteLength(source),
+    relativePath,
+  };
+}
+
+function normalizeMigrationFile(filePath, repoRoot) {
+  const absolutePath = resolvePath(filePath, repoRoot);
+  const source = normalizeMigrationSource(absolutePath, repoRoot);
   const id = migrationIdFromFile(absolutePath);
 
   return {
     id,
     filename: path.basename(absolutePath),
-    file: relativePath,
+    file: source.relativePath,
     absolute_file: absolutePath,
-    checksum: fileSha256(absolutePath),
-    bytes: Buffer.byteLength(sql),
-    no_transaction: migrationWantsNoTransaction(sql),
+    source_type: source.source_type,
+    checksum: sha256(source.sql),
+    source_checksum: fileSha256(absolutePath),
+    bytes: source.bytes,
+    source_bytes: source.source_bytes,
+    statements: source.statements.length,
+    sql: source.sql,
+    extraction_warnings: source.warnings,
+    no_transaction: migrationWantsNoTransaction(source.sql),
   };
+}
+
+function migrationSourcePriority(migration) {
+  const file = toPosixPath(migration.file);
+
+  if (file.startsWith("libs/db/src/migrations/")) return 10;
+  if (file.startsWith("libs/db/migrations/")) return 20;
+  if (file.startsWith("apps/api/src/migrations/")) return 30;
+  if (file.startsWith("apps/api/migrations/")) return 40;
+  if (file.startsWith("services/api/src/migrations/")) return 50;
+  if (file.startsWith("services/api/migrations/")) return 60;
+  if (file.startsWith("database/migrations/")) return 70;
+  if (file.startsWith("databases/migrations/")) return 80;
+  if (file.startsWith("db/migrations/")) return 90;
+  if (file.startsWith("migrations/")) return 100;
+  if (file.startsWith("dist/libs/db/migrations/")) return 200;
+  if (file.startsWith("dist/libs/db/src/migrations/")) return 210;
+  if (file.startsWith("dist/apps/api/migrations/")) return 220;
+  if (file.startsWith("dist/apps/api/src/migrations/")) return 230;
+  if (file.startsWith("dist/services/api/migrations/")) return 240;
+  if (file.startsWith("dist/services/api/src/migrations/")) return 250;
+
+  return 500;
+}
+
+function preferMigrationSource(left, right) {
+  const leftPriority = migrationSourcePriority(left);
+  const rightPriority = migrationSourcePriority(right);
+
+  if (leftPriority !== rightPriority) {
+    return leftPriority < rightPriority ? left : right;
+  }
+
+  if (left.source_type !== right.source_type) {
+    if (left.source_type === "sql") return left;
+    if (right.source_type === "sql") return right;
+    if (left.source_type === "mikro-orm") return left;
+    if (right.source_type === "mikro-orm") return right;
+  }
+
+  return naturalCompare(left.file, right.file) <= 0 ? left : right;
+}
+
+function dedupeEquivalentMigrations(migrations) {
+  const byId = new Map();
+  const output = [];
+
+  for (const migration of migrations) {
+    const existing = byId.get(migration.id);
+
+    if (!existing) {
+      byId.set(migration.id, migration);
+      output.push(migration);
+      continue;
+    }
+
+    if (existing.checksum !== migration.checksum) {
+      output.push(migration);
+      continue;
+    }
+
+    const preferred = preferMigrationSource(existing, migration);
+
+    if (preferred !== existing) {
+      byId.set(migration.id, preferred);
+      const index = output.indexOf(existing);
+
+      if (index >= 0) output[index] = preferred;
+    }
+  }
+
+  return output;
 }
 
 function discoverMigrationFiles(paths, repoRoot, args) {
@@ -1268,32 +1672,49 @@ function discoverMigrationFiles(paths, repoRoot, args) {
       continue;
     }
 
-    files.push(...walkFiles(absolutePath, repoRoot, args.exclude_migrations));
+    files.push(
+      ...walkFiles(
+        absolutePath,
+        repoRoot,
+        excludePatternsForCandidate(
+          candidate,
+          repoRoot,
+          args.exclude_migrations,
+        ),
+      ),
+    );
   }
 
-  const migrations = [...new Set(files)]
-    .filter((filePath) => /\.sql$/i.test(filePath))
-    .map((filePath) => normalizeMigrationFile(filePath, repoRoot))
-    .filter((migration) => {
-      if (args.include_migrations.length) {
-        const matched = args.include_migrations.some((pattern) => {
-          return (
-            migration.id === pattern ||
-            migration.filename === pattern ||
-            matchesPattern(migration.file, pattern)
-          );
-        });
+  const migrations = dedupeEquivalentMigrations(
+    [...new Set(files)]
+      .filter((filePath) => MIGRATION_FILE_PATTERN.test(filePath))
+      .map((filePath) => normalizeMigrationFile(filePath, repoRoot))
+      .filter((migration) => normalizeString(migration.sql))
+      .filter((migration) => {
+        if (args.include_migrations.length) {
+          const matched = args.include_migrations.some((pattern) => {
+            return (
+              migration.id === pattern ||
+              migration.filename === pattern ||
+              matchesPattern(migration.file, pattern)
+            );
+          });
 
-        if (!matched) return false;
-      }
+          if (!matched) return false;
+        }
 
-      return !shouldExcludePath(migration.file, args.exclude_migrations);
-    })
-    .sort(
-      (left, right) =>
-        naturalCompare(left.id, right.id) ||
-        naturalCompare(left.file, right.file),
-    );
+        return !shouldExcludePath(
+          migration.file,
+          excludePatternsForMigration(migration.file, args.exclude_migrations),
+        );
+      })
+      .sort(
+        (left, right) =>
+          naturalCompare(left.id, right.id) ||
+          migrationSourcePriority(left) - migrationSourcePriority(right) ||
+          naturalCompare(left.file, right.file),
+      ),
+  );
 
   return args.max_migrations > 0
     ? migrations.slice(0, args.max_migrations)
@@ -1594,7 +2015,7 @@ function shouldWrapTransaction(plan, migration) {
 }
 
 function createMigrationScript(plan, migration, github) {
-  const sql = fs.readFileSync(migration.absolute_file, "utf8");
+  const sql = normalizeString(migration.sql);
   const wrapped = shouldWrapTransaction(plan, migration);
   const insert = insertMigrationRecordSql(
     plan.migrations_table,
@@ -2176,6 +2597,12 @@ function validateDatabasePlan(plan, args) {
     );
   }
 
+  for (const migration of plan.migrations_discovered) {
+    for (const warning of migration.extraction_warnings || []) {
+      warnings.push(warning);
+    }
+  }
+
   const ids = new Set();
   const duplicateIds = new Set();
 
@@ -2340,6 +2767,8 @@ function applyMigration(plan, migration, args, repoRoot, github) {
     id: migration.id,
     filename: migration.filename,
     file: migration.file,
+    source_type: migration.source_type,
+    statements: migration.statements,
     checksum: migration.checksum,
     wrapped_transaction: script.wrapped,
     status: "pending",
@@ -2484,8 +2913,12 @@ async function runDatabaseMigrations(plan, args, repoRoot, github) {
       id: migration.id,
       filename: migration.filename,
       file: migration.file,
+      source_type: migration.source_type,
       checksum: migration.checksum,
+      source_checksum: migration.source_checksum,
       bytes: migration.bytes,
+      source_bytes: migration.source_bytes,
+      statements: migration.statements,
       no_transaction: migration.no_transaction,
     })),
     comparison: {
@@ -2561,6 +2994,8 @@ async function runDatabaseMigrations(plan, args, repoRoot, github) {
         id: migration.id,
         filename: migration.filename,
         file: migration.file,
+        source_type: migration.source_type,
+        statements: migration.statements,
         checksum: migration.checksum,
         applied_at: migration.applied_at,
         execution_ms: migration.execution_ms,
@@ -2569,6 +3004,8 @@ async function runDatabaseMigrations(plan, args, repoRoot, github) {
         id: migration.id,
         filename: migration.filename,
         file: migration.file,
+        source_type: migration.source_type,
+        statements: migration.statements,
         checksum: migration.checksum,
         bytes: migration.bytes,
         no_transaction: migration.no_transaction,
@@ -2862,6 +3299,7 @@ function createReport(args, repoRoot, plans, execution) {
         migrations_table: plan.migrations_table,
         migrations: plan.migrations,
         migrations_discovered: plan.migrations_discovered.length,
+        migration_sources: groupMigrationSources(plan.migrations_discovered),
         transaction_mode: plan.transaction_mode,
         create_table: plan.create_table,
         lock_migrations: plan.lock_migrations,
@@ -2877,6 +3315,17 @@ function createReport(args, repoRoot, plans, execution) {
     stopped_early: execution.stopped_early,
     status,
   };
+}
+
+function groupMigrationSources(migrations) {
+  const groups = {};
+
+  for (const migration of migrations) {
+    const sourceType = migration.source_type || "unknown";
+    groups[sourceType] = (groups[sourceType] || 0) + 1;
+  }
+
+  return groups;
 }
 
 function escapeMarkdown(value) {
@@ -2929,13 +3378,17 @@ function createMarkdownSummary(report) {
     lines.push("No database migration plans were selected.");
   } else {
     lines.push(
-      "| Database | Requested Client | Effective Client | URL Present | Table | Migrations | Transactions |",
+      "| Database | Requested Client | Effective Client | URL Present | Table | Migrations | Sources | Transactions |",
     );
-    lines.push("|---|---|---|---:|---|---:|---|");
+    lines.push("|---|---|---|---:|---|---:|---|---|");
 
     for (const database of report.selected_databases) {
+      const sources = Object.entries(database.migration_sources || {})
+        .map(([name, count]) => `${name}:${count}`)
+        .join(", ");
+
       lines.push(
-        `| \`${database.name}\` | \`${database.requested_client || database.client}\` | \`${database.effective_client}\` | \`${database.database_url_present ? "true" : "false"}\` | \`${database.migrations_table}\` | \`${database.migrations_discovered}\` | \`${database.transaction_mode}\` |`,
+        `| \`${database.name}\` | \`${database.requested_client || database.client}\` | \`${database.effective_client}\` | \`${database.database_url_present ? "true" : "false"}\` | \`${database.migrations_table}\` | \`${database.migrations_discovered}\` | \`${sources || "none"}\` | \`${database.transaction_mode}\` |`,
       );
     }
   }
@@ -2970,18 +3423,18 @@ function createMarkdownSummary(report) {
     lines.push("");
     lines.push("## ⏳ Pending Migrations");
     lines.push("");
-    lines.push("| Database | Migration | File | Checksum |");
-    lines.push("|---|---|---|---|");
+    lines.push("| Database | Migration | Type | File | Checksum |");
+    lines.push("|---|---|---|---|---|");
 
     for (const migration of pending.slice(0, 100)) {
       lines.push(
-        `| \`${migration.database}\` | \`${migration.id}\` | \`${migration.file}\` | \`${migration.checksum.slice(0, 12)}\` |`,
+        `| \`${migration.database}\` | \`${migration.id}\` | \`${migration.source_type || "sql"}\` | \`${migration.file}\` | \`${migration.checksum.slice(0, 12)}\` |`,
       );
     }
 
     if (pending.length > 100) {
       lines.push(
-        `| ... | ... | ... | ${pending.length - 100} additional migration(s) omitted. |`,
+        `| ... | ... | ... | ... | ${pending.length - 100} additional migration(s) omitted. |`,
       );
     }
   }
@@ -2997,12 +3450,12 @@ function createMarkdownSummary(report) {
     lines.push("");
     lines.push("## 🚀 Migration Actions");
     lines.push("");
-    lines.push("| Status | Database | Migration | Wrapped | Duration |");
-    lines.push("|---|---|---|---:|---:|");
+    lines.push("| Status | Database | Migration | Type | Wrapped | Duration |");
+    lines.push("|---|---|---|---|---:|---:|");
 
     for (const migration of applied) {
       lines.push(
-        `| \`${migration.status}\` | \`${migration.database}\` | \`${migration.id}\` | \`${migration.wrapped_transaction ? "true" : "false"}\` | \`${formatDuration(migration.duration_ms)}\` |`,
+        `| \`${migration.status}\` | \`${migration.database}\` | \`${migration.id}\` | \`${migration.source_type || "sql"}\` | \`${migration.wrapped_transaction ? "true" : "false"}\` | \`${formatDuration(migration.duration_ms)}\` |`,
       );
     }
   }

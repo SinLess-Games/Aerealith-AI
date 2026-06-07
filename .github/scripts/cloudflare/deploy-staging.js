@@ -125,9 +125,16 @@ function parseArgs(argv = process.argv.slice(2)) {
     log_dir: process.env.CLOUDFLARE_STAGING_LOG_DIR || DEFAULT_LOG_DIR,
 
     environment:
-      process.env.CLOUDFLARE_STAGING_ENVIRONMENT || DEFAULT_ENVIRONMENT,
+      process.env.CLOUDFLARE_STAGING_ENVIRONMENT ||
+      process.env.CLOUDFLARE_ENVIRONMENT ||
+      DEFAULT_ENVIRONMENT,
+    stage:
+      process.env.CLOUDFLARE_DEPLOYMENT_STAGE ||
+      process.env.CLOUDFLARE_STAGING_STAGE ||
+      DEFAULT_ENVIRONMENT,
     branch:
       process.env.CLOUDFLARE_STAGING_BRANCH ||
+      process.env.CLOUDFLARE_STAGING_REF ||
       process.env.GITHUB_REF_NAME ||
       DEFAULT_BRANCH,
 
@@ -279,7 +286,13 @@ function parseArgs(argv = process.argv.slice(2)) {
       continue;
     }
 
-    if (arg === "--branch") {
+    if (arg === "--stage" || arg === "--deployment-stage") {
+      args.stage = argv[index + 1];
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--branch" || arg === "--ref" || arg === "--deployment-ref") {
       args.branch = argv[index + 1];
       index += 1;
       continue;
@@ -546,6 +559,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     args.environment,
     DEFAULT_ENVIRONMENT,
   ).toLowerCase();
+  args.stage = normalizeString(args.stage, args.environment).toLowerCase();
   args.branch = safeBranchName(args.branch);
   args.target_type = args.target_type.toLowerCase();
   args.include_targets = [...new Set(args.include_targets)];
@@ -577,7 +591,9 @@ Options:
       --repo <owner/repo>                 Repository slug.
       --input <file>                      cloudflare-targets.json input file.
       --environment <name>                Deployment environment. Default: staging.
+      --stage <name>                      Deployment stage alias accepted by shared workflows.
       --branch <name>                     Staging branch name.
+      --ref <name>                        Deployment ref alias for branch.
       --target-id <id>                    Deploy one target by detector ID.
       --target <name>                     Deploy one target by name.
       --type <pages|worker>               Deploy one target type.
@@ -1875,6 +1891,7 @@ function createReport(args, repoRoot, input, plan, execution) {
         ? toRelativePath(resolvePath(args.log_dir, repoRoot), repoRoot)
         : null,
       environment: args.environment,
+      stage: args.stage,
       branch: args.branch,
       changed_only: args.changed_only,
       deploy_pages: args.deploy_pages,
@@ -1966,6 +1983,7 @@ function createMarkdownSummary(report) {
     "",
     `- Status: \`${report.status}\``,
     `- Environment: \`${report.config.environment}\``,
+    `- Stage: \`${report.config.stage}\``,
     `- Branch: \`${report.config.branch}\``,
     `- Dry run: \`${report.config.dry_run ? "true" : "false"}\``,
     `- Blocked: \`${report.blocked ? "true" : "false"}\``,
@@ -2177,6 +2195,7 @@ function writeGitHubOutputs(report) {
     report.totals.failed === 0 && !report.blocked ? "true" : "false",
   );
   setGitHubOutput("cloudflare_staging_environment", report.config.environment);
+  setGitHubOutput("cloudflare_staging_stage", report.config.stage);
   setGitHubOutput("cloudflare_staging_branch", report.config.branch);
   setGitHubOutput(
     "cloudflare_staging_selected_deployments",
