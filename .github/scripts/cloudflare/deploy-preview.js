@@ -1,38 +1,14 @@
 #!/usr/bin/env node
 // .github/scripts/cloudflare/deploy-preview.js
-// =============================================================================
 // Aerealith AI — Cloudflare Preview Deployment Runner
-// -----------------------------------------------------------------------------
-// Purpose:
-//   Deploy Cloudflare preview targets discovered by CI into Cloudflare Pages
-//   branch previews or Worker preview environments.
-//
-// Input:
-//   - artifacts/ci/cloudflare-targets.json
-//
-// Output:
-//   - artifacts/cloudflare/deploy-preview.json
-//   - artifacts/cloudflare/deploy-preview.md
-//   - artifacts/cloudflare/deploy-preview/logs/*.stdout.log
-//   - artifacts/cloudflare/deploy-preview/logs/*.stderr.log
-//
-// Notes:
-//   - CommonJS only.
-//   - No external dependencies.
-//   - Uses Wrangler through pnpm/npx/yarn/bunx or a custom command.
-//   - Does not require per-resource secrets.
-//   - Does require CLOUDFLARE_API_TOKEN for real deployments.
-//   - CLOUDFLARE_ACCOUNT_ID is recommended and required by default.
-//   - Worker preview deploys are protected by default and require a configured
-//     Wrangler preview environment unless explicitly allowed.
-// =============================================================================
+// Deploys discovered Cloudflare Pages/Worker targets. Missing Pages projects
+// are created automatically, then the Pages deploy is retried.
 
 const fs = require("node:fs");
 const path = require("node:path");
 const childProcess = require("node:child_process");
 
-let logger = null;
-
+let logger;
 try {
   logger = require("../utils/logger");
 } catch {
@@ -40,94 +16,85 @@ try {
     info: (message) => console.log(`[cloudflare-preview] ${message}`),
     warn: (message) => console.warn(`[cloudflare-preview] WARN: ${message}`),
     error: (message) => console.error(`[cloudflare-preview] ERROR: ${message}`),
-    debug: () => {},
-    dump: () => {},
-    formatError: (err) => {
-      if (!err) return "unknown error";
-      if (typeof err === "string") return err;
-      return err.message || String(err);
-    },
+    formatError: (error) => error?.message || String(error || "unknown error"),
   };
 }
 
 const PROJECT_NAME = "Aerealith AI";
 const DEFAULT_REPOSITORY = "SinLess-Games/Aerealith-AI";
 const DEFAULT_BRANCH = "main";
-
+const DEFAULT_ENVIRONMENT = "preview";
 const DEFAULT_INPUT_FILE = "artifacts/ci/cloudflare-targets.json";
 const DEFAULT_OUTPUT_FILE = "artifacts/cloudflare/deploy-preview.json";
 const DEFAULT_SUMMARY_FILE = "artifacts/cloudflare/deploy-preview.md";
 const DEFAULT_LOG_DIR = "artifacts/cloudflare/deploy-preview/logs";
 
-const DEFAULT_ENVIRONMENT = "preview";
-const DEFAULT_STAGE = "preview";
-
 const TRUE_VALUES = new Set(["true", "1", "yes", "y", "on", "enabled"]);
 const FALSE_VALUES = new Set(["false", "0", "no", "n", "off", "disabled"]);
-
+const URL_PATTERN = /https?:\/\/[^\s"'<>]+/g;
 const SECRET_OUTPUT_PATTERN =
   /((ghp|github_pat|gho|ghu|ghs|ghr|sk|xoxb|xoxp|npm|cf)_[A-Za-z0-9_=-]{10,}|Bearer\s+[A-Za-z0-9._~+/=-]{10,}|password\s*=\s*[^\s]+|--password\s+[^\s]+|-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----)/gi;
 
-const URL_PATTERN = /https?:\/\/[^\s"'<>]+/g;
-
-function normalizeString(value, fallback = "") {
+function str(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
   return String(value).trim() || fallback;
 }
 
-function normalizeBoolean(value, fallback = false) {
+function bool(value, fallback = false) {
   if (value === undefined || value === null || value === "") return fallback;
   if (typeof value === "boolean") return value;
-
   const normalized = String(value).trim().toLowerCase();
-
   if (TRUE_VALUES.has(normalized)) return true;
   if (FALSE_VALUES.has(normalized)) return false;
-
   return fallback;
 }
 
-function normalizeInteger(value, fallback = 0) {
+function int(value, fallback = 0) {
   if (value === undefined || value === null || value === "") return fallback;
-
   const parsed = Number.parseInt(String(value), 10);
-
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function normalizeStringList(value) {
+function list(value) {
   if (value === undefined || value === null || value === "") return [];
-
-  if (Array.isArray(value)) {
-    return [
-      ...new Set(value.map((item) => String(item).trim()).filter(Boolean)),
-    ];
-  }
-
-  return [
-    ...new Set(
-      String(value)
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ),
-  ];
+  const items = Array.isArray(value) ? value : String(value).split(",");
+  return [...new Set(items.map((item) => String(item).trim()).filter(Boolean))];
 }
 
-function requireArgValue(argv, index, arg) {
+function valueFor(argv, index, arg) {
   const value = argv[index + 1];
-
   if (value === undefined || String(value).startsWith("--")) {
     throw new Error(`Missing value for argument: ${arg}`);
   }
-
   return value;
+}
+
+function safeBranch(value) {
+  return (
+    str(value, DEFAULT_BRANCH)
+      .replace(/^refs\/heads\//, "")
+      .replace(/^refs\/pull\//, "pull-")
+      .replace(/[^A-Za-z0-9._/-]+/g, "-")
+      .replace(/\/+/g, "/")
+      .replace(/^-|-$/g, "")
+      .slice(0, 180) || DEFAULT_BRANCH
+  );
+}
+
+function safeId(value) {
+  return (
+    str(value, "cloudflare-preview")
+      .toLowerCase()
+      .replace(/^@/, "")
+      .replace(/[^a-z0-9_.:-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "cloudflare-preview"
+  );
 }
 
 function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     repository: process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
-
     input_file: process.env.CLOUDFLARE_PREVIEW_INPUT_FILE || DEFAULT_INPUT_FILE,
     output_file:
       process.env.CLOUDFLARE_PREVIEW_OUTPUT_FILE || DEFAULT_OUTPUT_FILE,
@@ -139,25 +106,21 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.CLOUDFLARE_PREVIEW_ENVIRONMENT ||
       process.env.CLOUDFLARE_ENVIRONMENT ||
       DEFAULT_ENVIRONMENT,
-
     deployment_stage:
       process.env.CLOUDFLARE_PREVIEW_STAGE ||
       process.env.CLOUDFLARE_DEPLOYMENT_STAGE ||
       process.env.CLOUDFLARE_STAGE ||
       process.env.CLOUDFLARE_ENVIRONMENT ||
-      DEFAULT_STAGE,
-
+      DEFAULT_ENVIRONMENT,
     deployment_alias:
       process.env.CLOUDFLARE_PREVIEW_ALIAS ||
       process.env.CLOUDFLARE_DEPLOYMENT_ALIAS ||
       "",
-
     preview_ref:
       process.env.CLOUDFLARE_PREVIEW_REF ||
       process.env.GITHUB_HEAD_REF ||
       process.env.GITHUB_REF_NAME ||
       DEFAULT_BRANCH,
-
     branch:
       process.env.CLOUDFLARE_PREVIEW_BRANCH ||
       process.env.CLOUDFLARE_PREVIEW_REF ||
@@ -186,428 +149,244 @@ function parseArgs(argv = process.argv.slice(2)) {
       process.env.CLOUDFLARE_PREVIEW_TARGET_CONFIG ||
       "",
 
-    include_targets: normalizeStringList(
-      process.env.CLOUDFLARE_PREVIEW_INCLUDE_TARGETS,
-    ),
-    exclude_targets: normalizeStringList(
-      process.env.CLOUDFLARE_PREVIEW_EXCLUDE_TARGETS,
-    ),
+    include_targets: list(process.env.CLOUDFLARE_PREVIEW_INCLUDE_TARGETS),
+    exclude_targets: list(process.env.CLOUDFLARE_PREVIEW_EXCLUDE_TARGETS),
 
     wrangler_command:
       process.env.CLOUDFLARE_WRANGLER_COMMAND ||
       process.env.WRANGLER_COMMAND ||
       "",
     package_manager: process.env.CLOUDFLARE_PREVIEW_PACKAGE_MANAGER || "auto",
-
-    run_build: normalizeBoolean(
-      process.env.CLOUDFLARE_PREVIEW_RUN_BUILD,
-      false,
-    ),
+    run_build: bool(process.env.CLOUDFLARE_PREVIEW_RUN_BUILD, false),
     build_command: process.env.CLOUDFLARE_PREVIEW_BUILD_COMMAND || "",
 
-    changed_only: normalizeBoolean(
-      process.env.CLOUDFLARE_PREVIEW_CHANGED_ONLY,
+    changed_only: bool(process.env.CLOUDFLARE_PREVIEW_CHANGED_ONLY, true),
+    deploy_pages: bool(process.env.CLOUDFLARE_PREVIEW_DEPLOY_PAGES, true),
+    deploy_workers: bool(process.env.CLOUDFLARE_PREVIEW_DEPLOY_WORKERS, true),
+    auto_create_pages_project: bool(
+      process.env.CLOUDFLARE_PREVIEW_AUTO_CREATE_PAGES_PROJECT ||
+        process.env.CLOUDFLARE_AUTO_CREATE_PAGES_PROJECT,
       true,
     ),
-    deploy_pages: normalizeBoolean(
-      process.env.CLOUDFLARE_PREVIEW_DEPLOY_PAGES,
-      true,
-    ),
-    deploy_workers: normalizeBoolean(
-      process.env.CLOUDFLARE_PREVIEW_DEPLOY_WORKERS,
-      true,
-    ),
+    pages_production_branch:
+      process.env.CLOUDFLARE_PREVIEW_PAGES_PRODUCTION_BRANCH ||
+      process.env.CLOUDFLARE_PAGES_PRODUCTION_BRANCH ||
+      process.env.CLOUDFLARE_PRODUCTION_BRANCH ||
+      DEFAULT_BRANCH,
 
-    require_credentials: normalizeBoolean(
+    require_credentials: bool(
       process.env.CLOUDFLARE_PREVIEW_REQUIRE_CREDENTIALS,
       true,
     ),
-    require_account_id: normalizeBoolean(
+    require_account_id: bool(
       process.env.CLOUDFLARE_PREVIEW_REQUIRE_ACCOUNT_ID,
       true,
     ),
-    require_worker_preview_env: normalizeBoolean(
+    require_worker_preview_env: bool(
       process.env.CLOUDFLARE_PREVIEW_REQUIRE_WORKER_ENV,
       true,
     ),
-    allow_worker_default_preview: normalizeBoolean(
+    allow_worker_default_preview: bool(
       process.env.CLOUDFLARE_PREVIEW_ALLOW_WORKER_DEFAULT,
       false,
     ),
 
-    max_deployments: normalizeInteger(
-      process.env.CLOUDFLARE_PREVIEW_MAX_DEPLOYMENTS,
-      0,
-    ),
-    timeout_minutes: normalizeInteger(
-      process.env.CLOUDFLARE_PREVIEW_TIMEOUT_MINUTES,
-      20,
-    ),
-    max_buffer_mb: normalizeInteger(
-      process.env.CLOUDFLARE_PREVIEW_MAX_BUFFER_MB,
-      64,
-    ),
+    max_deployments: int(process.env.CLOUDFLARE_PREVIEW_MAX_DEPLOYMENTS, 0),
+    timeout_minutes: int(process.env.CLOUDFLARE_PREVIEW_TIMEOUT_MINUTES, 20),
+    max_buffer_mb: int(process.env.CLOUDFLARE_PREVIEW_MAX_BUFFER_MB, 64),
 
-    continue_on_error: normalizeBoolean(
+    continue_on_error: bool(
       process.env.CLOUDFLARE_PREVIEW_CONTINUE_ON_ERROR,
       true,
     ),
-    fail_on_error: normalizeBoolean(
-      process.env.CLOUDFLARE_PREVIEW_FAIL_ON_ERROR,
-      true,
-    ),
-    fail_if_empty: normalizeBoolean(
-      process.env.CLOUDFLARE_PREVIEW_FAIL_IF_EMPTY,
-      false,
-    ),
+    fail_on_error: bool(process.env.CLOUDFLARE_PREVIEW_FAIL_ON_ERROR, true),
+    fail_if_empty: bool(process.env.CLOUDFLARE_PREVIEW_FAIL_IF_EMPTY, false),
 
-    dry_run: normalizeBoolean(
+    dry_run: bool(
       process.env.CLOUDFLARE_PREVIEW_DRY_RUN ||
         process.env.CLOUDFLARE_DRY_RUN ||
         process.env.DRY_RUN ||
         process.env.PROJECT_SYNC_DRY_RUN,
       false,
     ),
-    write_logs: normalizeBoolean(
-      process.env.CLOUDFLARE_PREVIEW_WRITE_LOGS,
-      true,
-    ),
-    write_summary_file: normalizeBoolean(
+    write_logs: bool(process.env.CLOUDFLARE_PREVIEW_WRITE_LOGS, true),
+    write_summary_file: bool(
       process.env.CLOUDFLARE_PREVIEW_WRITE_SUMMARY,
       true,
     ),
-    print: normalizeBoolean(process.env.CLOUDFLARE_PREVIEW_PRINT, true),
-    write_step_summary: normalizeBoolean(
-      process.env.CLOUDFLARE_PREVIEW_STEP_SUMMARY,
-      true,
-    ),
+    print: bool(process.env.CLOUDFLARE_PREVIEW_PRINT, true),
+    write_step_summary: bool(process.env.CLOUDFLARE_PREVIEW_STEP_SUMMARY, true),
   };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
 
     if (arg === "--repo" || arg === "--repository") {
-      args.repository = requireArgValue(argv, index, arg);
+      args.repository = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--input") {
-      args.input_file = requireArgValue(argv, index, arg);
+    } else if (arg === "--input") {
+      args.input_file = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--environment" || arg === "--env") {
-      args.environment = requireArgValue(argv, index, arg);
+    } else if (arg === "--environment" || arg === "--env") {
+      args.environment = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--stage" || arg === "--deployment-stage") {
-      args.deployment_stage = requireArgValue(argv, index, arg);
+    } else if (arg === "--stage" || arg === "--deployment-stage") {
+      args.deployment_stage = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--alias" || arg === "--deployment-alias") {
-      args.deployment_alias = requireArgValue(argv, index, arg);
+    } else if (arg === "--alias" || arg === "--deployment-alias") {
+      args.deployment_alias = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (
+    } else if (
       arg === "--ref" ||
       arg === "--preview-ref" ||
       arg === "--deployment-ref"
     ) {
-      args.preview_ref = requireArgValue(argv, index, arg);
+      args.preview_ref = valueFor(argv, index, arg);
       args.branch = args.preview_ref;
       index += 1;
-      continue;
-    }
-
-    if (arg === "--branch") {
-      args.branch = requireArgValue(argv, index, arg);
+    } else if (arg === "--branch") {
+      args.branch = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--target-id") {
-      args.target_id = requireArgValue(argv, index, arg);
+    } else if (arg === "--target-id") {
+      args.target_id = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--target" || arg === "--target-name") {
-      args.target_name = requireArgValue(argv, index, arg);
+    } else if (arg === "--target" || arg === "--target-name") {
+      args.target_name = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--type" || arg === "--target-type") {
-      args.target_type = requireArgValue(argv, index, arg);
+    } else if (arg === "--type" || arg === "--target-type") {
+      args.target_type = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--root" || arg === "--target-root") {
-      args.target_root = requireArgValue(argv, index, arg);
+    } else if (arg === "--root" || arg === "--target-root") {
+      args.target_root = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--config" || arg === "--target-config") {
-      args.target_config = requireArgValue(argv, index, arg);
+    } else if (arg === "--config" || arg === "--target-config") {
+      args.target_config = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--include-target" || arg === "--include-targets") {
-      args.include_targets.push(
-        ...normalizeStringList(requireArgValue(argv, index, arg)),
-      );
+    } else if (arg === "--include-target" || arg === "--include-targets") {
+      args.include_targets.push(...list(valueFor(argv, index, arg)));
       index += 1;
-      continue;
-    }
-
-    if (arg === "--exclude-target" || arg === "--exclude-targets") {
-      args.exclude_targets.push(
-        ...normalizeStringList(requireArgValue(argv, index, arg)),
-      );
+    } else if (arg === "--exclude-target" || arg === "--exclude-targets") {
+      args.exclude_targets.push(...list(valueFor(argv, index, arg)));
       index += 1;
-      continue;
-    }
-
-    if (arg === "--wrangler-command") {
-      args.wrangler_command = requireArgValue(argv, index, arg);
+    } else if (arg === "--wrangler-command") {
+      args.wrangler_command = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--package-manager") {
-      args.package_manager = requireArgValue(argv, index, arg);
+    } else if (arg === "--package-manager") {
+      args.package_manager = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--run-build") {
-      args.run_build = true;
-      continue;
-    }
-
-    if (arg === "--no-build") {
-      args.run_build = false;
-      continue;
-    }
-
-    if (arg === "--build-command") {
-      args.build_command = requireArgValue(argv, index, arg);
+    } else if (arg === "--build-command") {
+      args.build_command = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--changed-only") {
-      args.changed_only = true;
-      continue;
-    }
-
-    if (arg === "--all-targets") {
-      args.changed_only = false;
-      continue;
-    }
-
-    if (arg === "--pages") {
-      args.deploy_pages = true;
-      continue;
-    }
-
-    if (arg === "--no-pages") {
-      args.deploy_pages = false;
-      continue;
-    }
-
-    if (arg === "--workers") {
-      args.deploy_workers = true;
-      continue;
-    }
-
-    if (arg === "--no-workers") {
-      args.deploy_workers = false;
-      continue;
-    }
-
-    if (arg === "--require-credentials") {
-      args.require_credentials = true;
-      continue;
-    }
-
-    if (arg === "--no-require-credentials") {
-      args.require_credentials = false;
-      continue;
-    }
-
-    if (arg === "--require-account-id") {
-      args.require_account_id = true;
-      continue;
-    }
-
-    if (arg === "--no-require-account-id") {
-      args.require_account_id = false;
-      continue;
-    }
-
-    if (arg === "--require-worker-preview-env") {
-      args.require_worker_preview_env = true;
-      continue;
-    }
-
-    if (arg === "--no-require-worker-preview-env") {
-      args.require_worker_preview_env = false;
-      continue;
-    }
-
-    if (arg === "--allow-worker-default-preview") {
-      args.allow_worker_default_preview = true;
-      continue;
-    }
-
-    if (arg === "--no-allow-worker-default-preview") {
-      args.allow_worker_default_preview = false;
-      continue;
-    }
-
-    if (arg === "--max-deployments") {
-      args.max_deployments = normalizeInteger(
-        requireArgValue(argv, index, arg),
+    } else if (arg === "--pages-production-branch") {
+      args.pages_production_branch = valueFor(argv, index, arg);
+      index += 1;
+    } else if (arg === "--max-deployments") {
+      args.max_deployments = int(
+        valueFor(argv, index, arg),
         args.max_deployments,
       );
       index += 1;
-      continue;
-    }
-
-    if (arg === "--timeout-minutes") {
-      args.timeout_minutes = normalizeInteger(
-        requireArgValue(argv, index, arg),
+    } else if (arg === "--timeout-minutes") {
+      args.timeout_minutes = int(
+        valueFor(argv, index, arg),
         args.timeout_minutes,
       );
       index += 1;
-      continue;
-    }
-
-    if (arg === "--max-buffer-mb") {
-      args.max_buffer_mb = normalizeInteger(
-        requireArgValue(argv, index, arg),
-        args.max_buffer_mb,
-      );
+    } else if (arg === "--max-buffer-mb") {
+      args.max_buffer_mb = int(valueFor(argv, index, arg), args.max_buffer_mb);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--continue-on-error") {
-      args.continue_on_error = true;
-      continue;
-    }
-
-    if (arg === "--no-continue-on-error") {
-      args.continue_on_error = false;
-      continue;
-    }
-
-    if (arg === "--fail-on-error") {
-      args.fail_on_error = true;
-      continue;
-    }
-
-    if (arg === "--no-fail-on-error") {
-      args.fail_on_error = false;
-      continue;
-    }
-
-    if (arg === "--fail-if-empty") {
-      args.fail_if_empty = true;
-      continue;
-    }
-
-    if (arg === "--logs") {
-      args.write_logs = true;
-      continue;
-    }
-
-    if (arg === "--no-logs") {
-      args.write_logs = false;
-      continue;
-    }
-
-    if (arg === "--log-dir") {
-      args.log_dir = requireArgValue(argv, index, arg);
+    } else if (arg === "--log-dir") {
+      args.log_dir = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--output" || arg === "-o") {
-      args.output_file = requireArgValue(argv, index, arg);
+    } else if (arg === "--output" || arg === "-o") {
+      args.output_file = valueFor(argv, index, arg);
       index += 1;
-      continue;
-    }
-
-    if (arg === "--summary") {
-      args.summary_file = requireArgValue(argv, index, arg);
+    } else if (arg === "--summary") {
+      args.summary_file = valueFor(argv, index, arg);
       args.write_summary_file = true;
       index += 1;
-      continue;
-    }
-
-    if (arg === "--no-summary") {
+    } else if (arg === "--run-build") {
+      args.run_build = true;
+    } else if (arg === "--no-build") {
+      args.run_build = false;
+    } else if (arg === "--changed-only") {
+      args.changed_only = true;
+    } else if (arg === "--all-targets") {
+      args.changed_only = false;
+    } else if (arg === "--pages") {
+      args.deploy_pages = true;
+    } else if (arg === "--no-pages") {
+      args.deploy_pages = false;
+    } else if (arg === "--workers") {
+      args.deploy_workers = true;
+    } else if (arg === "--no-workers") {
+      args.deploy_workers = false;
+    } else if (arg === "--auto-create-pages-project") {
+      args.auto_create_pages_project = true;
+    } else if (arg === "--no-auto-create-pages-project") {
+      args.auto_create_pages_project = false;
+    } else if (arg === "--require-credentials") {
+      args.require_credentials = true;
+    } else if (arg === "--no-require-credentials") {
+      args.require_credentials = false;
+    } else if (arg === "--require-account-id") {
+      args.require_account_id = true;
+    } else if (arg === "--no-require-account-id") {
+      args.require_account_id = false;
+    } else if (arg === "--require-worker-preview-env") {
+      args.require_worker_preview_env = true;
+    } else if (arg === "--no-require-worker-preview-env") {
+      args.require_worker_preview_env = false;
+    } else if (arg === "--allow-worker-default-preview") {
+      args.allow_worker_default_preview = true;
+    } else if (arg === "--no-allow-worker-default-preview") {
+      args.allow_worker_default_preview = false;
+    } else if (arg === "--continue-on-error") {
+      args.continue_on_error = true;
+    } else if (arg === "--no-continue-on-error") {
+      args.continue_on_error = false;
+    } else if (arg === "--fail-on-error") {
+      args.fail_on_error = true;
+    } else if (arg === "--no-fail-on-error") {
+      args.fail_on_error = false;
+    } else if (arg === "--fail-if-empty") {
+      args.fail_if_empty = true;
+    } else if (arg === "--logs") {
+      args.write_logs = true;
+    } else if (arg === "--no-logs") {
+      args.write_logs = false;
+    } else if (arg === "--no-summary") {
       args.write_summary_file = false;
-      continue;
-    }
-
-    if (arg === "--dry-run") {
+    } else if (arg === "--dry-run") {
       args.dry_run = true;
-      continue;
-    }
-
-    if (arg === "--no-print") {
+    } else if (arg === "--no-print") {
       args.print = false;
-      continue;
-    }
-
-    if (arg === "--no-step-summary") {
+    } else if (arg === "--no-step-summary") {
       args.write_step_summary = false;
-      continue;
-    }
-
-    if (arg === "--help" || arg === "-h") {
+    } else if (arg === "--help" || arg === "-h") {
       printHelp();
       process.exit(0);
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
     }
-
-    throw new Error(`Unknown argument: ${arg}`);
   }
 
-  args.environment = normalizeString(
-    args.environment,
-    DEFAULT_ENVIRONMENT,
-  ).toLowerCase();
-
-  args.deployment_stage = normalizeString(
+  args.environment = str(args.environment, DEFAULT_ENVIRONMENT).toLowerCase();
+  args.deployment_stage = str(
     args.deployment_stage || args.environment,
     args.environment,
   ).toLowerCase();
-
-  args.preview_ref = safeBranchName(args.preview_ref || args.branch);
-  args.branch = safeBranchName(
+  args.preview_ref = safeBranch(args.preview_ref || args.branch);
+  args.branch = safeBranch(
     args.branch || args.preview_ref || args.deployment_alias,
   );
-
-  args.target_type = normalizeString(args.target_type).toLowerCase();
+  args.pages_production_branch = safeBranch(
+    args.pages_production_branch || DEFAULT_BRANCH,
+  );
+  args.target_type = str(args.target_type).toLowerCase();
   args.include_targets = [...new Set(args.include_targets)];
   args.exclude_targets = [...new Set(args.exclude_targets)];
-  args.package_manager = normalizeString(
-    args.package_manager,
-    "auto",
-  ).toLowerCase();
+  args.package_manager = str(args.package_manager, "auto").toLowerCase();
   args.max_deployments = Math.max(0, args.max_deployments);
   args.timeout_minutes = Math.max(0, args.timeout_minutes);
   args.max_buffer_mb = Math.max(1, args.max_buffer_mb);
@@ -622,60 +401,22 @@ Aerealith AI Cloudflare Preview Deployment Runner
 Usage:
   node .github/scripts/cloudflare/deploy-preview.js [options]
 
-Examples:
-  node .github/scripts/cloudflare/deploy-preview.js
-  node .github/scripts/cloudflare/deploy-preview.js --target web --environment preview
-  node .github/scripts/cloudflare/deploy-preview.js --environment preview --stage preview --alias main --ref main
-  node .github/scripts/cloudflare/deploy-preview.js --all-targets --run-build
-  node .github/scripts/cloudflare/deploy-preview.js --target api --allow-worker-default-preview
-
-Options:
-      --repo <owner/repo>                 Repository slug.
-      --input <file>                      cloudflare-targets.json input file.
-      --environment <name>                Deployment environment. Default: preview.
-      --stage <name>                      Deployment stage, such as preview, staging, or production.
-      --alias <name>                      Deployment alias metadata, such as branch alias.
-      --ref <ref>                         Preview source ref; also used as Pages branch unless --branch is set later.
-      --branch <name>                     Preview branch name.
-      --target-id <id>                    Deploy one target by detector ID.
-      --target <name>                     Deploy one target by name.
-      --type <pages|worker>               Deploy one target type.
-      --root <path>                       Deploy one target root.
-      --config <path>                     Deploy one Wrangler config.
-      --include-target <list>             Include target names.
-      --exclude-target <list>             Exclude target names.
-      --wrangler-command <command>        Custom Wrangler command prefix.
-      --package-manager <auto|pnpm|npm|yarn|bun|npx>
-      --run-build                         Run build before deploy.
-      --no-build                          Do not run build. Default.
-      --build-command <command>           Custom build command.
-      --changed-only                      Deploy affected targets only. Default.
-      --all-targets                       Deploy all matching targets.
-      --pages / --no-pages                Enable or disable Pages deployment.
-      --workers / --no-workers            Enable or disable Worker deployment.
-      --require-credentials               Require Cloudflare credentials. Default.
-      --no-require-credentials            Do not require credentials.
-      --require-account-id                Require CLOUDFLARE_ACCOUNT_ID. Default.
-      --no-require-account-id             Do not require CLOUDFLARE_ACCOUNT_ID.
-      --require-worker-preview-env        Require Worker preview env. Default.
-      --no-require-worker-preview-env     Do not require Worker preview env.
-      --allow-worker-default-preview      Allow Worker deploy without preview env.
-      --max-deployments <number>          Maximum deployments to run.
-      --timeout-minutes <number>          Per-command timeout. Default: 20.
-      --max-buffer-mb <number>            Per-command output buffer in MB. Default: 64.
-      --continue-on-error                 Continue after failed deployments. Default.
-      --no-continue-on-error              Stop after first failure.
-      --fail-on-error                     Exit non-zero on deployment failure. Default.
-      --no-fail-on-error                  Do not fail when deployment fails.
-      --fail-if-empty                     Exit non-zero when no deployment is selected.
-      --logs / --no-logs                  Write stdout/stderr logs.
-      --log-dir <dir>                     Log output directory.
-  -o, --output <file>                     JSON output file.
-      --summary <file>                    Markdown summary output file.
-      --no-summary                        Do not write Markdown summary.
-      --dry-run                           Plan but do not deploy.
-      --no-print                          Do not print JSON result.
-      --no-step-summary                   Do not append GitHub step summary.
+Common options:
+  --input <file>
+  --environment <name>
+  --stage <name>
+  --alias <name>
+  --ref <ref>
+  --branch <branch>
+  --target <name>
+  --type <pages|worker>
+  --run-build / --no-build
+  --pages / --no-pages
+  --workers / --no-workers
+  --auto-create-pages-project / --no-auto-create-pages-project
+  --pages-production-branch <branch>
+  --output <file>
+  --summary <file>
 `);
 }
 
@@ -730,58 +471,35 @@ function isDirectory(filePath) {
 
 function ensureDir(dirPath, dryRun = false) {
   if (fs.existsSync(dirPath)) return;
-
   if (dryRun) {
     logger.info(`[dry-run] Would create directory: ${dirPath}`);
     return;
   }
-
-  fs.mkdirSync(dirPath, {
-    recursive: true,
-  });
+  fs.mkdirSync(dirPath, { recursive: true });
 }
 
 function writeTextFile(filePath, content, options = {}) {
   ensureDir(path.dirname(filePath), options.dry_run);
-
   if (options.dry_run) {
     logger.info(`[dry-run] Would write ${filePath}.`);
-    return {
-      written: false,
-      dry_run: true,
-      path: filePath,
-    };
+    return;
   }
-
   fs.writeFileSync(filePath, content);
   logger.info(`Wrote ${filePath}.`);
-
-  return {
-    written: true,
-    dry_run: false,
-    path: filePath,
-  };
 }
 
-function safeJsonParse(text, fallback = null) {
+function readJsonFile(filePath, repoRoot, fallback = null) {
+  const absolutePath = resolvePath(filePath, repoRoot);
+  if (!isFile(absolutePath)) return fallback;
   try {
-    return JSON.parse(text);
+    return JSON.parse(fs.readFileSync(absolutePath, "utf8"));
   } catch {
     return fallback;
   }
 }
 
-function readJsonFile(filePath, repoRoot, fallback = null) {
-  const absolutePath = resolvePath(filePath, repoRoot);
-
-  if (!isFile(absolutePath)) return fallback;
-
-  return safeJsonParse(fs.readFileSync(absolutePath, "utf8"), fallback);
-}
-
 function runGit(args, options = {}) {
   const repoRoot = options.repoRoot || findRepoRoot();
-
   try {
     return childProcess
       .execFileSync("git", args, {
@@ -796,6 +514,8 @@ function runGit(args, options = {}) {
 }
 
 function getGitMetadata(repoRoot) {
+  const sha =
+    process.env.GITHUB_SHA || runGit(["rev-parse", "HEAD"], { repoRoot });
   return {
     repository: process.env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
     server_url: process.env.GITHUB_SERVER_URL || "https://github.com",
@@ -803,9 +523,9 @@ function getGitMetadata(repoRoot) {
       process.env.GITHUB_REF ||
       runGit(["rev-parse", "--abbrev-ref", "HEAD"], { repoRoot }),
     ref_name: process.env.GITHUB_REF_NAME || "",
-    sha: process.env.GITHUB_SHA || runGit(["rev-parse", "HEAD"], { repoRoot }),
+    sha,
     short_sha:
-      (process.env.GITHUB_SHA || "").slice(0, 12) ||
+      sha.slice(0, 12) ||
       runGit(["rev-parse", "--short=12", "HEAD"], { repoRoot }),
     branch:
       process.env.GITHUB_HEAD_REF ||
@@ -821,31 +541,8 @@ function getGitMetadata(repoRoot) {
   };
 }
 
-function safeBranchName(value) {
-  return (
-    normalizeString(value, DEFAULT_BRANCH)
-      .replace(/^refs\/heads\//, "")
-      .replace(/^refs\/pull\//, "pull-")
-      .replace(/[^A-Za-z0-9._/-]+/g, "-")
-      .replace(/\/+/g, "/")
-      .replace(/^-|-$/g, "")
-      .slice(0, 180) || DEFAULT_BRANCH
-  );
-}
-
-function safeId(value) {
-  return (
-    normalizeString(value, "cloudflare-preview")
-      .toLowerCase()
-      .replace(/^@/, "")
-      .replace(/[^a-z0-9_.:-]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "") || "cloudflare-preview"
-  );
-}
-
 function splitCommandLine(value) {
-  const input = normalizeString(value);
+  const input = str(value);
   if (!input) return [];
 
   const parts = [];
@@ -857,34 +554,20 @@ function splitCommandLine(value) {
     if (escaped) {
       current += char;
       escaped = false;
-      continue;
-    }
-
-    if (char === "\\") {
+    } else if (char === "\\") {
       escaped = true;
-      continue;
-    }
-
-    if ((char === "'" || char === '"') && !quote) {
+    } else if ((char === "'" || char === '"') && !quote) {
       quote = char;
-      continue;
-    }
-
-    if (char === quote) {
+    } else if (char === quote) {
       quote = "";
-      continue;
-    }
-
-    if (/\s/.test(char) && !quote) {
+    } else if (/\s/.test(char) && !quote) {
       if (current) {
         parts.push(current);
         current = "";
       }
-
-      continue;
+    } else {
+      current += char;
     }
-
-    current += char;
   }
 
   if (current) parts.push(current);
@@ -894,13 +577,11 @@ function splitCommandLine(value) {
 
 function commandDisplay(command, commandArgs) {
   return [command, ...commandArgs]
-    .map((part) => {
-      const value = String(part);
-
-      if (/^[A-Za-z0-9_./:=@,+-]+$/.test(value)) return value;
-
-      return JSON.stringify(value);
-    })
+    .map((part) =>
+      /^[A-Za-z0-9_./:=@,+-]+$/.test(String(part))
+        ? String(part)
+        : JSON.stringify(String(part)),
+    )
     .join(" ");
 }
 
@@ -916,7 +597,6 @@ function inferPackageManager(repoRoot, requested) {
 function createWranglerPrefix(args, repoRoot) {
   if (args.wrangler_command) {
     const parsed = splitCommandLine(args.wrangler_command);
-
     if (parsed.length) {
       return {
         command: parsed[0],
@@ -937,34 +617,18 @@ function createWranglerPrefix(args, repoRoot) {
   }
 
   if (packageManager === "yarn") {
-    return {
-      command: "yarn",
-      args: ["wrangler"],
-      package_manager: "yarn",
-    };
+    return { command: "yarn", args: ["wrangler"], package_manager: "yarn" };
   }
 
   if (packageManager === "bun") {
-    return {
-      command: "bunx",
-      args: ["wrangler"],
-      package_manager: "bun",
-    };
+    return { command: "bunx", args: ["wrangler"], package_manager: "bun" };
   }
 
   if (packageManager === "npm") {
-    return {
-      command: "npx",
-      args: ["wrangler"],
-      package_manager: "npm",
-    };
+    return { command: "npx", args: ["wrangler"], package_manager: "npm" };
   }
 
-  return {
-    command: "npx",
-    args: ["wrangler"],
-    package_manager: "npx",
-  };
+  return { command: "npx", args: ["wrangler"], package_manager: "npx" };
 }
 
 function createPackageRunCommand(packageManager, root, script) {
@@ -1011,14 +675,44 @@ function createPackageRunCommand(packageManager, root, script) {
   };
 }
 
+function candidateInputFiles(args) {
+  const files = [args.input_file];
+
+  if (args.output_file) {
+    files.push(
+      path.join(path.dirname(args.output_file), "discover-deployments.json"),
+    );
+  }
+
+  if (process.env.CLOUDFLARE_OUTPUT_DIR) {
+    files.push(
+      path.join(process.env.CLOUDFLARE_OUTPUT_DIR, "discover-deployments.json"),
+    );
+  }
+
+  files.push(
+    "artifacts/cloudflare/preview/discover-deployments.json",
+    "artifacts/ci/cloudflare-targets.json",
+  );
+
+  return [...new Set(files.map(toPosixPath).filter(Boolean))];
+}
+
 function loadCloudflareInput(args, repoRoot) {
-  const absolutePath = resolvePath(args.input_file, repoRoot);
-  const relativePath = toRelativePath(absolutePath, repoRoot);
+  const searched = candidateInputFiles(args);
+  const selectedFile = searched.find((file) =>
+    isFile(resolvePath(file, repoRoot)),
+  );
+  const file = selectedFile || args.input_file;
+  const absolutePath = resolvePath(file, repoRoot);
   const data = readJsonFile(absolutePath, repoRoot, null);
 
   return {
-    file: relativePath,
+    file: toRelativePath(absolutePath, repoRoot),
     available: Boolean(data),
+    searched_files: searched.map((candidate) =>
+      toRelativePath(resolvePath(candidate, repoRoot), repoRoot),
+    ),
     data,
   };
 }
@@ -1032,6 +726,7 @@ function byTargetKey(targets) {
       target.name,
       `${target.name}:${target.root}`,
       `${target.primary_type}:${target.name}`,
+      `${target.type}:${target.name}`,
       target.config_file,
     ]) {
       if (key) map.set(String(key), target);
@@ -1039,6 +734,36 @@ function byTargetKey(targets) {
   }
 
   return map;
+}
+
+function inputTargets(data) {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data.targets)) return data.targets;
+  if (Array.isArray(data.cloudflare_targets)) return data.cloudflare_targets;
+  if (Array.isArray(data.deployment_targets)) return data.deployment_targets;
+  if (Array.isArray(data.projects)) return data.projects;
+  return [];
+}
+
+function inputMatrix(data) {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data.deployment_matrix)) return data.deployment_matrix;
+  if (Array.isArray(data.deployments)) return data.deployments;
+  if (Array.isArray(data.deployment_targets)) return data.deployment_targets;
+
+  if (Array.isArray(data.results)) {
+    return data.results.filter(
+      (item) =>
+        item &&
+        (item.type ||
+          item.primary_type ||
+          item.target_type ||
+          item.target_name ||
+          item.name),
+    );
+  }
+
+  return [];
 }
 
 function createDirectDeploymentFromEnv(args) {
@@ -1068,9 +793,6 @@ function createDirectDeploymentFromEnv(args) {
     target_types: [type],
     root: args.target_root || ".",
     config_file: args.target_config || "",
-    package_json: null,
-    package_name: null,
-    package_manager_command: "",
     environment: args.environment,
     deployment_stage: args.deployment_stage,
     deployment_alias: args.deployment_alias,
@@ -1081,27 +803,37 @@ function createDirectDeploymentFromEnv(args) {
     main: "",
     pages_build_output_dir: "",
     compatibility_date: "",
-    d1_databases: 0,
-    kv_namespaces: 0,
-    r2_buckets: 0,
-    queue_producers: 0,
-    queue_consumers: 0,
-    durable_objects: 0,
   };
 }
 
-function normalizeDeployment(record, target = {}) {
-  const type = normalizeString(
-    record.type || record.primary_type || target.primary_type || "unknown",
+function normalizeDeployment(record, target = {}, args = {}) {
+  const type = str(
+    record.type ||
+      record.primary_type ||
+      record.target_type ||
+      target.primary_type ||
+      target.type ||
+      "unknown",
   ).toLowerCase();
-  const name = normalizeString(
-    record.name || target.name || "cloudflare-target",
+  const name = str(
+    record.name ||
+      record.target_name ||
+      target.name ||
+      process.env.CLOUDFLARE_PROJECT_NAME ||
+      "cloudflare-target",
   );
   const root = toPosixPath(record.root || target.root || ".");
+  const affected =
+    record.affected === undefined && target.affected === undefined
+      ? true
+      : Boolean(record.affected || target.affected);
 
   return {
-    id: normalizeString(
-      record.id || target.id || safeId(`${type}-${name}-${root}`),
+    id: str(
+      record.id ||
+        record.target_id ||
+        target.id ||
+        safeId(`${type}-${name}-${root}`),
     ),
     name,
     type,
@@ -1112,23 +844,30 @@ function normalizeDeployment(record, target = {}) {
     package_name: record.package_name || target.package_name || null,
     package_manager_command:
       record.package_manager_command || target.package_manager_command || "",
-    environment: normalizeString(
-      record.environment || DEFAULT_ENVIRONMENT,
+    environment: str(
+      record.environment ||
+        target.environment ||
+        args.environment ||
+        DEFAULT_ENVIRONMENT,
     ).toLowerCase(),
-    deployment_stage: normalizeString(
-      record.deployment_stage || record.stage || "",
+    deployment_stage: str(
+      record.deployment_stage || record.stage || args.deployment_stage || "",
     ).toLowerCase(),
-    deployment_alias: normalizeString(
-      record.deployment_alias || record.alias || "",
+    deployment_alias: str(
+      record.deployment_alias || record.alias || args.deployment_alias || "",
     ),
-    preview_ref: normalizeString(record.preview_ref || record.ref || ""),
+    preview_ref: str(
+      record.preview_ref || record.ref || args.preview_ref || "",
+    ),
     wrangler_environment:
       record.wrangler_environment === undefined ||
       record.wrangler_environment === null
-        ? ""
+        ? target.wrangler_environment || ""
         : String(record.wrangler_environment),
-    has_config_environment: Boolean(record.has_config_environment),
-    affected: Boolean(record.affected || target.affected),
+    has_config_environment: Boolean(
+      record.has_config_environment || target.has_config_environment,
+    ),
+    affected,
     main: record.main || target.main || "",
     pages_build_output_dir:
       record.pages_build_output_dir || target.pages_build_output_dir || "",
@@ -1158,7 +897,6 @@ function normalizeDeployment(record, target = {}) {
 function deploymentMatchesFilters(deployment, args) {
   if (args.environment && deployment.environment !== args.environment)
     return false;
-
   if (args.target_id && deployment.id !== args.target_id) return false;
   if (args.target_name && deployment.name !== args.target_name) return false;
   if (args.target_type && deployment.type !== args.target_type) return false;
@@ -1169,60 +907,56 @@ function deploymentMatchesFilters(deployment, args) {
     deployment.config_file !== toPosixPath(args.target_config)
   )
     return false;
-
   if (
     args.include_targets.length &&
     !args.include_targets.includes(deployment.name)
-  ) {
+  )
     return false;
-  }
-
-  if (args.exclude_targets.includes(deployment.name)) {
-    return false;
-  }
-
+  if (args.exclude_targets.includes(deployment.name)) return false;
   if (args.changed_only && !deployment.affected) return false;
   if (deployment.type === "pages" && !args.deploy_pages) return false;
   if (deployment.type === "worker" && !args.deploy_workers) return false;
-
   return deployment.type === "pages" || deployment.type === "worker";
 }
 
 function selectDeployments(input, args) {
   const data = input.data || {};
-  const targetMap = byTargetKey(data.targets || []);
-  const matrix = Array.isArray(data.deployment_matrix)
-    ? data.deployment_matrix
-    : [];
-
+  const targets = inputTargets(data);
+  const targetMap = byTargetKey(targets);
+  const matrix = inputMatrix(data);
   const deployments = matrix.map((entry) => {
     const target =
       targetMap.get(entry.id) ||
+      targetMap.get(entry.target_id) ||
       targetMap.get(entry.name) ||
+      targetMap.get(entry.target_name) ||
       targetMap.get(`${entry.name}:${entry.root}`) ||
       targetMap.get(`${entry.type}:${entry.name}`) ||
+      targetMap.get(`${entry.primary_type}:${entry.name}`) ||
       targetMap.get(entry.config_file) ||
       {};
 
     return normalizeDeployment(
       {
         ...entry,
+        environment: entry.environment || args.environment,
         deployment_stage: entry.deployment_stage || args.deployment_stage,
         deployment_alias: entry.deployment_alias || args.deployment_alias,
         preview_ref: entry.preview_ref || args.preview_ref,
       },
       target,
+      args,
     );
   });
 
-  if (!deployments.length && Array.isArray(data.targets)) {
-    for (const target of data.targets) {
+  if (!deployments.length && targets.length) {
+    for (const target of targets) {
       deployments.push(
         normalizeDeployment(
           {
             id: target.id,
             name: target.name,
-            type: target.primary_type,
+            type: target.primary_type || target.type,
             root: target.root,
             config_file: target.config_file,
             environment: args.environment,
@@ -1240,6 +974,7 @@ function selectDeployments(input, args) {
             pages_build_output_dir: target.pages_build_output_dir,
           },
           target,
+          args,
         ),
       );
     }
@@ -1248,26 +983,22 @@ function selectDeployments(input, args) {
   const direct = createDirectDeploymentFromEnv(args);
   if (direct) deployments.push(direct);
 
-  const selected = deployments
-    .filter((deployment) => deploymentMatchesFilters(deployment, args))
-    .slice(0, args.max_deployments > 0 ? args.max_deployments : undefined);
-
   return [
     ...new Map(
-      selected.map((deployment) => [deployment.id, deployment]),
+      deployments
+        .filter((deployment) => deploymentMatchesFilters(deployment, args))
+        .slice(0, args.max_deployments > 0 ? args.max_deployments : undefined)
+        .map((deployment) => [deployment.id, deployment]),
     ).values(),
   ];
 }
 
 function resolveTargetPath(targetRoot, targetPath, repoRoot) {
-  const normalizedPath = normalizeString(targetPath);
-
+  const normalizedPath = str(targetPath);
   if (!normalizedPath) return "";
-
   if (path.isAbsolute(normalizedPath)) return path.normalize(normalizedPath);
 
   const fromRepoRoot = resolvePath(normalizedPath, repoRoot);
-
   if (fs.existsSync(fromRepoRoot)) return fromRepoRoot;
 
   return resolvePath(path.join(targetRoot || ".", normalizedPath), repoRoot);
@@ -1278,17 +1009,11 @@ function validateCredentials(args) {
   const warnings = [];
 
   if (!args.require_credentials || args.dry_run) {
-    return {
-      ok: true,
-      errors,
-      warnings,
-    };
+    return { ok: true, errors, warnings };
   }
 
-  if (!process.env.CLOUDFLARE_API_TOKEN) {
+  if (!process.env.CLOUDFLARE_API_TOKEN)
     errors.push("Missing CLOUDFLARE_API_TOKEN.");
-  }
-
   if (args.require_account_id && !process.env.CLOUDFLARE_ACCOUNT_ID) {
     errors.push("Missing CLOUDFLARE_ACCOUNT_ID.");
   } else if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
@@ -1297,11 +1022,7 @@ function validateCredentials(args) {
     );
   }
 
-  return {
-    ok: errors.length === 0,
-    errors,
-    warnings,
-  };
+  return { ok: errors.length === 0, errors, warnings };
 }
 
 function validateDeployment(deployment, args, repoRoot) {
@@ -1314,7 +1035,6 @@ function validateDeployment(deployment, args, repoRoot) {
       deployment.pages_build_output_dir,
       repoRoot,
     );
-
     if (!deployment.pages_build_output_dir) {
       errors.push("Pages target is missing pages_build_output_dir.");
     } else if (!isDirectory(outputDir) && !args.run_build && !args.dry_run) {
@@ -1322,15 +1042,12 @@ function validateDeployment(deployment, args, repoRoot) {
         `Pages output directory does not exist: ${toRelativePath(outputDir, repoRoot)}`,
       );
     }
-
-    if (!deployment.name) {
+    if (!deployment.name)
       errors.push("Pages target is missing a project name.");
-    }
   }
 
   if (deployment.type === "worker") {
     const configFile = resolvePath(deployment.config_file, repoRoot);
-
     if (!deployment.config_file) {
       errors.push("Worker target is missing config_file.");
     } else if (!isFile(configFile)) {
@@ -1346,8 +1063,7 @@ function validateDeployment(deployment, args, repoRoot) {
       !deployment.has_config_environment
     ) {
       errors.push(
-        `Worker target "${deployment.name}" does not declare a Wrangler "${args.environment}" environment. ` +
-          "This guard prevents accidentally deploying preview changes to the default Worker.",
+        `Worker target "${deployment.name}" does not declare a Wrangler "${args.environment}" environment.`,
       );
     }
   }
@@ -1356,37 +1072,32 @@ function validateDeployment(deployment, args, repoRoot) {
     errors.push(`Unsupported Cloudflare target type: ${deployment.type}`);
   }
 
-  return {
-    ok: errors.length === 0,
-    errors,
-    warnings,
-  };
+  return { ok: errors.length === 0, errors, warnings };
 }
 
-function redactOutput(value) {
+function redact(value) {
   return String(value || "").replace(SECRET_OUTPUT_PATTERN, "[REDACTED]");
+}
+
+function cleanUrl(url) {
+  return String(url || "")
+    .replace(/\u001b\[[0-9;]*m/g, "")
+    .replace(/[),.;]+$/g, "")
+    .trim();
 }
 
 function extractUrls(...values) {
   const urls = [];
-
   for (const value of values) {
-    const matches = String(value || "").match(URL_PATTERN) || [];
-    urls.push(...matches.map((url) => url.replace(/[),.;]+$/g, "")));
+    urls.push(...(String(value || "").match(URL_PATTERN) || []).map(cleanUrl));
   }
-
-  return [...new Set(urls)];
+  return [...new Set(urls.filter(Boolean))];
 }
 
 function writeLogFile(logDir, name, content, repoRoot, args) {
   if (!args.write_logs) return null;
-
   const logPath = resolvePath(path.join(logDir, name), repoRoot);
-
-  writeTextFile(logPath, redactOutput(content), {
-    dry_run: args.dry_run,
-  });
-
+  writeTextFile(logPath, redact(content), { dry_run: args.dry_run });
   return toRelativePath(logPath, repoRoot);
 }
 
@@ -1423,10 +1134,7 @@ function runCommand(commandRecord, args, repoRoot) {
     commandRecord.args,
     {
       cwd: commandRecord.cwd || repoRoot,
-      env: {
-        ...process.env,
-        CI: process.env.CI || "true",
-      },
+      env: { ...process.env, CI: process.env.CI || "true" },
       shell: Boolean(commandRecord.shell),
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
@@ -1436,26 +1144,11 @@ function runCommand(commandRecord, args, repoRoot) {
   );
 
   const endedAt = new Date();
-  const stdout = redactOutput(result.stdout || "");
-  const stderr = redactOutput(result.stderr || "");
+  const stdout = redact(result.stdout || "");
+  const stderr = redact(result.stderr || "");
   const exitCode = result.status;
   const timedOut = result.error?.code === "ETIMEDOUT";
   const success = exitCode === 0 && !timedOut;
-
-  const stdoutLog = writeLogFile(
-    args.log_dir,
-    `${commandRecord.id}.stdout.log`,
-    stdout,
-    repoRoot,
-    args,
-  );
-  const stderrLog = writeLogFile(
-    args.log_dir,
-    `${commandRecord.id}.stderr.log`,
-    stderr,
-    repoRoot,
-    args,
-  );
 
   return {
     ...commandRecord,
@@ -1473,17 +1166,99 @@ function runCommand(commandRecord, args, repoRoot) {
     started_at: startedAt.toISOString(),
     ended_at: endedAt.toISOString(),
     duration_ms: endedAt.getTime() - startedAt.getTime(),
-    stdout_log: stdoutLog,
-    stderr_log: stderrLog,
+    stdout_log: writeLogFile(
+      args.log_dir,
+      `${commandRecord.id}.stdout.log`,
+      stdout,
+      repoRoot,
+      args,
+    ),
+    stderr_log: writeLogFile(
+      args.log_dir,
+      `${commandRecord.id}.stderr.log`,
+      stderr,
+      repoRoot,
+      args,
+    ),
     stdout_preview: stdout.slice(0, 4000),
     stderr_preview: stderr.slice(0, 4000),
     urls: extractUrls(stdout, stderr),
   };
 }
 
+function isPagesProjectNotFoundResult(result) {
+  if (!result || result.success) return false;
+  if (result.target_type !== "pages" || result.kind !== "deploy") return false;
+  const output = `${result.stdout_preview || ""}\n${result.stderr_preview || ""}\n${result.error || ""}`;
+  return (
+    /project not found/i.test(output) ||
+    /code:\s*8000007/i.test(output) ||
+    /\/pages\/projects\//i.test(output)
+  );
+}
+
+function isPagesProjectAlreadyExistsResult(result) {
+  if (!result || result.success) return false;
+  const output = `${result.stdout_preview || ""}\n${result.stderr_preview || ""}\n${result.error || ""}`;
+  return (
+    /already exists/i.test(output) ||
+    /project already exists/i.test(output) ||
+    /name already exists/i.test(output)
+  );
+}
+
+function createPagesProjectCommand(commandRecord, args, repoRoot) {
+  const commandArgs = Array.isArray(commandRecord.args)
+    ? commandRecord.args
+    : [];
+  const pagesIndex = commandArgs.indexOf("pages");
+  const wranglerPrefixArgs =
+    pagesIndex >= 0 ? commandArgs.slice(0, pagesIndex) : ["exec", "wrangler"];
+  const projectName =
+    commandRecord.pages_project_name ||
+    commandRecord.target_name ||
+    str(process.env.CLOUDFLARE_PROJECT_NAME);
+  if (!projectName) return null;
+
+  const projectArgs = [
+    ...wranglerPrefixArgs,
+    "pages",
+    "project",
+    "create",
+    projectName,
+    "--production-branch",
+    args.pages_production_branch || DEFAULT_BRANCH,
+  ];
+
+  return {
+    id: safeId(
+      `${commandRecord.target_id || projectName}-create-pages-project-${args.deployment_stage || args.environment}`,
+    ),
+    kind: "setup",
+    target_id: commandRecord.target_id,
+    target_name: commandRecord.target_name || projectName,
+    target_type: "pages",
+    command: commandRecord.command,
+    args: projectArgs,
+    shell: false,
+    cwd: repoRoot,
+    pages_project_name: projectName,
+    pages_production_branch: args.pages_production_branch || DEFAULT_BRANCH,
+    display: commandDisplay(commandRecord.command, projectArgs),
+  };
+}
+
+function createPagesDeployRetryCommand(commandRecord) {
+  return {
+    ...commandRecord,
+    id: safeId(`${commandRecord.id || commandRecord.target_id}-retry`),
+    retry_of: commandRecord.id || "",
+    display: `${commandRecord.display} (retry after Pages project create)`,
+  };
+}
+
 function createBuildCommand(deployment, args, repoRoot, packageManager) {
   if (!args.run_build) return null;
-
   const cwd = resolvePath(deployment.root || ".", repoRoot);
 
   if (args.build_command) {
@@ -1527,7 +1302,6 @@ function createPagesDeployCommand(deployment, args, repoRoot, wranglerPrefix) {
     deployment.pages_build_output_dir,
     repoRoot,
   );
-
   const wranglerArgs = [
     ...wranglerPrefix.args,
     "pages",
@@ -1539,9 +1313,8 @@ function createPagesDeployCommand(deployment, args, repoRoot, wranglerPrefix) {
     args.branch,
   ];
 
-  if (process.env.GITHUB_SHA) {
+  if (process.env.GITHUB_SHA)
     wranglerArgs.push("--commit-hash", process.env.GITHUB_SHA);
-  }
 
   const commitMessage = process.env.GITHUB_EVENT_NAME
     ? `${PROJECT_NAME} ${args.deployment_stage || args.environment} deployment from ${process.env.GITHUB_EVENT_NAME}`
@@ -1561,6 +1334,8 @@ function createPagesDeployCommand(deployment, args, repoRoot, wranglerPrefix) {
     args: wranglerArgs,
     shell: false,
     cwd: repoRoot,
+    pages_project_name: deployment.name,
+    pages_production_branch: args.pages_production_branch,
     display: commandDisplay(wranglerPrefix.command, wranglerArgs),
   };
 }
@@ -1597,7 +1372,6 @@ function createDeployCommand(deployment, args, repoRoot, wranglerPrefix) {
   if (deployment.type === "pages") {
     return createPagesDeployCommand(deployment, args, repoRoot, wranglerPrefix);
   }
-
   if (deployment.type === "worker") {
     return createWorkerDeployCommand(
       deployment,
@@ -1606,7 +1380,6 @@ function createDeployCommand(deployment, args, repoRoot, wranglerPrefix) {
       wranglerPrefix,
     );
   }
-
   return null;
 }
 
@@ -1615,7 +1388,6 @@ function createPlan(args, repoRoot, input) {
   const packageManager = inferPackageManager(repoRoot, args.package_manager);
   const credentials = validateCredentials(args);
   const deployments = selectDeployments(input, args);
-
   const commands = [];
   const skipped = [];
   const validations = [];
@@ -1689,9 +1461,46 @@ function executePlan(plan, args, repoRoot) {
   }
 
   for (const commandRecord of plan.commands) {
-    const result = runCommand(commandRecord, args, repoRoot);
-
+    let result = runCommand(commandRecord, args, repoRoot);
     results.push(result);
+
+    if (
+      !result.success &&
+      args.auto_create_pages_project &&
+      isPagesProjectNotFoundResult(result)
+    ) {
+      const createProjectCommand = createPagesProjectCommand(
+        commandRecord,
+        args,
+        repoRoot,
+      );
+
+      if (createProjectCommand) {
+        logger.warn(
+          `Cloudflare Pages project "${createProjectCommand.pages_project_name}" was not found. Creating it and retrying deployment.`,
+        );
+        const createResult = runCommand(createProjectCommand, args, repoRoot);
+        results.push(createResult);
+
+        if (
+          createResult.success ||
+          isPagesProjectAlreadyExistsResult(createResult)
+        ) {
+          const retryCommand = createPagesDeployRetryCommand(commandRecord);
+          const retryResult = runCommand(retryCommand, args, repoRoot);
+          results.push(retryResult);
+
+          if (retryResult.success) {
+            result.status = "recovered";
+            result.success = true;
+            result.recovered = true;
+            result.recovered_by = retryResult.id;
+          }
+
+          result = retryResult;
+        }
+      }
+    }
 
     if (!result.success && !args.continue_on_error) {
       stoppedEarly = true;
@@ -1731,21 +1540,17 @@ function executePlan(plan, args, repoRoot) {
 
 function formatDuration(ms) {
   const value = Number(ms || 0);
-
   if (value < 1000) return `${value}ms`;
-
   const seconds = value / 1000;
-
   if (seconds < 60) return `${seconds.toFixed(1)}s`;
-
-  const minutes = Math.floor(seconds / 60);
-  const rest = Math.round(seconds % 60);
-
-  return `${minutes}m ${rest}s`;
+  return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
 }
 
 function summarizeResults(results, skipped) {
   const passed = results.filter((result) => result.status === "passed").length;
+  const recovered = results.filter(
+    (result) => result.status === "recovered",
+  ).length;
   const failed = results.filter((result) => result.status === "failed").length;
   const skippedCommands = results.filter(
     (result) => result.status === "skipped",
@@ -1758,6 +1563,7 @@ function summarizeResults(results, skipped) {
   return {
     total_commands: results.length,
     passed,
+    recovered,
     failed,
     skipped: skippedCommands + skipped.length,
     skipped_targets: skipped.length,
@@ -1772,15 +1578,7 @@ function groupDeployments(deployments) {
 
   for (const deployment of deployments) {
     const type = deployment.type || "unknown";
-
-    if (!groups[type]) {
-      groups[type] = {
-        count: 0,
-        affected: 0,
-        targets: [],
-      };
-    }
-
+    groups[type] ||= { count: 0, affected: 0, targets: [] };
     groups[type].count += 1;
     if (deployment.affected) groups[type].affected += 1;
     groups[type].targets.push(deployment.name);
@@ -1805,6 +1603,9 @@ function createReport(args, repoRoot, input, plan, execution) {
   );
   const buildResults = execution.results.filter(
     (result) => result.kind === "build",
+  );
+  const setupResults = execution.results.filter(
+    (result) => result.kind === "setup",
   );
   const status = execution.blocked
     ? "blocked"
@@ -1838,6 +1639,7 @@ function createReport(args, repoRoot, input, plan, execution) {
     input: {
       file: input.file,
       available: input.available,
+      searched_files: input.searched_files || [],
       type: input.data?.type || null,
       created_at: input.data?.created_at || null,
     },
@@ -1864,6 +1666,8 @@ function createReport(args, repoRoot, input, plan, execution) {
       changed_only: args.changed_only,
       deploy_pages: args.deploy_pages,
       deploy_workers: args.deploy_workers,
+      auto_create_pages_project: args.auto_create_pages_project,
+      pages_production_branch: args.pages_production_branch,
       run_build: args.run_build,
       require_credentials: args.require_credentials,
       require_account_id: args.require_account_id,
@@ -1897,6 +1701,7 @@ function createReport(args, repoRoot, input, plan, execution) {
       deploy_commands: plan.commands.filter(
         (command) => command.kind === "deploy",
       ).length,
+      setup_commands: setupResults.length,
       build_passed: buildResults.filter((result) => result.status === "passed")
         .length,
       build_failed: buildResults.filter((result) => result.status === "failed")
@@ -1904,9 +1709,16 @@ function createReport(args, repoRoot, input, plan, execution) {
       deploy_passed: deployResults.filter(
         (result) => result.status === "passed",
       ).length,
+      deploy_recovered: deployResults.filter(
+        (result) => result.status === "recovered",
+      ).length,
       deploy_failed: deployResults.filter(
         (result) => result.status === "failed",
       ).length,
+      setup_passed: setupResults.filter((result) => result.status === "passed")
+        .length,
+      setup_failed: setupResults.filter((result) => result.status === "failed")
+        .length,
       urls: urls.length,
       ...totals,
     },
@@ -1943,7 +1755,7 @@ function createMarkdownSummary(report) {
     "",
     `Generated: \`${report.created_at}\``,
     "",
-    "## 🚦 Status",
+    "## Status",
     "",
     `- Status: \`${report.status}\``,
     `- Environment: \`${report.config.environment}\``,
@@ -1952,74 +1764,36 @@ function createMarkdownSummary(report) {
     `- Ref: \`${report.config.preview_ref || "not set"}\``,
     `- Branch: \`${report.config.branch}\``,
     `- Dry run: \`${report.config.dry_run ? "true" : "false"}\``,
-    `- Blocked: \`${report.blocked ? "true" : "false"}\``,
+    `- Auto-create Pages project: \`${report.config.auto_create_pages_project ? "true" : "false"}\``,
+    `- Pages production branch: \`${report.config.pages_production_branch}\``,
     "",
-    "## 🧾 Repository",
-    "",
-    `- Repository: \`${report.repository}\``,
-    `- Git branch: \`${report.github.branch || "unknown"}\``,
-    `- Commit: \`${report.github.short_sha || report.github.sha || "unknown"}\``,
-    `- Workflow: \`${report.github.workflow || "unknown"}\``,
-    `- Run: \`${report.github.run_id || "unknown"}\``,
-    "",
-    "## 📊 Totals",
+    "## Totals",
     "",
     `- Selected deployments: \`${report.totals.selected_deployments}\``,
     `- Pages targets: \`${report.totals.selected_pages}\``,
     `- Worker targets: \`${report.totals.selected_workers}\``,
     `- Planned commands: \`${report.totals.planned_commands}\``,
-    `- Build commands: \`${report.totals.build_commands}\``,
-    `- Deploy commands: \`${report.totals.deploy_commands}\``,
+    `- Setup commands: \`${report.totals.setup_commands}\``,
     `- Passed: \`${report.totals.passed}\``,
+    `- Recovered: \`${report.totals.recovered}\``,
     `- Failed: \`${report.totals.failed}\``,
     `- Skipped: \`${report.totals.skipped}\``,
     `- URLs: \`${report.totals.urls}\``,
     `- Duration: \`${report.totals.duration_human}\``,
     "",
-    "## 🔐 Credentials",
-    "",
-    `- Credential check: \`${report.credentials.ok ? "passed" : "failed"}\``,
-    `- API token present: \`${report.credentials.api_token_present ? "true" : "false"}\``,
-    `- Account ID present: \`${report.credentials.account_id_present ? "true" : "false"}\``,
-    "",
   ];
 
   if (report.preview_url) {
-    lines.push("## 🔗 Primary Preview URL");
-    lines.push("");
-    lines.push(`- ${report.preview_url}`);
-    lines.push("");
+    lines.push("## Primary Preview URL", "", `- ${report.preview_url}`, "");
   }
 
-  if (report.block_reason) {
-    lines.push(`Blocked reason: ${report.block_reason}`);
-    lines.push("");
-  }
-
-  if (Object.keys(report.deployment_groups).length) {
-    lines.push("## 🗂️ Deployment Groups");
-    lines.push("");
-    lines.push("| Type | Count | Affected | Targets |");
-    lines.push("|---|---:|---:|---|");
-
-    for (const [type, group] of Object.entries(report.deployment_groups)) {
-      lines.push(
-        `| \`${type}\` | \`${group.count}\` | \`${group.affected}\` | ${group.targets.map((item) => `\`${item}\``).join(", ")} |`,
-      );
-    }
-
-    lines.push("");
-  }
-
-  lines.push("## 🎯 Selected Deployments");
-  lines.push("");
+  lines.push("## Selected Deployments", "");
 
   if (!report.deployments.length) {
     lines.push("No Cloudflare preview deployments were selected.");
   } else {
     lines.push("| Target | Type | Root | Config | Affected |");
     lines.push("|---|---|---|---|---:|");
-
     for (const deployment of report.deployments) {
       lines.push(
         `| \`${deployment.name}\` | \`${deployment.type}\` | \`${deployment.root}\` | \`${deployment.config_file || "none"}\` | \`${deployment.affected ? "true" : "false"}\` |`,
@@ -2027,46 +1801,29 @@ function createMarkdownSummary(report) {
     }
   }
 
-  lines.push("");
-  lines.push("## 🚀 Commands");
-  lines.push("");
+  lines.push("", "## Commands", "");
 
   if (!report.results.length) {
     lines.push("No commands were executed.");
   } else {
     lines.push("| Status | Kind | Target | Type | Duration | Command |");
     lines.push("|---|---|---|---|---:|---|");
-
     for (const result of report.results.slice(0, 200)) {
       lines.push(
         `| \`${result.status}\` | \`${result.kind}\` | \`${result.target_name}\` | \`${result.target_type}\` | \`${formatDuration(result.duration_ms)}\` | \`${escapeMarkdown(result.display)}\` |`,
       );
     }
-
-    if (report.results.length > 200) {
-      lines.push(
-        `| ... | ... | ... | ... | ... | ${report.results.length - 200} additional command(s) omitted. |`,
-      );
-    }
   }
 
   if (report.urls.length) {
-    lines.push("");
-    lines.push("## 🔗 Preview URLs");
-    lines.push("");
-
-    for (const url of report.urls) {
-      lines.push(`- ${url}`);
-    }
+    lines.push("", "## URLs", "");
+    for (const url of report.urls) lines.push(`- ${url}`);
   }
 
   if (report.skipped_targets.length) {
-    lines.push("");
-    lines.push("## ⚠️ Skipped Targets");
-    lines.push("");
+    lines.push("", "## Skipped Targets", "");
     lines.push("| Target | Type | Reason |");
     lines.push("|---|---|---|");
-
     for (const skipped of report.skipped_targets) {
       lines.push(
         `| \`${skipped.target_name}\` | \`${skipped.target_type}\` | ${escapeMarkdown(skipped.reason)} |`,
@@ -2075,26 +1832,20 @@ function createMarkdownSummary(report) {
   }
 
   if (report.failures.length) {
-    lines.push("");
-    lines.push("## ❌ Failures");
-    lines.push("");
+    lines.push("", "## Failures", "");
     lines.push("| Kind | Target | Exit | Error | Stderr Log |");
     lines.push("|---|---|---:|---|---|");
-
     for (const failure of report.failures.slice(0, 50)) {
       const error =
         failure.error ||
         failure.stderr_preview.split(/\r?\n/).slice(0, 2).join(" ");
-
       lines.push(
         `| \`${failure.kind}\` | \`${failure.target_name}\` | \`${failure.exit_code ?? "unknown"}\` | ${escapeMarkdown(error || "Command failed.")} | \`${failure.stderr_log || "not written"}\` |`,
       );
     }
   }
 
-  lines.push("");
-  lines.push("## 📤 Outputs");
-  lines.push("");
+  lines.push("", "## Outputs", "");
   lines.push(`- JSON report: \`${report.config.output_file}\``);
   lines.push(
     `- Markdown summary: \`${report.config.summary_file || "not written"}\``,
@@ -2106,24 +1857,16 @@ function createMarkdownSummary(report) {
 
 function appendGitHubStepSummary(markdown) {
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
-
   if (!summaryFile) return false;
-
   fs.appendFileSync(summaryFile, `${String(markdown).trim()}\n\n`);
   return true;
 }
 
 function setGitHubOutput(name, value) {
   const outputFile = process.env.GITHUB_OUTPUT;
-
   if (!outputFile) return false;
-
   const rendered = typeof value === "string" ? value : JSON.stringify(value);
-
-  fs.appendFileSync(
-    outputFile,
-    `${name}<<EOF\n${redactOutput(rendered)}\nEOF\n`,
-  );
+  fs.appendFileSync(outputFile, `${name}<<EOF\n${redact(rendered)}\nEOF\n`);
   return true;
 }
 
@@ -2164,7 +1907,19 @@ function writeGitHubOutputs(report) {
     String(report.totals.planned_commands),
   );
   setGitHubOutput("cloudflare_preview_passed", String(report.totals.passed));
+  setGitHubOutput(
+    "cloudflare_preview_recovered",
+    String(report.totals.recovered),
+  );
   setGitHubOutput("cloudflare_preview_failed", String(report.totals.failed));
+  setGitHubOutput(
+    "cloudflare_preview_auto_create_pages_project",
+    report.config.auto_create_pages_project ? "true" : "false",
+  );
+  setGitHubOutput(
+    "cloudflare_preview_pages_production_branch",
+    report.config.pages_production_branch,
+  );
   setGitHubOutput("cloudflare_preview_urls", report.urls.join(","));
   setGitHubOutput("cloudflare_preview_urls_json", JSON.stringify(report.urls));
   setGitHubOutput(
@@ -2200,37 +1955,23 @@ function main() {
 
   const execution =
     process.exitCode === 1
-      ? {
-          results: [],
-          stopped_early: false,
-          blocked: false,
-          block_reason: "",
-        }
+      ? { results: [], stopped_early: false, blocked: false, block_reason: "" }
       : executePlan(plan, args, repoRoot);
 
   const report = createReport(args, repoRoot, input, plan, execution);
   const json = `${JSON.stringify(report, null, 2)}\n`;
   const markdown = createMarkdownSummary(report);
 
-  writeTextFile(outputFile, json, {
-    dry_run: args.dry_run,
-  });
+  writeTextFile(outputFile, json, { dry_run: args.dry_run });
 
   if (args.write_summary_file) {
-    writeTextFile(summaryFile, markdown, {
-      dry_run: args.dry_run,
-    });
+    writeTextFile(summaryFile, markdown, { dry_run: args.dry_run });
   }
 
   writeGitHubOutputs(report);
 
-  if (args.write_step_summary) {
-    appendGitHubStepSummary(markdown);
-  }
-
-  if (args.print) {
-    console.log(json.trim());
-  }
+  if (args.write_step_summary) appendGitHubStepSummary(markdown);
+  if (args.print) console.log(json.trim());
 
   if (args.fail_if_empty && report.totals.selected_deployments === 0) {
     process.exitCode = 1;
