@@ -10,11 +10,7 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "es2022"
-    ],
+    "lib": ["dom", "dom.iterable", "es2022"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
@@ -27,10 +23,7 @@
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": false,
 
-    "types": [
-      "node",
-      "@cloudflare/workers-types"
-    ],
+    "types": ["node", "@cloudflare/workers-types"],
     "plugins": [
       {
         "name": "next"
@@ -65,16 +58,10 @@
   ],
   "references": [
     {
-      "path": "../../libs/config"
+      "path": "../../libs/ui"
     },
     {
       "path": "../../libs/db"
-    },
-    {
-      "path": "../../libs/flags"
-    },
-    {
-      "path": "../../libs/ui"
     }
   ]
 }

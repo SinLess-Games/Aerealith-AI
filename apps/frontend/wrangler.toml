@@ -5,8 +5,8 @@
 # This Worker is the public frontend edge service for Aerealith AI.
 #
 # Runtime:
-#   - Next.js/OpenNext Worker entrypoint
-#   - Static assets served from .open-next/assets
+#   - Next.js Worker entrypoint
+#   - Static build assets served from .next/static
 #   - Node.js compatibility enabled for framework/runtime packages
 #
 # Secrets:
@@ -16,9 +16,10 @@
 #       const postgresUrl = await env.POSTGRES_URL_SECRET.get()
 #
 # IMPORTANT:
-#   Replace <CLOUDFLARE_SECRETS_STORE_ID> with the real Secrets Store ID.
-#   The account secret name should be POSTGRES_URL unless you intentionally
-#   named it differently in Cloudflare Secrets Store.
+#   The account secret names should exist in Cloudflare Secrets Store:
+#     - PREVIEW_POSTGRES_URL
+#     - STAGING_POSTGRES_URL
+#     - PRODUCTION_POSTGRES_URL
 # =============================================================================
 
 "$schema" = "../../node_modules/wrangler/config-schema.json"
@@ -37,9 +38,6 @@ compatibility_flags = [
 # -----------------------------------------------------------------------------
 # Routes / Domains
 # -----------------------------------------------------------------------------
-# Keep workers_dev enabled while bringing the production custom domains online.
-# Once production DNS/routes are confirmed, you can disable workers_dev if desired.
-# -----------------------------------------------------------------------------
 
 routes = [
   { pattern = "aerealith.com", custom_domain = true },
@@ -49,26 +47,20 @@ routes = [
 # -----------------------------------------------------------------------------
 # Static Assets
 # -----------------------------------------------------------------------------
-# OpenNext emits assets here. The ASSETS binding lets the Worker serve static
-# files directly from Cloudflare's asset pipeline.
+# Your current frontend build runs:
+#   next build && node ./scripts/ensure-middleware-manifest.mjs
+#
+# That creates .next/static, not .open-next/assets.
+# If you later switch to OpenNext output, change this back to:
+#   directory = ".open-next/assets"
 # -----------------------------------------------------------------------------
 
 [assets]
-directory = ".open-next/assets"
+directory = ".next/static"
 binding = "ASSETS"
 
 # -----------------------------------------------------------------------------
 # Service Bindings
-# -----------------------------------------------------------------------------
-# Frontend self-reference is useful for framework internals, middleware behavior,
-# and future internal calls.
-#
-# Add more service bindings here as microservices come online:
-#   AUTH_SERVICE
-#   USER_SERVICE
-#   MEMORY_SERVICE
-#   AUTOMATION_SERVICE
-#   INTEGRATION_SERVICE
 # -----------------------------------------------------------------------------
 
 [[services]]
@@ -98,6 +90,14 @@ service = "aerealith-frontend"
 # binding = "INTEGRATION_SERVICE"
 # service = "aerealith-integrations"
 
+# -----------------------------------------------------------------------------
+# Cloudflare Secrets Store
+# -----------------------------------------------------------------------------
+
+[[secrets_store_secrets]]
+binding = "POSTGRES_URL_SECRET"
+store_id = "ab6f1fdec6a246578177e0577e94f40b"
+secret_name = "PRODUCTION_POSTGRES_URL"
 
 # -----------------------------------------------------------------------------
 # Public / Non-sensitive Runtime Variables
@@ -131,7 +131,7 @@ ENABLE_OBSERVABILITY = "true"
 # Required Worker Secrets
 # -----------------------------------------------------------------------------
 # This validates traditional Worker secrets, not Secrets Store account secrets.
-# Leave this empty unless you also add per-Worker secrets with:
+# Keep this empty unless you also add per-Worker secrets with:
 #   wrangler secret put SOME_SECRET
 # -----------------------------------------------------------------------------
 
@@ -155,10 +155,18 @@ enabled = true
 # Environment Overrides
 # =============================================================================
 
+# -----------------------------------------------------------------------------
+# Preview
+# -----------------------------------------------------------------------------
+
 [env.preview]
 name = "aerealith-frontend-preview"
 workers_dev = true
 routes = []
+
+[env.preview.assets]
+directory = ".next/static"
+binding = "ASSETS"
 
 [env.preview.vars]
 APP_NAME = "Aerealith AI"
@@ -166,6 +174,7 @@ APP_SERVICE = "frontend"
 APP_ENVIRONMENT = "preview"
 APP_PUBLIC_DOMAIN = "preview.aerealith.com"
 APP_PUBLIC_APP_DOMAIN = "preview.aerealith.app"
+
 DATABASE_PROVIDER = "postgresql"
 DATABASE_URL_SOURCE = "cloudflare-secrets-store"
 DATABASE_URL_SECRET_BINDING = "POSTGRES_URL_SECRET"
@@ -175,9 +184,13 @@ DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
 DATABASE_POOL_MIN = "0"
 DATABASE_POOL_MAX = "1"
 DATABASE_APPLICATION_NAME = "aerealith-frontend-preview"
+
 MIKRO_ORM_DEBUG = "false"
 LOG_LEVEL = "debug"
 ENABLE_OBSERVABILITY = "true"
+
+[env.preview.secrets]
+required = []
 
 [[env.preview.secrets_store_secrets]]
 binding = "POSTGRES_URL_SECRET"
@@ -188,6 +201,19 @@ secret_name = "PREVIEW_POSTGRES_URL"
 binding = "WORKER_SELF_REFERENCE"
 service = "aerealith-frontend-preview"
 
+[env.preview.observability]
+enabled = true
+
+[env.preview.observability.logs]
+enabled = true
+
+[env.preview.observability.traces]
+enabled = true
+
+# -----------------------------------------------------------------------------
+# Staging
+# -----------------------------------------------------------------------------
+
 [env.staging]
 name = "aerealith-frontend-staging"
 workers_dev = true
@@ -196,12 +222,17 @@ routes = [
   { pattern = "staging.aerealith.app", custom_domain = true }
 ]
 
+[env.staging.assets]
+directory = ".next/static"
+binding = "ASSETS"
+
 [env.staging.vars]
 APP_NAME = "Aerealith AI"
 APP_SERVICE = "frontend"
 APP_ENVIRONMENT = "staging"
 APP_PUBLIC_DOMAIN = "staging.aerealith.com"
 APP_PUBLIC_APP_DOMAIN = "staging.aerealith.app"
+
 DATABASE_PROVIDER = "postgresql"
 DATABASE_URL_SOURCE = "cloudflare-secrets-store"
 DATABASE_URL_SECRET_BINDING = "POSTGRES_URL_SECRET"
@@ -211,18 +242,35 @@ DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
 DATABASE_POOL_MIN = "0"
 DATABASE_POOL_MAX = "1"
 DATABASE_APPLICATION_NAME = "aerealith-frontend-staging"
+
 MIKRO_ORM_DEBUG = "false"
 LOG_LEVEL = "info"
 ENABLE_OBSERVABILITY = "true"
 
+[env.staging.secrets]
+required = []
+
 [[env.staging.secrets_store_secrets]]
 binding = "POSTGRES_URL_SECRET"
-store_id = "<CLOUDFLARE_SECRETS_STORE_ID>"
+store_id = "ab6f1fdec6a246578177e0577e94f40b"
 secret_name = "STAGING_POSTGRES_URL"
 
 [[env.staging.services]]
 binding = "WORKER_SELF_REFERENCE"
 service = "aerealith-frontend-staging"
+
+[env.staging.observability]
+enabled = true
+
+[env.staging.observability.logs]
+enabled = true
+
+[env.staging.observability.traces]
+enabled = true
+
+# -----------------------------------------------------------------------------
+# Production
+# -----------------------------------------------------------------------------
 
 [env.production]
 name = "aerealith-frontend"
@@ -234,12 +282,17 @@ routes = [
   { pattern = "www.aerealith.app", custom_domain = true }
 ]
 
+[env.production.assets]
+directory = ".next/static"
+binding = "ASSETS"
+
 [env.production.vars]
 APP_NAME = "Aerealith AI"
 APP_SERVICE = "frontend"
 APP_ENVIRONMENT = "production"
 APP_PUBLIC_DOMAIN = "aerealith.com"
 APP_PUBLIC_APP_DOMAIN = "aerealith.app"
+
 DATABASE_PROVIDER = "postgresql"
 DATABASE_URL_SOURCE = "cloudflare-secrets-store"
 DATABASE_URL_SECRET_BINDING = "POSTGRES_URL_SECRET"
@@ -249,15 +302,28 @@ DATABASE_SSL_REJECT_UNAUTHORIZED = "true"
 DATABASE_POOL_MIN = "0"
 DATABASE_POOL_MAX = "1"
 DATABASE_APPLICATION_NAME = "aerealith-frontend-production"
+
 MIKRO_ORM_DEBUG = "false"
 LOG_LEVEL = "info"
 ENABLE_OBSERVABILITY = "true"
 
+[env.production.secrets]
+required = []
+
 [[env.production.secrets_store_secrets]]
 binding = "POSTGRES_URL_SECRET"
-store_id = "<CLOUDFLARE_SECRETS_STORE_ID>"
+store_id = "ab6f1fdec6a246578177e0577e94f40b"
 secret_name = "PRODUCTION_POSTGRES_URL"
 
 [[env.production.services]]
 binding = "WORKER_SELF_REFERENCE"
 service = "aerealith-frontend"
+
+[env.production.observability]
+enabled = true
+
+[env.production.observability.logs]
+enabled = true
+
+[env.production.observability.traces]
+enabled = true

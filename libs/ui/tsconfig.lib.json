@@ -20,9 +20,6 @@
   },
   "references": [
     {
-      "path": "../flags/tsconfig.lib.json"
-    },
-    {
       "path": "../config/tsconfig.lib.json"
     }
   ],
