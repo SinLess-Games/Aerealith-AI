@@ -91,7 +91,7 @@
       "outputs": ["{options.outputFile}"],
       "options": {
         "cwd": "apps/frontend",
-        "command": "eslint . --ignore-pattern next-env.d.ts --ignore-pattern cloudflare-env.d.ts --ignore-pattern open-next-env.d.ts --ignore-pattern .next/** --ignore-pattern .open-next/**"
+        "command": "eslint --no-error-on-unmatched-pattern --no-warn-ignored . --ignore-pattern next-env.d.ts --ignore-pattern cloudflare-env.d.ts --ignore-pattern open-next-env.d.ts --ignore-pattern .next/** --ignore-pattern .open-next/**"
       },
       "metadata": {
         "technologies": ["eslint"],

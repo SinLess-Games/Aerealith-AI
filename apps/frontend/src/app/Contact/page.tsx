@@ -9,7 +9,7 @@ import { CONTACT_OPTIONS } from "../../content/contact";
 import { headerProps } from "../../content/header";
 
 const Header = dynamic(
-  () => import("@aerealith-ai/ui").then((module) => module.Header),
+  () => import("@helix-ai/ui").then((module) => module.Header),
   { ssr: false },
 );
 
