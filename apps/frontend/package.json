@@ -8,7 +8,9 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build  && node ./scripts/ensure-middleware-manifest.mjs",
+    "build": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && node ./scripts/ensure-middleware-manifest.mjs && test -f .open-next/worker.js",
+    "next:build": "next build && node ./scripts/ensure-middleware-manifest.mjs",
+    "start": "next start",
     "db:migrate": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts up",
     "db:migration:up": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts up",
     "db:migration:down": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts down",
@@ -17,20 +19,20 @@
     "db:migration:pending": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts pending",
     "db:migration:check": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts check",
     "db:tables": "tsx --tsconfig scripts/db/tsconfig.json scripts/db/migrate.ts tables",
-    "cf:build": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build",
-    "cf:preview": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "cf:deploy": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf:upload": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf:build": "cross-env NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && node ./scripts/ensure-middleware-manifest.mjs && test -f .open-next/worker.js",
+    "cf:preview": "pnpm run cf:build && opennextjs-cloudflare preview",
+    "cf:deploy": "pnpm run cf:build && opennextjs-cloudflare deploy",
+    "cf:upload": "pnpm run cf:build && opennextjs-cloudflare upload",
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "lint": "eslint --no-error-on-unmatched-pattern --no-warn-ignored . --ignore-pattern next-env.d.ts --ignore-pattern cloudflare-env.d.ts --ignore-pattern open-next-env.d.ts --ignore-pattern .next/** --ignore-pattern .open-next/**"
   },
   "dependencies": {
+    "@aerealith-ai/config": "workspace:*",
+    "@aerealith-ai/db": "workspace:*",
+    "@aerealith-ai/flags": "workspace:*",
+    "@aerealith-ai/ui": "workspace:*",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
-    "@helix-ai/config": "workspace:*",
-    "@helix-ai/flags": "workspace:*",
-    "@helix-ai/ui": "workspace:*",
-    "@helix-ai/db": "workspace:*",
     "@mui/material": "^7.3.5",
     "next": "15.5.18",
     "react": "^19.2.6",
@@ -43,6 +45,7 @@
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "cross-env": "^10.1.0",
+    "tsx": "^4.20.6",
     "wrangler": "4.90.0"
   }
 }

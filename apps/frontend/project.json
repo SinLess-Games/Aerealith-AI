@@ -9,17 +9,39 @@
       "dependsOn": ["^build"],
       "cache": true,
       "inputs": [
-        "default",
-        "^default",
+        "production",
+        "^production",
+        "cloudflare",
+        {
+          "externalDependencies": ["next", "@opennextjs/cloudflare", "wrangler"]
+        }
+      ],
+      "outputs": ["{projectRoot}/.next", "{projectRoot}/.open-next"],
+      "options": {
+        "cwd": "apps/frontend",
+        "tty": false,
+        "command": "NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build && node ./scripts/ensure-middleware-manifest.mjs && test -f .open-next/worker.js"
+      },
+      "syncGenerators": ["@nx/js:typescript-sync"],
+      "parallelism": true,
+      "configurations": {}
+    },
+    "next:build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["^build"],
+      "cache": true,
+      "inputs": [
+        "production",
+        "^production",
         {
           "externalDependencies": ["next"]
         }
       ],
-      "outputs": ["{workspaceRoot}/dist/apps/frontend"],
+      "outputs": ["{projectRoot}/.next"],
       "options": {
         "cwd": "apps/frontend",
         "tty": false,
-        "command": "next build  && node ./scripts/ensure-middleware-manifest.mjs"
+        "command": "next build && node ./scripts/ensure-middleware-manifest.mjs"
       },
       "syncGenerators": ["@nx/js:typescript-sync"],
       "parallelism": true,
@@ -39,7 +61,7 @@
     "start": {
       "executor": "nx:run-commands",
       "continuous": true,
-      "dependsOn": ["build"],
+      "dependsOn": ["next:build"],
       "options": {
         "cwd": "apps/frontend",
         "command": "next start"
@@ -50,7 +72,7 @@
     "serve-static": {
       "executor": "nx:run-commands",
       "continuous": true,
-      "dependsOn": ["build"],
+      "dependsOn": ["next:build"],
       "options": {
         "cwd": "apps/frontend",
         "command": "next start"
@@ -292,7 +314,7 @@
     },
     "cf:build": {
       "executor": "nx:run-commands",
-      "dependsOn": ["^build"],
+      "dependsOn": ["build"],
       "cache": true,
       "inputs": [
         "production",
@@ -302,11 +324,11 @@
           "externalDependencies": ["next", "@opennextjs/cloudflare", "wrangler"]
         }
       ],
-      "outputs": ["{projectRoot}/.open-next"],
+      "outputs": ["{projectRoot}/.next", "{projectRoot}/.open-next"],
       "options": {
         "cwd": "apps/frontend",
         "tty": false,
-        "command": "NODE_ENV=production NEXT_PRIVATE_MINIMAL_MODE=1 opennextjs-cloudflare build"
+        "command": "test -f .open-next/worker.js"
       },
       "syncGenerators": ["@nx/js:typescript-sync"],
       "configurations": {},
