@@ -32,6 +32,11 @@ on:
         required: true
         default: true
         type: boolean
+      run_cockroachdb_migrations:
+        description: "Run CockroachDB preview migrations."
+        required: true
+        default: true
+        type: boolean
       sync_kv:
         description: "Sync Cloudflare KV preview configuration."
         required: true
@@ -104,6 +109,8 @@ jobs:
       pull_request_number: ${{ steps.context.outputs.pull_request_number }}
       is_fork: ${{ steps.context.outputs.is_fork }}
       should_discover: ${{ steps.context.outputs.should_discover }}
+      should_run_d1_migrations: ${{ steps.context.outputs.should_run_d1_migrations }}
+      should_run_cockroachdb_migrations: ${{ steps.context.outputs.should_run_cockroachdb_migrations }}
       should_run_migrations: ${{ steps.context.outputs.should_run_migrations }}
       should_sync_resources: ${{ steps.context.outputs.should_sync_resources }}
       should_deploy: ${{ steps.context.outputs.should_deploy }}
@@ -118,6 +125,7 @@ jobs:
           INPUT_ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name || 'preview' }}
           INPUT_PREVIEW_ALIAS: ${{ github.event.inputs.preview_alias || '' }}
           INPUT_RUN_D1_MIGRATIONS: ${{ github.event.inputs.run_d1_migrations || 'true' }}
+          INPUT_RUN_COCKROACHDB_MIGRATIONS: ${{ github.event.inputs.run_cockroachdb_migrations || 'true' }}
           INPUT_SYNC_KV: ${{ github.event.inputs.sync_kv || 'true' }}
           INPUT_SYNC_QUEUES: ${{ github.event.inputs.sync_queues || 'true' }}
           INPUT_SYNC_R2: ${{ github.event.inputs.sync_r2 || 'true' }}
@@ -153,6 +161,8 @@ jobs:
           fi
 
           should_discover="false"
+          should_run_d1_migrations="false"
+          should_run_cockroachdb_migrations="false"
           should_run_migrations="false"
           should_sync_resources="false"
           should_deploy="false"
@@ -164,6 +174,14 @@ jobs:
               should_deploy="true"
 
               if [[ "${INPUT_RUN_D1_MIGRATIONS:-true}" == "true" ]]; then
+                should_run_d1_migrations="true"
+              fi
+
+              if [[ "${INPUT_RUN_COCKROACHDB_MIGRATIONS:-true}" == "true" ]]; then
+                should_run_cockroachdb_migrations="true"
+              fi
+
+              if [[ "$should_run_d1_migrations" == "true" || "$should_run_cockroachdb_migrations" == "true" ]]; then
                 should_run_migrations="true"
               fi
 
@@ -176,7 +194,18 @@ jobs:
               ;;
             migrations-only)
               should_discover="true"
-              should_run_migrations="true"
+
+              if [[ "${INPUT_RUN_D1_MIGRATIONS:-true}" == "true" ]]; then
+                should_run_d1_migrations="true"
+              fi
+
+              if [[ "${INPUT_RUN_COCKROACHDB_MIGRATIONS:-true}" == "true" ]]; then
+                should_run_cockroachdb_migrations="true"
+              fi
+
+              if [[ "$should_run_d1_migrations" == "true" || "$should_run_cockroachdb_migrations" == "true" ]]; then
+                should_run_migrations="true"
+              fi
               ;;
             sync-only)
               should_discover="true"
@@ -197,7 +226,9 @@ jobs:
           fi
 
           if [[ "$is_fork" == "true" ]]; then
-            echo "::notice::Pull request is from a fork. Cloudflare deployment and sync steps will be skipped to protect secrets."
+            echo "::notice::Pull request is from a fork. Cloudflare deployment, resource sync, and migrations will be skipped to protect secrets."
+            should_run_d1_migrations="false"
+            should_run_cockroachdb_migrations="false"
             should_run_migrations="false"
             should_sync_resources="false"
             should_deploy="false"
@@ -212,6 +243,8 @@ jobs:
             echo "pull_request_number=$pull_request_number"
             echo "is_fork=$is_fork"
             echo "should_discover=$should_discover"
+            echo "should_run_d1_migrations=$should_run_d1_migrations"
+            echo "should_run_cockroachdb_migrations=$should_run_cockroachdb_migrations"
             echo "should_run_migrations=$should_run_migrations"
             echo "should_sync_resources=$should_sync_resources"
             echo "should_deploy=$should_deploy"
@@ -232,7 +265,9 @@ jobs:
             echo "| Pull request | \`${pull_request_number:-none}\` |"
             echo "| Fork | \`$is_fork\` |"
             echo "| Discover | \`$should_discover\` |"
-            echo "| D1 migrations | \`$should_run_migrations\` |"
+            echo "| D1 migrations | \`$should_run_d1_migrations\` |"
+            echo "| CockroachDB migrations | \`$should_run_cockroachdb_migrations\` |"
+            echo "| Any migrations | \`$should_run_migrations\` |"
             echo "| Resource sync | \`$should_sync_resources\` |"
             echo "| Deploy | \`$should_deploy\` |"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -262,6 +297,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
       CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME || vars.CLOUDFLARE_PROJECT_NAME || 'aerealith-ai' }}
+      CLOUDFLARE_SECRETS_STORE_ID: ${{ secrets.CLOUDFLARE_SECRETS_STORE_ID || vars.CLOUDFLARE_SECRETS_STORE_ID || '' }}
 
       CLOUDFLARE_ENVIRONMENT: ${{ needs.preflight.outputs.environment_name }}
       CLOUDFLARE_DEPLOYMENT_STAGE: preview
@@ -269,8 +305,20 @@ jobs:
       CLOUDFLARE_PREVIEW_REF: ${{ needs.preflight.outputs.deployment_ref }}
       CLOUDFLARE_PULL_REQUEST_NUMBER: ${{ needs.preflight.outputs.pull_request_number }}
 
+      CLOUDFLARE_PREFER_WORKERS_OVER_PAGES: "true"
+      CLOUDFLARE_SKIP_MISSING_PAGES_OUTPUT: "true"
+      CLOUDFLARE_AUTO_CREATE_PAGES_PROJECT: "true"
+      CLOUDFLARE_PAGES_PRODUCTION_BRANCH: "main"
+      CLOUDFLARE_PREVIEW_REQUIRE_WORKER_ENV: "true"
+      CLOUDFLARE_PREVIEW_ALLOW_WORKER_DEFAULT: "false"
+      CLOUDFLARE_PREVIEW_CHANGED_ONLY: "true"
+      CLOUDFLARE_PREVIEW_CONTINUE_ON_ERROR: "true"
+      CLOUDFLARE_PREVIEW_FAIL_IF_EMPTY: "false"
+      WRANGLER_SEND_METRICS: "false"
+
+      COCKROACHDB_MIGRATIONS_CLIENT: psql
+      COCKROACHDB_MIGRATIONS_DATABASE_URL: ${{ secrets.PREVIEW_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
       PREVIEW_COCKROACH_DATABASE_URL: ${{ secrets.PREVIEW_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
-      STAGING_COCKROACH_DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
       COCKROACH_DATABASE_URL: ${{ secrets.PREVIEW_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
       COCKROACHDB_DATABASE_URL: ${{ secrets.PREVIEW_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
       DATABASE_URL: ${{ secrets.PREVIEW_COCKROACH_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
@@ -304,6 +352,13 @@ jobs:
           set -euo pipefail
           pnpm install --frozen-lockfile
 
+      - name: Install PostgreSQL client
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
       - name: Prepare Cloudflare output directory
         run: |
           set -euo pipefail
@@ -311,7 +366,7 @@ jobs:
 
       - name: Validate Cloudflare credentials
         if: >-
-          needs.preflight.outputs.should_run_migrations == 'true' ||
+          needs.preflight.outputs.should_run_d1_migrations == 'true' ||
           needs.preflight.outputs.should_sync_resources == 'true' ||
           needs.preflight.outputs.should_deploy == 'true'
         run: |
@@ -333,17 +388,14 @@ jobs:
           fi
 
       - name: Validate CockroachDB configuration
-        if: >-
-          needs.preflight.outputs.should_run_migrations == 'true' ||
-          needs.preflight.outputs.should_sync_resources == 'true' ||
-          needs.preflight.outputs.should_deploy == 'true'
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
         run: |
           set -euo pipefail
 
           missing=()
 
-          if [[ -z "${PREVIEW_COCKROACH_DATABASE_URL:-}" && -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
-            missing+=("PREVIEW_COCKROACH_DATABASE_URL or COCKROACH_DATABASE_URL or COCKROACHDB_DATABASE_URL or DATABASE_URL")
+          if [[ -z "${COCKROACHDB_MIGRATIONS_DATABASE_URL:-}" && -z "${PREVIEW_COCKROACH_DATABASE_URL:-}" && -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
+            missing+=("COCKROACHDB_MIGRATIONS_DATABASE_URL or PREVIEW_COCKROACH_DATABASE_URL or COCKROACH_DATABASE_URL or COCKROACHDB_DATABASE_URL or DATABASE_URL")
           fi
 
           if [[ "${#missing[@]}" -gt 0 ]]; then
@@ -352,10 +404,7 @@ jobs:
           fi
 
       - name: Configure CockroachDB SSL certificate
-        if: >-
-          needs.preflight.outputs.should_run_migrations == 'true' ||
-          needs.preflight.outputs.should_sync_resources == 'true' ||
-          needs.preflight.outputs.should_deploy == 'true'
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
         env:
           COCKROACHDB_CA_CERT: ${{ secrets.COCKROACHDB_CA_CERT }}
         run: |
@@ -399,6 +448,68 @@ jobs:
             echo "| PGSSLROOTCERT configured | \`true\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Configure Cloudflare Secrets Store ID in Wrangler configs
+        if: needs.preflight.outputs.should_deploy == 'true'
+        run: |
+          set -euo pipefail
+
+          mapfile -t wrangler_files < <(
+            {
+              find . -path './node_modules' -prune -o \
+                -path './.git' -prune -o \
+                -path './dist' -prune -o \
+                -path './artifacts' -prune -o \
+                -type f \( -name 'wrangler.toml' -o -name 'wrangler.json' -o -name 'wrangler.jsonc' \) -print
+            } | sort
+          )
+
+          if [[ "${#wrangler_files[@]}" -eq 0 ]]; then
+            echo "::notice::No Wrangler config files found to inspect."
+            exit 0
+          fi
+
+          placeholder_files=()
+
+          for file in "${wrangler_files[@]}"; do
+            if grep -q '<CLOUDFLARE_SECRETS_STORE_ID>' "$file"; then
+              placeholder_files+=("$file")
+            fi
+          done
+
+          if [[ "${#placeholder_files[@]}" -eq 0 ]]; then
+            echo "::notice::No Cloudflare Secrets Store placeholder values found in Wrangler configs."
+            exit 0
+          fi
+
+          if [[ -z "${CLOUDFLARE_SECRETS_STORE_ID:-}" ]]; then
+            echo "::error::Wrangler config contains <CLOUDFLARE_SECRETS_STORE_ID>, but CLOUDFLARE_SECRETS_STORE_ID is not configured as a GitHub secret or repository variable."
+            printf 'Files requiring the value:\n'
+            printf ' - %s\n' "${placeholder_files[@]}"
+            exit 1
+          fi
+
+          python - "$CLOUDFLARE_SECRETS_STORE_ID" "${placeholder_files[@]}" <<'PY'
+          import pathlib
+          import sys
+
+          store_id = sys.argv[1]
+
+          for file_name in sys.argv[2:]:
+              path = pathlib.Path(file_name)
+              content = path.read_text()
+              path.write_text(content.replace("<CLOUDFLARE_SECRETS_STORE_ID>", store_id))
+              print(f"Patched Secrets Store ID placeholder in {file_name}")
+          PY
+
+          {
+            echo "### Cloudflare Secrets Store"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Wrangler configs patched | \`${#placeholder_files[@]}\` |"
+            echo "| Secrets Store ID configured | \`true\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Discover Cloudflare deployments
         id: discover
         if: needs.preflight.outputs.should_discover == 'true'
@@ -418,7 +529,7 @@ jobs:
             --summary "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.md"
 
       - name: Run D1 preview migrations
-        if: needs.preflight.outputs.should_run_migrations == 'true'
+        if: needs.preflight.outputs.should_run_d1_migrations == 'true'
         run: |
           set -euo pipefail
 
@@ -432,6 +543,22 @@ jobs:
             --stage preview \
             --output "$CLOUDFLARE_OUTPUT_DIR/d1-migrations.json" \
             --summary "$CLOUDFLARE_OUTPUT_DIR/d1-migrations.md"
+
+      - name: Run CockroachDB preview migrations
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/databases/run-cockroachdb-migrations.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/databases/run-cockroachdb-migrations.js"
+            exit 0
+          fi
+
+          node ".github/scripts/databases/run-cockroachdb-migrations.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage preview \
+            --output "$CLOUDFLARE_OUTPUT_DIR/cockroachdb-migrations.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/cockroachdb-migrations.md"
 
       - name: Sync Cloudflare KV
         if: needs.preflight.outputs.should_sync_resources == 'true' && env.CLOUDFLARE_SYNC_KV == 'true'
@@ -521,6 +648,12 @@ jobs:
             --stage preview \
             --alias "$CLOUDFLARE_PREVIEW_ALIAS" \
             --ref "$CLOUDFLARE_PREVIEW_REF" \
+            --workers \
+            --pages \
+            --prefer-workers-over-pages \
+            --skip-missing-pages-output \
+            --auto-create-pages-project \
+            --pages-production-branch "$CLOUDFLARE_PAGES_PRODUCTION_BRANCH" \
             --output "$CLOUDFLARE_OUTPUT_DIR/deploy-preview.json" \
             --summary "$CLOUDFLARE_OUTPUT_DIR/deploy-preview.md"
 
@@ -542,6 +675,7 @@ jobs:
           if [[ -n "$preview_url" ]]; then
             echo "cloudflare_preview_url=$preview_url" >> "$GITHUB_OUTPUT"
             echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+            echo "deployment_url=$preview_url" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Comment preview URL on pull request
@@ -636,5 +770,8 @@ jobs:
             echo "| Deployment ref | \`${{ needs.preflight.outputs.deployment_ref || 'none' }}\` |"
             echo "| Pull request | \`${{ needs.preflight.outputs.pull_request_number || 'none' }}\` |"
             echo "| Fork | \`${{ needs.preflight.outputs.is_fork }}\` |"
+            echo "| D1 migrations | \`${{ needs.preflight.outputs.should_run_d1_migrations }}\` |"
+            echo "| CockroachDB migrations | \`${{ needs.preflight.outputs.should_run_cockroachdb_migrations }}\` |"
+            echo "| Resource sync | \`${{ needs.preflight.outputs.should_sync_resources }}\` |"
             echo "| Deploy | \`${{ needs.preflight.outputs.should_deploy }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"

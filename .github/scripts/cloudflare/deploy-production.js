@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // .github/scripts/cloudflare/deploy-production.js
 // Aerealith AI — Cloudflare Production Deployment Runner
-// Deploys discovered Pages/Worker targets. Missing Pages projects are created automatically and retried.
+// Deploys discovered Cloudflare Worker/Pages targets.
+// Worker targets are preferred over inferred fallback Pages targets so OpenNext
+// and microservice Workers deploy through Wrangler config instead of a missing
+// dist/apps/* Pages directory.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -12,10 +15,11 @@ try {
   logger = require("../utils/logger");
 } catch {
   logger = {
-    info: (m) => console.log(`[cloudflare-production] ${m}`),
-    warn: (m) => console.warn(`[cloudflare-production] WARN: ${m}`),
-    error: (m) => console.error(`[cloudflare-production] ERROR: ${m}`),
-    formatError: (e) => e?.message || String(e || "unknown error"),
+    info: (message) => console.log(`[cloudflare-production] ${message}`),
+    warn: (message) => console.warn(`[cloudflare-production] WARN: ${message}`),
+    error: (message) =>
+      console.error(`[cloudflare-production] ERROR: ${message}`),
+    formatError: (error) => error?.message || String(error || "unknown error"),
   };
 }
 
@@ -171,6 +175,17 @@ function parseArgs(argv = process.argv.slice(2)) {
     changed_only: b(process.env.CLOUDFLARE_PRODUCTION_CHANGED_ONLY, false),
     deploy_pages: b(process.env.CLOUDFLARE_PRODUCTION_DEPLOY_PAGES, true),
     deploy_workers: b(process.env.CLOUDFLARE_PRODUCTION_DEPLOY_WORKERS, true),
+
+    prefer_workers_over_pages: b(
+      process.env.CLOUDFLARE_PRODUCTION_PREFER_WORKERS_OVER_PAGES ||
+        process.env.CLOUDFLARE_PREFER_WORKERS_OVER_PAGES,
+      true,
+    ),
+    skip_missing_pages_output: b(
+      process.env.CLOUDFLARE_PRODUCTION_SKIP_MISSING_PAGES_OUTPUT ||
+        process.env.CLOUDFLARE_SKIP_MISSING_PAGES_OUTPUT,
+      true,
+    ),
 
     auto_create_pages_project: b(
       process.env.CLOUDFLARE_PRODUCTION_AUTO_CREATE_PAGES_PROJECT ||
@@ -344,6 +359,14 @@ function parseArgs(argv = process.argv.slice(2)) {
       args.deploy_workers = true;
     } else if (arg === "--no-workers") {
       args.deploy_workers = false;
+    } else if (arg === "--prefer-workers-over-pages") {
+      args.prefer_workers_over_pages = true;
+    } else if (arg === "--no-prefer-workers-over-pages") {
+      args.prefer_workers_over_pages = false;
+    } else if (arg === "--skip-missing-pages-output") {
+      args.skip_missing_pages_output = true;
+    } else if (arg === "--no-skip-missing-pages-output") {
+      args.skip_missing_pages_output = false;
     } else if (arg === "--auto-create-pages-project") {
       args.auto_create_pages_project = true;
     } else if (arg === "--no-auto-create-pages-project") {
@@ -405,7 +428,10 @@ function parseArgs(argv = process.argv.slice(2)) {
   }
 
   args.environment = s(args.environment, DEFAULT_ENVIRONMENT).toLowerCase();
-  args.stage = s(args.stage, args.environment).toLowerCase();
+  args.stage = s(
+    args.stage || args.environment,
+    args.environment,
+  ).toLowerCase();
   args.branch = safeBranch(args.branch, DEFAULT_BRANCH);
   args.pages_production_branch = safeBranch(
     args.pages_production_branch,
@@ -441,6 +467,10 @@ Options:
   --run-build / --no-build            Toggle build before deploy.
   --pages / --no-pages                Enable or disable Pages deployment.
   --workers / --no-workers            Enable or disable Worker deployment.
+  --prefer-workers-over-pages         Prefer Worker targets over inferred Pages targets. Default.
+  --no-prefer-workers-over-pages      Keep inferred Pages targets when Workers exist.
+  --skip-missing-pages-output         Skip Pages deploys with missing output dirs. Default.
+  --no-skip-missing-pages-output      Fail when a Pages output dir is missing.
   --auto-create-pages-project         Create missing Cloudflare Pages projects. Default.
   --no-auto-create-pages-project      Do not create missing Cloudflare Pages projects.
   --pages-production-branch <branch>  Production branch used when creating Pages projects.
@@ -528,6 +558,22 @@ function readJson(filePath, root, fallback = null) {
 
   try {
     return JSON.parse(fs.readFileSync(resolved, "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+
+function stripJsonComments(value) {
+  return String(value || "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
+function readJsonOrJsoncFile(filePath, fallback = null) {
+  if (!isFile(filePath)) return fallback;
+
+  try {
+    return JSON.parse(stripJsonComments(fs.readFileSync(filePath, "utf8")));
   } catch {
     return fallback;
   }
@@ -630,8 +676,8 @@ function splitCommandLine(value) {
   return out;
 }
 
-function display(command, args) {
-  return [command, ...args]
+function display(command, commandArgs) {
+  return [command, ...commandArgs]
     .map((part) =>
       /^[A-Za-z0-9_./:=@,+-]+$/.test(String(part))
         ? String(part)
@@ -820,6 +866,7 @@ function matrixList(data) {
       value.service_name ||
       value.config_file ||
       value.wrangler_config ||
+      value.wrangler_config_file ||
       value.pages_build_output_dir ||
       value.output_dir ||
       value.root
@@ -942,8 +989,9 @@ function inferType(record, target = {}) {
   ).toLowerCase();
 
   if (["page", "pages", "cloudflare-pages"].includes(explicit)) return "pages";
-  if (["worker", "workers", "cloudflare-worker"].includes(explicit))
+  if (["worker", "workers", "cloudflare-worker"].includes(explicit)) {
     return "worker";
+  }
 
   if (
     record.pages_build_output_dir ||
@@ -1123,24 +1171,105 @@ function matchesDeployment(deployment, args) {
   if (args.target_id && deployment.id !== args.target_id) return false;
   if (args.target_name && deployment.name !== args.target_name) return false;
   if (args.target_type && deployment.type !== args.target_type) return false;
-  if (args.target_root && deployment.root !== posix(args.target_root))
+  if (args.target_root && deployment.root !== posix(args.target_root)) {
     return false;
+  }
   if (
     args.target_config &&
     deployment.config_file !== posix(args.target_config)
-  )
+  ) {
     return false;
+  }
   if (
     args.include_targets.length &&
     !args.include_targets.includes(deployment.name)
-  )
+  ) {
     return false;
+  }
   if (args.exclude_targets.includes(deployment.name)) return false;
   if (args.changed_only && !deployment.affected) return false;
   if (deployment.type === "pages" && !args.deploy_pages) return false;
   if (deployment.type === "worker" && !args.deploy_workers) return false;
 
   return deployment.type === "pages" || deployment.type === "worker";
+}
+
+function appNameFromPagesOutputDir(outputDir) {
+  const normalized = posix(outputDir);
+  const match = normalized.match(/(?:^|\/)dist\/apps\/([^/]+)/);
+
+  return match?.[1] || "";
+}
+
+function pageTargetLooksInferred(deployment) {
+  if (!deployment || deployment.type !== "pages") return false;
+  if (deployment.config_file) return false;
+
+  return (
+    deployment.id.startsWith("pages-") ||
+    deployment.root === "." ||
+    deployment.pages_build_output_dir.startsWith("dist/apps/")
+  );
+}
+
+function workerMatchesPagesTarget(worker, pagesTarget) {
+  if (!worker || !pagesTarget) return false;
+  if (worker.type !== "worker" || pagesTarget.type !== "pages") return false;
+
+  const appName = appNameFromPagesOutputDir(pagesTarget.pages_build_output_dir);
+  const workerRoot = posix(worker.root);
+  const workerConfig = posix(worker.config_file);
+
+  if (appName) {
+    if (workerRoot === `apps/${appName}`) return true;
+    if (workerConfig.startsWith(`apps/${appName}/`)) return true;
+  }
+
+  if (worker.name && pagesTarget.name && worker.name === pagesTarget.name) {
+    return true;
+  }
+
+  if (
+    worker.pages_build_output_dir &&
+    worker.pages_build_output_dir.includes(".open-next")
+  ) {
+    return true;
+  }
+
+  if (
+    workerConfig.endsWith("wrangler.toml") ||
+    workerConfig.endsWith("wrangler.jsonc")
+  ) {
+    return pageTargetLooksInferred(pagesTarget);
+  }
+
+  return false;
+}
+
+function removeWorkerShadowedPages(deployments, args) {
+  if (!args.prefer_workers_over_pages) return deployments;
+
+  const workers = deployments.filter(
+    (deployment) => deployment.type === "worker",
+  );
+  const filtered = [];
+
+  for (const deployment of deployments) {
+    if (
+      deployment.type === "pages" &&
+      pageTargetLooksInferred(deployment) &&
+      workers.some((worker) => workerMatchesPagesTarget(worker, deployment))
+    ) {
+      logger.warn(
+        `Skipping inferred Pages target "${deployment.name}" because a Worker target for the same frontend/service was discovered.`,
+      );
+      continue;
+    }
+
+    filtered.push(deployment);
+  }
+
+  return filtered;
 }
 
 function selectDeployments(input, args) {
@@ -1157,6 +1286,7 @@ function selectDeployments(input, args) {
       targetsByKey.get(`${entry.name}:${entry.root}`) ||
       targetsByKey.get(`${entry.target_name}:${entry.root}`) ||
       targetsByKey.get(`${entry.type}:${entry.name}`) ||
+      targetsByKey.get(`${entry.primary_type}:${entry.name}`) ||
       targetsByKey.get(entry.config_file) ||
       targetsByKey.get(entry.wrangler_config) ||
       {};
@@ -1164,7 +1294,7 @@ function selectDeployments(input, args) {
     return normalizeDeployment(entry, target, args);
   });
 
-  if (!deployments.length) {
+  if (!deployments.length && targets.length) {
     for (const target of targets) {
       deployments.push(
         normalizeDeployment(
@@ -1217,12 +1347,16 @@ function selectDeployments(input, args) {
     matchesDeployment(deployment, args),
   );
 
+  selected = removeWorkerShadowedPages(selected, args);
+
   if (!selected.length && args.changed_only) {
     const relaxedArgs = { ...args, changed_only: false };
 
     selected = unique.filter((deployment) =>
       matchesDeployment(deployment, relaxedArgs),
     );
+
+    selected = removeWorkerShadowedPages(selected, relaxedArgs);
 
     if (selected.length) {
       logger.warn(
@@ -1248,6 +1382,39 @@ function targetPath(targetRoot, targetPathValue, root) {
   return fs.existsSync(fromRoot)
     ? fromRoot
     : abs(path.join(targetRoot || ".", value), root);
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function wranglerConfigHasEnvironment(configFile, environmentName) {
+  if (!configFile || !isFile(configFile) || !environmentName) return false;
+
+  const ext = path.extname(configFile).toLowerCase();
+  const content = fs.readFileSync(configFile, "utf8");
+  const env = escapeRegExp(environmentName);
+
+  if (ext === ".toml") {
+    return new RegExp(`^\\s*\\[\\s*env\\.${env}\\s*\\]`, "m").test(content);
+  }
+
+  if (ext === ".json" || ext === ".jsonc") {
+    const parsed = readJsonOrJsoncFile(configFile, null);
+
+    if (
+      parsed?.env &&
+      Object.prototype.hasOwnProperty.call(parsed.env, environmentName)
+    ) {
+      return true;
+    }
+
+    return new RegExp(`"env"\\s*:\\s*\\{[\\s\\S]*?"${env}"\\s*:`, "m").test(
+      content,
+    );
+  }
+
+  return false;
 }
 
 function validateCredentials(args) {
@@ -1346,7 +1513,13 @@ function validateDeployment(deployment, args, root) {
     if (!deployment.pages_build_output_dir) {
       errors.push("Pages target is missing pages_build_output_dir.");
     } else if (!isDir(out) && !args.run_build && !args.dry_run) {
-      errors.push(`Pages output directory does not exist: ${rel(out, root)}`);
+      if (args.skip_missing_pages_output) {
+        warnings.push(
+          `Pages output directory does not exist and will be skipped if still missing at deploy time: ${rel(out, root)}`,
+        );
+      } else {
+        errors.push(`Pages output directory does not exist: ${rel(out, root)}`);
+      }
     }
 
     if (!deployment.name) {
@@ -1365,10 +1538,16 @@ function validateDeployment(deployment, args, root) {
       );
     }
 
+    const configHasProductionEnv =
+      deployment.has_config_environment ||
+      wranglerConfigHasEnvironment(config, DEFAULT_ENVIRONMENT);
+
+    deployment.has_config_environment = configHasProductionEnv;
+
     if (
       args.environment === DEFAULT_ENVIRONMENT &&
       !args.allow_worker_default_production &&
-      !deployment.has_config_environment
+      !configHasProductionEnv
     ) {
       errors.push(
         `Worker target "${deployment.name}" does not declare a Wrangler "${args.environment}" environment. Enable --allow-worker-default-production only when the default Wrangler environment is production-safe.`,
@@ -1502,6 +1681,41 @@ function run(commandRecord, args, root) {
     stderr_preview: stderr.slice(0, 4000),
     urls: urls(stdout, stderr),
   };
+}
+
+function createSkippedCommandResult(commandRecord, reason) {
+  return {
+    ...commandRecord,
+    status: "skipped",
+    success: true,
+    skipped: true,
+    dry_run: false,
+    exit_code: null,
+    signal: null,
+    error: reason,
+    started_at: new Date().toISOString(),
+    ended_at: new Date().toISOString(),
+    duration_ms: 0,
+    stdout_log: null,
+    stderr_log: null,
+    stdout_preview: "",
+    stderr_preview: "",
+    urls: [],
+  };
+}
+
+function isPagesDeployCommand(commandRecord) {
+  return (
+    commandRecord?.kind === "deploy" && commandRecord?.target_type === "pages"
+  );
+}
+
+function shouldSkipMissingPagesDeploy(commandRecord, args) {
+  if (!args.skip_missing_pages_output) return false;
+  if (!isPagesDeployCommand(commandRecord)) return false;
+  if (!commandRecord.pages_output_dir) return false;
+
+  return !isDir(commandRecord.pages_output_dir);
 }
 
 function pagesProjectNotFound(result) {
@@ -1661,19 +1875,25 @@ function pagesDeployCommand(deployment, args, root, wrangler) {
     cwd: root,
     pages_project_name: deployment.name,
     pages_production_branch: args.pages_production_branch,
+    pages_output_dir: outputDir,
     display: display(wrangler.command, wranglerArgs),
   };
 }
 
 function workerDeployCommand(deployment, args, root, wrangler) {
-  const wranglerArgs = [
-    ...wrangler.args,
-    "deploy",
-    "--config",
-    abs(deployment.config_file, root),
-  ];
+  const configFile = abs(deployment.config_file, root);
+  const configHasEnv =
+    deployment.has_config_environment ||
+    wranglerConfigHasEnvironment(configFile, DEFAULT_ENVIRONMENT);
 
-  if (deployment.wrangler_environment && deployment.has_config_environment) {
+  const wranglerArgs = [...wrangler.args, "deploy", "--config", configFile];
+
+  if (configHasEnv) {
+    wranglerArgs.push("--env", DEFAULT_ENVIRONMENT);
+  } else if (
+    deployment.wrangler_environment &&
+    deployment.has_config_environment
+  ) {
     wranglerArgs.push("--env", deployment.wrangler_environment);
   }
 
@@ -1787,8 +2007,15 @@ function executePlan(plan, args, root) {
 
   for (let index = 0; index < plan.commands.length; index += 1) {
     const command = plan.commands[index];
-    let result = run(command, args, root);
 
+    if (shouldSkipMissingPagesDeploy(command, args)) {
+      const reason = `Skipped Pages deploy because the output directory does not exist: ${rel(command.pages_output_dir, root)}`;
+      logger.warn(reason);
+      results.push(createSkippedCommandResult(command, reason));
+      continue;
+    }
+
+    let result = run(command, args, root);
     results.push(result);
 
     if (
@@ -1838,26 +2065,27 @@ function executePlan(plan, args, root) {
     }
   }
 
-  const skipped = stoppedEarly
-    ? plan.commands.slice(stopIndex + 1).map((command) => ({
-        ...command,
-        status: "skipped",
-        success: true,
-        skipped: true,
-        dry_run: args.dry_run,
-        exit_code: null,
-        signal: null,
-        error: "Skipped because a previous command failed.",
-        started_at: null,
-        ended_at: null,
-        duration_ms: 0,
-        stdout_log: null,
-        stderr_log: null,
-        stdout_preview: "",
-        stderr_preview: "",
-        urls: [],
-      }))
-    : [];
+  const skipped =
+    stoppedEarly && stopIndex >= 0
+      ? plan.commands.slice(stopIndex + 1).map((command) => ({
+          ...command,
+          status: "skipped",
+          success: true,
+          skipped: true,
+          dry_run: args.dry_run,
+          exit_code: null,
+          signal: null,
+          error: "Skipped because a previous command failed.",
+          started_at: null,
+          ended_at: null,
+          duration_ms: 0,
+          stdout_log: null,
+          stderr_log: null,
+          stdout_preview: "",
+          stderr_preview: "",
+          urls: [],
+        }))
+      : [];
 
   return {
     results: [...results, ...skipped],
@@ -1997,6 +2225,8 @@ function createReport(args, root, input, plan, execution) {
       changed_only: args.changed_only,
       deploy_pages: args.deploy_pages,
       deploy_workers: args.deploy_workers,
+      prefer_workers_over_pages: args.prefer_workers_over_pages,
+      skip_missing_pages_output: args.skip_missing_pages_output,
       auto_create_pages_project: args.auto_create_pages_project,
       pages_production_branch: args.pages_production_branch,
       run_build: args.run_build,
@@ -2098,6 +2328,8 @@ function markdown(report) {
     `- Branch: \`${report.config.branch}\``,
     `- Dry run: \`${report.config.dry_run ? "true" : "false"}\``,
     `- Blocked: \`${report.blocked ? "true" : "false"}\``,
+    `- Worker-first deploys: \`${report.config.prefer_workers_over_pages ? "true" : "false"}\``,
+    `- Skip missing Pages output: \`${report.config.skip_missing_pages_output ? "true" : "false"}\``,
     `- Auto-create Pages project: \`${report.config.auto_create_pages_project ? "true" : "false"}\``,
     `- Pages production branch: \`${report.config.pages_production_branch}\``,
     "",
@@ -2314,6 +2546,14 @@ function writeOutputs(report) {
   output(
     "cloudflare_production_guard_ok",
     report.production_guard.ok ? "true" : "false",
+  );
+  output(
+    "cloudflare_production_prefer_workers_over_pages",
+    report.config.prefer_workers_over_pages ? "true" : "false",
+  );
+  output(
+    "cloudflare_production_skip_missing_pages_output",
+    report.config.skip_missing_pages_output ? "true" : "false",
   );
   output(
     "cloudflare_production_auto_create_pages_project",

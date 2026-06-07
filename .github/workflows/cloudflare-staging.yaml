@@ -102,6 +102,7 @@ jobs:
       should_discover: ${{ steps.context.outputs.should_discover }}
       should_run_cockroachdb_migrations: ${{ steps.context.outputs.should_run_cockroachdb_migrations }}
       should_run_d1_migrations: ${{ steps.context.outputs.should_run_d1_migrations }}
+      should_run_migrations: ${{ steps.context.outputs.should_run_migrations }}
       should_sync_resources: ${{ steps.context.outputs.should_sync_resources }}
       should_deploy: ${{ steps.context.outputs.should_deploy }}
       should_summarize: ${{ steps.context.outputs.should_summarize }}
@@ -134,6 +135,7 @@ jobs:
           should_discover="false"
           should_run_cockroachdb_migrations="false"
           should_run_d1_migrations="false"
+          should_run_migrations="false"
           should_sync_resources="false"
           should_deploy="false"
           should_summarize="true"
@@ -149,6 +151,10 @@ jobs:
 
               if [[ "${INPUT_RUN_D1_MIGRATIONS:-true}" == "true" ]]; then
                 should_run_d1_migrations="true"
+              fi
+
+              if [[ "$should_run_cockroachdb_migrations" == "true" || "$should_run_d1_migrations" == "true" ]]; then
+                should_run_migrations="true"
               fi
 
               if [[ "${INPUT_SYNC_KV:-true}" == "true" || "${INPUT_SYNC_QUEUES:-true}" == "true" || "${INPUT_SYNC_R2:-true}" == "true" || "${INPUT_SYNC_SECRETS:-false}" == "true" ]]; then
@@ -167,6 +173,10 @@ jobs:
 
               if [[ "${INPUT_RUN_D1_MIGRATIONS:-true}" == "true" ]]; then
                 should_run_d1_migrations="true"
+              fi
+
+              if [[ "$should_run_cockroachdb_migrations" == "true" || "$should_run_d1_migrations" == "true" ]]; then
+                should_run_migrations="true"
               fi
               ;;
             sync-only)
@@ -190,6 +200,7 @@ jobs:
             echo "should_discover=$should_discover"
             echo "should_run_cockroachdb_migrations=$should_run_cockroachdb_migrations"
             echo "should_run_d1_migrations=$should_run_d1_migrations"
+            echo "should_run_migrations=$should_run_migrations"
             echo "should_sync_resources=$should_sync_resources"
             echo "should_deploy=$should_deploy"
             echo "should_summarize=$should_summarize"
@@ -209,6 +220,7 @@ jobs:
             echo "| Discover | \`$should_discover\` |"
             echo "| CockroachDB migrations | \`$should_run_cockroachdb_migrations\` |"
             echo "| D1 migrations | \`$should_run_d1_migrations\` |"
+            echo "| Any migrations | \`$should_run_migrations\` |"
             echo "| Resource sync | \`$should_sync_resources\` |"
             echo "| Deploy | \`$should_deploy\` |"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -239,11 +251,23 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID || vars.CLOUDFLARE_ZONE_ID }}
       CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PROJECT_NAME || vars.CLOUDFLARE_PROJECT_NAME || 'aerealith-ai' }}
+      CLOUDFLARE_SECRETS_STORE_ID: ${{ secrets.CLOUDFLARE_SECRETS_STORE_ID || vars.CLOUDFLARE_SECRETS_STORE_ID || '' }}
 
       CLOUDFLARE_ENVIRONMENT: ${{ needs.preflight.outputs.environment_name }}
       CLOUDFLARE_DEPLOYMENT_STAGE: staging
       CLOUDFLARE_STAGING_REF: ${{ needs.preflight.outputs.deployment_ref }}
       CLOUDFLARE_DEPLOYMENT_ALIAS: staging
+
+      CLOUDFLARE_PREFER_WORKERS_OVER_PAGES: "true"
+      CLOUDFLARE_SKIP_MISSING_PAGES_OUTPUT: "true"
+      CLOUDFLARE_AUTO_CREATE_PAGES_PROJECT: "true"
+      CLOUDFLARE_PAGES_PRODUCTION_BRANCH: "main"
+      CLOUDFLARE_STAGING_REQUIRE_WORKER_ENV: "true"
+      CLOUDFLARE_STAGING_ALLOW_WORKER_DEFAULT: "false"
+      CLOUDFLARE_STAGING_CHANGED_ONLY: "true"
+      CLOUDFLARE_STAGING_CONTINUE_ON_ERROR: "true"
+      CLOUDFLARE_STAGING_FAIL_IF_EMPTY: "false"
+      WRANGLER_SEND_METRICS: "false"
 
       COCKROACHDB_MIGRATIONS_CLIENT: psql
       COCKROACHDB_MIGRATIONS_DATABASE_URL: ${{ secrets.STAGING_COCKROACH_DATABASE_URL || secrets.STAGING_COCKROACHDB_DATABASE_URL || secrets.STAGING_DATABASE_URL || secrets.COCKROACH_DATABASE_URL || secrets.COCKROACHDB_DATABASE_URL || secrets.DATABASE_URL }}
@@ -282,14 +306,25 @@ jobs:
           set -euo pipefail
           pnpm install --frozen-lockfile
 
+      - name: Ensure PostgreSQL client is available
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
+        run: |
+          set -euo pipefail
+
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+
+          psql --version
+
       - name: Prepare Cloudflare output directory
         run: |
           set -euo pipefail
           mkdir -p "$CLOUDFLARE_OUTPUT_DIR"
 
-      - name: Validate staging credentials
+      - name: Validate Cloudflare credentials
         if: >-
-          needs.preflight.outputs.should_run_cockroachdb_migrations == 'true' ||
           needs.preflight.outputs.should_run_d1_migrations == 'true' ||
           needs.preflight.outputs.should_sync_resources == 'true' ||
           needs.preflight.outputs.should_deploy == 'true'
@@ -306,28 +341,28 @@ jobs:
             missing+=("CLOUDFLARE_ACCOUNT_ID")
           fi
 
-          if [[ "${{ needs.preflight.outputs.should_run_cockroachdb_migrations }}" == "true" && "${PROJECT_SYNC_DRY_RUN:-false}" != "true" ]]; then
+          if [[ "${#missing[@]}" -gt 0 ]]; then
+            printf '::error::Missing required Cloudflare secret or variable(s): %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: Validate CockroachDB staging configuration
+        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
+        run: |
+          set -euo pipefail
+
+          missing=()
+
+          if [[ "${PROJECT_SYNC_DRY_RUN:-false}" != "true" ]]; then
             if [[ -z "${COCKROACHDB_MIGRATIONS_DATABASE_URL:-}" && -z "${STAGING_COCKROACH_DATABASE_URL:-}" && -z "${COCKROACH_DATABASE_URL:-}" && -z "${COCKROACHDB_DATABASE_URL:-}" && -z "${DATABASE_URL:-}" ]]; then
               missing+=("COCKROACHDB_MIGRATIONS_DATABASE_URL or STAGING_COCKROACH_DATABASE_URL or STAGING_DATABASE_URL or COCKROACH_DATABASE_URL or DATABASE_URL")
             fi
           fi
 
           if [[ "${#missing[@]}" -gt 0 ]]; then
-            printf '::error::Missing required staging secret or variable(s): %s\n' "${missing[*]}"
+            printf '::error::Missing required CockroachDB secret(s): %s\n' "${missing[*]}"
             exit 1
           fi
-
-      - name: Ensure PostgreSQL client is available
-        if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
-        run: |
-          set -euo pipefail
-
-          if ! command -v psql >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y postgresql-client
-          fi
-
-          psql --version
 
       - name: Normalize CockroachDB staging database URL
         if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
@@ -388,24 +423,6 @@ jobs:
                       env_file.write(f"{key}={raw}\n")
           PY
 
-      - name: Discover Cloudflare staging deployments
-        id: discover
-        if: needs.preflight.outputs.should_discover == 'true'
-        run: |
-          set -euo pipefail
-
-          if [[ ! -f ".github/scripts/cloudflare/discover-deployments.js" ]]; then
-            echo "::notice::Skipping missing script: .github/scripts/cloudflare/discover-deployments.js"
-            exit 0
-          fi
-
-          node ".github/scripts/cloudflare/discover-deployments.js" \
-            --environment "$CLOUDFLARE_ENVIRONMENT" \
-            --stage staging \
-            --ref "$CLOUDFLARE_STAGING_REF" \
-            --output "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.json" \
-            --summary "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.md"
-
       - name: Configure CockroachDB SSL certificate
         if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
         env:
@@ -437,7 +454,10 @@ jobs:
             exit 1
           fi
 
-          echo "PGSSLROOTCERT=$cert_file" >> "$GITHUB_ENV"
+          {
+            echo "PGSSLROOTCERT=$cert_file"
+            echo "COCKROACHDB_CA_CERT_PATH=$cert_file"
+          } >> "$GITHUB_ENV"
 
           {
             echo "### CockroachDB SSL certificate"
@@ -446,7 +466,88 @@ jobs:
             echo "|---|---|"
             echo "| Certificate path | \`$cert_file\` |"
             echo "| PGSSLROOTCERT configured | \`true\` |"
+            echo "| COCKROACHDB_CA_CERT_PATH configured | \`true\` |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configure Cloudflare Secrets Store ID in Wrangler configs
+        if: needs.preflight.outputs.should_deploy == 'true'
+        run: |
+          set -euo pipefail
+
+          mapfile -t wrangler_files < <(
+            {
+              find . -path './node_modules' -prune -o \
+                -path './.git' -prune -o \
+                -path './dist' -prune -o \
+                -path './artifacts' -prune -o \
+                -type f \( -name 'wrangler.toml' -o -name 'wrangler.json' -o -name 'wrangler.jsonc' \) -print
+            } | sort
+          )
+
+          if [[ "${#wrangler_files[@]}" -eq 0 ]]; then
+            echo "::notice::No Wrangler config files found to inspect."
+            exit 0
+          fi
+
+          placeholder_files=()
+
+          for file in "${wrangler_files[@]}"; do
+            if grep -q '<CLOUDFLARE_SECRETS_STORE_ID>' "$file"; then
+              placeholder_files+=("$file")
+            fi
+          done
+
+          if [[ "${#placeholder_files[@]}" -eq 0 ]]; then
+            echo "::notice::No Cloudflare Secrets Store placeholder values found in Wrangler configs."
+            exit 0
+          fi
+
+          if [[ -z "${CLOUDFLARE_SECRETS_STORE_ID:-}" ]]; then
+            echo "::error::Wrangler config contains <CLOUDFLARE_SECRETS_STORE_ID>, but CLOUDFLARE_SECRETS_STORE_ID is not configured as a GitHub secret or repository variable."
+            printf 'Files requiring the value:\n'
+            printf ' - %s\n' "${placeholder_files[@]}"
+            exit 1
+          fi
+
+          python3 - "$CLOUDFLARE_SECRETS_STORE_ID" "${placeholder_files[@]}" <<'PY'
+          import pathlib
+          import sys
+
+          store_id = sys.argv[1]
+
+          for file_name in sys.argv[2:]:
+              path = pathlib.Path(file_name)
+              content = path.read_text()
+              path.write_text(content.replace("<CLOUDFLARE_SECRETS_STORE_ID>", store_id))
+              print(f"Patched Secrets Store ID placeholder in {file_name}")
+          PY
+
+          {
+            echo "### Cloudflare Secrets Store"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Wrangler configs patched | \`${#placeholder_files[@]}\` |"
+            echo "| Secrets Store ID configured | \`true\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Discover Cloudflare staging deployments
+        id: discover
+        if: needs.preflight.outputs.should_discover == 'true'
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ".github/scripts/cloudflare/discover-deployments.js" ]]; then
+            echo "::notice::Skipping missing script: .github/scripts/cloudflare/discover-deployments.js"
+            exit 0
+          fi
+
+          node ".github/scripts/cloudflare/discover-deployments.js" \
+            --environment "$CLOUDFLARE_ENVIRONMENT" \
+            --stage staging \
+            --ref "$CLOUDFLARE_STAGING_REF" \
+            --output "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.json" \
+            --summary "$CLOUDFLARE_OUTPUT_DIR/discover-deployments.md"
 
       - name: Run CockroachDB staging migrations
         if: needs.preflight.outputs.should_run_cockroachdb_migrations == 'true'
@@ -567,6 +668,12 @@ jobs:
             --environment "$CLOUDFLARE_ENVIRONMENT" \
             --stage staging \
             --ref "$CLOUDFLARE_STAGING_REF" \
+            --workers \
+            --pages \
+            --prefer-workers-over-pages \
+            --skip-missing-pages-output \
+            --auto-create-pages-project \
+            --pages-production-branch "$CLOUDFLARE_PAGES_PRODUCTION_BRANCH" \
             --output "$CLOUDFLARE_OUTPUT_DIR/deploy-staging.json" \
             --summary "$CLOUDFLARE_OUTPUT_DIR/deploy-staging.md"
 
@@ -650,6 +757,7 @@ jobs:
             echo "| Deployment ref | \`${{ needs.preflight.outputs.deployment_ref || 'none' }}\` |"
             echo "| CockroachDB migrations | \`${{ needs.preflight.outputs.should_run_cockroachdb_migrations }}\` |"
             echo "| D1 migrations | \`${{ needs.preflight.outputs.should_run_d1_migrations }}\` |"
+            echo "| Any migrations | \`${{ needs.preflight.outputs.should_run_migrations }}\` |"
             echo "| Resource sync | \`${{ needs.preflight.outputs.should_sync_resources }}\` |"
             echo "| Deploy | \`${{ needs.preflight.outputs.should_deploy }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
