@@ -34,7 +34,7 @@
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@mui/material": "^7.3.5",
-    "next": "15.5.18",
+    "next": "15.5.19",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "server-only": "^0.0.1"
