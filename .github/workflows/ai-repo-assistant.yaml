@@ -580,7 +580,7 @@ jobs:
 
       - name: Upload repository management artifacts
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: repo-management-${{ github.run_id }}
           path: |
@@ -660,7 +660,7 @@ jobs:
 
       - name: Upload AI assistant artifacts
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ai-assistant-${{ github.run_id }}
           path: |
@@ -741,7 +741,7 @@ jobs:
 
       - name: Upload security summary artifacts
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: security-summary-${{ github.run_id }}
           path: |

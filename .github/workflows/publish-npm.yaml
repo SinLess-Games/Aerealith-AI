@@ -336,7 +336,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Restore pnpm store cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm.outputs.pnpm_store }}
           key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -660,7 +660,7 @@ jobs:
 
       - name: Upload NPM package artifacts
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: npm-packages-${{ github.run_id }}
           path: |

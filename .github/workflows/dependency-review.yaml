@@ -218,7 +218,7 @@ jobs:
           persist-credentials: false
 
       - name: Review dependency changes
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: ${{ needs.preflight.outputs.fail_on_severity }}
           fail-on-scopes: ${{ needs.preflight.outputs.fail_on_scopes }}
@@ -270,7 +270,7 @@ jobs:
           npm --version
 
       - name: Restore pnpm store cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.local/share/pnpm/store
           key: >-
@@ -703,7 +703,7 @@ jobs:
 
       - name: Upload dependency review artifacts
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dependency-review-${{ github.run_id }}
           path: |
