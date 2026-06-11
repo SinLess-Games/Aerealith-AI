@@ -1,9 +1,11 @@
+// libs/ui/src/components/profile/index.tsx
+
 'use client';
 
 import * as React from 'react';
 
-import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
@@ -15,11 +17,9 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 
-import { GlassCard } from '../cards';
 import type {
   PrivateUserProfileDashboardDto,
   PublicUserProfileDto,
-  UserProfileDto,
   UserAchievementDto,
   UserActivityEventDto,
   UserAppConnectionDto,
@@ -27,6 +27,8 @@ import type {
   UserIntegrationDto,
   UserReportDto,
 } from '@aerealith-ai/contracts';
+
+import { GlassCard } from '../cards';
 
 type ProfileFeatureFlags = Partial<
   Record<
@@ -38,6 +40,8 @@ type ProfileFeatureFlags = Partial<
     boolean
   >
 >;
+
+type UnknownRecord = Record<string, unknown>;
 
 export type ProfileDashboardProps =
   | {
@@ -58,6 +62,44 @@ const panelSx = {
     'linear-gradient(145deg, rgba(9, 13, 30, 0.92), rgba(18, 17, 42, 0.78))',
 };
 
+function asRecord(value: unknown): UnknownRecord {
+  if (typeof value === 'object' && value !== null) {
+    return value as UnknownRecord;
+  }
+
+  return {};
+}
+
+function getStringField(value: unknown, key: string): string | undefined {
+  const fieldValue = asRecord(value)[key];
+
+  if (typeof fieldValue !== 'string') {
+    return undefined;
+  }
+
+  const trimmedValue = fieldValue.trim();
+
+  return trimmedValue.length > 0 ? trimmedValue : undefined;
+}
+
+function getNullableStringField(value: unknown, key: string): string | null {
+  return getStringField(value, key) ?? null;
+}
+
+function displayValue(value: unknown, fallback = 'Unavailable'): string {
+  if (typeof value === 'string') {
+    const trimmedValue = value.trim();
+
+    return trimmedValue.length > 0 ? trimmedValue : fallback;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  return fallback;
+}
+
 export function ProfileDashboard(
   props: ProfileDashboardProps,
 ): React.ReactElement {
@@ -65,6 +107,17 @@ export function ProfileDashboard(
   const flags = props.flags ?? {};
   const profile = data.profile;
   const isPrivate = mode === 'private';
+
+  const profileDisplayName =
+    getStringField(profile, 'displayName') ??
+    getStringField(profile, 'username') ??
+    getStringField(profile, 'handle') ??
+    'Aerealith User';
+
+  const profileHandle =
+    getStringField(profile, 'handle') ??
+    getStringField(profile, 'username') ??
+    'member';
 
   return (
     <Box
@@ -91,15 +144,16 @@ export function ProfileDashboard(
         }}
       >
         {isPrivate ? <ProfileSidebar /> : null}
+
         <Stack spacing={2.5}>
           <ProfileHeader
-            avatarUrl={profile.avatarUrl}
-            bannerUrl={profile.bannerUrl}
-            bio={profile.bio}
-            displayName={profile.displayName}
-            handle={profile.handle}
-            joined={profile.createdAt}
-            location={profile.locationLabel}
+            avatarUrl={getNullableStringField(profile, 'avatarUrl')}
+            bannerUrl={getNullableStringField(profile, 'bannerUrl')}
+            bio={getNullableStringField(profile, 'bio')}
+            displayName={profileDisplayName}
+            handle={profileHandle}
+            joined={getStringField(profile, 'createdAt')}
+            location={getNullableStringField(profile, 'locationLabel')}
             mode={mode}
             stats={data.stats}
           />
@@ -124,21 +178,26 @@ export function ProfileDashboard(
             {isPrivate && flags['profile-app-connections'] !== false ? (
               <AppConnectionsPanel items={data.appConnections} />
             ) : null}
+
             {isPrivate && flags['profile-integrations'] !== false ? (
               <IntegrationsPanel items={data.integrations} />
             ) : null}
+
             {flags['profile-files'] !== false ? (
               <FilesPanel items={data.files} />
             ) : null}
+
             {flags['profile-reports'] !== false ? (
               <ReportsPanel items={data.reports} />
             ) : null}
+
             {flags['profile-achievements'] !== false ? (
               <AchievementsPanel
                 items={data.achievements}
                 totalPoints={data.stats.totalPoints}
               />
             ) : null}
+
             {isPrivate ? <ActivityPanel items={data.activity} /> : null}
             {isPrivate ? <SettingsPanel profile={data.profile} /> : null}
           </Box>
@@ -157,6 +216,7 @@ export function ProfileLoadingSkeleton(): React.ReactElement {
           height={260}
           sx={{ bgcolor: 'rgba(255,255,255,.08)' }}
         />
+
         <Box
           sx={{
             display: 'grid',
@@ -192,6 +252,7 @@ export function ProfileErrorState({
         <Typography component="h1" variant="h5">
           Profile unavailable
         </Typography>
+
         <Typography sx={{ mt: 1, color: 'rgba(248,251,255,.72)' }}>
           {message}
         </Typography>
@@ -224,6 +285,7 @@ function ProfileSidebar(): React.ReactElement {
         >
           Aerealith AI
         </Typography>
+
         {navItems.map((item) => (
           <Button
             key={item}
@@ -244,7 +306,7 @@ function ProfileHeader(props: {
   bio?: string | null;
   displayName: string;
   handle: string;
-  joined: string;
+  joined?: string | null;
   location?: string | null;
   mode: 'public' | 'private';
   stats: {
@@ -297,12 +359,13 @@ function ProfileHeader(props: {
               ? null
               : props.displayName.slice(0, 2).toUpperCase()}
           </Box>
+
           <Stack spacing={1} sx={{ flex: 1 }}>
             <Stack
               direction="row"
               spacing={1.5}
               alignItems="center"
-              flexWrap="wrap"
+              sx={{ flexWrap: 'wrap' }}
             >
               <Typography
                 component="h1"
@@ -311,6 +374,7 @@ function ProfileHeader(props: {
               >
                 {props.displayName}
               </Typography>
+
               <Chip
                 label={
                   props.mode === 'private'
@@ -322,15 +386,19 @@ function ProfileHeader(props: {
                 variant="outlined"
               />
             </Stack>
+
             <Typography sx={{ color: '#cbd5e1' }}>@{props.handle}</Typography>
+
             {props.location ? (
               <Typography sx={{ color: '#cbd5e1' }}>
                 {props.location}
               </Typography>
             ) : null}
+
             <Typography sx={{ color: '#cbd5e1' }}>
               Member since {formatDate(props.joined)}
             </Typography>
+
             {props.bio ? (
               <Typography sx={{ maxWidth: 720, color: '#f8fafc' }}>
                 {props.bio}
@@ -338,6 +406,7 @@ function ProfileHeader(props: {
             ) : null}
           </Stack>
         </Stack>
+
         <Box
           sx={{
             mt: 4,
@@ -377,6 +446,7 @@ function Stat({
       <Typography sx={{ fontSize: 24, fontWeight: 800 }}>
         {value.toLocaleString()}
       </Typography>
+
       <Typography sx={{ color: '#cbd5e1', fontSize: 13 }}>{label}</Typography>
     </Box>
   );
@@ -399,6 +469,7 @@ function Panel({
         <Typography component="h2" variant="h6">
           {title}
         </Typography>
+
         {empty ? (
           <EmptyState title={`No ${title.toLowerCase()} yet`} />
         ) : (
@@ -419,9 +490,11 @@ function AppConnectionsPanel({
       {items.map((item) => (
         <Row
           key={item.id}
-          title={item.displayName}
-          detail={item.connectedAccountIdentifier ?? item.provider}
-          badge={item.status}
+          title={displayValue(item.displayName)}
+          detail={displayValue(
+            item.connectedAccountIdentifier ?? item.provider,
+          )}
+          badge={displayValue(item.status)}
         />
       ))}
     </Panel>
@@ -438,9 +511,9 @@ function IntegrationsPanel({
       {items.map((item) => (
         <Row
           key={item.id}
-          title={item.displayName}
-          detail={item.description ?? item.provider}
-          badge={item.enabled ? item.status : 'disabled'}
+          title={displayValue(item.displayName)}
+          detail={displayValue(item.description ?? item.provider)}
+          badge={displayValue(item.enabled ? item.status : 'disabled')}
         />
       ))}
     </Panel>
@@ -457,9 +530,9 @@ function FilesPanel({
       {items.map((item) => (
         <Row
           key={item.id}
-          title={item.name}
+          title={displayValue(item.name)}
           detail={formatBytes(item.sizeBytes)}
-          badge={item.visibility}
+          badge={displayValue(item.visibility)}
         />
       ))}
     </Panel>
@@ -476,9 +549,9 @@ function ReportsPanel({
       {items.map((item) => (
         <Row
           key={item.id}
-          title={item.title}
+          title={displayValue(item.title)}
           detail={formatDate(item.generatedAt)}
-          badge={item.type.replaceAll('_', ' ')}
+          badge={displayValue(item.type).replaceAll('_', ' ')}
         />
       ))}
     </Panel>
@@ -497,13 +570,15 @@ function AchievementsPanel({
       <Typography sx={{ color: '#c4b5fd', fontWeight: 700 }}>
         {totalPoints.toLocaleString()} total points
       </Typography>
+
       {items.map((item) => (
         <Box key={item.id} sx={{ py: 1 }}>
           <Row
-            title={item.title}
+            title={displayValue(item.title)}
             detail={`${item.points} points`}
             badge={item.unlocked ? 'unlocked' : 'in progress'}
           />
+
           <LinearProgress
             variant="determinate"
             value={item.progress.percentage}
@@ -525,9 +600,9 @@ function ActivityPanel({
       {items.map((item) => (
         <Row
           key={item.id}
-          title={item.title}
-          detail={item.description ?? formatDate(item.createdAt)}
-          badge={item.type}
+          title={displayValue(item.title)}
+          detail={displayValue(item.description ?? formatDate(item.createdAt))}
+          badge={displayValue(item.type)}
         />
       ))}
     </Panel>
@@ -544,15 +619,27 @@ type EditableProfileField =
 
 type EditableProfileForm = Record<EditableProfileField, string>;
 
-function createEditableProfileForm(profile: UserProfileDto): EditableProfileForm {
+function createEditableProfileForm(profile: unknown): EditableProfileForm {
   return {
-    displayName: profile.displayName ?? '',
-    handle: profile.handle ?? '',
-    bio: profile.bio ?? '',
-    locationLabel: profile.locationLabel ?? '',
-    websiteUrl: profile.websiteUrl ?? '',
-    visibility: profile.visibility ?? 'private',
+    displayName: getStringField(profile, 'displayName') ?? '',
+    handle:
+      getStringField(profile, 'handle') ??
+      getStringField(profile, 'username') ??
+      '',
+    bio: getStringField(profile, 'bio') ?? '',
+    locationLabel: getStringField(profile, 'locationLabel') ?? '',
+    websiteUrl: getStringField(profile, 'websiteUrl') ?? '',
+    visibility: getStringField(profile, 'visibility') ?? 'private',
   };
+}
+
+function getProfileIdentifier(profile: unknown): string | undefined {
+  return (
+    getStringField(profile, 'username') ??
+    getStringField(profile, 'handle') ??
+    getStringField(profile, 'userId') ??
+    getStringField(profile, 'id')
+  );
 }
 
 function nullableValue(value: string): string | null {
@@ -564,7 +651,7 @@ function nullableValue(value: string): string | null {
 function SettingsPanel({
   profile,
 }: {
-  profile: UserProfileDto;
+  profile: unknown;
 }): React.ReactElement {
   const [form, setForm] = React.useState<EditableProfileForm>(() =>
     createEditableProfileForm(profile),
@@ -586,8 +673,14 @@ function SettingsPanel({
     setIsSaving(true);
 
     try {
+      const profileIdentifier = getProfileIdentifier(profile);
+
+      if (!profileIdentifier) {
+        throw new Error('Unable to determine which profile should be saved.');
+      }
+
       const response = await fetch(
-        `/api/V1/users/${encodeURIComponent(profile.username)}/profile`,
+        `/api/V1/users/${encodeURIComponent(profileIdentifier)}/profile`,
         {
           method: 'PATCH',
           headers: {
@@ -604,6 +697,7 @@ function SettingsPanel({
           }),
         },
       );
+
       const body = (await response.json().catch(() => null)) as
         | { ok?: boolean; error?: { message?: string } }
         | null;
@@ -638,6 +732,7 @@ function SettingsPanel({
               {status.message}
             </Alert>
           ) : null}
+
           <TextField
             label="Display name"
             value={form.displayName}
@@ -645,6 +740,7 @@ function SettingsPanel({
             required
             size="small"
           />
+
           <TextField
             label="Handle"
             value={form.handle}
@@ -652,6 +748,7 @@ function SettingsPanel({
             required
             size="small"
           />
+
           <TextField
             label="Bio"
             value={form.bio}
@@ -660,18 +757,21 @@ function SettingsPanel({
             minRows={3}
             size="small"
           />
+
           <TextField
             label="Location"
             value={form.locationLabel}
             onChange={updateField('locationLabel')}
             size="small"
           />
+
           <TextField
             label="Website"
             value={form.websiteUrl}
             onChange={updateField('websiteUrl')}
             size="small"
           />
+
           <TextField
             label="Visibility"
             value={form.visibility}
@@ -682,6 +782,7 @@ function SettingsPanel({
             <MenuItem value="private">Private</MenuItem>
             <MenuItem value="public">Public</MenuItem>
           </TextField>
+
           <Button
             disabled={isSaving}
             type="submit"
@@ -701,9 +802,9 @@ function Row({
   detail,
   badge,
 }: {
-  title: string;
-  detail: string;
-  badge: string;
+  title: React.ReactNode;
+  detail?: React.ReactNode;
+  badge?: React.ReactNode;
 }): React.ReactElement {
   return (
     <>
@@ -717,18 +818,25 @@ function Row({
           <Typography sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
             {title}
           </Typography>
-          <Typography
-            sx={{ color: '#94a3b8', fontSize: 13, overflowWrap: 'anywhere' }}
-          >
-            {detail}
-          </Typography>
+
+          {detail ? (
+            <Typography
+              sx={{ color: '#94a3b8', fontSize: 13, overflowWrap: 'anywhere' }}
+            >
+              {detail}
+            </Typography>
+          ) : null}
         </Box>
-        <Chip
-          label={badge}
-          size="small"
-          sx={{ color: '#86efac', bgcolor: 'rgba(22,163,74,.12)' }}
-        />
+
+        {badge ? (
+          <Chip
+            label={badge}
+            size="small"
+            sx={{ color: '#86efac', bgcolor: 'rgba(22,163,74,.12)' }}
+          />
+        ) : null}
       </Stack>
+
       <Divider sx={{ borderColor: 'rgba(148,163,184,.14)' }} />
     </>
   );
@@ -760,8 +868,18 @@ function PermissionNotice({ text }: { text: string }): React.ReactElement {
   );
 }
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) {
+function formatDate(value: unknown): string {
+  if (
+    typeof value !== 'string' &&
+    typeof value !== 'number' &&
+    !(value instanceof Date)
+  ) {
+    return 'Not generated';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
     return 'Not generated';
   }
 
@@ -769,11 +887,11 @@ function formatDate(value: string | null | undefined): string {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(new Date(value));
+  }).format(date);
 }
 
-function formatBytes(value: number | null | undefined): string {
-  if (!value) {
+function formatBytes(value: unknown): string {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
     return 'Size unavailable';
   }
 

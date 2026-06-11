@@ -2,23 +2,23 @@
 
 'use client';
 
-import * as React from 'react';
 import type {
   HTMLAttributeAnchorTarget,
 } from 'react';
+import * as React from 'react';
 
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import MuiCard from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import CardContent from '@mui/material/CardContent';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme, type Theme } from '@mui/material/styles';
 import NextLink from 'next/link';
-import type { FeatureCardAlign, FeatureCardProps, FeatureCardTone, FeatureCardVariant } from '../../types'
+import type { FeatureCardAlign, FeatureCardProps, FeatureCardTone, FeatureCardVariant } from '../../types';
 import { mergeSx } from '../../utils';
 
 

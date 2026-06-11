@@ -1,12 +1,15 @@
-import { OpenFeature } from '@openfeature/server-sdk';
+// libs/flags/src/server/provider.ts
+
 import {
   FlagshipServerProvider,
   type FlagshipBinding,
 } from '@cloudflare/flagship/server';
+import { OpenFeature, type Provider } from '@openfeature/server-sdk';
 
 import {
   FLAGS_ENV_KEYS,
   FLAGS_ERROR_CODES,
+  FLAGS_FLAGSHIP_APP_ID,
   FLAGS_OPENFEATURE_DOMAINS,
   FLAGS_PROVIDER_NAME,
   FLAGS_WORKER_BINDING_KEYS,
@@ -14,41 +17,15 @@ import {
 
 import type {
   CloudflareFlagshipBinding,
+  CreateFlagshipServerProviderResult,
   FlagshipRemoteCredentials,
+  FlagshipServerProviderCredentialsMode,
+  FlagshipServerProviderDomain,
+  FlagshipServerProviderEnv,
   FlagshipServerProviderOptions,
+  InitializedFlagshipServerProvider,
+  InitializeFlagshipServerProviderOptions,
 } from '../types';
-
-export type FlagshipServerProviderCredentialsMode = 'binding' | 'remote';
-
-export type FlagshipServerProviderDomain =
-  | typeof FLAGS_OPENFEATURE_DOMAINS.default
-  | typeof FLAGS_OPENFEATURE_DOMAINS.server
-  | typeof FLAGS_OPENFEATURE_DOMAINS.hono
-  | typeof FLAGS_OPENFEATURE_DOMAINS.testing
-  | string;
-
-export type CreateFlagshipServerProviderResult = {
-  readonly provider: InstanceType<typeof FlagshipServerProvider>;
-  readonly providerName: string;
-  readonly credentialsMode: FlagshipServerProviderCredentialsMode;
-  readonly cacheKey: string;
-};
-
-export type InitializeFlagshipServerProviderOptions =
-  FlagshipServerProviderOptions & {
-    readonly domain?: FlagshipServerProviderDomain;
-    readonly force?: boolean;
-  };
-
-export type InitializedFlagshipServerProvider =
-  CreateFlagshipServerProviderResult & {
-    readonly domain?: FlagshipServerProviderDomain;
-    readonly initialized: true;
-  };
-
-export type FlagshipServerProviderEnv = Record<string, unknown> & {
-  readonly FLAGS?: CloudflareFlagshipBinding;
-};
 
 export class FlagshipServerProviderError extends Error {
   public override readonly name = 'FlagshipServerProviderError';
@@ -179,11 +156,17 @@ export function getFlagshipServerProviderOptionsFromEnv(
     };
   }
 
+  const appId = readString(env, FLAGS_ENV_KEYS.appId) ?? FLAGS_FLAGSHIP_APP_ID;
+
+  if (!appId) {
+    throw new FlagshipServerProviderError(
+      FLAGS_ERROR_CODES.missingCredentials,
+      `Missing required Flagship environment variable: ${FLAGS_ENV_KEYS.appId}.`,
+    );
+  }
+
   return {
-    appId:
-      (readString(env, FLAGS_ENV_KEYS.appId) as string | undefined) ??
-      // fallback to compile-time constant when env var absent
-      (require('../constants').FLAGS_FLAGSHIP_APP_ID as string),
+    appId,
     accountId: requireEnvString(env, FLAGS_ENV_KEYS.accountId),
     authToken: requireEnvString(env, FLAGS_ENV_KEYS.authToken),
     providerName:
@@ -283,15 +266,17 @@ export function normalizeProviderDomain(
 }
 
 async function registerFlagshipServerProvider(
-  provider: InstanceType<typeof FlagshipServerProvider>,
+  provider: unknown,
   domain?: FlagshipServerProviderDomain,
 ): Promise<void> {
+  const openFeatureProvider = provider as Provider;
+
   if (domain) {
-    await OpenFeature.setProviderAndWait(domain, provider);
+    await OpenFeature.setProviderAndWait(domain, openFeatureProvider);
     return;
   }
 
-  await OpenFeature.setProviderAndWait(provider);
+  await OpenFeature.setProviderAndWait(openFeatureProvider);
 }
 
 function createProviderCacheKey(
@@ -316,10 +301,9 @@ function createInitializationCacheKey(
   providerCacheKey: string,
   domain?: FlagshipServerProviderDomain,
 ): string {
-  return [
-    domain ?? FLAGS_OPENFEATURE_DOMAINS.default,
-    providerCacheKey,
-  ].join(':');
+  return [domain ?? FLAGS_OPENFEATURE_DOMAINS.default, providerCacheKey].join(
+    ':',
+  );
 }
 
 function requireEnvString(

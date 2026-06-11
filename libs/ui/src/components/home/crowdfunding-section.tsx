@@ -6,15 +6,16 @@ import * as React from 'react';
 
 import Box from '@mui/material/Box';
 
-import MediaCarousel from '../media/carousel';
-import MarketingSection from '../marketing/marketing-section';
 import type {
   CarouselItem,
   CdnVideoInput,
   MarketingSectionProps,
-  MediaCarouselProps,
 } from '../../types';
 import { mergeSx } from '../../utils';
+import MarketingSection from '../marketing/marketing-section';
+import MediaCarousel from '../media/carousel';
+
+type MediaCarouselComponentProps = React.ComponentProps<typeof MediaCarousel>;
 
 export type CrowdfundingSectionContent = {
   id?: string;
@@ -81,13 +82,13 @@ export interface CrowdfundingSectionProps
   mediaPosition?: MarketingSectionProps['mediaPosition'];
 
   mediaCarouselProps?: Omit<
-    MediaCarouselProps,
+    MediaCarouselComponentProps,
     'items' | 'children' | 'cdnVideos'
   >;
 }
 
 const DEFAULT_CROWDFUNDING_DESCRIPTION =
-  'Support the infrastructure, engineering, security, design, integrations, documentation, and production systems needed to bring Helix AI to production.';
+  'Support the infrastructure, engineering, security, design, integrations, documentation, and production systems needed to bring Aerealith AI to production.';
 
 function toArray<T>(value: readonly T[] | undefined): T[] {
   return value ? [...value] : [];
@@ -149,6 +150,9 @@ export function CrowdfundingSection({
             width: '100%',
             maxWidth: 1500,
             mx: 'auto',
+            bgcolor: 'transparent',
+            backgroundColor: 'transparent',
+            backgroundImage: 'none',
           },
           mediaSx,
         )}
@@ -172,29 +176,47 @@ export function CrowdfundingSection({
           objectFit="contain"
           objectPosition="center"
           rounded
-          bordered
-          elevated
+          bordered={false}
+          elevated={false}
           imageSizes="100vw"
           slotProps={{
             card: {
               sx: {
                 width: '100%',
                 maxWidth: '100%',
+                bgcolor: 'transparent',
+                backgroundColor: 'transparent',
+                backgroundImage: 'none',
+                boxShadow: 'none',
               },
             },
             viewport: {
               sx: {
-                bgcolor: 'rgba(0, 0, 0, 0.82)',
+                bgcolor: 'transparent',
+                backgroundColor: 'transparent',
+                backgroundImage: 'none',
+              },
+            },
+            slide: {
+              sx: {
+                bgcolor: 'transparent',
+                backgroundColor: 'transparent',
+                backgroundImage: 'none',
               },
             },
             media: {
               sx: {
-                bgcolor: 'rgba(0, 0, 0, 0.82)',
+                bgcolor: 'transparent',
+                backgroundColor: 'transparent',
+                backgroundImage: 'none',
               },
             },
             caption: {
               sx: {
                 textAlign: 'center',
+                bgcolor: 'transparent',
+                backgroundColor: 'transparent',
+                backgroundImage: 'none',
               },
             },
           }}
@@ -207,11 +229,11 @@ export function CrowdfundingSection({
     <MarketingSection
       id={id ?? content?.id ?? 'crowdfunding'}
       eyebrow={eyebrow ?? content?.eyebrow ?? 'Community Funding'}
-      title={title ?? content?.title ?? 'Help Build Helix AI'}
+      title={title ?? content?.title ?? 'Help Build Aerealith AI'}
       description={
         description ??
         content?.description ??
-        'Help fund the platform work needed to turn Helix AI into a reliable command center for users, creators, developers, teams, and organizations.'
+        'Help fund the platform work needed to turn Aerealith AI into a reliable command center for users, creators, developers, teams, and organizations.'
       }
       body={body ?? content?.body ?? DEFAULT_CROWDFUNDING_DESCRIPTION}
       footnote={footnote ?? content?.footnote}

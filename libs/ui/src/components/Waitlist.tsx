@@ -2,8 +2,6 @@
 
 'use client';
 
-import * as React from 'react';
-import Script from 'next/script';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -12,6 +10,8 @@ import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Image, { type StaticImageData } from 'next/image';
+import Script from 'next/script';
+import * as React from 'react';
 
 export type WaitlistStatus = 'idle' | 'sending' | 'success' | 'error';
 
@@ -22,6 +22,11 @@ type TurnstileRenderOptions = {
   callback?: (token: string) => void;
   'expired-callback'?: () => void;
   'error-callback'?: () => void;
+};
+
+type TurnstileTokenState = {
+  siteKey: string;
+  token: string;
 };
 
 declare global {
@@ -208,11 +213,15 @@ export function HeroWaitlist({
   turnstileSiteKey = DEFAULT_TURNSTILE_SITE_KEY,
   turnstileTheme = 'dark',
   turnstileSize = 'normal',
-}: HeroWaitlistProps) {
+}: HeroWaitlistProps): React.ReactElement {
   const [email, setEmail] = React.useState('');
   const [status, setStatus] = React.useState<WaitlistStatus>('idle');
   const [feedbackMessage, setFeedbackMessage] = React.useState('');
-  const [turnstileToken, setTurnstileToken] = React.useState('');
+  const [turnstileTokenState, setTurnstileTokenState] =
+    React.useState<TurnstileTokenState>({
+      siteKey: '',
+      token: '',
+    });
   const [turnstileReady, setTurnstileReady] = React.useState(
     getInitialTurnstileReady,
   );
@@ -232,6 +241,11 @@ export function HeroWaitlist({
   const isTurnstileEnabled = trimmedTurnstileSiteKey.length > 0;
   const isSending = status === 'sending';
 
+  const turnstileToken =
+    isTurnstileEnabled && turnstileTokenState.siteKey === trimmedTurnstileSiteKey
+      ? turnstileTokenState.token
+      : '';
+
   const isValidEmail = React.useMemo(
     () => isValidEmailAddress(trimmedEmail),
     [trimmedEmail],
@@ -247,8 +261,15 @@ export function HeroWaitlist({
     !isSending &&
     (!isTurnstileEnabled || turnstileToken.length > 0);
 
+  const clearTurnstileToken = React.useCallback(() => {
+    setTurnstileTokenState({
+      siteKey: trimmedTurnstileSiteKey,
+      token: '',
+    });
+  }, [trimmedTurnstileSiteKey]);
+
   const resetTurnstile = React.useCallback(() => {
-    setTurnstileToken('');
+    clearTurnstileToken();
 
     const widgetId = turnstileWidgetIdRef.current;
 
@@ -263,21 +284,28 @@ export function HeroWaitlist({
         // Ignore reset failures caused by an already-cleared widget.
       }
     }
-  }, []);
+  }, [clearTurnstileToken]);
 
   React.useEffect(() => {
     if (
-      isTurnstileEnabled &&
-      typeof window !== 'undefined' &&
-      window.turnstile
+      !isTurnstileEnabled ||
+      typeof window === 'undefined' ||
+      !window.turnstile
     ) {
-      setTurnstileReady(true);
+      return undefined;
     }
+
+    const timer = window.setTimeout(() => {
+      setTurnstileReady(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [isTurnstileEnabled]);
 
   React.useEffect(() => {
     if (!isTurnstileEnabled) {
-      setTurnstileToken('');
       return undefined;
     }
 
@@ -291,22 +319,25 @@ export function HeroWaitlist({
       return undefined;
     }
 
-    setTurnstileToken('');
+    let failedRenderTimer: number | undefined;
 
     const widgetId = window.turnstile.render(turnstileContainerRef.current, {
       sitekey: trimmedTurnstileSiteKey,
       theme: turnstileTheme,
       size: turnstileSize,
       callback: (token: string) => {
-        setTurnstileToken(token);
+        setTurnstileTokenState({
+          siteKey: trimmedTurnstileSiteKey,
+          token,
+        });
       },
       'expired-callback': () => {
-        setTurnstileToken('');
+        clearTurnstileToken();
         setFeedbackMessage('Bot verification expired. Please try again.');
         setStatus('error');
       },
       'error-callback': () => {
-        setTurnstileToken('');
+        clearTurnstileToken();
         setFeedbackMessage('Bot verification failed. Please try again.');
         setStatus('error');
       },
@@ -315,11 +346,17 @@ export function HeroWaitlist({
     turnstileWidgetIdRef.current = widgetId;
 
     if (!widgetId) {
-      setFeedbackMessage('Bot verification could not initialize.');
-      setStatus('error');
+      failedRenderTimer = window.setTimeout(() => {
+        setFeedbackMessage('Bot verification could not initialize.');
+        setStatus('error');
+      }, 0);
     }
 
     return () => {
+      if (failedRenderTimer !== undefined) {
+        window.clearTimeout(failedRenderTimer);
+      }
+
       const currentWidgetId = turnstileWidgetIdRef.current;
 
       if (
@@ -335,9 +372,9 @@ export function HeroWaitlist({
       }
 
       turnstileWidgetIdRef.current = undefined;
-      setTurnstileToken('');
     };
   }, [
+    clearTurnstileToken,
     isTurnstileEnabled,
     trimmedTurnstileSiteKey,
     turnstileReady,
@@ -454,7 +491,7 @@ export function HeroWaitlist({
           }}
           onError={() => {
             setTurnstileReady(false);
-            setTurnstileToken('');
+            clearTurnstileToken();
             setFeedbackMessage(
               'Bot verification could not load. Please refresh and try again.',
             );
@@ -805,7 +842,7 @@ export function HeroSection({
   imageUrl,
   imageAlt = 'Hero Image',
   waitlist,
-}: HeroSectionProps) {
+}: HeroSectionProps): React.ReactElement {
   return (
     <Box
       component="section"

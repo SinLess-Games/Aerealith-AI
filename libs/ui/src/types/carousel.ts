@@ -1,3 +1,5 @@
+// libs/ui/src/types/carousel.ts
+
 import type {
   CSSProperties,
   ReactNode,
@@ -8,6 +10,23 @@ import type { BoxProps } from '@mui/material/Box';
 import type { CardProps as MuiCardProps } from '@mui/material/Card';
 import type { StackProps } from '@mui/material/Stack';
 import type { ImageProps as NextImageProps } from 'next/image';
+
+import type {
+  PowerPointPlayerMode,
+  PowerPointPlayerProps,
+  PowerPointSlide,
+} from './power-point';
+
+export type CarouselBorderRadius =
+  | number
+  | string
+  | {
+      xs?: number | string;
+      sm?: number | string;
+      md?: number | string;
+      lg?: number | string;
+      xl?: number | string;
+    };
 
 export type CarouselBaseItem = {
   id?: string;
@@ -145,7 +164,7 @@ export type CdnVideoInput = Omit<CarouselVideoItem, 'type'> & {
    * CDN URL for the video file.
    *
    * Example:
-   * https://cdn.example.com/videos/helix-preview.mp4
+   * https://cdn.example.com/videos/aerealith-preview.mp4
    */
   src?: string;
 
@@ -218,3 +237,93 @@ export type MediaCarouselProps = Omit<BoxProps, 'children'> & {
    * Browser fullscreen support.
    */
   fullscreen?: boolean;
+
+  /**
+   * Carousel viewport aspect ratio.
+   */
+  aspectRatio?: string | number;
+
+  /**
+   * Default object-fit used by image and video slides.
+   */
+  objectFit?: CSSProperties['objectFit'];
+
+  /**
+   * Default object-position used by image and video slides.
+   */
+  objectPosition?: CSSProperties['objectPosition'];
+
+  /**
+   * Enables or customizes rounded carousel corners.
+   */
+  rounded?: boolean | CarouselBorderRadius;
+
+  /**
+   * Enables the carousel border.
+   */
+  bordered?: boolean;
+
+  /**
+   * Enables elevated carousel shadow.
+   */
+  elevated?: boolean;
+
+  /**
+   * Default responsive sizes string for image slides.
+   */
+  imageSizes?: string;
+
+  /**
+   * CDN video shorthand input.
+   */
+  cdnVideos?: readonly CdnVideoInput[];
+
+  /**
+   * PowerPoint shorthand input.
+   */
+  powerpoints?: readonly PowerPointCarouselInput[];
+
+  /**
+   * Automatically scans sequential images from imageBasePath.
+   */
+  autoDiscoverImages?: boolean;
+
+  /**
+   * Base public path used by automatic image discovery.
+   */
+  imageBasePath?: string;
+
+  /**
+   * File prefix used by automatic image discovery.
+   */
+  imageFilePrefix?: string;
+
+  /**
+   * File extension used by automatic image discovery.
+   */
+  imageExtension?: string;
+
+  /**
+   * First image index used by automatic image discovery.
+   */
+  startIndex?: number;
+
+  /**
+   * Maximum number of image indexes to scan.
+   */
+  maxImages?: number;
+
+  /**
+   * Number of missing images before discovery stops.
+   */
+  stopAfterMisses?: number;
+
+  imageAltPrefix?: string;
+  imageTitlePrefix?: string;
+  videoTitlePrefix?: string;
+  powerPointTitlePrefix?: string;
+
+  onIndexChange?: (index: number, item: CarouselItem) => void;
+
+  slotProps?: MediaCarouselSlotProps;
+};

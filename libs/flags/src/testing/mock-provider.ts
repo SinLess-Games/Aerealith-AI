@@ -1,15 +1,19 @@
+// libs/flags/src/testing/mock-provider.ts
+
 import { FLAGS_ERROR_CODES } from '../constants';
 
 import type {
   ClientFlagEvaluator,
-  FlagDefaultValues,
+  CreateMockFlagProviderOptions,
   FlagEvaluationContext,
   FlagJsonValue,
   FlagKey,
   FlagRegistry,
   FlagValue,
   FlagValueKind,
-  MockFlagProviderOptions,
+  MockFlagProvider,
+  MockFlagProviderState,
+  MockFlagResolver,
   MockFlagValues,
   ServerFlagEvaluator,
 } from '../types';
@@ -24,76 +28,9 @@ import {
   MOCK_FLAG_VALUES,
 } from './mock-flags';
 
-const DEFAULT_MOCK_BOOLEAN_VALUE = Boolean(false);
-const DEFAULT_MOCK_STRING_VALUE = String('');
-const DEFAULT_MOCK_NUMBER_VALUE = Number(0);
-
-export type MockFlagResolver<TValue extends FlagValue = FlagValue> = (
-  input: MockFlagResolutionInput<TValue>,
-) => TValue;
-
-export type MockFlagResolutionInput<TValue extends FlagValue = FlagValue> = {
-  readonly key: FlagKey;
-  readonly defaultValue: TValue;
-  readonly context?: FlagEvaluationContext;
-  readonly values: MockFlagValues;
-  readonly registry: FlagRegistry;
-};
-
-export type MockFlagProviderState = {
-  readonly values: MockFlagValues;
-  readonly defaultValues: FlagDefaultValues;
-  readonly registry: FlagRegistry;
-  readonly context?: FlagEvaluationContext;
-  readonly resolvers: Partial<Record<FlagKey, MockFlagResolver>>;
-};
-
-export type CreateMockFlagProviderOptions = MockFlagProviderOptions & {
-  readonly registry?: FlagRegistry;
-  readonly resolvers?: Partial<Record<FlagKey, MockFlagResolver>>;
-};
-
-export type MockFlagProvider = {
-  readonly name: string;
-
-  getState: () => MockFlagProviderState;
-  getValues: () => MockFlagValues;
-  getContext: () => FlagEvaluationContext | undefined;
-  getRegistry: () => FlagRegistry;
-
-  setContext: (context: FlagEvaluationContext | undefined) => void;
-  setValue: (key: FlagKey, value: FlagValue) => void;
-  setValues: (values: MockFlagValues) => void;
-  patchValues: (values: MockFlagValues) => void;
-  resetValues: () => void;
-
-  resolveBooleanValue: (
-    key: FlagKey,
-    defaultValue?: boolean,
-    context?: FlagEvaluationContext,
-  ) => boolean;
-
-  resolveStringValue: (
-    key: FlagKey,
-    defaultValue?: string,
-    context?: FlagEvaluationContext,
-  ) => string;
-
-  resolveNumberValue: (
-    key: FlagKey,
-    defaultValue?: number,
-    context?: FlagEvaluationContext,
-  ) => number;
-
-  resolveObjectValue: <TValue extends FlagJsonValue>(
-    key: FlagKey,
-    defaultValue: TValue,
-    context?: FlagEvaluationContext,
-  ) => TValue;
-
-  createServerEvaluator: () => ServerFlagEvaluator;
-  createClientEvaluator: () => ClientFlagEvaluator;
-};
+const DEFAULT_MOCK_BOOLEAN_VALUE = false;
+const DEFAULT_MOCK_STRING_VALUE = '';
+const DEFAULT_MOCK_NUMBER_VALUE = 0;
 
 export class MockFlagProviderError extends Error {
   public override readonly name = 'MockFlagProviderError';
@@ -126,22 +63,22 @@ export function createMockFlagProvider(
   const provider: MockFlagProvider = {
     name: 'aerealith-mock-flag-provider',
 
-    getState: () => state,
+    getState: (): MockFlagProviderState => state,
 
-    getValues: () => state.values,
+    getValues: (): MockFlagValues => state.values,
 
-    getContext: () => state.context,
+    getContext: (): FlagEvaluationContext | undefined => state.context,
 
-    getRegistry: () => state.registry,
+    getRegistry: (): FlagRegistry => state.registry,
 
-    setContext: (context) => {
+    setContext: (context: FlagEvaluationContext | undefined): void => {
       state = {
         ...state,
         context,
       };
     },
 
-    setValue: (key, value) => {
+    setValue: (key: FlagKey, value: FlagValue): void => {
       state = {
         ...state,
         values: {
@@ -151,14 +88,14 @@ export function createMockFlagProvider(
       };
     },
 
-    setValues: (values) => {
+    setValues: (values: MockFlagValues): void => {
       state = {
         ...state,
         values,
       };
     },
 
-    patchValues: (values) => {
+    patchValues: (values: MockFlagValues): void => {
       state = {
         ...state,
         values: {
@@ -168,7 +105,7 @@ export function createMockFlagProvider(
       };
     },
 
-    resetValues: () => {
+    resetValues: (): void => {
       state = {
         ...state,
         values: createMockFlagValues(),
@@ -176,26 +113,26 @@ export function createMockFlagProvider(
     },
 
     resolveBooleanValue: (
-      key,
+      key: FlagKey,
       defaultValue: boolean = state.defaultValues.boolean,
-      context,
-    ) => {
+      context?: FlagEvaluationContext,
+    ): boolean => {
       return resolveMockBooleanFlag(provider, key, defaultValue, context);
     },
 
     resolveStringValue: (
-      key,
+      key: FlagKey,
       defaultValue: string = state.defaultValues.string,
-      context,
-    ) => {
+      context?: FlagEvaluationContext,
+    ): string => {
       return resolveMockStringFlag(provider, key, defaultValue, context);
     },
 
     resolveNumberValue: (
-      key,
+      key: FlagKey,
       defaultValue: number = state.defaultValues.number,
-      context,
-    ) => {
+      context?: FlagEvaluationContext,
+    ): number => {
       return resolveMockNumberFlag(provider, key, defaultValue, context);
     },
 
@@ -207,9 +144,13 @@ export function createMockFlagProvider(
       return resolveMockObjectFlag(provider, key, defaultValue, context);
     },
 
-    createServerEvaluator: () => createMockServerFlagEvaluator(provider),
+    createServerEvaluator: (): ServerFlagEvaluator => {
+      return createMockServerFlagEvaluator(provider);
+    },
 
-    createClientEvaluator: () => createMockClientFlagEvaluator(provider),
+    createClientEvaluator: (): ClientFlagEvaluator => {
+      return createMockClientFlagEvaluator(provider);
+    },
   };
 
   return provider;
@@ -220,28 +161,36 @@ export function createMockServerFlagEvaluator(
 ): ServerFlagEvaluator {
   return {
     boolean: async (
-      key,
+      key: FlagKey,
       defaultValue: boolean = provider.getState().defaultValues.boolean,
-      context,
-    ) => provider.resolveBooleanValue(key, defaultValue, context),
+      context?: FlagEvaluationContext,
+    ): Promise<boolean> => {
+      return provider.resolveBooleanValue(key, defaultValue, context);
+    },
 
     string: async (
-      key,
+      key: FlagKey,
       defaultValue: string = provider.getState().defaultValues.string,
-      context,
-    ) => provider.resolveStringValue(key, defaultValue, context),
+      context?: FlagEvaluationContext,
+    ): Promise<string> => {
+      return provider.resolveStringValue(key, defaultValue, context);
+    },
 
     number: async (
-      key,
+      key: FlagKey,
       defaultValue: number = provider.getState().defaultValues.number,
-      context,
-    ) => provider.resolveNumberValue(key, defaultValue, context),
+      context?: FlagEvaluationContext,
+    ): Promise<number> => {
+      return provider.resolveNumberValue(key, defaultValue, context);
+    },
 
     object: async <TValue extends FlagJsonValue>(
       key: FlagKey,
       defaultValue: TValue,
       context?: FlagEvaluationContext,
-    ): Promise<TValue> => provider.resolveObjectValue(key, defaultValue, context),
+    ): Promise<TValue> => {
+      return provider.resolveObjectValue(key, defaultValue, context);
+    },
   };
 }
 
@@ -250,28 +199,36 @@ export function createMockClientFlagEvaluator(
 ): ClientFlagEvaluator {
   return {
     boolean: (
-      key,
+      key: FlagKey,
       defaultValue: boolean = provider.getState().defaultValues.boolean,
-      context,
-    ) => provider.resolveBooleanValue(key, defaultValue, context),
+      context?: FlagEvaluationContext,
+    ): boolean => {
+      return provider.resolveBooleanValue(key, defaultValue, context);
+    },
 
     string: (
-      key,
+      key: FlagKey,
       defaultValue: string = provider.getState().defaultValues.string,
-      context,
-    ) => provider.resolveStringValue(key, defaultValue, context),
+      context?: FlagEvaluationContext,
+    ): string => {
+      return provider.resolveStringValue(key, defaultValue, context);
+    },
 
     number: (
-      key,
+      key: FlagKey,
       defaultValue: number = provider.getState().defaultValues.number,
-      context,
-    ) => provider.resolveNumberValue(key, defaultValue, context),
+      context?: FlagEvaluationContext,
+    ): number => {
+      return provider.resolveNumberValue(key, defaultValue, context);
+    },
 
     object: <TValue extends FlagJsonValue>(
       key: FlagKey,
       defaultValue: TValue,
       context?: FlagEvaluationContext,
-    ): TValue => provider.resolveObjectValue(key, defaultValue, context),
+    ): TValue => {
+      return provider.resolveObjectValue(key, defaultValue, context);
+    },
   };
 }
 

@@ -1,16 +1,16 @@
 // apps/frontend/src/app/layout.tsx
 
-import * as React from 'react';
+import { Image_Paths } from '@aerealith-ai/content';
+import { BackgroundImage, HelixProviders } from '@aerealith-ai/ui';
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
-import { BackgroundImage, HelixProviders } from '@aerealith-ai/ui';
-import { Image_Paths } from '@aerealith-ai/content';
+import * as React from 'react';
 
 import { FeatureFlagsProvider } from '../components/feature-flags-provider';
 import {
   createDefaultFrontendFeatureFlags,
-  parseFrontendFeatureFlags,
   FRONTEND_FEATURE_FLAGS_HEADER,
+  parseFrontendFeatureFlags,
 } from '../lib/feature-flags';
 
 import 'next-cloudinary/dist/cld-video-player.css';
@@ -142,6 +142,10 @@ export const metadata: Metadata = {
   },
 
   manifest: '/site.webmanifest',
+
+  other: {
+    'darkreader-lock': '',
+  },
 };
 
 export const viewport: Viewport = {
@@ -169,7 +173,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <BackgroundImage
           imageUrl={BACKGROUND_DARK_IMAGE}
           lightImageUrl={BACKGROUND_LIGHT_IMAGE}

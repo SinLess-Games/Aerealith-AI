@@ -1,23 +1,18 @@
-import { OpenFeature } from '@openfeature/server-sdk';
+// libs/flags/src/server/hooks.ts
+
 import { LoggingHook, TelemetryHook } from '@cloudflare/flagship/server';
+import { OpenFeature } from '@openfeature/server-sdk';
 
 import { FLAGS_LOG_MESSAGES } from '../constants';
 
-import type { FlagHookOptions, FlagLogger } from '../types';
+import type {
+  FlagHookOptions,
+  FlagLogger,
+  FlagshipServerHookRegistrationOptions,
+  FlagshipServerHookRegistrationResult,
+} from '../types';
 
-export type OpenFeatureServerHook = Parameters<typeof OpenFeature.addHooks>[0];
-
-export type FlagshipServerHookRegistrationOptions = FlagHookOptions & {
-  readonly force?: boolean;
-  readonly logger?: FlagLogger;
-};
-
-export type FlagshipServerHookRegistrationResult = {
-  readonly registered: boolean;
-  readonly logging: boolean;
-  readonly telemetry: boolean;
-  readonly hooks: readonly OpenFeatureServerHook[];
-};
+type OpenFeatureServerHook = Parameters<typeof OpenFeature.addHooks>[number];
 
 let hooksRegistered = false;
 let registeredHooks: readonly OpenFeatureServerHook[] = [];
@@ -31,17 +26,17 @@ export function createFlagshipServerHooks(
   const hooks: OpenFeatureServerHook[] = [];
 
   if (logging) {
-    hooks.push(new LoggingHook());
+    hooks.push(new LoggingHook() as OpenFeatureServerHook);
   }
 
   if (telemetry) {
     hooks.push(
-      new TelemetryHook((event) => {
+      new TelemetryHook((event: unknown) => {
         options.logger?.debug?.('Feature flag telemetry event captured.', {
           component: 'flags.server.hooks',
           event,
         });
-      }),
+      }) as OpenFeatureServerHook,
     );
   }
 
@@ -113,7 +108,13 @@ export function hasRegisteredHook(name: string): boolean {
 }
 
 export function getHookName(hook: OpenFeatureServerHook): string {
-  const constructorName = hook?.constructor?.name;
+  const maybeHook = hook as {
+    readonly constructor?: {
+      readonly name?: string;
+    };
+  };
+
+  const constructorName = maybeHook.constructor?.name;
 
   if (constructorName && constructorName.length > 0) {
     return constructorName;

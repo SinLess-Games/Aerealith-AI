@@ -2,8 +2,8 @@
 
 'use client';
 
-import * as React from 'react';
 import type { CSSProperties } from 'react';
+import * as React from 'react';
 
 import Box from '@mui/material/Box';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -23,7 +23,7 @@ export type {
   BackgroundImageSource,
   BackgroundMode,
   BackgroundPreference,
-  BackgroundUserSettings,
+  BackgroundUserSettings
 } from '../../types/background';
 
 const DEFAULT_LOCAL_STORAGE_KEYS = [
@@ -118,13 +118,37 @@ function readDocumentPreference(): BackgroundPreference | undefined {
 
   const root = document.documentElement;
 
-  return (
-    normalizePreference(root.dataset.theme) ??
-    normalizePreference(root.getAttribute('data-theme')) ??
-    normalizePreference(root.getAttribute('data-mui-color-scheme')) ??
-    (root.classList.contains('light') ? 'light' : undefined) ??
-    (root.classList.contains('dark') ? 'dark' : undefined)
+  const datasetPreference = normalizePreference(root.dataset.theme);
+
+  if (datasetPreference) {
+    return datasetPreference;
+  }
+
+  const themeAttributePreference = normalizePreference(
+    root.getAttribute('data-theme'),
   );
+
+  if (themeAttributePreference) {
+    return themeAttributePreference;
+  }
+
+  const muiColorSchemePreference = normalizePreference(
+    root.getAttribute('data-mui-color-scheme'),
+  );
+
+  if (muiColorSchemePreference) {
+    return muiColorSchemePreference;
+  }
+
+  if (root.classList.contains('light')) {
+    return 'light';
+  }
+
+  if (root.classList.contains('dark')) {
+    return 'dark';
+  }
+
+  return undefined;
 }
 
 function getSystemColorSchemeSnapshot(): BackgroundMode {
@@ -248,7 +272,8 @@ export function BackgroundImage({
 
   const storedPreference = React.useSyncExternalStore(
     subscribeToLocalStorage,
-    (): BackgroundPreference => readStoredPreference(localStorageKeys) ?? 'system',
+    (): BackgroundPreference =>
+      readStoredPreference(localStorageKeys) ?? 'system',
     (): BackgroundPreference => 'system',
   );
 
@@ -298,12 +323,12 @@ export function BackgroundImage({
 
   const backgroundColor =
     resolvedMode === 'light'
-      ? muiTheme.palette.background.default || '#F7F4FF'
+      ? muiTheme.palette.background.default || '#f7f4ff'
       : muiTheme.palette.background.default || '#050716';
 
   const overlayColor =
     resolvedMode === 'light'
-      ? alpha('#FFFFFF', safeOverlayOpacity)
+      ? alpha('#ffffff', safeOverlayOpacity)
       : alpha('#000000', safeOverlayOpacity);
 
   const foregroundSx = {
@@ -312,15 +337,27 @@ export function BackgroundImage({
     minHeight: '100dvh',
   };
 
-  const rootStyle = {
-    ...boxProps.style,
-  } as CSSProperties | undefined;
+  const rootStyle = boxProps.style
+    ? ({ ...boxProps.style } as CSSProperties)
+    : undefined;
+
+  const imageStyle = React.useMemo<CSSProperties>(
+    () => ({
+      objectFit,
+      objectPosition,
+      userSelect: 'none',
+      color: 'transparent',
+    }),
+    [objectFit, objectPosition],
+  );
 
   return (
     <Box
       {...boxProps}
       data-background-mode={resolvedMode}
       data-background-preference={resolvedPreference}
+      data-darkreader-ignore
+      suppressHydrationWarning
       style={rootStyle}
       sx={mergeSx(
         {
@@ -335,6 +372,8 @@ export function BackgroundImage({
     >
       <Box
         aria-hidden={altText.length === 0}
+        data-darkreader-ignore
+        suppressHydrationWarning
         sx={mergeSx(
           {
             position: 'fixed',
@@ -362,17 +401,18 @@ export function BackgroundImage({
           quality={quality}
           sizes={sizes}
           aria-hidden={altText.length === 0}
-          style={{
-            objectFit,
-            objectPosition,
-            userSelect: 'none',
-          }}
+          data-darkreader-ignore
+          draggable={false}
+          suppressHydrationWarning
+          style={imageStyle}
         />
       </Box>
 
       {overlayGradient ? (
         <Box
           aria-hidden="true"
+          data-darkreader-ignore
+          suppressHydrationWarning
           sx={{
             position: 'fixed',
             inset: 0,
@@ -385,6 +425,8 @@ export function BackgroundImage({
 
       <Box
         aria-hidden="true"
+        data-darkreader-ignore
+        suppressHydrationWarning
         sx={mergeSx(
           {
             position: 'fixed',
@@ -398,7 +440,13 @@ export function BackgroundImage({
         style={overlayStyle}
       />
 
-      <Box sx={mergeSx(foregroundSx, sx)}>{children}</Box>
+      <Box
+        data-darkreader-ignore
+        suppressHydrationWarning
+        sx={mergeSx(foregroundSx, sx)}
+      >
+        {children}
+      </Box>
     </Box>
   );
 }

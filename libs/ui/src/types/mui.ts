@@ -1,4 +1,10 @@
+// libs/ui/src/types/mui.ts
+
+import type { ReactNode } from 'react';
+
 import type { Theme } from '@mui/material/styles';
+
+export type Mode = 'light' | 'dark';
 
 export type MuiBreakpointsWithProductionKeys = Theme['breakpoints'] & {
   internal_mediaKeys?: Theme['breakpoints']['keys'];
@@ -21,19 +27,16 @@ export type ModeColorTokens = {
   neutral: string;
 };
 
-export type ThemeFontTokens = typeof HelixFonts &
-  Partial<Record<'DISPLAY' | 'BODY' | 'MONO', string>>;
-
-type MuiBreakpointsWithProductionKeys = Theme['breakpoints'] & {
-  internal_mediaKeys?: Theme['breakpoints']['keys'];
-};
-
+export type ThemeFontTokens = Partial<
+  Record<'DISPLAY' | 'BODY' | 'MONO' | 'display' | 'body' | 'mono', string>
+> &
+  Record<string, string | undefined>;
 
 export type ThemeProviderDefaultMode = 'system' | Mode;
 
 export type ThemeProviderProps = {
   defaultMode?: ThemeProviderDefaultMode;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 export type ColorModeContextValue = {

@@ -5,6 +5,7 @@
     "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": false,
+    "rootDir": "src",
     "outDir": "../../dist/libs/ui",
     "lib": ["dom", "dom.iterable", "esnext"],
     "types": [
@@ -15,8 +16,7 @@
       "@nx/next/typings/image.d.ts"
     ],
     "jsx": "react-jsx",
-    "tsBuildInfoFile": "../../dist/tmp/libs/ui/tsconfig.lib.tsbuildinfo",
-    "disableSourceOfProjectReferenceRedirect": true
+    "tsBuildInfoFile": "../../dist/tmp/libs/ui/tsconfig.lib.tsbuildinfo"
   },
   "references": [
     {
@@ -48,5 +48,5 @@
     "eslint.config.cjs",
     "eslint.config.mjs"
   ],
-  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

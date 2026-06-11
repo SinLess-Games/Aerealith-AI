@@ -1,7 +1,7 @@
 // libs/ui/src/theme/cssVars.ts
 
+import type { Mode as ThemeMode, ThemePalette } from '../types';
 import { AEREALITH_PALETTE, themes } from './constants';
-import type { ThemeMode, ThemePalette } from '../types';
 
 export type CssVarMap = Record<`--hx-${string}`, string>;
 

@@ -1,3 +1,5 @@
+// libs/flags/src/hono/middleware.ts
+
 import { createMiddleware } from 'hono/factory';
 
 import {
@@ -8,10 +10,19 @@ import {
 } from '../constants';
 
 import type {
+  BuildHonoFlagContextOptions,
   FlagEvaluationContext,
-  FlagLogger,
+  FlagJsonValue,
+  FlagKey,
+  FlagshipServerClientDomain,
+  FlagshipServerProviderEnv,
   FlagshipServerProviderOptions,
-  HonoFlagContextFactoryInput,
+  HonoFlagBindings,
+  HonoFlagContext,
+  HonoFlagEnv,
+  HonoFlagMiddlewareOptions,
+  HonoFlagMiddlewareState,
+  InitializeFlagshipServerProviderOptions,
   ServerFlagEvaluator,
 } from '../types';
 
@@ -20,9 +31,6 @@ import {
   getFlagshipServerProviderOptionsFromEnv,
   initializeFlagshipServerProvider,
   registerFlagshipServerHooksFromOptions,
-  type FlagshipServerClientDomain,
-  type FlagshipServerProviderEnv,
-  type InitializeFlagshipServerProviderOptions,
 } from '../server';
 
 import {
@@ -31,73 +39,7 @@ import {
   HONO_FLAG_PROVIDER_DOMAIN,
   setHonoFlagContext,
   setHonoFlags,
-  type BuildHonoFlagContextOptions,
-  type HonoFlagBindings,
-  type HonoFlagContext,
-  type HonoFlagEnv,
 } from './context';
-
-export type HonoFlagProviderFactory<
-  TBindings extends HonoFlagBindings = HonoFlagBindings,
-> = (
-  context: HonoFlagContext<TBindings>,
-) => FlagshipServerProviderOptions | Promise<FlagshipServerProviderOptions>;
-
-export type HonoFlagContextInputFactory<
-  TBindings extends HonoFlagBindings = HonoFlagBindings,
-> = (
-  input: HonoFlagContextFactoryInput,
-  context: HonoFlagContext<TBindings>,
-) => FlagEvaluationContext | Promise<FlagEvaluationContext>;
-
-export type HonoFlagMiddlewareOptions<
-  TBindings extends HonoFlagBindings = HonoFlagBindings,
-> = {
-  readonly enabled?: boolean;
-
-  /**
-   * Optional explicit provider config.
-   *
-   * If omitted, the middleware reads from context.env:
-   * - FLAGS binding when available
-   * - otherwise CLOUDFLARE_FLAGSHIP_APP_ID
-   * - CLOUDFLARE_ACCOUNT_ID
-   * - CLOUDFLARE_FLAGSHIP_AUTH_TOKEN
-   */
-  readonly provider?:
-    | FlagshipServerProviderOptions
-    | HonoFlagProviderFactory<TBindings>;
-
-  /**
-   * OpenFeature domain used for this Hono integration.
-   */
-  readonly domain?: FlagshipServerClientDomain;
-
-  /**
-   * Static context merged into every request context.
-   */
-  readonly context?: FlagEvaluationContext;
-
-  /**
-   * Request-aware context factory.
-   */
-  readonly getContext?: HonoFlagContextInputFactory<TBindings>;
-
-  readonly includeAnonymousContext?: boolean;
-
-  /**
-   * When true, provider/context failures do not fail the request.
-   * A fallback evaluator returning defaults is installed instead.
-   */
-  readonly failOpen?: boolean;
-
-  readonly logger?: FlagLogger;
-};
-
-export type HonoFlagMiddlewareState = {
-  readonly initialized: boolean;
-  readonly domain: FlagshipServerClientDomain;
-};
 
 export class HonoFlagMiddlewareError extends Error {
   public override readonly name = 'HonoFlagMiddlewareError';
@@ -113,9 +55,7 @@ export class HonoFlagMiddlewareError extends Error {
 
 export function honoFlagMiddleware<
   TBindings extends HonoFlagBindings = HonoFlagBindings,
->(
-  options: HonoFlagMiddlewareOptions<TBindings> = {},
-) {
+>(options: HonoFlagMiddlewareOptions<TBindings> = {}) {
   const domain = options.domain ?? HONO_FLAG_PROVIDER_DOMAIN;
 
   return createMiddleware<HonoFlagEnv<TBindings>>(async (context, next) => {
@@ -129,10 +69,12 @@ export function honoFlagMiddleware<
 
       registerFlagshipServerHooksFromOptions(provider.hooks, options.logger);
 
-      await initializeFlagshipServerProvider({
+      const providerOptions: InitializeFlagshipServerProviderOptions = {
         ...provider,
         domain,
-      } satisfies InitializeFlagshipServerProviderOptions);
+      };
+
+      await initializeFlagshipServerProvider(providerOptions);
 
       const flagContext = await resolveMiddlewareFlagContext(context, options);
 
@@ -154,7 +96,10 @@ export function honoFlagMiddleware<
       await next();
     } catch (error) {
       if (options.failOpen ?? false) {
-        const fallbackContext = await safeResolveFallbackContext(context, options);
+        const fallbackContext = await safeResolveFallbackContext(
+          context,
+          options,
+        );
         const fallbackFlags = createFallbackHonoFlagEvaluator();
 
         setHonoFlagContext(context, fallbackContext);
@@ -181,9 +126,7 @@ export function honoFlagMiddleware<
 
 export function createHonoFlagMiddleware<
   TBindings extends HonoFlagBindings = HonoFlagBindings,
->(
-  options: HonoFlagMiddlewareOptions<TBindings> = {},
-) {
+>(options: HonoFlagMiddlewareOptions<TBindings> = {}) {
   return honoFlagMiddleware(options);
 }
 
@@ -202,7 +145,7 @@ export async function resolveHonoFlagProviderOptions<
   }
 
   return getFlagshipServerProviderOptionsFromEnv(
-    context.env as FlagshipServerProviderEnv,
+    readHonoEnv(context) as FlagshipServerProviderEnv,
   );
 }
 
@@ -218,41 +161,47 @@ export async function resolveMiddlewareFlagContext<
     ? await options.getContext(requestInput, context)
     : undefined;
 
-  return buildHonoFlagContext(context, {
+  const contextOptions: BuildHonoFlagContextOptions<TBindings> = {
     context: {
       ...(options.context ?? {}),
       ...(customContext ?? {}),
     },
     includeAnonymousContext: options.includeAnonymousContext,
-  } satisfies BuildHonoFlagContextOptions<TBindings>);
+  };
+
+  return buildHonoFlagContext(context, contextOptions);
 }
 
 export function createFallbackHonoFlagEvaluator(): ServerFlagEvaluator {
   return {
     boolean: async (
-      _key,
+      _key: FlagKey,
       defaultValue: boolean = FLAGS_DEFAULT_VALUES.boolean,
+      _context?: FlagEvaluationContext,
     ): Promise<boolean> => {
       return defaultValue;
     },
 
     string: async (
-      _key,
+      _key: FlagKey,
       defaultValue: string = FLAGS_DEFAULT_VALUES.string,
+      _context?: FlagEvaluationContext,
     ): Promise<string> => {
       return defaultValue;
     },
 
     number: async (
-      _key,
+      _key: FlagKey,
       defaultValue: number = FLAGS_DEFAULT_VALUES.number,
+      _context?: FlagEvaluationContext,
     ): Promise<number> => {
       return defaultValue;
     },
 
-    object: async <TValue>(
-      _key: string,
+    object: async <TValue extends FlagJsonValue>(
+      _key: FlagKey,
       defaultValue: TValue,
+      _context?: FlagEvaluationContext,
     ): Promise<TValue> => {
       return defaultValue;
     },
@@ -279,4 +228,10 @@ async function safeResolveFallbackContext<
   } catch {
     return options.context ?? {};
   }
+}
+
+function readHonoEnv<TBindings extends HonoFlagBindings>(
+  context: HonoFlagContext<TBindings>,
+): TBindings {
+  return context.env;
 }

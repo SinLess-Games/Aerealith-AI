@@ -18,5 +18,3 @@ export type ThemePalette = {
   accentForeground: ColorFormats;
 };
 
-export type ThemeMode = 'light' | 'dark';
-export type Mode = ThemeMode;

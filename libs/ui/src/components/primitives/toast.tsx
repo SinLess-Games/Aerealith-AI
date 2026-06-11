@@ -5,19 +5,19 @@
 import * as React from 'react';
 
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import type { AlertColor, AlertProps } from '@mui/material/Alert';
 import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
 import Box from '@mui/material/Box';
+import type { ButtonProps } from '@mui/material/Button';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import Snackbar from '@mui/material/Snackbar';
-import type { AlertColor, AlertProps } from '@mui/material/Alert';
-import type { ButtonProps } from '@mui/material/Button';
 import type {
   SnackbarCloseReason,
   SnackbarOrigin,
   SnackbarProps,
 } from '@mui/material/Snackbar';
+import Snackbar from '@mui/material/Snackbar';
 import type { SxProps, Theme } from '@mui/material/styles';
 
 import { mergeSx } from '../../utils';
@@ -101,6 +101,29 @@ export interface ToastProviderProps {
   alertSx?: SxProps<Theme>;
 }
 
+type ToastProviderState = {
+  queue: ToastMessage[];
+  activeToast: ToastMessage | null;
+  open: boolean;
+};
+
+type ToastProviderAction =
+  | {
+      type: 'enqueue';
+      toast: ToastMessage;
+      maxQueued: number;
+    }
+  | {
+      type: 'dismiss';
+      id?: ToastId;
+    }
+  | {
+      type: 'finish-active';
+    }
+  | {
+      type: 'clear';
+    };
+
 const DEFAULT_AUTO_HIDE_DURATION = 6000;
 
 const ToastContext = React.createContext<ToastContextValue | null>(null);
@@ -144,6 +167,79 @@ function getActionRel(action: ToastAction): string | undefined {
   }
 
   return undefined;
+}
+
+function limitQueue(queue: ToastMessage[], maxQueued: number): ToastMessage[] {
+  if (maxQueued <= 0) {
+    return queue;
+  }
+
+  return queue.slice(-maxQueued);
+}
+
+function toastProviderReducer(
+  state: ToastProviderState,
+  action: ToastProviderAction,
+): ToastProviderState {
+  switch (action.type) {
+    case 'enqueue': {
+      if (!state.activeToast) {
+        return {
+          ...state,
+          activeToast: action.toast,
+          open: true,
+        };
+      }
+
+      return {
+        ...state,
+        queue: limitQueue([...state.queue, action.toast], action.maxQueued),
+      };
+    }
+
+    case 'dismiss': {
+      const nextQueue = action.id
+        ? state.queue.filter((queuedToast) => queuedToast.id !== action.id)
+        : state.queue;
+
+      const shouldCloseActiveToast =
+        !action.id || state.activeToast?.id === action.id;
+
+      return {
+        ...state,
+        queue: nextQueue,
+        open: shouldCloseActiveToast ? false : state.open,
+      };
+    }
+
+    case 'finish-active': {
+      const [nextToast, ...remainingToasts] = state.queue;
+
+      if (nextToast) {
+        return {
+          queue: remainingToasts,
+          activeToast: nextToast,
+          open: true,
+        };
+      }
+
+      return {
+        queue: [],
+        activeToast: null,
+        open: false,
+      };
+    }
+
+    case 'clear':
+      return {
+        ...state,
+        queue: [],
+        open: false,
+      };
+
+    default:
+      return state;
+  }
 }
 
 export function Toast({
@@ -280,23 +376,14 @@ export function ToastProvider({
   snackbarProps,
   alertSx,
 }: ToastProviderProps): React.ReactElement {
-  const [queue, setQueue] = React.useState<ToastMessage[]>([]);
-  const [activeToast, setActiveToast] = React.useState<ToastMessage | null>(
-    null,
+  const [{ activeToast, open }, dispatch] = React.useReducer(
+    toastProviderReducer,
+    {
+      queue: [],
+      activeToast: null,
+      open: false,
+    },
   );
-  const [open, setOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (activeToast || queue.length === 0) {
-      return;
-    }
-
-    const [nextToast, ...remainingToasts] = queue;
-
-    setActiveToast(nextToast);
-    setQueue(remainingToasts);
-    setOpen(true);
-  }, [activeToast, queue]);
 
   React.useEffect(() => {
     if (open || !activeToast) {
@@ -304,7 +391,7 @@ export function ToastProvider({
     }
 
     const timer = window.setTimeout(() => {
-      setActiveToast(null);
+      dispatch({ type: 'finish-active' });
     }, 180);
 
     return () => {
@@ -316,14 +403,10 @@ export function ToastProvider({
     (input: ToastInput): ToastId => {
       const nextToast = normalizeToast(input);
 
-      setQueue((currentQueue) => {
-        const nextQueue = [...currentQueue, nextToast];
-
-        if (maxQueued <= 0) {
-          return nextQueue;
-        }
-
-        return nextQueue.slice(-maxQueued);
+      dispatch({
+        type: 'enqueue',
+        toast: nextToast,
+        maxQueued,
       });
 
       return nextToast.id;
@@ -332,27 +415,14 @@ export function ToastProvider({
   );
 
   const dismiss = React.useCallback((id?: ToastId): void => {
-    if (!id) {
-      setOpen(false);
-      return;
-    }
-
-    setQueue((currentQueue) =>
-      currentQueue.filter((queuedToast) => queuedToast.id !== id),
-    );
-
-    setActiveToast((currentToast) => {
-      if (currentToast?.id === id) {
-        setOpen(false);
-      }
-
-      return currentToast;
+    dispatch({
+      type: 'dismiss',
+      id,
     });
   }, []);
 
   const clear = React.useCallback((): void => {
-    setQueue([]);
-    setOpen(false);
+    dispatch({ type: 'clear' });
   }, []);
 
   const contextValue = React.useMemo<ToastContextValue>(
@@ -402,7 +472,7 @@ export function ToastProvider({
           ignoreClickaway={ignoreClickaway}
           alertVariant={alertVariant}
           alertSx={alertSx}
-          onClose={() => setOpen(false)}
+          onClose={() => dispatch({ type: 'dismiss' })}
           {...snackbarProps}
         />
       ) : null}

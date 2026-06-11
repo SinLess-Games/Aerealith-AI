@@ -8,7 +8,6 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import FeatureCard from '../cards/feature-card';
 import type {
   FeatureGridAlign,
   FeatureGridColumns,
@@ -16,6 +15,7 @@ import type {
   FeatureGridProps,
 } from '../../types';
 import { mergeSx } from '../../utils';
+import FeatureCard from '../cards/feature-card';
 
 export type {
   FeatureGridAlign,
@@ -23,7 +23,7 @@ export type {
   FeatureGridItem,
   FeatureGridProps,
   FeatureGridResponsiveValue,
-  FeatureGridSlotProps,
+  FeatureGridSlotProps
 } from '../../types';
 
 const DEFAULT_COLUMNS: Required<Exclude<FeatureGridColumns, number>> = {
@@ -287,7 +287,6 @@ export function FeatureGrid({
               border: 1,
               borderColor: 'divider',
               borderRadius: 3,
-              bgcolor: 'background.paper',
               textAlign: 'center',
             },
             slotProps?.empty?.sx,

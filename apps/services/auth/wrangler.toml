@@ -49,9 +49,15 @@ keep_names = true
 # MikroORM/Knex includes optional dialect loaders for MariaDB and SQLite even
 # though this service uses PostgreSQL. Wrangler still sees those require() calls
 # during bundling, so alias the unused optional drivers to a Worker-safe shim.
+#
+# Workspace libraries are built into dist/libs/{name}. Wrangler does not always
+# follow Nx workspace package metadata correctly during Worker bundling, so the
+# observability package is explicitly aliased to its built entrypoint.
 # -----------------------------------------------------------------------------
 
 [alias]
+"@aerealith-ai/observability" = "../../../libs/observability/src/worker.ts"
+
 "pg" = "./src/shims/pg.cjs"
 "mariadb/callback" = "./src/shims/unused-db-driver.ts"
 "better-sqlite3" = "./src/shims/unused-db-driver.ts"
@@ -75,7 +81,7 @@ LOG_LEVEL = "debug"
 # Frontend origin used for CORS decisions inside the auth service.
 FRONTEND_SERVICE_NAME = "aerealith-ai-frontend"
 FLAGS_PROVIDER_NAME = "aerealith-flagship"
-FRONTEND_ORIGIN = "https://helixaibot.com"
+FRONTEND_ORIGIN = "https://aerealith.com"
 
 # Feature flags (Flagship)
 CLOUDFLARE_FLAGSHIP_APP_ID = "2a1ca9ba-b446-4cb8-b8eb-ab0f3985679f"
@@ -130,9 +136,17 @@ SERVICE_DISPLAY_NAME = "Aerealith Auth Service Preview"
 API_VERSION = "v1"
 API_BASE_PATH = "/api/V1/auth"
 LOG_LEVEL = "debug"
+
 FRONTEND_SERVICE_NAME = "aerealith-ai-frontend"
 FLAGS_PROVIDER_NAME = "aerealith-flagship"
-FRONTEND_ORIGIN = "https://helixaibot.com"
+FRONTEND_ORIGIN = "https://aerealith.com"
+
+CLOUDFLARE_FLAGSHIP_APP_ID = "2a1ca9ba-b446-4cb8-b8eb-ab0f3985679f"
+CLOUDFLARE_FLAGSHIP_AUTH_TOKEN = "__SET_FLAGSHIP_AUTH_TOKEN__"
+
+PYROSCOPE_SERVER_ADDRESS = ""
+PYROSCOPE_BASIC_AUTH_USER = ""
+PYROSCOPE_BASIC_AUTH_PASSWORD = ""
 
 [env.preview.observability]
 enabled = true
@@ -151,7 +165,7 @@ name = "aerealith-auth-service"
 workers_dev = false
 preview_urls = false
 
-# Keep this commented while the frontend Worker owns helixaibot.com.
+# Keep this commented while the frontend Worker owns aerealith.com.
 # The frontend can still call this Worker privately through AUTH_SERVICE.
 #
 # [[env.production.routes]]
@@ -168,9 +182,17 @@ SERVICE_DISPLAY_NAME = "Aerealith Auth Service"
 API_VERSION = "v1"
 API_BASE_PATH = "/api/V1/auth"
 LOG_LEVEL = "info"
+
 FRONTEND_SERVICE_NAME = "aerealith-ai-frontend"
 FLAGS_PROVIDER_NAME = "aerealith-flagship"
-FRONTEND_ORIGIN = "https://helixaibot.com"
+FRONTEND_ORIGIN = "https://aerealith.com"
+
+CLOUDFLARE_FLAGSHIP_APP_ID = "2a1ca9ba-b446-4cb8-b8eb-ab0f3985679f"
+CLOUDFLARE_FLAGSHIP_AUTH_TOKEN = "__SET_FLAGSHIP_AUTH_TOKEN__"
+
+PYROSCOPE_SERVER_ADDRESS = ""
+PYROSCOPE_BASIC_AUTH_USER = ""
+PYROSCOPE_BASIC_AUTH_PASSWORD = ""
 
 [env.production.observability]
 enabled = true

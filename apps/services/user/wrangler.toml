@@ -53,6 +53,8 @@ keep_names = true
 # -----------------------------------------------------------------------------
 
 [alias]
+"@aerealith-ai/observability" = "../../../libs/observability/src/worker.ts"
+
 "pg" = "./src/shims/pg.cjs"
 "mariadb/callback" = "./src/shims/unused-db-driver.ts"
 "better-sqlite3" = "./src/shims/unused-db-driver.ts"

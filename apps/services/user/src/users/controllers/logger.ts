@@ -1,9 +1,24 @@
+// apps/services/user/src/users/controllers/logger.ts
+
 import type { Context } from 'hono';
+
 import { createLogger, type LogEntryOptions } from '@aerealith-ai/observability';
 
 import type { UserServiceContextEnv } from '../types';
 
 type UserControllerContext = Context<{ Bindings: UserServiceContextEnv }>;
+
+export type ValidationIssueInput = {
+  code: string;
+  message: string;
+  path: readonly PropertyKey[];
+};
+
+export type MappedValidationIssue = {
+  path: string;
+  code: string;
+  message: string;
+};
 
 export const createUserControllerLogger = (context: UserControllerContext) => {
   return createLogger({
@@ -37,11 +52,19 @@ export const logUserControllerError = (
 };
 
 export const mapValidationIssues = (
-  issues: Array<{ path: Array<string | number>; code: string; message: string }>,
-): Array<{ path: string; code: string; message: string }> => {
+  issues: readonly ValidationIssueInput[],
+): MappedValidationIssue[] => {
   return issues.map((issue) => ({
-    path: issue.path.map(String).join('.'),
+    path: issue.path.map(formatValidationIssuePathSegment).join('.'),
     code: issue.code,
     message: issue.message,
   }));
 };
+
+function formatValidationIssuePathSegment(segment: PropertyKey): string {
+  if (typeof segment === 'symbol') {
+    return segment.description ?? segment.toString();
+  }
+
+  return String(segment);
+}

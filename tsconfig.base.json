@@ -68,12 +68,6 @@
       ],
       "@aerealith-ai/observability": [
         "./dist/libs/observability/src/index.d.ts"
-      ],
-      "@aerealith-ai/observability/browser": [
-        "./libs/observability/src/browser.ts"
-      ],
-      "@aerealith-ai/observability/profiler": [
-        "./libs/observability/src/profiler/index.ts"
       ]
     }
   }

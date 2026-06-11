@@ -1,3 +1,5 @@
+// apps/services/user/src/users/controllers/get-user-profile.controller.ts
+
 import type { EntityManager } from '@mikro-orm/postgresql';
 import type { Context } from 'hono';
 
@@ -15,6 +17,12 @@ import {
   mapValidationIssues,
 } from './logger';
 
+type ControllerValidationIssue = {
+  code: string;
+  message: string;
+  path: readonly PropertyKey[];
+};
+
 export const getUserProfileController = async (
   context: Context,
 ): Promise<Response> => {
@@ -31,7 +39,9 @@ export const getUserProfileController = async (
         error: {
           code: usernameParam.code,
           message: usernameParam.message,
-          issues: mapValidationIssues(usernameParam.issues),
+          issues: mapValidationIssues(
+            normalizeValidationIssues(usernameParam.issues),
+          ),
         },
       },
       400,
@@ -69,6 +79,26 @@ export const getUserProfileController = async (
     throw error;
   }
 };
+
+function normalizeValidationIssues(
+  issues: readonly ControllerValidationIssue[],
+): { path: (string | number)[]; code: string; message: string }[] {
+  return issues.map((issue) => ({
+    code: issue.code,
+    message: issue.message,
+    path: issue.path.map(normalizeValidationIssuePathSegment),
+  }));
+}
+
+function normalizeValidationIssuePathSegment(
+  segment: PropertyKey,
+): string | number {
+  if (typeof segment === 'string' || typeof segment === 'number') {
+    return segment;
+  }
+
+  return segment.description ?? segment.toString();
+}
 
 function getStatusCodeForGetUserProfileError(
   error: GetUserProfileServiceError,

@@ -22,7 +22,7 @@ export type {
   MarketingCopyProps,
   MarketingCopySlotProps,
   MarketingCopyTone,
-  MarketingCopyVariant,
+  MarketingCopyVariant
 } from '../../types';
 
 function getTextAlign(align: MarketingCopyAlign): 'left' | 'center' | 'right' {

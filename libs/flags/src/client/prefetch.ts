@@ -1,30 +1,16 @@
+// libs/flags/src/client/prefetch.ts
+
 import { FLAGS_SECURITY_LIMITS } from '../constants';
 
 import type {
   AnyFlagDefinition,
+  CreateFlagPrefetchConfigOptions,
   FlagKey,
   FlagPrefetchConfig,
+  FlagPrefetchInput,
+  FlagPrefetchValidationResult,
   FlagRegistry,
 } from '../types';
-
-export type FlagPrefetchInput =
-  | readonly FlagKey[]
-  | FlagPrefetchConfig
-  | FlagRegistry
-  | undefined
-  | null;
-
-export type CreateFlagPrefetchConfigOptions = {
-  readonly required?: boolean;
-  readonly maxFlags?: number;
-  readonly sort?: boolean;
-};
-
-export type FlagPrefetchValidationResult = {
-  readonly valid: boolean;
-  readonly flags: readonly FlagKey[];
-  readonly errors: readonly string[];
-};
 
 export class FlagPrefetchError extends Error {
   public override readonly name = 'FlagPrefetchError';
@@ -71,7 +57,9 @@ export function validatePrefetchFlags(
   }
 
   if (flags.length > maxFlags) {
-    errors.push(`Prefetch flag count exceeds maximum allowed count of ${maxFlags}.`);
+    errors.push(
+      `Prefetch flag count exceeds maximum allowed count of ${maxFlags}.`,
+    );
   }
 
   for (const flag of flags) {
@@ -129,7 +117,10 @@ export function createPrefetchFlagsFromEnv(
   value: string | undefined | null,
   options: CreateFlagPrefetchConfigOptions = {},
 ): readonly FlagKey[] {
-  return createFlagPrefetchConfig(parsePrefetchFlagsFromString(value), options).flags;
+  return createFlagPrefetchConfig(
+    parsePrefetchFlagsFromString(value),
+    options,
+  ).flags;
 }
 
 export function parsePrefetchFlagsFromString(
@@ -167,9 +158,12 @@ export function assertPrefetchFlagAvailable(
   flag: FlagKey,
 ): void {
   if (!hasPrefetchFlag(input, flag)) {
-    throw new FlagPrefetchError(`Feature flag "${flag}" is not included in prefetchFlags.`, [
-      `Add "${flag}" to the client provider prefetchFlags list before evaluating it in the browser.`,
-    ]);
+    throw new FlagPrefetchError(
+      `Feature flag "${flag}" is not included in prefetchFlags.`,
+      [
+        `Add "${flag}" to the client provider prefetchFlags list before evaluating it in the browser.`,
+      ],
+    );
   }
 }
 
@@ -213,11 +207,15 @@ export function normalizePrefetchFlagKey(flag: unknown): FlagKey | undefined {
   return flag.trim();
 }
 
-export function dedupePrefetchFlags(flags: readonly FlagKey[]): readonly FlagKey[] {
+export function dedupePrefetchFlags(
+  flags: readonly FlagKey[],
+): readonly FlagKey[] {
   return [...new Set(flags)];
 }
 
-export function isFlagPrefetchConfig(value: unknown): value is FlagPrefetchConfig {
+export function isFlagPrefetchConfig(
+  value: unknown,
+): value is FlagPrefetchConfig {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -232,7 +230,9 @@ export function isFlagRegistry(value: unknown): value is FlagRegistry {
     return false;
   }
 
-  return Object.values(value as Record<string, unknown>).every(isFlagDefinitionLike);
+  return Object.values(value as Record<string, unknown>).every(
+    isFlagDefinitionLike,
+  );
 }
 
 function extractPrefetchFlags(input: FlagPrefetchInput): readonly FlagKey[] {

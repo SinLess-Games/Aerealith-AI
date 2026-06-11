@@ -1,11 +1,16 @@
+// libs/flags/src/context/user-context.ts
+
 import { FLAGS_DEFAULT_ENVIRONMENT } from '../constants';
 
 import type {
-  BuildFlagContextOptions,
+  BuildUserFlagContextOptions,
   FlagContextInput,
-  FlagEnvironment,
   FlagEvaluationContext,
   FlagJsonValue,
+  FlagOrganizationInput,
+  FlagUserId,
+  FlagUserInput,
+  FlagWorkspaceInput,
   RequiredFlagEvaluationContext,
 } from '../types';
 
@@ -16,75 +21,6 @@ import {
   mergeFlagEvaluationContexts,
   normalizeTargetingKey,
 } from './evaluation-context';
-
-export type FlagUserId = string | number;
-
-export type FlagUserRole = string;
-
-export type FlagUserPlan = string;
-
-export type FlagUserInput = {
-  readonly id?: FlagUserId;
-  readonly userId?: FlagUserId;
-  readonly targetingKey?: string;
-
-  readonly anonymousId?: string;
-  readonly sessionId?: string;
-
-  readonly email?: string;
-  readonly username?: string;
-  readonly displayName?: string;
-  readonly name?: string;
-
-  readonly role?: FlagUserRole;
-  readonly roles?: readonly FlagUserRole[];
-  readonly plan?: FlagUserPlan;
-
-  readonly country?: string;
-  readonly locale?: string;
-  readonly timezone?: string;
-
-  readonly organizationId?: string | number;
-  readonly workspaceId?: string | number;
-  readonly accountId?: string | number;
-
-  readonly authenticated?: boolean;
-  readonly internal?: boolean;
-  readonly admin?: boolean;
-
-  readonly createdAt?: string | Date;
-  readonly updatedAt?: string | Date;
-  readonly lastLoginAt?: string | Date;
-
-  readonly metadata?: Record<string, unknown>;
-};
-
-export type FlagOrganizationInput = {
-  readonly id?: string | number;
-  readonly organizationId?: string | number;
-  readonly name?: string;
-  readonly slug?: string;
-  readonly plan?: string;
-  readonly role?: string;
-  readonly metadata?: Record<string, unknown>;
-};
-
-export type FlagWorkspaceInput = {
-  readonly id?: string | number;
-  readonly workspaceId?: string | number;
-  readonly name?: string;
-  readonly slug?: string;
-  readonly environment?: FlagEnvironment;
-  readonly metadata?: Record<string, unknown>;
-};
-
-export type BuildUserFlagContextOptions = BuildFlagContextOptions & {
-  readonly includeUserProfile?: boolean;
-  readonly includeEmail?: boolean;
-  readonly includeMetadata?: boolean;
-  readonly organization?: FlagOrganizationInput;
-  readonly workspace?: FlagWorkspaceInput;
-};
 
 export function buildUserFlagEvaluationContext(
   user: FlagUserInput | undefined | null,
@@ -109,7 +45,9 @@ export function buildUserFlagEvaluationContext(
       anonymousId: user.anonymousId,
       sessionId: user.sessionId,
 
-      email: options.includeEmail ? normalizeOptionalString(user.email) : undefined,
+      email: options.includeEmail
+        ? normalizeOptionalString(user.email)
+        : undefined,
       username: normalizeOptionalString(user.username),
       displayName: options.includeUserProfile
         ? normalizeOptionalString(user.displayName ?? user.name)
@@ -161,7 +99,10 @@ export function buildRequiredUserFlagEvaluationContext(
 }
 
 export function buildAnonymousUserFlagEvaluationContext(
-  input: Pick<FlagUserInput, 'anonymousId' | 'sessionId' | 'country' | 'locale'> = {},
+  input: Pick<
+    FlagUserInput,
+    'anonymousId' | 'sessionId' | 'country' | 'locale'
+  > = {},
   options: BuildUserFlagContextOptions = {},
 ): FlagEvaluationContext {
   return buildFlagEvaluationContext(
@@ -274,7 +215,7 @@ export function mergeUserFlagContext(
 ): FlagEvaluationContext {
   return mergeFlagEvaluationContexts(
     buildUserFlagEvaluationContext(user, options),
-    context,
+    buildFlagEvaluationContext(context, options),
   );
 }
 
@@ -330,7 +271,9 @@ function normalizeOptionalString(value: unknown): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function normalizeStringArray(values: readonly string[] | undefined): string[] | undefined {
+function normalizeStringArray(
+  values: readonly string[] | undefined,
+): string[] | undefined {
   if (!values) {
     return undefined;
   }
@@ -381,6 +324,10 @@ function normalizeMetadataValue(value: unknown): FlagJsonValue | undefined {
     return null;
   }
 
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
+  }
+
   if (typeof value === 'string') {
     const normalized = value.trim();
 
@@ -393,10 +340,6 @@ function normalizeMetadataValue(value: unknown): FlagJsonValue | undefined {
 
   if (typeof value === 'boolean') {
     return value;
-  }
-
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
   }
 
   if (Array.isArray(value)) {

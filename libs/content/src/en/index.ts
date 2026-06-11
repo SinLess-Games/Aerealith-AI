@@ -1,13 +1,13 @@
 // libs/content/src/en/index.ts
 
 export * from './about';
+export * from './constants';
 export * from './contact';
 export * from './footer';
 export * from './header';
 export * from './home';
+export * from './policies';
 export * from './technology';
-
-export * from './constants';
 
 // Browser-safe profile content only.
 // Do not export profile-edit-options here because it imports libs/db.
@@ -17,7 +17,7 @@ export { profileTabs } from './profile/profile-tabs';
 export { profileSidebar } from './profile/sidebar';
 
 export type {
-  ProfileConnectionCategory,
+  PolicyDocument, ProfileConnectionCategory,
   ProfileConnectionCategoryIcon,
   ProfileEditOptions,
   ProfileScaffoldContent,
@@ -25,5 +25,5 @@ export type {
   ProfileSidebarIcon,
   ProfileSidebarItem,
   ProfileTabItem,
-  ProfileTabValue,
+  ProfileTabValue
 } from '../types';

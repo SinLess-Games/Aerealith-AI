@@ -1,20 +1,31 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "../../dist/libs/observability",
-    "declaration": true,
+   "compilerOptions": {
     "composite": true,
+    "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": false,
-    "tsBuildInfoFile": "../../dist/libs/observability/tsconfig.lib.tsbuildinfo",
-    "types": ["node"]
+    "rootDir": "src",
+    "outDir": "../../dist/libs/observability",
+    "lib": ["dom", "dom.iterable", "es2022"],
+    "types": ["node"],
+    "tsBuildInfoFile": "../../dist/tmp/libs/observability/tsconfig.lib.tsbuildinfo"
   },
-  "include": ["src/**/*.ts"],
   "exclude": [
+    "out-tsc",
+    "dist",
     "jest.config.ts",
-    "jest.config.cts",
     "src/**/*.spec.ts",
-    "src/**/*.test.ts"
-  ]
+    "src/**/*.test.ts",
+    "src/**/*.spec.tsx",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.js",
+    "src/**/*.test.js",
+    "src/**/*.spec.jsx",
+    "src/**/*.test.jsx",
+    "eslint.config.js",
+    "eslint.config.cjs",
+    "eslint.config.mjs"
+  ],
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

@@ -2,9 +2,12 @@
   "name": "@aerealith-ai/observability",
   "version": "0.0.1",
   "private": true,
-  "type": "commonjs",
-  "main": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
+  "main": "../../dist/libs/observability/src/index.js",
+  "module": "../../dist/libs/observability/src/index.js",
+  "types": "../../dist/libs/observability/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json"
+  },
   "dependencies": {
     "@grafana/faro-web-sdk": "^2.5.0",
     "@grafana/faro-web-tracing": "^2.5.0",
@@ -13,30 +16,12 @@
     "@opentelemetry/resources": "^2.7.1",
     "@opentelemetry/sdk-trace-base": "^2.7.1",
     "@opentelemetry/semantic-conventions": "^1.32.0",
-    "hono": "^4.8.3",
     "@pyroscope/nodejs": "^0.4.11",
+    "hono": "^4.8.3",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@grafana/faro-webpack-plugin": "^0.11.1",
     "@types/node": "24.10.1"
-  },
-  "exports": {
-    "./package.json": "./package.json",
-    "./browser": {
-      "types": "./dist/src/browser.d.ts",
-      "import": "./dist/src/browser.js",
-      "default": "./dist/src/browser.js"
-    },
-    "./profiler": {
-      "types": "./dist/src/profiler/index.d.ts",
-      "import": "./dist/src/profiler/index.js",
-      "default": "./dist/src/profiler/index.js"
-    },
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js",
-      "default": "./dist/src/index.js"
-    }
   }
 }

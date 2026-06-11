@@ -1,3 +1,5 @@
+// apps/services/user/src/users/controllers/update-user.controller.ts
+
 import type { EntityManager } from '@mikro-orm/postgresql';
 import type { Context } from 'hono';
 
@@ -11,6 +13,12 @@ import { getEntityManager } from '@aerealith-ai/db';
 import { UpdateUserService, UpdateUserServiceError } from '../services';
 import { mapValidationIssues } from './logger';
 
+type ControllerValidationIssue = {
+  code: string;
+  message: string;
+  path: readonly PropertyKey[];
+};
+
 export const updateUserController = async (
   context: Context,
 ): Promise<Response> => {
@@ -23,7 +31,9 @@ export const updateUserController = async (
         error: {
           code: usernameParam.code,
           message: usernameParam.message,
-          issues: mapValidationIssues(usernameParam.issues),
+          issues: mapValidationIssues(
+            normalizeValidationIssues(usernameParam.issues),
+          ),
         },
       },
       400,
@@ -42,7 +52,9 @@ export const updateUserController = async (
           message:
             parsedBody.error.issues[0]?.message ??
             'Invalid update user payload.',
-          issues: mapValidationIssues(parsedBody.error.issues),
+          issues: mapValidationIssues(
+            normalizeValidationIssues(parsedBody.error.issues),
+          ),
         },
       },
       400,
@@ -83,6 +95,26 @@ async function readJsonBody(context: Context): Promise<unknown> {
   } catch {
     return {};
   }
+}
+
+function normalizeValidationIssues(
+  issues: readonly ControllerValidationIssue[],
+): { path: (string | number)[]; code: string; message: string }[] {
+  return issues.map((issue) => ({
+    code: issue.code,
+    message: issue.message,
+    path: issue.path.map(normalizeValidationIssuePathSegment),
+  }));
+}
+
+function normalizeValidationIssuePathSegment(
+  segment: PropertyKey,
+): string | number {
+  if (typeof segment === 'string' || typeof segment === 'number') {
+    return segment;
+  }
+
+  return segment.description ?? segment.toString();
 }
 
 function getStatusCodeForUpdateUserError(

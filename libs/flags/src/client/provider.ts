@@ -1,5 +1,11 @@
+// libs/flags/src/client/provider.ts
+
 import { FlagshipClientProvider } from '@cloudflare/flagship/web';
-import { OpenFeature, type EvaluationContext } from '@openfeature/web-sdk';
+import {
+  OpenFeature,
+  type EvaluationContext,
+  type Provider,
+} from '@openfeature/web-sdk';
 
 import {
   FLAGS_ENV_KEYS,
@@ -15,47 +21,22 @@ import {
 import { toOpenFeatureEvaluationContext } from '../openfeature-context';
 
 import type {
+  CreateFlagshipClientProviderOptions,
+  CreateFlagshipClientProviderResult,
   FlagEvaluationContext,
   FlagKey,
+  FlagPrefetchInput,
+  FlagshipClientProviderEnv,
   FlagshipClientProviderOptions,
   FlagshipRemoteCredentials,
+  InitializedFlagshipClientProvider,
+  InitializeFlagshipClientProviderOptions,
 } from '../types';
 
 import {
   createFlagPrefetchConfig,
   normalizePrefetchFlags,
-  type CreateFlagPrefetchConfigOptions,
-  type FlagPrefetchInput,
 } from './prefetch';
-
-export type FlagshipClientProviderInstance = InstanceType<
-  typeof FlagshipClientProvider
->;
-
-export type CreateFlagshipClientProviderOptions =
-  FlagshipClientProviderOptions & {
-    readonly prefetch?: CreateFlagPrefetchConfigOptions;
-  };
-
-export type InitializeFlagshipClientProviderOptions =
-  CreateFlagshipClientProviderOptions & {
-    readonly force?: boolean;
-  };
-
-export type CreateFlagshipClientProviderResult = {
-  readonly provider: FlagshipClientProviderInstance;
-  readonly providerName: string;
-  readonly prefetchFlags: readonly FlagKey[];
-  readonly cacheKey: string;
-};
-
-export type InitializedFlagshipClientProvider =
-  CreateFlagshipClientProviderResult & {
-    readonly initialized: true;
-    readonly context?: FlagEvaluationContext;
-  };
-
-export type FlagshipClientProviderEnv = Record<string, unknown>;
 
 export class FlagshipClientProviderError extends Error {
   public override readonly name = 'FlagshipClientProviderError';
@@ -125,7 +106,9 @@ export async function initializeFlagshipClientProvider(
     return initializationPromise;
   }
 
-  initializationPromise = OpenFeature.setProviderAndWait(providerResult.provider)
+  initializationPromise = OpenFeature.setProviderAndWait(
+    providerResult.provider as unknown as Provider,
+  )
     .then(async () => {
       const context = options.context
         ? buildFlagEvaluationContext(options.context)
@@ -232,8 +215,8 @@ export function getFlagshipClientProviderOptionsFromEnv(
   return {
     ...credentials,
     providerName:
-      readClientEnvString(env, FLAGS_ENV_KEYS.providerName) ??
-      overrides.providerName,
+      overrides.providerName ??
+      readClientEnvString(env, FLAGS_ENV_KEYS.providerName),
     prefetchFlags: normalizePrefetchFlags(
       overrides.prefetchFlags ?? prefetchFlags,
     ),

@@ -1,17 +1,11 @@
+// libs/ui/src/utils/faro.ts
+
 'use client';
 
 import type { initializeFaro as initializeFaroType } from '@grafana/faro-web-sdk';
 
-import { initBrowserTelemetry } from '@aerealith-ai/observability/browser';
-
-// This package is the source of truth for Helix config.
-//
-// TS6305 can appear in VS Code before @aerealith-ai/config has generated
-// dist/libs/config/index.d.ts. The import is still correct; the generated
-// declaration file is produced by building @aerealith-ai/config.
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore TS6305: referenced project declarations may not exist before config build.
 import { appConfig } from '@aerealith-ai/config';
+import { initBrowserTelemetry } from '@aerealith-ai/observability';
 
 type FaroInstance = ReturnType<typeof initializeFaroType>;
 
@@ -45,7 +39,8 @@ type FaroSourceConfig = Partial<{
 
 type ConfigRecord = Record<string, unknown>;
 
-type HelixWindow = Window & {
+type AerealithWindow = Window & {
+  __AEREALITH_FARO__?: FaroInstance | null;
   __HELIX_FARO__?: FaroInstance | null;
 };
 
@@ -259,7 +254,7 @@ function buildConfig(
       faroConfig.applicationName ??
       getEnv('NEXT_PUBLIC_FARO_APP_NAME') ??
       getEnv('NEXT_PUBLIC_APP_NAME') ??
-      'helix-app',
+      'aerealith-app',
     appVersion:
       overrides.appVersion ??
       faroConfig.appVersion ??
@@ -278,10 +273,8 @@ function buildConfig(
       getEnv('NODE_ENV') ??
       'development',
     sampleRate:
-      readNumber(['observability', 'faro', 'samplingRate']) ??
-      readNumber(['grafanaCloud', 'addons', 'faro', 'samplingRate']) ??
-      readNumber(['grafanaCloud', 'faro', 'samplingRate']) ??
-      readNumber(['addons', 'faro', 'samplingRate']) ??
+      overrides.sampleRate ??
+      faroConfig.samplingRate ??
       (getEnv('NODE_ENV') === 'production' ? 0.15 : 0),
   };
 }
@@ -295,14 +288,21 @@ function getStoredFaro(): FaroInstance | null {
     return null;
   }
 
-  return (window as HelixWindow).__HELIX_FARO__ ?? null;
+  const browserWindow = window as AerealithWindow;
+
+  return (
+    browserWindow.__AEREALITH_FARO__ ?? browserWindow.__HELIX_FARO__ ?? null
+  );
 }
 
 function setStoredFaro(faro: FaroInstance | null): void {
   faroSingleton = faro;
 
   if (typeof window !== 'undefined') {
-    (window as HelixWindow).__HELIX_FARO__ = faro;
+    const browserWindow = window as AerealithWindow;
+
+    browserWindow.__AEREALITH_FARO__ = faro;
+    browserWindow.__HELIX_FARO__ = faro;
   }
 }
 

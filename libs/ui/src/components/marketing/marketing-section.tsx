@@ -8,10 +8,6 @@ import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import { alpha, useTheme, type SxProps, type Theme } from '@mui/material/styles';
 
-import FeatureCard from '../cards/feature-card';
-import MediaCarousel from '../media/carousel';
-import FeatureGrid from './feature-grid';
-import MarketingCopy from './marketing-copy';
 import type {
   CarouselItem,
   FeatureGridItem,
@@ -22,6 +18,10 @@ import type {
   MarketingSectionVariant,
 } from '../../types';
 import { mergeSx } from '../../utils';
+import FeatureCard from '../cards/feature-card';
+import MediaCarousel from '../media/carousel';
+import FeatureGrid from './feature-grid';
+import MarketingCopy from './marketing-copy';
 
 export type {
   MarketingSectionFeatureLayout,
@@ -29,7 +29,7 @@ export type {
   MarketingSectionProps,
   MarketingSectionSlotProps,
   MarketingSectionSpacing,
-  MarketingSectionVariant,
+  MarketingSectionVariant
 } from '../../types';
 
 const spacingYMap: Record<MarketingSectionSpacing, SxProps<Theme>> = {
@@ -246,7 +246,7 @@ export function MarketingSection({
   const theme = useTheme();
   const titleId = React.useId().replace(/:/g, '');
   const resolvedTitleId = title
-    ? `helix-marketing-section-${titleId}`
+    ? `aerealith-marketing-section-${titleId}`
     : undefined;
 
   const hasMedia = Boolean(media);
@@ -256,6 +256,22 @@ export function MarketingSection({
   const safeCarouselItems = React.useMemo(
     () => [...carouselItems],
     [carouselItems],
+  );
+
+  const {
+    cdnVideos: carouselCdnVideos,
+    powerpoints: carouselPowerpoints,
+    ...resolvedCarouselProps
+  } = carouselProps ?? {};
+
+  const safeCarouselCdnVideos = React.useMemo(
+    () => (carouselCdnVideos ? [...carouselCdnVideos] : undefined),
+    [carouselCdnVideos],
+  );
+
+  const safeCarouselPowerpoints = React.useMemo(
+    () => (carouselPowerpoints ? [...carouselPowerpoints] : undefined),
+    [carouselPowerpoints],
   );
 
   const carouselFeatureItems = React.useMemo(
@@ -277,8 +293,8 @@ export function MarketingSection({
 
   const hasCarouselContent =
     carouselFeatureItems.length > 0 ||
-    Boolean(carouselProps?.cdnVideos?.length) ||
-    Boolean(carouselProps?.powerpoints?.length) ||
+    Boolean(safeCarouselCdnVideos?.length) ||
+    Boolean(safeCarouselPowerpoints?.length) ||
     Boolean(carouselProps?.autoDiscoverImages);
 
   const resolvedFeatureLayout = getFeatureLayout({
@@ -391,7 +407,9 @@ export function MarketingSection({
             rounded
             bordered
             elevated
-            {...carouselProps}
+            {...resolvedCarouselProps}
+            cdnVideos={safeCarouselCdnVideos}
+            powerpoints={safeCarouselPowerpoints}
             items={
               carouselFeatureItems.length > 0 ? carouselFeatureItems : undefined
             }

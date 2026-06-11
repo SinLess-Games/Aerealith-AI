@@ -1,3 +1,5 @@
+// libs/flags/src/context/evaluation-context.ts
+
 import {
   FLAGS_ANONYMOUS_TARGETING_PREFIX,
   FLAGS_CONTEXT_ATTRIBUTE_KEY_PATTERN,
@@ -15,11 +17,24 @@ import type {
   FlagEvaluationContext,
   FlagJsonValue,
   FlagTargetingKey,
+  MutableFlagEvaluationContext,
   RequiredFlagEvaluationContext,
 } from '../types';
 
-type MutableFlagEvaluationContext = {
-  [key: string]: FlagJsonValue | undefined;
+export type FlagHeadersLike = {
+  readonly get: (key: string) => string | null | undefined;
+};
+
+export type FlagRequestLike = {
+  readonly headers: FlagHeadersLike;
+};
+
+type CryptoLike = {
+  readonly randomUUID?: () => string;
+};
+
+type RuntimeGlobal = typeof globalThis & {
+  readonly crypto?: CryptoLike;
 };
 
 export function buildFlagEvaluationContext(
@@ -27,7 +42,9 @@ export function buildFlagEvaluationContext(
   options: BuildFlagContextOptions = {},
 ): FlagEvaluationContext {
   const sanitized = sanitizeFlagEvaluationContext(input);
-  const environment = normalizeEnvironment(options.environment ?? sanitized.environment);
+  const environment = normalizeEnvironment(
+    options.environment ?? sanitized.environment,
+  );
 
   const targetingKey =
     normalizeTargetingKey(sanitized.targetingKey) ??
@@ -60,16 +77,19 @@ export function buildRequiredFlagEvaluationContext(
 export function mergeFlagEvaluationContexts(
   ...contexts: readonly (FlagEvaluationContext | undefined | null)[]
 ): FlagEvaluationContext {
-  const merged = contexts.reduce<MutableFlagEvaluationContext>((accumulator, context) => {
-    if (!context) {
-      return accumulator;
-    }
+  const merged = contexts.reduce<MutableFlagEvaluationContext>(
+    (accumulator, context) => {
+      if (!context) {
+        return accumulator;
+      }
 
-    return {
-      ...accumulator,
-      ...sanitizeFlagEvaluationContext(context),
-    };
-  }, {});
+      return {
+        ...accumulator,
+        ...sanitizeFlagEvaluationContext(context),
+      };
+    },
+    {},
+  );
 
   return removeUndefinedValues(merged);
 }
@@ -99,7 +119,7 @@ export function sanitizeFlagEvaluationContext(
 }
 
 export function buildContextFromRequest(
-  request: Request,
+  request: FlagRequestLike,
   input: FlagContextInput = {},
   options: BuildFlagContextOptions = {},
 ): FlagEvaluationContext {
@@ -114,7 +134,9 @@ export function buildContextFromRequest(
   );
 }
 
-export function getFlagContextFromHeaders(headers: Headers): FlagEvaluationContext {
+export function getFlagContextFromHeaders(
+  headers: FlagHeadersLike,
+): FlagEvaluationContext {
   return sanitizeFlagEvaluationContext({
     targetingKey: getHeaderValue(headers, FLAGS_HEADER_KEYS.targetingKey),
     userId: getHeaderValue(headers, FLAGS_HEADER_KEYS.userId),
@@ -142,7 +164,10 @@ export function requireFlagTargetingKey(
 export function hasFlagTargetingKey(
   context: FlagEvaluationContext | undefined | null,
 ): context is RequiredFlagEvaluationContext {
-  return typeof context?.targetingKey === 'string' && context.targetingKey.trim().length > 0;
+  return (
+    typeof context?.targetingKey === 'string' &&
+    context.targetingKey.trim().length > 0
+  );
 }
 
 export function buildUserTargetingKey(userId: string): FlagTargetingKey {
@@ -156,14 +181,19 @@ export function buildAnonymousTargetingKey(
     return undefined;
   }
 
-  return joinTargetingKeyParts(FLAGS_ANONYMOUS_TARGETING_PREFIX, createStableRandomId());
+  return joinTargetingKeyParts(
+    FLAGS_ANONYMOUS_TARGETING_PREFIX,
+    createStableRandomId(),
+  );
 }
 
 export function joinTargetingKeyParts(
   prefix: string,
   value: string | number | boolean,
 ): FlagTargetingKey {
-  return `${String(prefix).trim()}${FLAGS_TARGETING_SEPARATOR}${String(value).trim()}`;
+  return `${String(prefix).trim()}${FLAGS_TARGETING_SEPARATOR}${String(
+    value,
+  ).trim()}`;
 }
 
 export function normalizeTargetingKey(
@@ -179,12 +209,13 @@ export function normalizeTargetingKey(
     return undefined;
   }
 
-  return truncateString(normalized, FLAGS_SECURITY_LIMITS.maxContextStringValueLength);
+  return truncateString(
+    normalized,
+    FLAGS_SECURITY_LIMITS.maxContextStringValueLength,
+  );
 }
 
-export function normalizeEnvironment(
-  environment: unknown,
-): FlagEnvironment {
+export function normalizeEnvironment(environment: unknown): FlagEnvironment {
   if (typeof environment !== 'string') {
     return FLAGS_DEFAULT_ENVIRONMENT;
   }
@@ -195,7 +226,10 @@ export function normalizeEnvironment(
     return FLAGS_DEFAULT_ENVIRONMENT;
   }
 
-  return truncateString(normalized, FLAGS_SECURITY_LIMITS.maxContextStringValueLength);
+  return truncateString(
+    normalized,
+    FLAGS_SECURITY_LIMITS.maxContextStringValueLength,
+  );
 }
 
 export function normalizeContextAttributeKey(key: unknown): string | undefined {
@@ -220,7 +254,9 @@ export function normalizeContextAttributeKey(key: unknown): string | undefined {
   return normalized;
 }
 
-export function normalizeContextValue(value: unknown): FlagJsonValue | undefined {
+export function normalizeContextValue(
+  value: unknown,
+): FlagJsonValue | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -229,8 +265,15 @@ export function normalizeContextValue(value: unknown): FlagJsonValue | undefined
     return null;
   }
 
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
   if (typeof value === 'string') {
-    return truncateString(value.trim(), FLAGS_SECURITY_LIMITS.maxContextStringValueLength);
+    return truncateString(
+      value.trim(),
+      FLAGS_SECURITY_LIMITS.maxContextStringValueLength,
+    );
   }
 
   if (typeof value === 'number') {
@@ -261,14 +304,12 @@ export function normalizeContextValue(value: unknown): FlagJsonValue | undefined
     );
   }
 
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
   return undefined;
 }
 
-export function getContextAttribute<TValue extends FlagJsonValue = FlagJsonValue>(
+export function getContextAttribute<
+  TValue extends FlagJsonValue = FlagJsonValue,
+>(
   context: FlagEvaluationContext,
   key: string,
 ): TValue | undefined {
@@ -312,7 +353,9 @@ export function removeContextAttribute(
   return removeUndefinedValues(nextContext);
 }
 
-export function isFlagEvaluationContext(value: unknown): value is FlagEvaluationContext {
+export function isFlagEvaluationContext(
+  value: unknown,
+): value is FlagEvaluationContext {
   return isPlainObject(value);
 }
 
@@ -328,7 +371,10 @@ function buildTargetingKeyFromContext(
   }
 
   if (context.anonymousId) {
-    return joinTargetingKeyParts(FLAGS_ANONYMOUS_TARGETING_PREFIX, String(context.anonymousId));
+    return joinTargetingKeyParts(
+      FLAGS_ANONYMOUS_TARGETING_PREFIX,
+      String(context.anonymousId),
+    );
   }
 
   if (context.sessionId) {
@@ -338,7 +384,10 @@ function buildTargetingKeyFromContext(
   return undefined;
 }
 
-function getHeaderValue(headers: Headers, key: string): string | undefined {
+function getHeaderValue(
+  headers: FlagHeadersLike,
+  key: string,
+): string | undefined {
   const value = headers.get(key);
 
   if (!value) {
@@ -367,8 +416,10 @@ function truncateString(value: string, maxLength: number): string {
 }
 
 function createStableRandomId(): string {
-  if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
+  const runtime = globalThis as RuntimeGlobal;
+
+  if (runtime.crypto?.randomUUID) {
+    return runtime.crypto.randomUUID();
   }
 
   return Math.random().toString(36).slice(2);

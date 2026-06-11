@@ -1,35 +1,18 @@
+// libs/flags/src/openfeature-context.ts
+
 import type { FlagEvaluationContext, FlagJsonValue } from './types';
 
-/**
- * OpenFeature-compatible evaluation context value.
- *
- * This mirrors the shape OpenFeature SDKs expect:
- * - no `undefined`
- * - JSON-compatible primitive/object/array values
- * - mutable arrays/objects
- */
+export type OpenFeatureContextPrimitive = string | number | boolean | null;
+
 export type OpenFeatureContextValue =
-  | string
-  | number
-  | boolean
-  | null
+  | OpenFeatureContextPrimitive
   | OpenFeatureContextValue[]
   | { [key: string]: OpenFeatureContextValue };
 
-export type OpenFeatureEvaluationContextLike = Record<
-  string,
-  OpenFeatureContextValue
->;
+export type OpenFeatureEvaluationContextLike = {
+  [key: string]: OpenFeatureContextValue;
+};
 
-/**
- * Converts the shared Aerealith flag context into an OpenFeature-safe context.
- *
- * OpenFeature evaluation context is arbitrary contextual data used for
- * targeting/dynamic evaluation, but SDK context values must not contain
- * `undefined`. This adapter strips invalid values and normalizes Dates,
- * arrays, and objects before runtime-specific files pass context into the
- * server/web SDKs.
- */
 export function toOpenFeatureEvaluationContext(
   context?: FlagEvaluationContext,
 ): OpenFeatureEvaluationContextLike | undefined {
@@ -39,21 +22,29 @@ export function toOpenFeatureEvaluationContext(
 
   const normalized = normalizeOpenFeatureContextObject(context);
 
-  return Object.keys(normalized).length > 0 ? normalized : undefined;
+  if (Object.keys(normalized).length === 0) {
+    return undefined;
+  }
+
+  return normalized;
 }
 
 export function normalizeOpenFeatureContextObject(
   context: Record<string, unknown>,
 ): OpenFeatureEvaluationContextLike {
-  return Object.fromEntries(
-    Object.entries(context)
-      .map(([key, value]) => {
-        return [key, normalizeOpenFeatureContextValue(value)] as const;
-      })
-      .filter((entry): entry is readonly [string, OpenFeatureContextValue] => {
-        return entry[1] !== undefined;
-      }),
-  );
+  const normalized: OpenFeatureEvaluationContextLike = {};
+
+  for (const [key, value] of Object.entries(context)) {
+    const normalizedValue = normalizeOpenFeatureContextValue(value);
+
+    if (normalizedValue === undefined) {
+      continue;
+    }
+
+    normalized[key] = normalizedValue;
+  }
+
+  return normalized;
 }
 
 export function normalizeOpenFeatureContextValue(
@@ -84,11 +75,7 @@ export function normalizeOpenFeatureContextValue(
   }
 
   if (Array.isArray(value)) {
-    return value
-      .map((item) => normalizeOpenFeatureContextValue(item))
-      .filter((item): item is OpenFeatureContextValue => {
-        return item !== undefined;
-      });
+    return normalizeOpenFeatureContextArray(value);
   }
 
   if (isPlainObject(value)) {
@@ -96,6 +83,24 @@ export function normalizeOpenFeatureContextValue(
   }
 
   return undefined;
+}
+
+export function normalizeOpenFeatureContextArray(
+  values: readonly unknown[],
+): OpenFeatureContextValue[] {
+  const normalized: OpenFeatureContextValue[] = [];
+
+  for (const value of values) {
+    const normalizedValue = normalizeOpenFeatureContextValue(value);
+
+    if (normalizedValue === undefined) {
+      continue;
+    }
+
+    normalized.push(normalizedValue);
+  }
+
+  return normalized;
 }
 
 export function isOpenFeatureContextValue(
@@ -119,11 +124,7 @@ export function fromFlagJsonValue(
 ): OpenFeatureContextValue {
   const normalized = normalizeOpenFeatureContextValue(value);
 
-  if (normalized === undefined) {
-    return null;
-  }
-
-  return normalized;
+  return normalized ?? null;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

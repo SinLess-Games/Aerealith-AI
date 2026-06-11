@@ -1,4 +1,4 @@
-import type { UserProfileMenuUser } from '../profile/user-profile-menu';
+import { alpha, type SxProps, type Theme } from '@mui/material/styles';
 import type {
   ActivePathOptions,
   BrowserCookieOptions,
@@ -6,6 +6,8 @@ import type {
   HeaderUserResolutionOptions,
   UnknownRecord,
 } from '../../types';
+import type { UserProfileMenuUser } from '../profile/user-profile-menu';
+
 
 export const CURRENT_USERNAME_STORAGE_KEY = 'helix.currentUsername';
 export const USERNAME_COOKIE_NAME = 'helix_username';
@@ -620,8 +622,6 @@ export async function postLogout(endpoint: string): Promise<unknown> {
 
   return data;
 }
-
-import { alpha, type SxProps, type Theme } from '@mui/material/styles';
 
 export function getMobileNavListSx(
   open: boolean,

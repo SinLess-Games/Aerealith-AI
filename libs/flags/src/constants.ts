@@ -1,4 +1,11 @@
-import type { FlagDefaultValues, FlagEnvironment, FlagKey, FlagValueKind } from './types';
+// libs/flags/src/constants.ts
+
+import type {
+  FlagDefaultValues,
+  FlagEnvironment,
+  FlagKey,
+  FlagValueKind,
+} from './types';
 
 export const FLAGS_PACKAGE_NAME = '@aerealith-ai/flags' as const;
 
@@ -6,7 +13,8 @@ export const FLAGS_PROVIDER_NAME = 'aerealith-flagship' as const;
 
 export const FLAGS_CLIENT_NAME = 'aerealith-ai' as const;
 
-export const FLAGS_DEFAULT_ENVIRONMENT = 'development' satisfies FlagEnvironment;
+export const FLAGS_DEFAULT_ENVIRONMENT =
+  'development' satisfies FlagEnvironment;
 
 export const FLAGS_SUPPORTED_VALUE_KINDS = [
   'boolean',
@@ -15,24 +23,6 @@ export const FLAGS_SUPPORTED_VALUE_KINDS = [
   'object',
 ] as const satisfies readonly FlagValueKind[];
 
-/**
- * Do not use `as const` here.
- *
- * These defaults must stay widened as:
- * - boolean
- * - string
- * - number
- * - FlagJsonValue
- *
- * If this object is narrowed with `as const`, TypeScript infers:
- * - false
- * - ''
- * - 0
- * - {}
- *
- * That causes downstream helper signatures to reject ordinary boolean,
- * string, and number defaults.
- */
 export const FLAGS_DEFAULT_VALUES: FlagDefaultValues = {
   boolean: false,
   string: '',
@@ -87,8 +77,8 @@ export const FLAGS_ENV_KEYS = {
   providerName: 'AEREALITH_FLAGS_PROVIDER_NAME',
 } as const;
 
-// Flagship default app id for Aerealith (used when env var is not provided)
-export const FLAGS_FLAGSHIP_APP_ID = '2a1ca9ba-b446-4cb8-b8eb-ab0f3985679f' as const;
+export const FLAGS_FLAGSHIP_APP_ID =
+  '2a1ca9ba-b446-4cb8-b8eb-ab0f3985679f' as const;
 
 export const FLAGS_WORKER_BINDING_KEYS = {
   flagship: 'FLAGS',

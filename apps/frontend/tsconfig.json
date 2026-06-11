@@ -1,68 +1,46 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "strict": false,
-    "composite": false,
-    "allowJs": false,
-    "allowSyntheticDefaultImports": true,
+    "allowJs": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
     "incremental": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "lib": ["dom", "dom.iterable", "es2022"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
-    "emitDeclarationOnly": false,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "target": "es2022",
-
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "useDefineForClassFields": false,
-
-    "types": ["node", "@cloudflare/workers-types"],
+    "lib": ["dom", "dom.iterable", "es2022"],
     "plugins": [
       {
         "name": "next"
       }
+    ],
+    "resolveJsonModule": true,
+    "strict": true,
+    "target": "es2022",
+    "types": [
+      "node"
     ]
   },
   "include": [
+    "*.cts",
+    "*.mts",
     "*.ts",
     "*.tsx",
-    ".next/types/**/*.ts",
-    "cloudflare-env.d.ts",
     "next-env.d.ts",
+    "src/**/*.cts",
+    "src/**/*.mts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "../../dist/apps/frontend/types/**/*.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    ".next/cache",
-    ".open-next",
-    ".wrangler",
-    "out-tsc",
+    ".next",
     "dist",
-    "../../dist",
-    "../../dist/apps/frontend",
-    "jest.config.ts",
-    "src/**/*.spec.ts",
-    "src/**/*.test.ts",
-    "eslint.config.js",
-    "eslint.config.cjs",
-    "eslint.config.mjs"
+    "coverage"
   ],
   "references": [
-    {
-      "path": "../../libs/contracts"
-    },
-    {
-      "path": "../../libs/content"
-    },
     {
       "path": "../../libs/ui"
     },
@@ -71,6 +49,12 @@
     },
     {
       "path": "../../libs/db"
+    },
+    {
+      "path": "../../libs/contracts"
+    },
+    {
+      "path": "../../libs/content"
     },
     {
       "path": "../../libs/config"

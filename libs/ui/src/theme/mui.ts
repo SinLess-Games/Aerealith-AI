@@ -7,9 +7,8 @@ import {
   type ThemeOptions,
 } from '@mui/material/styles';
 
+import type { ModeColorTokens, MuiBreakpointsWithProductionKeys, ThemeFontTokens, Mode as ThemeMode } from '../types';
 import { AEREALITH_PALETTE, HELIX_COLORS, HelixFonts } from './constants';
-import type { ThemeMode } from '../types';
-import type { ModeColorTokens, ThemeFontTokens, MuiBreakpointsWithProductionKeys } from '../types';
 
 const DEFAULT_MODE: ThemeMode = 'dark';
 

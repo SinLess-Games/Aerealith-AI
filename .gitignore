@@ -5,13 +5,14 @@
 # Nx & build outputs
 dist/
 out/
-.next/
+*/.next/
 tmp/
 .cache/
 build/
 coverage/
 reports/
 test-output/
+*/.wrangler/
 
 # Generated libs/assets
 *.tsbuildinfo

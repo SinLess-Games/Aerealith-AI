@@ -24,7 +24,6 @@ import {
 import {
   Box,
   Button,
-  Card,
   CardContent,
   Fade,
   IconButton,
@@ -41,6 +40,7 @@ import type {
   CarouselVideoItem,
   CdnVideoInput,
   MediaCarouselProps,
+  MediaCarouselSlotProps,
   PowerPointCarouselInput,
 } from '../../types';
 import MediaImage from './image';
@@ -57,12 +57,23 @@ export type {
   CdnVideoInput,
   MediaCarouselProps,
   MediaCarouselSlotProps,
-  PowerPointCarouselInput,
+  PowerPointCarouselInput
 } from '../../types';
 
 type SxArrayItem =
   | SystemStyleObject<Theme>
   | ((theme: Theme) => SystemStyleObject<Theme>);
+
+type CarouselBorderRadius =
+  | number
+  | string
+  | {
+      xs?: number | string;
+      sm?: number | string;
+      md?: number | string;
+      lg?: number | string;
+      xl?: number | string;
+    };
 
 type PanPosition = {
   x: number;
@@ -76,6 +87,31 @@ type DragState = {
   panStartX: number;
   panStartY: number;
   moved: boolean;
+};
+
+type ExtendedMediaCarouselProps = MediaCarouselProps & {
+  aspectRatio?: string | number;
+  objectFit?: CSSProperties['objectFit'];
+  objectPosition?: CSSProperties['objectPosition'];
+  rounded?: boolean | CarouselBorderRadius;
+  bordered?: boolean;
+  elevated?: boolean;
+  imageSizes?: string;
+  cdnVideos?: CdnVideoInput[];
+  powerpoints?: PowerPointCarouselInput[];
+  autoDiscoverImages?: boolean;
+  imageBasePath?: string;
+  imageFilePrefix?: string;
+  imageExtension?: string;
+  startIndex?: number;
+  maxImages?: number;
+  stopAfterMisses?: number;
+  imageAltPrefix?: string;
+  imageTitlePrefix?: string;
+  videoTitlePrefix?: string;
+  powerPointTitlePrefix?: string;
+  onIndexChange?: (index: number, item: CarouselItem) => void;
+  slotProps?: MediaCarouselSlotProps;
 };
 
 const DEFAULT_MEDIA_MAX_SCAN_COUNT = 100;
@@ -225,7 +261,7 @@ export function createSequentialCarouselImageItem({
 export function createCarouselVideoItem(
   video: CdnVideoInput,
   index = 0,
-  videoTitlePrefix = 'Helix AI video',
+  videoTitlePrefix = 'Aerealith AI video',
 ): CarouselVideoItem {
   return {
     id: video.id ?? `cdn-video-${index + 1}`,
@@ -250,7 +286,7 @@ export function createCarouselVideoItem(
 export function createCarouselPowerPointItem(
   powerPoint: PowerPointCarouselInput,
   index = 0,
-  powerPointTitlePrefix = 'Helix AI presentation',
+  powerPointTitlePrefix = 'Aerealith AI presentation',
 ): CarouselPowerPointItem {
   return {
     id: powerPoint.id ?? `powerpoint-${index + 1}`,
@@ -258,7 +294,8 @@ export function createCarouselPowerPointItem(
     title: powerPoint.title ?? `${powerPointTitlePrefix} ${index + 1}`,
     description: powerPoint.description,
     caption: powerPoint.caption,
-    ariaLabel: powerPoint.ariaLabel ?? `${powerPointTitlePrefix} ${index + 1}`,
+    ariaLabel:
+      powerPoint.ariaLabel ?? `${powerPointTitlePrefix} ${index + 1}`,
     src: powerPoint.src,
     mode: powerPoint.mode,
     slides: powerPoint.slides,
@@ -278,7 +315,7 @@ export function createCarouselPowerPointItem(
 export function cdnVideoItem(
   video: CdnVideoInput,
   index = 0,
-  videoTitlePrefix = 'Helix AI video',
+  videoTitlePrefix = 'Aerealith AI video',
 ): CarouselVideoItem {
   return createCarouselVideoItem(video, index, videoTitlePrefix);
 }
@@ -286,7 +323,7 @@ export function cdnVideoItem(
 export function powerPointItem(
   powerPoint: PowerPointCarouselInput,
   index = 0,
-  powerPointTitlePrefix = 'Helix AI presentation',
+  powerPointTitlePrefix = 'Aerealith AI presentation',
 ): CarouselPowerPointItem {
   return createCarouselPowerPointItem(
     powerPoint,
@@ -353,8 +390,8 @@ export function MediaCarousel({
   objectFit = 'cover',
   objectPosition = 'center',
   rounded = true,
-  bordered = true,
-  elevated = true,
+  bordered = false,
+  elevated = false,
   imageSizes = '(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px',
 
   cdnVideos = [],
@@ -366,10 +403,10 @@ export function MediaCarousel({
   startIndex = DEFAULT_MEDIA_START_INDEX,
   maxImages = DEFAULT_MEDIA_MAX_SCAN_COUNT,
   stopAfterMisses = DEFAULT_MEDIA_STOP_AFTER_MISSES,
-  imageAltPrefix = 'Helix AI media image',
+  imageAltPrefix = 'Aerealith AI media image',
   imageTitlePrefix = 'Media Image',
-  videoTitlePrefix = 'Helix AI video',
-  powerPointTitlePrefix = 'Helix AI presentation',
+  videoTitlePrefix = 'Aerealith AI video',
+  powerPointTitlePrefix = 'Aerealith AI presentation',
 
   onIndexChange,
   slotProps,
@@ -389,7 +426,7 @@ export function MediaCarousel({
   onPointerUp,
   onPointerCancel,
   ...boxProps
-}: MediaCarouselProps): ReactElement | null {
+}: ExtendedMediaCarouselProps): ReactElement | null {
   const carouselId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
@@ -409,7 +446,7 @@ export function MediaCarousel({
     () =>
       cdnVideos
         .filter(hasVideoSource)
-        .map((video, index) =>
+        .map((video: CdnVideoInput, index: number) =>
           createCarouselVideoItem(video, index, videoTitlePrefix),
         ),
     [cdnVideos, videoTitlePrefix],
@@ -419,7 +456,7 @@ export function MediaCarousel({
     () =>
       powerpoints
         .filter(hasPowerPointSource)
-        .map((powerPoint, index) =>
+        .map((powerPoint: PowerPointCarouselInput, index: number) =>
           createCarouselPowerPointItem(
             powerPoint,
             index,
@@ -438,7 +475,6 @@ export function MediaCarousel({
 
     async function discoverImages(): Promise<void> {
       if (!autoDiscoverImages) {
-        setDiscoveredImageItems([]);
         return;
       }
 
@@ -513,7 +549,7 @@ export function MediaCarousel({
 
   const slides = useMemo<CarouselItem[]>(() => {
     const configuredItems = [
-      ...discoveredImageItems,
+      ...(autoDiscoverImages ? discoveredImageItems : []),
       ...explicitItems,
       ...videoItems,
       ...powerPointItems,
@@ -525,6 +561,7 @@ export function MediaCarousel({
 
     return childItems;
   }, [
+    autoDiscoverImages,
     childItems,
     discoveredImageItems,
     explicitItems,
@@ -534,7 +571,7 @@ export function MediaCarousel({
 
   const count = slides.length;
 
-  const [activeIndex, setActiveIndex] = useState(() =>
+  const [requestedActiveIndex, setActiveIndex] = useState(() =>
     clampIndex(initialIndex, count),
   );
   const [isHovered, setIsHovered] = useState(false);
@@ -548,7 +585,9 @@ export function MediaCarousel({
   });
   const [isPanning, setIsPanning] = useState(false);
 
-  const borderRadius =
+  const activeIndex = clampIndex(requestedActiveIndex, count);
+
+  const borderRadius: CarouselBorderRadius =
     rounded === true ? { xs: 3, md: 4 } : rounded === false ? 0 : rounded;
 
   const activeItem = slides[activeIndex];
@@ -585,28 +624,26 @@ export function MediaCarousel({
       return;
     }
 
-    setFullscreenZoom((currentZoom) =>
-      roundZoom(clampZoom(currentZoom + FULLSCREEN_ZOOM_STEP)),
+    setFullscreenZoom(
+      roundZoom(clampZoom(fullscreenZoom + FULLSCREEN_ZOOM_STEP)),
     );
-  }, [activeItemIsZoomable]);
+  }, [activeItemIsZoomable, fullscreenZoom]);
 
   const zoomOut = useCallback(() => {
     if (!activeItemIsZoomable) {
       return;
     }
 
-    setFullscreenZoom((currentZoom) => {
-      const nextZoom = roundZoom(
-        clampZoom(currentZoom - FULLSCREEN_ZOOM_STEP),
-      );
+    const nextZoom = roundZoom(
+      clampZoom(fullscreenZoom - FULLSCREEN_ZOOM_STEP),
+    );
 
-      if (nextZoom <= MIN_FULLSCREEN_ZOOM) {
-        resetPan();
-      }
+    setFullscreenZoom(nextZoom);
 
-      return nextZoom;
-    });
-  }, [activeItemIsZoomable, resetPan]);
+    if (nextZoom <= MIN_FULLSCREEN_ZOOM) {
+      resetPan();
+    }
+  }, [activeItemIsZoomable, fullscreenZoom, resetPan]);
 
   const goTo = useCallback(
     (nextIndex: number) => {
@@ -790,29 +827,26 @@ export function MediaCarousel({
     [onPointerMove],
   );
 
-  const endPointerPan = useCallback(
-    (event: PointerEvent<HTMLDivElement>) => {
-      const dragState = dragStateRef.current;
+  const endPointerPan = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    const dragState = dragStateRef.current;
 
-      if (!dragState || dragState.pointerId !== event.pointerId) {
-        return;
-      }
+    if (!dragState || dragState.pointerId !== event.pointerId) {
+      return;
+    }
 
-      if (dragState.moved) {
-        suppressNextClickRef.current = true;
-      }
+    if (dragState.moved) {
+      suppressNextClickRef.current = true;
+    }
 
-      dragStateRef.current = null;
-      setIsPanning(false);
+    dragStateRef.current = null;
+    setIsPanning(false);
 
-      try {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      } catch {
-        // Ignore browsers that already released pointer capture.
-      }
-    },
-    [],
-  );
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // Ignore browsers that already released pointer capture.
+    }
+  }, []);
 
   const handleRootPointerUp = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
@@ -934,10 +968,6 @@ export function MediaCarousel({
   );
 
   useEffect(() => {
-    setActiveIndex((currentIndex) => clampIndex(currentIndex, count));
-  }, [count]);
-
-  useEffect(() => {
     if (!canAutoScroll) {
       return undefined;
     }
@@ -969,20 +999,12 @@ export function MediaCarousel({
       }
     };
 
-    handleFullscreenChange();
-
     document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, [resetZoom]);
-
-  useEffect(() => {
-    if (fullscreenZoom <= MIN_FULLSCREEN_ZOOM) {
-      resetPan();
-    }
-  }, [fullscreenZoom, resetPan]);
 
   if (!count) {
     return null;
@@ -1049,6 +1071,9 @@ export function MediaCarousel({
         {
           width: '100%',
           outline: 'none',
+          bgcolor: 'transparent',
+          backgroundColor: 'transparent',
+          backgroundImage: 'none',
           touchAction: canPanFullscreenMedia ? 'none' : undefined,
           cursor: isFullscreen
             ? canPanFullscreenMedia
@@ -1075,7 +1100,9 @@ export function MediaCarousel({
             display: 'grid !important',
             placeItems: 'center !important',
             p: { xs: 1, md: 2 },
-            bgcolor: '#000',
+            bgcolor: 'transparent !important',
+            backgroundColor: 'transparent !important',
+            backgroundImage: 'none !important',
             overflow: 'hidden !important',
             userSelect: 'none',
           },
@@ -1089,7 +1116,9 @@ export function MediaCarousel({
             flexDirection: 'column !important',
             borderRadius: '0 !important',
             borderColor: 'transparent !important',
-            bgcolor: '#000 !important',
+            bgcolor: 'transparent !important',
+            backgroundColor: 'transparent !important',
+            backgroundImage: 'none !important',
             boxShadow: 'none !important',
             overflow: 'hidden !important',
           },
@@ -1104,7 +1133,9 @@ export function MediaCarousel({
             aspectRatio: 'auto !important',
             display: 'grid !important',
             placeItems: 'center !important',
-            bgcolor: '#000 !important',
+            bgcolor: 'transparent !important',
+            backgroundColor: 'transparent !important',
+            backgroundImage: 'none !important',
             overflow: 'hidden !important',
           },
 
@@ -1115,6 +1146,9 @@ export function MediaCarousel({
             maxHeight: '100% !important',
             display: 'grid !important',
             placeItems: 'center !important',
+            bgcolor: 'transparent !important',
+            backgroundColor: 'transparent !important',
+            backgroundImage: 'none !important',
             overflow: 'hidden !important',
           },
 
@@ -1126,7 +1160,9 @@ export function MediaCarousel({
             maxHeight: '100% !important',
             display: 'grid !important',
             placeItems: 'center !important',
-            bgcolor: '#000 !important',
+            bgcolor: 'transparent !important',
+            backgroundColor: 'transparent !important',
+            backgroundImage: 'none !important',
             overflow: 'hidden !important',
           },
 
@@ -1137,6 +1173,9 @@ export function MediaCarousel({
             maxHeight: '100% !important',
             display: 'grid !important',
             placeItems: 'center !important',
+            bgcolor: 'transparent !important',
+            backgroundColor: 'transparent !important',
+            backgroundImage: 'none !important',
             overflow: 'hidden !important',
           },
 
@@ -1151,7 +1190,9 @@ export function MediaCarousel({
             maxWidth: '100% !important',
             maxHeight: '100% !important',
             border: '0 !important',
-            bgcolor: '#000 !important',
+            bgcolor: 'transparent !important',
+            backgroundColor: 'transparent !important',
+            backgroundImage: 'none !important',
           },
 
           '&:fullscreen img, &:fullscreen video, &:fullscreen canvas, &:fullscreen svg':
@@ -1195,8 +1236,7 @@ export function MediaCarousel({
         ...toSxArray(sx),
       ]}
     >
-      <Card
-        elevation={0}
+      <Box
         {...slotProps?.card}
         className={mergeClassNames(
           'helix-media-carousel-card',
@@ -1212,10 +1252,12 @@ export function MediaCarousel({
             borderColor: bordered
               ? 'rgba(255, 255, 255, 0.12)'
               : 'transparent',
-            bgcolor: 'rgba(255, 255, 255, 0.035)',
+            bgcolor: 'transparent',
+            backgroundColor: 'transparent',
+            backgroundImage: 'none',
             boxShadow: elevated
               ? '0 24px 76px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
-              : undefined,
+              : 'none',
           },
           ...toSxArray(slotProps?.card?.sx),
         ]}
@@ -1232,7 +1274,9 @@ export function MediaCarousel({
               overflow: 'hidden',
               width: '100%',
               aspectRatio,
-              bgcolor: 'rgba(0, 0, 0, 0.34)',
+              bgcolor: 'transparent',
+              backgroundColor: 'transparent',
+              backgroundImage: 'none',
             },
             ...toSxArray(slotProps?.viewport?.sx),
           ]}
@@ -1263,6 +1307,9 @@ export function MediaCarousel({
                       display: isActive ? 'block' : 'none',
                       width: '100%',
                       height: '100%',
+                      bgcolor: 'transparent',
+                      backgroundColor: 'transparent',
+                      backgroundImage: 'none',
                     },
                     ...toSxArray(slotProps?.slide?.sx),
                   ]}
@@ -1280,6 +1327,8 @@ export function MediaCarousel({
                           width: '100%',
                           height: '100%',
                           bgcolor: 'transparent',
+                          backgroundColor: 'transparent',
+                          backgroundImage: 'none',
                         },
                         ...toSxArray(slotProps?.media?.sx),
                       ]}
@@ -1310,6 +1359,8 @@ export function MediaCarousel({
                           height: '100%',
                           aspectRatio: undefined,
                           bgcolor: 'transparent',
+                          backgroundColor: 'transparent',
+                          backgroundImage: 'none',
                         }}
                       />
                     </Box>
@@ -1326,6 +1377,9 @@ export function MediaCarousel({
                         {
                           width: '100%',
                           height: '100%',
+                          bgcolor: 'transparent',
+                          backgroundColor: 'transparent',
+                          backgroundImage: 'none',
                         },
                         ...toSxArray(slotProps?.media?.sx),
                       ]}
@@ -1359,7 +1413,9 @@ export function MediaCarousel({
                           height: '100%',
                           objectFit: isFullscreen ? 'contain' : objectFit,
                           objectPosition,
-                          bgcolor: 'common.black',
+                          bgcolor: 'transparent',
+                          backgroundColor: 'transparent',
+                          backgroundImage: 'none',
                         }}
                       >
                         {item.sources?.map((source) => (
@@ -1384,7 +1440,9 @@ export function MediaCarousel({
                         {
                           width: '100%',
                           height: '100%',
-                          bgcolor: 'common.black',
+                          bgcolor: 'transparent',
+                          backgroundColor: 'transparent',
+                          backgroundImage: 'none',
                         },
                         ...toSxArray(slotProps?.media?.sx),
                       ]}
@@ -1408,6 +1466,9 @@ export function MediaCarousel({
                         sx={{
                           width: '100%',
                           height: '100%',
+                          bgcolor: 'transparent',
+                          backgroundColor: 'transparent',
+                          backgroundImage: 'none',
                         }}
                         frameSx={{
                           width: '100%',
@@ -1431,6 +1492,9 @@ export function MediaCarousel({
                         {
                           width: '100%',
                           height: '100%',
+                          bgcolor: 'transparent',
+                          backgroundColor: 'transparent',
+                          backgroundImage: 'none',
                         },
                         ...toSxArray(slotProps?.media?.sx),
                       ]}
@@ -1575,7 +1639,9 @@ export function MediaCarousel({
                   bottom: 0,
                   zIndex: 5,
                   height: 3,
-                  bgcolor: 'rgba(255, 255, 255, 0.16)',
+                  bgcolor: 'transparent',
+                  backgroundColor: 'transparent',
+                  backgroundImage: 'none',
                   overflow: 'hidden',
                 },
                 ...toSxArray(slotProps?.progress?.sx),
@@ -1607,6 +1673,9 @@ export function MediaCarousel({
               display: isFullscreen ? 'none' : 'grid',
               gap: 2,
               p: { xs: 2, sm: 2.5, md: 3 },
+              bgcolor: 'transparent',
+              backgroundColor: 'transparent',
+              backgroundImage: 'none',
               '&:last-child': {
                 pb: { xs: 2, sm: 2.5, md: 3 },
               },
@@ -1626,6 +1695,9 @@ export function MediaCarousel({
                   {
                     display: 'grid',
                     gap: 0.75,
+                    bgcolor: 'transparent',
+                    backgroundColor: 'transparent',
+                    backgroundImage: 'none',
                   },
                   ...toSxArray(slotProps?.caption?.sx),
                 ]}
@@ -1737,7 +1809,7 @@ export function MediaCarousel({
             ) : null}
           </CardContent>
         ) : null}
-      </Card>
+      </Box>
     </Box>
   );
 }

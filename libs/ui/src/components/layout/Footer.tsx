@@ -137,9 +137,10 @@ function renderFooterLink(
       maxWidth: '100%',
 
       color: active ? theme.palette.primary.main : theme.palette.text.secondary,
-      fontSize: '0.9rem',
-      fontWeight: active ? 900 : 650,
-      lineHeight: 1.35,
+      fontSize: '0.76rem',
+      fontWeight: 400,
+      lineHeight: 1.24,
+      letterSpacing: '0.01em',
 
       textDecoration: 'none',
       textUnderlineOffset: '0.24em',
@@ -156,7 +157,7 @@ function renderFooterLink(
         color: theme.palette.secondary.main,
         textDecoration: 'underline',
         textShadow: `0 0 10px ${alpha(theme.palette.secondary.main, 0.28)}`,
-        transform: 'translateX(2px)',
+        transform: 'translateX(1px)',
       },
 
       '&:focus-visible': {
@@ -221,9 +222,9 @@ function renderAction(action: FooterAction, index: number): React.ReactElement {
 
   const buttonSx: SxProps<Theme> = {
     borderRadius: 999,
-    px: 2.25,
-    py: 0.85,
-    fontWeight: 900,
+    px: 1.9,
+    py: 0.65,
+    fontWeight: 800,
     textTransform: 'none',
     letterSpacing: '0.02em',
   };
@@ -296,15 +297,15 @@ function FooterBrand({
     <Box
       sx={{
         position: 'relative',
-        width: { xs: 140, sm: 160 },
-        height: 42,
+        width: { xs: 128, sm: 146 },
+        height: 34,
       }}
     >
       <Image
         src={logo}
         alt={logoAlt}
         fill
-        sizes="160px"
+        sizes="146px"
         style={{
           objectFit: 'contain',
           objectPosition: 'left center',
@@ -321,7 +322,7 @@ function FooterBrand({
 
   return (
     <Stack
-      spacing={1.1}
+      spacing={0.75}
       sx={mergeSx(
         {
           width: '100%',
@@ -351,9 +352,9 @@ function FooterBrand({
           sx={{
             color: theme.palette.text.primary,
             fontFamily: theme.typography.h5.fontFamily,
-            fontWeight: 900,
-            fontSize: { xs: '1.25rem', md: '1.4rem' },
-            lineHeight: 1.1,
+            fontWeight: 800,
+            fontSize: { xs: '1.08rem', md: '1.2rem' },
+            lineHeight: 1.05,
             letterSpacing: '-0.02em',
           }}
         >
@@ -365,8 +366,9 @@ function FooterBrand({
         <Typography
           sx={{
             color: theme.palette.text.secondary,
-            lineHeight: 1.55,
-            maxWidth: 620,
+            fontSize: '0.9rem',
+            lineHeight: 1.35,
+            maxWidth: 560,
           }}
         >
           {tagline}
@@ -409,15 +411,15 @@ function FooterLinkGroups({
               id={groupId}
               component="h3"
               sx={(theme) => ({
-                mb: 0.9,
+                mb: 0.55,
                 width: '100%',
                 color: theme.palette.text.primary,
                 fontFamily: theme.typography.overline.fontFamily,
-                fontSize: '0.78rem',
-                fontWeight: 900,
-                letterSpacing: '0.12em',
-                lineHeight: 1.25,
-                textAlign: 'center',
+                fontSize: '0.64rem',
+                fontWeight: 800,
+                letterSpacing: '0.13em',
+                lineHeight: 1.1,
+                textAlign: 'left',
                 textTransform: 'uppercase',
               })}
             >
@@ -426,42 +428,31 @@ function FooterLinkGroups({
 
             <Box
               component="ul"
-              sx={(theme) => ({
+              sx={{
                 display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: 'repeat(2, minmax(0, 1fr))',
-                },
-                columnGap: { xs: 2.5, sm: 3.25, md: 3.75, lg: 4.25, xl: 4.75 },
-                rowGap: 0.7,
+                gridTemplateColumns: '1fr',
+                rowGap: 0.24,
                 width: '100%',
-                pl: { xs: 2.25, sm: 2.75 },
-                pr: 0,
-                py: 0,
+                p: 0,
                 m: 0,
-                listStyleType: 'disc',
-                listStylePosition: 'outside',
+                listStyle: 'none',
 
                 '& > li': {
-                  display: 'list-item',
+                  display: 'block',
                   minWidth: 0,
-                  pl: 0.3,
-                  lineHeight: 1.35,
+                  p: 0,
+                  m: 0,
+                  lineHeight: 1.2,
                 },
-
-                '& > li::marker': {
-                  color: alpha(theme.palette.text.secondary, 0.9),
-                  fontSize: '0.75em',
-                },
-              })}
+              }}
             >
               {group.links.map((link) => (
                 <Box
                   key={`${group.title}:${link.href}:${link.label}`}
                   component="li"
                   sx={{
-                    px: 0.35,
-                    py: 0.2,
+                    px: 0,
+                    py: 0,
                   }}
                 >
                   {renderFooterLink(
@@ -486,7 +477,7 @@ function FooterSocialLinks({
   }
 
   return (
-    <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+    <Stack direction="row" spacing={0.55} useFlexGap flexWrap="wrap">
       {socialLinks.map((link: FooterSocialLink, index) => {
         const normalized = normalizeFooterLinks([link])[0];
 
@@ -495,8 +486,8 @@ function FooterSocialLinks({
         }
 
         const iconButtonSx: SxProps<Theme> = (theme) => ({
-          width: 36,
-          height: 36,
+          width: 32,
+          height: 32,
           color: theme.palette.text.primary,
           border: `1px solid ${alpha(theme.palette.text.secondary, 0.2)}`,
           bgcolor: alpha(
@@ -677,35 +668,35 @@ export function Footer({
             width: '100%',
             maxWidth,
             px: { xs: 2.5, md: 5 },
-            pt: dense ? { xs: 2.25, md: 2.5 } : { xs: 2.75, md: 3 },
-            pb: dense ? { xs: 1.1, md: 1.25 } : { xs: 1.25, md: 1.4 },
+            pt: dense ? { xs: 1.35, md: 1.45 } : { xs: 1.55, md: 1.7 },
+            pb: dense ? { xs: 0.7, md: 0.8 } : { xs: 0.8, md: 0.9 },
             mx: 0,
             boxSizing: 'border-box',
           },
           containerSx,
         )}
       >
-        <Stack spacing={{ xs: 1.65, md: 1.9 }} sx={{ width: '100%' }}>
+        <Stack spacing={{ xs: 0.95, md: 1.1 }} sx={{ width: '100%' }}>
           <Box
             sx={{
               display: 'grid',
               gridTemplateColumns: {
                 xs: '1fr',
                 lg: normalizedGroups.length
-                  ? 'minmax(520px, 1.3fr) minmax(800px, 1.05fr)'
+                  ? 'minmax(280px, 1fr) minmax(520px, 0.95fr)'
                   : '1fr',
                 xl: normalizedGroups.length
-                  ? 'minmax(680px, 1.5fr) minmax(980px, 1fr)'
+                  ? 'minmax(340px, 1.1fr) minmax(660px, 0.9fr)'
                   : '1fr',
               },
-              columnGap: { xs: 3.5, md: 6, lg: 8, xl: 9 },
-              rowGap: { xs: 2.25, md: 2.75, lg: 3 },
+              columnGap: { xs: 3, md: 4.5, lg: 5.5, xl: 6 },
+              rowGap: { xs: 1.4, md: 1.6, lg: 1.8 },
               alignItems: 'start',
               width: '100%',
               minWidth: 0,
             }}
           >
-            <Stack spacing={1.5} sx={{ width: '100%', minWidth: 0 }}>
+            <Stack spacing={0.9} sx={{ width: '100%', minWidth: 0 }}>
               <FooterBrand
                 brandName={brandName}
                 tagline={tagline}
@@ -718,7 +709,7 @@ export function Footer({
               {actions.length ? (
                 <Stack
                   direction="row"
-                  spacing={1.25}
+                  spacing={1}
                   useFlexGap
                   flexWrap="wrap"
                   sx={{ width: '100%' }}
@@ -736,16 +727,21 @@ export function Footer({
                   display: 'grid',
                   gridTemplateColumns: {
                     xs: '1fr',
-                    sm: 'repeat(2, minmax(260px, 1fr))',
-                    lg: 'repeat(4, minmax(0, 1fr))',
+                    sm: 'repeat(2, minmax(150px, 1fr))',
+                    md: 'repeat(4, minmax(120px, 1fr))',
+                    lg: 'repeat(4, minmax(110px, 1fr))',
                   },
-                  columnGap: { xs: 3.5, md: 5, lg: 6, xl: 7 },
-                  rowGap: { xs: 2.25, md: 2.75, lg: 3 },
+                  columnGap: { xs: 2.25, sm: 2.75, md: 3.25, lg: 3.75, xl: 4 },
+                  rowGap: { xs: 1.35, md: 1.5, lg: 1.65 },
                   alignItems: 'start',
-                  justifySelf: 'end',
-                  width: '100%',
+                  justifySelf: { xs: 'stretch', lg: 'end' },
+                  width: {
+                    xs: '100%',
+                    lg: 'min(100%, 680px)',
+                    xl: 'min(100%, 760px)',
+                  },
                   minWidth: 0,
-                  p: 0.25,
+                  p: 0,
                 }}
               >
                 <FooterLinkGroups
@@ -779,12 +775,12 @@ export function Footer({
                 },
                 alignItems: 'center',
                 columnGap: 2,
-                rowGap: 0.75,
+                rowGap: 0.5,
 
                 position: 'relative',
                 width: '100vw',
                 maxWidth: '100vw',
-                minHeight: 20,
+                minHeight: 18,
                 marginInline: 'calc(50% - 50vw)',
                 px: { xs: 2.5, md: 5 },
                 py: 0,
@@ -796,8 +792,8 @@ export function Footer({
             <Typography
               sx={{
                 color: theme.palette.text.secondary,
-                fontSize: '0.8rem',
-                lineHeight: 1.2,
+                fontSize: '0.76rem',
+                lineHeight: 1.15,
                 minWidth: 0,
               }}
             >
@@ -806,7 +802,7 @@ export function Footer({
 
             <Stack
               direction="row"
-              spacing={1.35}
+              spacing={1.15}
               useFlexGap
               flexWrap="wrap"
               alignItems="center"
@@ -815,6 +811,7 @@ export function Footer({
                 justifySelf: { xs: 'start', md: 'end' },
                 width: { xs: '100%', md: 'auto' },
                 minWidth: 0,
+                mr: { xs: 0, md: 8, lg: 14, xl: 20 },
               }}
             >
               {versionLabel ? (
@@ -824,9 +821,9 @@ export function Footer({
                   rel="noopener noreferrer"
                   sx={{
                     color: theme.palette.secondary.main,
-                    fontSize: '0.8rem',
-                    fontWeight: 900,
-                    lineHeight: 1.2,
+                    fontSize: '0.76rem',
+                    fontWeight: 400,
+                    lineHeight: 1.15,
                     textDecoration: 'none',
                     textUnderlineOffset: '0.24em',
 
@@ -855,9 +852,10 @@ export function Footer({
                     link,
                     isActiveFooterPath(pathname, link.href),
                     {
-                      px: 0.55,
-                      fontSize: '0.8rem',
-                      lineHeight: 1.2,
+                      px: 0,
+                      fontSize: '0.76rem',
+                      fontWeight: 400,
+                      lineHeight: 1.15,
                       whiteSpace: 'nowrap',
                       overflowWrap: 'normal',
                     },

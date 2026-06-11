@@ -46,15 +46,15 @@ export const footerProps = {
         },
         {
           label: 'Privacy Policy',
-          href: '/policies/privacy',
+          href: '/Policies/privacy',
         },
         {
           label: 'Terms of Use',
-          href: '/policies/terms-of-use',
+          href: '/Policies/terms-of-use',
         },
         {
           label: 'Security',
-          href: '/policies/security',
+          href: '/Policies/security',
         },
       ],
     },
@@ -63,19 +63,19 @@ export const footerProps = {
       links: [
         {
           label: 'Responsible AI',
-          href: '/policies/responsible-ai',
+          href: '/Policies/responsible-ai',
         },
         {
           label: 'Cookies',
-          href: '/policies/cookie-tracking',
+          href: '/Policies/cookie-tracking',
         },
         {
           label: 'Data Policy',
-          href: '/policies/data',
+          href: '/Policies/data',
         },
         {
           label: 'Support',
-          href: '/policies/support',
+          href: '/Policies/support',
         },
       ],
     },
@@ -96,11 +96,11 @@ export const footerProps = {
         },
         {
           label: 'Copyright Takedown',
-          href: '/policies/copyright-takedown',
+          href: '/Policies/copyright-takedown',
         },
         {
           label: 'Developer Policy',
-          href: '/policies/developer',
+          href: '/Policies/developer',
         },
       ],
     },
@@ -126,19 +126,19 @@ export const footerProps = {
   legalLinks: [
     {
       label: 'Privacy',
-      href: '/policies/privacy',
+      href: '/Policies/privacy',
     },
     {
       label: 'Terms',
-      href: '/policies/terms-of-use',
+      href: '/Policies/terms-of-use',
     },
     {
       label: 'Security',
-      href: '/policies/security',
+      href: '/Policies/security',
     },
     {
       label: 'Cookies',
-      href: '/policies/cookie-tracking',
+      href: '/Policies/cookie-tracking',
     },
   ],
 

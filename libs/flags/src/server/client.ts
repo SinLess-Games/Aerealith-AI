@@ -1,10 +1,8 @@
+// libs/flags/src/server/client.ts
+
 import { OpenFeature, type EvaluationContext } from '@openfeature/server-sdk';
 
-import {
-  FLAGS_DEFAULT_VALUES,
-  FLAGS_ERROR_CODES,
-  type FLAGS_OPENFEATURE_DOMAINS,
-} from '../constants';
+import { FLAGS_DEFAULT_VALUES, FLAGS_ERROR_CODES } from '../constants';
 
 import {
   buildFlagEvaluationContext,
@@ -14,9 +12,13 @@ import {
 import { toOpenFeatureEvaluationContext } from '../openfeature-context';
 
 import type {
+  CreateFlagshipServerEvaluatorOptions,
   FlagEvaluationContext,
   FlagJsonValue,
   FlagKey,
+  FlagshipServerClientDomain,
+  GetFlagshipServerClientOptions,
+  InitializeFlagshipServerClientOptions,
   ServerFlagEvaluator,
 } from '../types';
 
@@ -24,34 +26,9 @@ import {
   initializeFlagshipServerProvider,
   isFlagshipServerProviderInitialized,
   normalizeProviderDomain,
-  type InitializeFlagshipServerProviderOptions,
 } from './provider';
 
-export type FlagshipServerClientDomain =
-  | typeof FLAGS_OPENFEATURE_DOMAINS.default
-  | typeof FLAGS_OPENFEATURE_DOMAINS.server
-  | typeof FLAGS_OPENFEATURE_DOMAINS.hono
-  | typeof FLAGS_OPENFEATURE_DOMAINS.testing
-  | string;
-
 export type FlagshipServerClient = ReturnType<typeof OpenFeature.getClient>;
-
-export type GetFlagshipServerClientOptions = {
-  readonly domain?: FlagshipServerClientDomain;
-  readonly name?: string;
-  readonly version?: string;
-};
-
-export type CreateFlagshipServerEvaluatorOptions =
-  GetFlagshipServerClientOptions & {
-    readonly context?: FlagEvaluationContext;
-  };
-
-export type InitializeFlagshipServerClientOptions =
-  InitializeFlagshipServerProviderOptions &
-    GetFlagshipServerClientOptions & {
-      readonly context?: FlagEvaluationContext;
-    };
 
 export class FlagshipServerClientError extends Error {
   public override readonly name = 'FlagshipServerClientError';
@@ -271,13 +248,29 @@ function mergeEvaluationContext(
 function toSdkEvaluationContext(
   context?: FlagEvaluationContext,
 ): EvaluationContext | undefined {
-  return toOpenFeatureEvaluationContext(context) as EvaluationContext | undefined;
+  if (!context) {
+    return undefined;
+  }
+
+  return toOpenFeatureEvaluationContext(context) as EvaluationContext;
 }
 
 function createEvaluationError(
   key: FlagKey,
   error: unknown,
 ): FlagshipServerClientError {
+  if (error instanceof FlagshipServerClientError) {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    return new FlagshipServerClientError(
+      FLAGS_ERROR_CODES.evaluationFailed,
+      `Failed to evaluate feature flag "${key}": ${error.message}`,
+      error,
+    );
+  }
+
   return new FlagshipServerClientError(
     FLAGS_ERROR_CODES.evaluationFailed,
     `Failed to evaluate feature flag "${key}".`,

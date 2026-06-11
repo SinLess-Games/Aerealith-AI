@@ -1,12 +1,17 @@
+// libs/flags/src/client/client.ts
+
 import { OpenFeature } from '@openfeature/web-sdk';
 
 import { FLAGS_DEFAULT_VALUES, FLAGS_ERROR_CODES } from '../constants';
 
 import type {
   ClientFlagEvaluator,
-  FlagEvaluationContext,
+  CreateFlagshipClientEvaluatorOptions,
   FlagJsonValue,
   FlagKey,
+  FlagshipClient,
+  GetFlagshipClientOptions,
+  InitializeFlagshipClientOptions,
 } from '../types';
 
 import {
@@ -19,25 +24,7 @@ import {
   getInitializedPrefetchFlags,
   initializeFlagshipClientProvider,
   setFlagshipClientContext,
-  type InitializeFlagshipClientProviderOptions,
 } from './provider';
-
-export type FlagshipClientDomain = string;
-
-export type FlagshipClient = ReturnType<typeof OpenFeature.getClient>;
-
-export type GetFlagshipClientOptions = {
-  readonly domain?: FlagshipClientDomain;
-  readonly version?: string;
-};
-
-export type CreateFlagshipClientEvaluatorOptions = GetFlagshipClientOptions;
-
-export type InitializeFlagshipClientOptions =
-  InitializeFlagshipClientProviderOptions &
-    GetFlagshipClientOptions & {
-      readonly context?: FlagEvaluationContext;
-    };
 
 export class FlagshipClientError extends Error {
   public override readonly name = 'FlagshipClientError';

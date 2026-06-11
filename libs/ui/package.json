@@ -2,29 +2,16 @@
   "name": "@aerealith-ai/ui",
   "version": "0.0.1",
   "private": true,
-  "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "../../dist/libs/ui/src/index.js",
+  "module": "../../dist/libs/ui/src/index.js",
+  "types": "../../dist/libs/ui/src/index.d.ts",
   "files": [
     "src",
-    "dist",
     "package.json"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
     "prepublishOnly": "pnpm build"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    }
   },
   "peerDependencies": {
     "@emotion/react": "11.x",
@@ -34,7 +21,7 @@
     "@grafana/faro-web-tracing": "^1.19.0",
     "@mui/icons-material": "^7.3.5",
     "@mui/material": "^7.3.5",
-    "next": ">=16",
+    "next": ">=15 <17",
     "react": ">=18",
     "react-dom": ">=18"
   },
@@ -52,9 +39,9 @@
   "dependencies": {
     "@aerealith-ai/config": "workspace:*",
     "@aerealith-ai/contracts": "workspace:*",
-    "@aerealith-ai/observability": "workspace:*",
     "@aerealith-ai/flags": "workspace:*",
-    "@mui/system": "^9.0.1",
+    "@aerealith-ai/observability": "workspace:*",
+    "@mui/system": "^7.3.5",
     "next-cloudinary": "^6.17.5",
     "server-only": "^0.0.1"
   },

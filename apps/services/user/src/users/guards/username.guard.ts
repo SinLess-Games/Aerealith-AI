@@ -1,3 +1,5 @@
+// apps/services/user/src/users/guards/username.guard.ts
+
 import type { Context, Next } from 'hono';
 
 import { getUsernameParam } from '@aerealith-ai/api';
@@ -8,6 +10,12 @@ export const USERNAME_CONTEXT_KEY = 'username';
 
 export type UsernameGuardVariables = {
   username: string;
+};
+
+type GuardValidationIssue = {
+  code: string;
+  message: string;
+  path: readonly PropertyKey[];
 };
 
 export const usernameGuard = async (
@@ -23,7 +31,9 @@ export const usernameGuard = async (
         error: {
           code: usernameParam.code,
           message: usernameParam.message,
-          issues: mapValidationIssues(usernameParam.issues),
+          issues: mapValidationIssues(
+            normalizeValidationIssues(usernameParam.issues),
+          ),
         },
       },
       400,
@@ -44,3 +54,23 @@ export const getGuardedUsername = (context: Context): string => {
 
   return username;
 };
+
+function normalizeValidationIssues(
+  issues: readonly GuardValidationIssue[],
+): { path: (string | number)[]; code: string; message: string }[] {
+  return issues.map((issue) => ({
+    code: issue.code,
+    message: issue.message,
+    path: issue.path.map(normalizeValidationIssuePathSegment),
+  }));
+}
+
+function normalizeValidationIssuePathSegment(
+  segment: PropertyKey,
+): string | number {
+  if (typeof segment === 'string' || typeof segment === 'number') {
+    return segment;
+  }
+
+  return segment.description ?? segment.toString();
+}

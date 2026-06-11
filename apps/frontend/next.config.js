@@ -16,34 +16,29 @@ const resolvedDbEntry = existsSync(dbDistEntry) ? dbDistEntry : dbSourceEntry;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Keep Nx’s dist path locally; let deployment adapters use their expected output.
   distDir: '.next',
 
   compiler: {
     emotion: true,
   },
 
-  // Nx runs ESLint as a separate lint target in CI. Keeping Next's build-time
-  // lint pass disabled avoids duplicate linting and its flat-config probe.
   eslint: {
     ignoreDuringBuilds: true,
   },
 
-  // Transpile browser/UI-safe workspace libraries.
-  //
-  // Do NOT include @aerealith-ai/db here.
-  // The DB package contains MikroORM decorators and should be consumed from
-  // its compiled output during the frontend build.
-  transpilePackages: ['@aerealith-ai/ui', '@aerealith-ai/config', '@aerealith-ai/flags', '@aerealith-ai/content', '@aerealith-ai/observability'],
+  transpilePackages: [
+    '@aerealith-ai/ui',
+    '@aerealith-ai/config',
+    '@aerealith-ai/flags',
+    '@aerealith-ai/content',
+    '@aerealith-ai/observability',
+  ],
 
   images: {
     remotePatterns: [],
     formats: ['image/avif', 'image/webp'],
   },
 
-  // Keep server-only database/runtime packages out of Next's server bundle.
-  // Route handlers are bundled by default, and this option opts packages out
-  // when they need native/server-specific resolution.
   serverExternalPackages: [
     '@mikro-orm/core',
     '@mikro-orm/postgresql',
@@ -57,21 +52,37 @@ const nextConfig = {
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
 
-      // Source aliases for frontend-safe workspace libraries.
       '@aerealith-ai/ui': resolve(repoRoot, 'libs/ui/src/index.ts'),
       '@aerealith-ai/config': resolve(repoRoot, 'libs/config/src/index.ts'),
       '@aerealith-ai/flags': resolve(repoRoot, 'libs/flags/src/index.ts'),
-      '@aerealith-ai/observability': resolve(repoRoot, 'libs/observability/src/index.ts'),
-      '@aerealith-ai/observability/browser': resolve(repoRoot, 'libs/observability/src/browser.ts'),
-      '@aerealith-ai/observability/profiler': resolve(repoRoot, 'libs/observability/src/profiler/index.ts'),
 
-      // IMPORTANT:
-      // Use the compiled DB package when available so Next does not parse
-      // raw MikroORM TypeScript decorators from libs/db/src.
+      // Content root import:
+      //   @aerealith-ai/content
+      '@aerealith-ai/content$': resolve(
+        repoRoot,
+        'libs/content/src/index.ts',
+      ),
+
+      // Content subpath imports:
+      //   @aerealith-ai/content/en/header
+      //   @aerealith-ai/content/en/footer
+      '@aerealith-ai/content': resolve(repoRoot, 'libs/content/src'),
+
+      '@aerealith-ai/observability': resolve(
+        repoRoot,
+        'libs/observability/src/index.ts',
+      ),
+      '@aerealith-ai/observability/browser': resolve(
+        repoRoot,
+        'libs/observability/src/browser.ts',
+      ),
+      '@aerealith-ai/observability/profiler': resolve(
+        repoRoot,
+        'libs/observability/src/profiler/index.ts',
+      ),
+
       '@aerealith-ai/db': resolvedDbEntry,
 
-      // Knex/MikroORM optional dialect packages.
-      // The app only uses PostgreSQL.
       'better-sqlite3': false,
       'mariadb/callback': false,
       mysql: false,
@@ -81,8 +92,6 @@ const nextConfig = {
       tedious: false,
     };
 
-    // Your workspace libraries use ESM-style `.js` imports in TypeScript source.
-    // This lets Webpack resolve `./file.js` to `./file.ts` during Next builds.
     config.resolve.extensionAlias = {
       ...(config.resolve.extensionAlias ?? {}),
       '.js': ['.ts', '.tsx', '.js'],

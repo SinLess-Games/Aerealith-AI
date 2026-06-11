@@ -4,8 +4,8 @@ import type { BoxProps } from '@mui/material/Box';
 import type { ContainerProps } from '@mui/material/Container';
 import type { SxProps, Theme } from '@mui/material/styles';
 
+import type { CarouselItem, MediaCarouselProps } from './carousel';
 import type { FeatureGridItem, FeatureGridProps } from './feature-grid';
-import type { CarouselItem, MediaCarouselProps } from './media';
 import type {
   MarketingCopyAlign,
   MarketingCopyProps,

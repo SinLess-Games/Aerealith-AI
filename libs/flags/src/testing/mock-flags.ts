@@ -1,3 +1,5 @@
+// libs/flags/src/testing/mock-flags.ts
+
 import {
   FLAGS_COMMON_KEYS,
   FLAGS_DEFAULT_VALUES,
@@ -10,6 +12,7 @@ import type {
   FlagJsonValue,
   FlagKey,
   FlagRegistry,
+  FlagValue,
   MockFlagProviderOptions,
   MockFlagValues,
   NumberFlagDefinition,
@@ -89,7 +92,7 @@ export const MOCK_BOOLEAN_FLAGS = {
     owner: 'platform',
     tags: ['platform', 'operations'],
   },
-} as const satisfies Record<string, BooleanFlagDefinition>;
+} satisfies Record<string, BooleanFlagDefinition>;
 
 export const MOCK_STRING_FLAGS = {
   dashboardVariant: {
@@ -109,7 +112,7 @@ export const MOCK_STRING_FLAGS = {
     owner: 'product',
     tags: ['app', 'onboarding', 'experiment'],
   },
-} as const satisfies Record<string, StringFlagDefinition>;
+} satisfies Record<string, StringFlagDefinition>;
 
 export const MOCK_NUMBER_FLAGS = {
   maxProjects: {
@@ -129,38 +132,53 @@ export const MOCK_NUMBER_FLAGS = {
     owner: 'product',
     tags: ['limits', 'uploads'],
   },
-} as const satisfies Record<string, NumberFlagDefinition>;
+} satisfies Record<string, NumberFlagDefinition>;
 
 export type MockPricingConfig = {
-  readonly enabled: boolean;
-  readonly showAnnualToggle: boolean;
-  readonly defaultPlan: string;
-  readonly highlightedPlan: string;
+  enabled: boolean;
+  showAnnualToggle: boolean;
+  defaultPlan: string;
+  highlightedPlan: string;
 };
 
 export type MockOnboardingConfig = {
-  readonly enabled: boolean;
-  readonly requiredSteps: readonly string[];
-  readonly skippable: boolean;
+  enabled: boolean;
+  requiredSteps: string[];
+  skippable: boolean;
 };
 
 export type MockObservabilityConfig = {
-  readonly enabled: boolean;
-  readonly showMetrics: boolean;
-  readonly showLogs: boolean;
-  readonly showTraces: boolean;
+  enabled: boolean;
+  showMetrics: boolean;
+  showLogs: boolean;
+  showTraces: boolean;
+};
+
+export const MOCK_PRICING_CONFIG_DEFAULT: MockPricingConfig = {
+  enabled: true,
+  showAnnualToggle: true,
+  defaultPlan: 'free',
+  highlightedPlan: 'pro',
+};
+
+export const MOCK_ONBOARDING_CONFIG_DEFAULT: MockOnboardingConfig = {
+  enabled: true,
+  requiredSteps: ['profile', 'workspace', 'preferences'],
+  skippable: true,
+};
+
+export const MOCK_OBSERVABILITY_CONFIG_DEFAULT: MockObservabilityConfig = {
+  enabled: false,
+  showMetrics: true,
+  showLogs: true,
+  showTraces: false,
 };
 
 export const MOCK_OBJECT_FLAGS = {
   pricingConfig: {
     key: 'pricing-config',
     kind: 'object',
-    defaultValue: {
-      enabled: true,
-      showAnnualToggle: true,
-      defaultPlan: 'free',
-      highlightedPlan: 'pro',
-    } satisfies MockPricingConfig,
+    defaultValue: MOCK_PRICING_CONFIG_DEFAULT as FlagJsonValue,
     description: 'Controls structured pricing UI configuration.',
     owner: 'frontend',
     tags: ['pricing', 'config'],
@@ -169,11 +187,7 @@ export const MOCK_OBJECT_FLAGS = {
   onboardingConfig: {
     key: 'onboarding-config',
     kind: 'object',
-    defaultValue: {
-      enabled: true,
-      requiredSteps: ['profile', 'workspace', 'preferences'],
-      skippable: true,
-    } satisfies MockOnboardingConfig,
+    defaultValue: MOCK_ONBOARDING_CONFIG_DEFAULT as FlagJsonValue,
     description: 'Controls structured onboarding configuration.',
     owner: 'product',
     tags: ['onboarding', 'config'],
@@ -182,31 +196,26 @@ export const MOCK_OBJECT_FLAGS = {
   observabilityConfig: {
     key: 'observability-config',
     kind: 'object',
-    defaultValue: {
-      enabled: false,
-      showMetrics: true,
-      showLogs: true,
-      showTraces: false,
-    } satisfies MockObservabilityConfig,
+    defaultValue: MOCK_OBSERVABILITY_CONFIG_DEFAULT as FlagJsonValue,
     description: 'Controls structured observability UI configuration.',
     owner: 'platform',
     tags: ['observability', 'config'],
   },
-} as const satisfies Record<string, ObjectFlagDefinition<FlagJsonValue>>;
+} satisfies Record<string, ObjectFlagDefinition<FlagJsonValue>>;
 
 export const MOCK_FLAG_REGISTRY = {
   ...MOCK_BOOLEAN_FLAGS,
   ...MOCK_STRING_FLAGS,
   ...MOCK_NUMBER_FLAGS,
   ...MOCK_OBJECT_FLAGS,
-} as const satisfies FlagRegistry;
+} satisfies FlagRegistry;
 
 export const MOCK_DEFAULT_FLAG_VALUES = {
   boolean: FLAGS_DEFAULT_VALUES.boolean,
   string: FLAGS_DEFAULT_VALUES.string,
   number: FLAGS_DEFAULT_VALUES.number,
   object: FLAGS_DEFAULT_VALUES.object,
-} as const satisfies FlagDefaultValues;
+} satisfies FlagDefaultValues;
 
 export const MOCK_FLAG_VALUES = {
   [FLAGS_COMMON_KEYS.authentication]: true,
@@ -227,7 +236,7 @@ export const MOCK_FLAG_VALUES = {
   'pricing-config': MOCK_OBJECT_FLAGS.pricingConfig.defaultValue,
   'onboarding-config': MOCK_OBJECT_FLAGS.onboardingConfig.defaultValue,
   'observability-config': MOCK_OBJECT_FLAGS.observabilityConfig.defaultValue,
-} as const satisfies MockFlagValues;
+} satisfies MockFlagValues;
 
 export const MOCK_ALL_FLAGS_ENABLED_VALUES = {
   ...MOCK_FLAG_VALUES,
@@ -239,7 +248,7 @@ export const MOCK_ALL_FLAGS_ENABLED_VALUES = {
   [FLAGS_COMMON_KEYS.onboarding]: true,
   [FLAGS_COMMON_KEYS.observability]: true,
   [FLAGS_COMMON_KEYS.maintenanceMode]: false,
-} as const satisfies MockFlagValues;
+} satisfies MockFlagValues;
 
 export const MOCK_ALL_FLAGS_DISABLED_VALUES = {
   ...MOCK_FLAG_VALUES,
@@ -251,7 +260,7 @@ export const MOCK_ALL_FLAGS_DISABLED_VALUES = {
   [FLAGS_COMMON_KEYS.onboarding]: false,
   [FLAGS_COMMON_KEYS.observability]: false,
   [FLAGS_COMMON_KEYS.maintenanceMode]: false,
-} as const satisfies MockFlagValues;
+} satisfies MockFlagValues;
 
 export const MOCK_MAINTENANCE_MODE_VALUES = {
   ...MOCK_FLAG_VALUES,
@@ -259,7 +268,7 @@ export const MOCK_MAINTENANCE_MODE_VALUES = {
   [FLAGS_COMMON_KEYS.registration]: false,
   [FLAGS_COMMON_KEYS.billing]: false,
   [FLAGS_COMMON_KEYS.dashboard]: false,
-} as const satisfies MockFlagValues;
+} satisfies MockFlagValues;
 
 export const MOCK_BETA_USER_VALUES = {
   ...MOCK_FLAG_VALUES,
@@ -270,7 +279,21 @@ export const MOCK_BETA_USER_VALUES = {
   'onboarding-variant': 'guided',
   'max-projects': 10,
   'max-uploads': 100,
-} as const satisfies MockFlagValues;
+} satisfies MockFlagValues;
+
+export const MOCK_ENTERPRISE_PRICING_CONFIG: MockPricingConfig = {
+  enabled: true,
+  showAnnualToggle: true,
+  defaultPlan: 'enterprise',
+  highlightedPlan: 'enterprise',
+};
+
+export const MOCK_ENTERPRISE_OBSERVABILITY_CONFIG: MockObservabilityConfig = {
+  enabled: true,
+  showMetrics: true,
+  showLogs: true,
+  showTraces: true,
+};
 
 export const MOCK_ENTERPRISE_USER_VALUES = {
   ...MOCK_FLAG_VALUES,
@@ -281,19 +304,9 @@ export const MOCK_ENTERPRISE_USER_VALUES = {
   'onboarding-variant': 'enterprise',
   'max-projects': 100,
   'max-uploads': 1000,
-  'pricing-config': {
-    enabled: true,
-    showAnnualToggle: true,
-    defaultPlan: 'enterprise',
-    highlightedPlan: 'enterprise',
-  } satisfies MockPricingConfig,
-  'observability-config': {
-    enabled: true,
-    showMetrics: true,
-    showLogs: true,
-    showTraces: true,
-  } satisfies MockObservabilityConfig,
-} as const satisfies MockFlagValues;
+  'pricing-config': MOCK_ENTERPRISE_PRICING_CONFIG as FlagJsonValue,
+  'observability-config': MOCK_ENTERPRISE_OBSERVABILITY_CONFIG as FlagJsonValue,
+} satisfies MockFlagValues;
 
 export const MOCK_FLAG_KEYS = Object.values(MOCK_FLAG_REGISTRY).map(
   (definition) => definition.key,
@@ -369,7 +382,7 @@ export function getRequiredMockFlagDefinition(
 export function getMockFlagDefaultValue(
   key: FlagKey,
   registry: FlagRegistry = MOCK_FLAG_REGISTRY,
-): AnyFlagDefinition['defaultValue'] {
+): FlagValue {
   return getRequiredMockFlagDefinition(key, registry).defaultValue;
 }
 
@@ -377,7 +390,7 @@ export function getMockFlagValue(
   key: FlagKey,
   values: MockFlagValues = MOCK_FLAG_VALUES,
   registry: FlagRegistry = MOCK_FLAG_REGISTRY,
-): AnyFlagDefinition['defaultValue'] {
+): FlagValue {
   const value = values[key];
 
   if (value !== undefined) {
@@ -390,7 +403,7 @@ export function getMockFlagValue(
 export function setMockFlagValue(
   values: MockFlagValues,
   key: FlagKey,
-  value: MockFlagValues[FlagKey],
+  value: FlagValue,
 ): MockFlagValues {
   return {
     ...values,
@@ -420,7 +433,7 @@ export function pickMockFlags(
     keys
       .filter((key) => key in values)
       .map((key) => [key, values[key]]),
-  ) satisfies MockFlagValues;
+  ) as MockFlagValues;
 }
 
 export function omitMockFlags(
@@ -429,7 +442,7 @@ export function omitMockFlags(
 ): MockFlagValues {
   return Object.fromEntries(
     Object.entries(values).filter(([key]) => !keys.includes(key)),
-  ) satisfies MockFlagValues;
+  ) as MockFlagValues;
 }
 
 export function isMockFlagEnabled(

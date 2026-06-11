@@ -1,3 +1,5 @@
+// apps/services/user/src/users/controllers/get-user.controller.ts
+
 import type { EntityManager } from '@mikro-orm/postgresql';
 import type { Context } from 'hono';
 
@@ -11,6 +13,12 @@ import {
   logUserControllerStart,
   mapValidationIssues,
 } from './logger';
+
+type ControllerValidationIssue = {
+  code: string;
+  message: string;
+  path: PropertyKey[];
+};
 
 export const getUserController = async (
   context: Context,
@@ -28,7 +36,9 @@ export const getUserController = async (
         error: {
           code: usernameParam.code,
           message: usernameParam.message,
-          issues: mapValidationIssues(usernameParam.issues),
+          issues: mapValidationIssues(
+            normalizeValidationIssues(usernameParam.issues),
+          ),
         },
       },
       400,
@@ -66,6 +76,26 @@ export const getUserController = async (
     throw error;
   }
 };
+
+function normalizeValidationIssues(
+  issues: readonly ControllerValidationIssue[],
+): { path: (string | number)[]; code: string; message: string }[] {
+  return issues.map((issue) => ({
+    code: issue.code,
+    message: issue.message,
+    path: issue.path.map(normalizeValidationIssuePathSegment),
+  }));
+}
+
+function normalizeValidationIssuePathSegment(
+  segment: PropertyKey,
+): string | number {
+  if (typeof segment === 'number' || typeof segment === 'string') {
+    return segment;
+  }
+
+  return segment.description ?? segment.toString();
+}
 
 function getStatusCodeForGetUserError(error: GetUserServiceError): 404 {
   switch (error.code) {

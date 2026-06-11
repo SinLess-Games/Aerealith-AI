@@ -1,17 +1,23 @@
+// libs/flags/src/client/evaluate.ts
+
 import { FLAGS_DEFAULT_VALUES, FLAGS_ERROR_CODES } from '../constants';
 
 import type {
   AnyFlagDefinition,
   BooleanFlagDefinition,
+  EvaluateClientFlagOptions,
+  EvaluateClientFlagRegistryOptions,
   FlagEvaluationContext,
   FlagEvaluationResult,
   FlagJsonValue,
   FlagKey,
   FlagRegistry,
+  FlagshipClient,
   FlagValue,
   FlagValueKind,
   NumberFlagDefinition,
   ObjectFlagDefinition,
+  OpenFeatureEvaluationDetails,
   StringFlagDefinition,
 } from '../types';
 
@@ -27,32 +33,11 @@ import {
   getClientStringDetails,
   getClientStringFlag,
   getFlagshipClient,
-  type FlagshipClient,
-  type GetFlagshipClientOptions,
 } from './client';
 
 import { assertPrefetchFlagAvailable } from './prefetch';
 
 import { getInitializedFlagshipClientContext } from './provider';
-
-type OpenFeatureEvaluationDetails<TValue> = {
-  readonly value: TValue;
-  readonly flagKey?: string;
-  readonly variant?: string;
-  readonly reason?: string;
-  readonly errorCode?: string;
-  readonly errorMessage?: string;
-};
-
-export type EvaluateClientFlagOptions = GetFlagshipClientOptions & {
-  readonly client?: FlagshipClient;
-  readonly details?: boolean;
-  readonly throwOnError?: boolean;
-};
-
-export type EvaluateClientFlagRegistryOptions = EvaluateClientFlagOptions & {
-  readonly only?: readonly FlagKey[];
-};
 
 export class ClientFlagEvaluationError extends Error {
   public override readonly name = 'ClientFlagEvaluationError';
@@ -137,9 +122,7 @@ export function evaluateClientNumberDefinition(
   );
 }
 
-export function evaluateClientObjectDefinition<
-  TValue extends FlagJsonValue,
->(
+export function evaluateClientObjectDefinition<TValue extends FlagJsonValue>(
   definition: ObjectFlagDefinition<TValue>,
   options: EvaluateClientFlagOptions = {},
 ): FlagEvaluationResult<TValue> {

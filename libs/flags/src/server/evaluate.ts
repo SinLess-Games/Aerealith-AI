@@ -1,3 +1,5 @@
+// libs/flags/src/server/evaluate.ts
+
 import { type EvaluationContext } from '@openfeature/server-sdk';
 
 import { FLAGS_DEFAULT_VALUES, FLAGS_ERROR_CODES } from '../constants';
@@ -12,6 +14,8 @@ import { toOpenFeatureEvaluationContext } from '../openfeature-context';
 import type {
   AnyFlagDefinition,
   BooleanFlagDefinition,
+  EvaluateServerFlagOptions,
+  EvaluateServerFlagRegistryOptions,
   FlagEvaluationContext,
   FlagEvaluationResult,
   FlagJsonValue,
@@ -21,6 +25,7 @@ import type {
   FlagValueKind,
   NumberFlagDefinition,
   ObjectFlagDefinition,
+  OpenFeatureEvaluationDetails,
   StringFlagDefinition,
 } from '../types';
 
@@ -28,28 +33,7 @@ import {
   assertFlagshipServerClientReady,
   getFlagshipServerClient,
   type FlagshipServerClient,
-  type GetFlagshipServerClientOptions,
 } from './client';
-
-type OpenFeatureEvaluationDetails<TValue> = {
-  readonly value: TValue;
-  readonly flagKey?: string;
-  readonly variant?: string;
-  readonly reason?: string;
-  readonly errorCode?: string;
-  readonly errorMessage?: string;
-};
-
-export type EvaluateServerFlagOptions = GetFlagshipServerClientOptions & {
-  readonly client?: FlagshipServerClient;
-  readonly context?: FlagEvaluationContext;
-  readonly details?: boolean;
-  readonly throwOnError?: boolean;
-};
-
-export type EvaluateServerFlagRegistryOptions = EvaluateServerFlagOptions & {
-  readonly only?: readonly FlagKey[];
-};
 
 export class ServerFlagEvaluationError extends Error {
   public override readonly name = 'ServerFlagEvaluationError';
@@ -369,7 +353,9 @@ export async function evaluateServerFlagRegistry(
   });
 
   const results = await Promise.all(
-    definitions.map(async (definition) => evaluateServerFlag(definition, options)),
+    definitions.map(async (definition) =>
+      evaluateServerFlag(definition, options),
+    ),
   );
 
   return Object.fromEntries(results.map((result) => [result.key, result]));
@@ -467,7 +453,9 @@ export function resolveServerEvaluationContext(
 export function resolveServerFlagClient(
   options: EvaluateServerFlagOptions = {},
 ): FlagshipServerClient {
-  return options.client ?? getFlagshipServerClient(options);
+  const candidateClient = options.client as FlagshipServerClient | undefined;
+
+  return candidateClient ?? getFlagshipServerClient(options);
 }
 
 function handleServerEvaluationFailure<TValue extends FlagValue>(input: {
@@ -522,7 +510,11 @@ function toServerFlagEvaluationError(
 function toSdkEvaluationContext(
   context?: FlagEvaluationContext,
 ): EvaluationContext | undefined {
-  return toOpenFeatureEvaluationContext(context) as EvaluationContext | undefined;
+  if (!context) {
+    return undefined;
+  }
+
+  return toOpenFeatureEvaluationContext(context) as EvaluationContext;
 }
 
 function toSdkObjectDefaultValue<TValue extends FlagJsonValue>(

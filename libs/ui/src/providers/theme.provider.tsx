@@ -2,15 +2,15 @@
 
 'use client';
 
-import * as React from 'react';
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
+import * as React from 'react';
 
 import { applyCssVars } from '../theme/cssVars';
 import { getMuiTheme } from '../theme/mui';
 import type {
   ColorModeContextValue,
-  ThemeMode,
+  Mode as ThemeMode,
   ThemeProviderDefaultMode,
   ThemeProviderProps,
 } from '../types';

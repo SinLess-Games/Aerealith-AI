@@ -1,6 +1,6 @@
 // libs/ui/src/theme/constants.ts
 
-import type { ColorFormats, ThemeMode, ThemePalette } from '../types';
+import type { ColorFormats, Mode as ThemeMode, ThemePalette } from '../types';
 
 const HEX_COLOR_PATTERN = /^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/;
 

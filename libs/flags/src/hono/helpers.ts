@@ -1,11 +1,21 @@
+// libs/flags/src/hono/helpers.ts
+
 import { FLAGS_DEFAULT_VALUES } from '../constants';
 
 import type {
+  AnyFlagDefinition,
+  EvaluateServerFlagOptions,
   FlagEvaluationContext,
+  FlagEvaluationResult,
   FlagJsonValue,
   FlagKey,
   FlagRegistry,
   FlagValue,
+  HonoFlagBindings,
+  HonoFlagContext,
+  HonoFlagGuardOptions,
+  HonoFlagHelperOptions,
+  HonoFlagJsonOptions,
   ServerFlagEvaluator,
 } from '../types';
 
@@ -18,30 +28,18 @@ import {
   evaluateServerNumberFlag,
   evaluateServerObjectFlag,
   evaluateServerStringFlag,
-  type EvaluateServerFlagOptions,
 } from '../server';
 
-import {
-  getHonoFlagContext,
-  getHonoFlags,
-  type HonoFlagBindings,
-  type HonoFlagContext,
-} from './context';
+import { getHonoFlagContext, getHonoFlags } from './context';
 
-export type HonoFlagHelperOptions = {
-  readonly context?: FlagEvaluationContext;
-  readonly defaultContext?: boolean;
+type HonoServerEvaluationOptions = HonoFlagHelperOptions &
+  Pick<EvaluateServerFlagOptions, 'details' | 'throwOnError'>;
+
+type HonoJsonContext = {
+  readonly json: (body: unknown) => unknown;
 };
 
-export type HonoFlagGuardOptions = HonoFlagHelperOptions & {
-  readonly defaultValue?: boolean;
-  readonly status?: number;
-  readonly message?: string;
-};
-
-export type HonoFlagJsonOptions = HonoFlagHelperOptions & {
-  readonly includeContext?: boolean;
-};
+type HonoJsonResult = unknown;
 
 export async function flagBoolean<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
@@ -205,9 +203,8 @@ export async function getHonoFlagValues<TBindings extends HonoFlagBindings>(
 export async function getHonoFlagResults<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
   registry: FlagRegistry,
-  options: HonoFlagHelperOptions &
-    Pick<EvaluateServerFlagOptions, 'details' | 'throwOnError'> = {},
-): Promise<Awaited<ReturnType<typeof evaluateServerFlagRegistry>>> {
+  options: HonoServerEvaluationOptions = {},
+): Promise<Record<FlagKey, FlagEvaluationResult>> {
   return evaluateServerFlagRegistry(registry, {
     context: resolveHonoHelperContext(context, options),
     details: options.details,
@@ -219,9 +216,8 @@ export async function getHonoFlagValueFromDefinition<
   TBindings extends HonoFlagBindings,
 >(
   context: HonoFlagContext<TBindings>,
-  definition: Parameters<typeof evaluateServerFlagValue>[0],
-  options: HonoFlagHelperOptions &
-    Pick<EvaluateServerFlagOptions, 'details' | 'throwOnError'> = {},
+  definition: AnyFlagDefinition,
+  options: HonoServerEvaluationOptions = {},
 ): Promise<FlagValue> {
   return evaluateServerFlagValue(definition, {
     context: resolveHonoHelperContext(context, options),
@@ -234,10 +230,9 @@ export async function getHonoFlagResultFromDefinition<
   TBindings extends HonoFlagBindings,
 >(
   context: HonoFlagContext<TBindings>,
-  definition: Parameters<typeof evaluateServerFlag>[0],
-  options: HonoFlagHelperOptions &
-    Pick<EvaluateServerFlagOptions, 'details' | 'throwOnError'> = {},
-): Promise<Awaited<ReturnType<typeof evaluateServerFlag>>> {
+  definition: AnyFlagDefinition,
+  options: HonoServerEvaluationOptions = {},
+): Promise<FlagEvaluationResult> {
   return evaluateServerFlag(definition, {
     context: resolveHonoHelperContext(context, options),
     details: options.details,
@@ -271,13 +266,13 @@ export async function jsonFlagState<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
   registry: FlagRegistry,
   options: HonoFlagJsonOptions = {},
-): Promise<Response> {
+): Promise<HonoJsonResult> {
   const flagContext = resolveHonoHelperContext(context, options);
   const values = await evaluateServerFlagRegistryValues(registry, {
     context: flagContext,
   });
 
-  return context.json({
+  return toHonoJsonContext(context).json({
     flags: values,
     ...(options.includeContext ? { context: flagContext } : {}),
   });
@@ -288,7 +283,7 @@ export async function jsonFlagResultState<TBindings extends HonoFlagBindings>(
   registry: FlagRegistry,
   options: HonoFlagJsonOptions &
     Pick<EvaluateServerFlagOptions, 'details' | 'throwOnError'> = {},
-): Promise<Response> {
+): Promise<HonoJsonResult> {
   const flagContext = resolveHonoHelperContext(context, options);
   const results = await evaluateServerFlagRegistry(registry, {
     context: flagContext,
@@ -296,7 +291,7 @@ export async function jsonFlagResultState<TBindings extends HonoFlagBindings>(
     throwOnError: options.throwOnError,
   });
 
-  return context.json({
+  return toHonoJsonContext(context).json({
     flags: results,
     ...(options.includeContext ? { context: flagContext } : {}),
   });
@@ -308,9 +303,8 @@ export async function evaluateHonoBooleanFlag<
   context: HonoFlagContext<TBindings>,
   key: FlagKey,
   defaultValue: boolean = FLAGS_DEFAULT_VALUES.boolean,
-  options: HonoFlagHelperOptions &
-    Pick<EvaluateServerFlagOptions, 'details' | 'throwOnError'> = {},
-): Promise<Awaited<ReturnType<typeof evaluateServerBooleanFlag>>> {
+  options: HonoServerEvaluationOptions = {},
+): Promise<FlagEvaluationResult<boolean>> {
   return evaluateServerBooleanFlag(key, defaultValue, {
     context: resolveHonoHelperContext(context, options),
     details: options.details,
@@ -324,9 +318,8 @@ export async function evaluateHonoStringFlag<
   context: HonoFlagContext<TBindings>,
   key: FlagKey,
   defaultValue: string = FLAGS_DEFAULT_VALUES.string,
-  options: HonoFlagHelperOptions &
-    Pick<EvaluateServerFlagOptions, 'details' | 'throwOnError'> = {},
-): Promise<Awaited<ReturnType<typeof evaluateServerStringFlag>>> {
+  options: HonoServerEvaluationOptions = {},
+): Promise<FlagEvaluationResult<string>> {
   return evaluateServerStringFlag(key, defaultValue, {
     context: resolveHonoHelperContext(context, options),
     details: options.details,
@@ -340,9 +333,8 @@ export async function evaluateHonoNumberFlag<
   context: HonoFlagContext<TBindings>,
   key: FlagKey,
   defaultValue: number = FLAGS_DEFAULT_VALUES.number,
-  options: HonoFlagHelperOptions &
-    Pick<EvaluateServerFlagOptions, 'details' | 'throwOnError'> = {},
-): Promise<Awaited<ReturnType<typeof evaluateServerNumberFlag>>> {
+  options: HonoServerEvaluationOptions = {},
+): Promise<FlagEvaluationResult<number>> {
   return evaluateServerNumberFlag(key, defaultValue, {
     context: resolveHonoHelperContext(context, options),
     details: options.details,
@@ -357,9 +349,8 @@ export async function evaluateHonoObjectFlag<
   context: HonoFlagContext<TBindings>,
   key: FlagKey,
   defaultValue: TValue,
-  options: HonoFlagHelperOptions &
-    Pick<EvaluateServerFlagOptions, 'details' | 'throwOnError'> = {},
-): Promise<Awaited<ReturnType<typeof evaluateServerObjectFlag<TValue>>>> {
+  options: HonoServerEvaluationOptions = {},
+): Promise<FlagEvaluationResult<TValue>> {
   return evaluateServerObjectFlag(key, defaultValue, {
     context: resolveHonoHelperContext(context, options),
     details: options.details,
@@ -377,4 +368,8 @@ export class HonoFlagGuardError extends Error {
   ) {
     super(message);
   }
+}
+
+function toHonoJsonContext(context: unknown): HonoJsonContext {
+  return context as HonoJsonContext;
 }

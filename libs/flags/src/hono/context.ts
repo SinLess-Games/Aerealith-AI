@@ -1,4 +1,4 @@
-import type { Context } from 'hono';
+// libs/flags/src/hono/context.ts
 
 import {
   FLAGS_DEFAULT_ENVIRONMENT,
@@ -13,14 +13,15 @@ import {
 } from '../context';
 
 import type {
+  BuildHonoFlagContextOptions,
   FlagEnvironment,
   FlagEvaluationContext,
+  HonoFlagBindings,
+  HonoFlagContext,
   HonoFlagContextFactoryInput,
-  HonoFlagVariables,
+  HonoFlagRequestContextInput,
   ServerFlagEvaluator,
 } from '../types';
-
-import type { FlagshipServerProviderEnv } from '../server';
 
 export const HONO_FLAGS_VARIABLE_KEY = 'flags' as const;
 
@@ -28,49 +29,40 @@ export const HONO_FLAG_CONTEXT_VARIABLE_KEY = 'flagContext' as const;
 
 export const HONO_FLAG_PROVIDER_DOMAIN = FLAGS_OPENFEATURE_DOMAINS.hono;
 
-export type HonoFlagBindings = FlagshipServerProviderEnv & Record<string, unknown>;
-
-export type HonoFlagEnv<TBindings extends HonoFlagBindings = HonoFlagBindings> = {
-  Bindings: TBindings;
-  Variables: HonoFlagVariables;
+type HeadersLike = {
+  readonly get: (key: string) => string | null | undefined;
 };
 
-export type HonoFlagContext<TBindings extends HonoFlagBindings = HonoFlagBindings> =
-  Context<HonoFlagEnv<TBindings>>;
-
-export type HonoFlagContextBuilder<TBindings extends HonoFlagBindings = HonoFlagBindings> = (
-  context: HonoFlagContext<TBindings>,
-) => FlagEvaluationContext | Promise<FlagEvaluationContext>;
-
-export type BuildHonoFlagContextOptions<
-  TBindings extends HonoFlagBindings = HonoFlagBindings,
-> = {
-  readonly context?: FlagEvaluationContext;
-  readonly environment?: FlagEnvironment;
-  readonly getContext?: HonoFlagContextBuilder<TBindings>;
-  readonly includeAnonymousContext?: boolean;
+type RequestLike = {
+  readonly headers: HeadersLike;
 };
 
-export type HonoFlagRequestContextInput = {
-  readonly request: Request;
-  readonly env?: unknown;
-  readonly executionContext?: unknown;
-  readonly context?: FlagEvaluationContext;
-  readonly environment?: FlagEnvironment;
-  readonly includeAnonymousContext?: boolean;
+type HonoVariableContext = {
+  readonly req: {
+    readonly raw: unknown;
+    readonly header: (key: string) => string | undefined;
+  };
+  readonly env: unknown;
+  readonly executionCtx?: unknown;
+
+  get: <TValue = unknown>(key: string) => TValue | undefined;
+  set: (key: string, value: unknown) => void;
 };
 
 export function setHonoFlags<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
   flags: ServerFlagEvaluator,
 ): void {
-  context.set(HONO_FLAGS_VARIABLE_KEY, flags);
+  setHonoVariable(context, HONO_FLAGS_VARIABLE_KEY, flags);
 }
 
 export function getHonoFlags<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
 ): ServerFlagEvaluator {
-  const flags = context.get(HONO_FLAGS_VARIABLE_KEY);
+  const flags = getHonoVariable<ServerFlagEvaluator>(
+    context,
+    HONO_FLAGS_VARIABLE_KEY,
+  );
 
   if (!flags) {
     throw new Error(
@@ -84,20 +76,23 @@ export function getHonoFlags<TBindings extends HonoFlagBindings>(
 export function hasHonoFlags<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
 ): boolean {
-  return Boolean(context.get(HONO_FLAGS_VARIABLE_KEY));
+  return Boolean(getHonoVariable(context, HONO_FLAGS_VARIABLE_KEY));
 }
 
 export function setHonoFlagContext<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
   flagContext: FlagEvaluationContext,
 ): void {
-  context.set(HONO_FLAG_CONTEXT_VARIABLE_KEY, flagContext);
+  setHonoVariable(context, HONO_FLAG_CONTEXT_VARIABLE_KEY, flagContext);
 }
 
 export function getHonoFlagContext<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
 ): FlagEvaluationContext {
-  const flagContext = context.get(HONO_FLAG_CONTEXT_VARIABLE_KEY);
+  const flagContext = getHonoVariable<FlagEvaluationContext>(
+    context,
+    HONO_FLAG_CONTEXT_VARIABLE_KEY,
+  );
 
   if (!flagContext) {
     throw new Error(
@@ -111,7 +106,7 @@ export function getHonoFlagContext<TBindings extends HonoFlagBindings>(
 export function hasHonoFlagContext<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
 ): boolean {
-  return Boolean(context.get(HONO_FLAG_CONTEXT_VARIABLE_KEY));
+  return Boolean(getHonoVariable(context, HONO_FLAG_CONTEXT_VARIABLE_KEY));
 }
 
 export async function buildHonoFlagContext<
@@ -120,9 +115,11 @@ export async function buildHonoFlagContext<
   context: HonoFlagContext<TBindings>,
   options: BuildHonoFlagContextOptions<TBindings> = {},
 ): Promise<FlagEvaluationContext> {
+  const honoContext = toHonoVariableContext(context);
+
   const requestContext = buildHonoFlagContextFromRequest({
-    request: context.req.raw,
-    env: context.env,
+    request: honoContext.req.raw,
+    env: honoContext.env,
     executionContext: getExecutionContext(context),
     context: options.context,
     environment: options.environment,
@@ -145,14 +142,29 @@ export async function buildHonoFlagContext<
 export function buildHonoFlagContextFromRequest(
   input: HonoFlagRequestContextInput,
 ): FlagEvaluationContext {
+  const request = toRequestLike(input.request);
+
   const environment =
     input.environment ??
     readEnvironmentFromEnv(input.env) ??
-    readEnvironmentFromRequest(input.request) ??
+    (request ? readEnvironmentFromRequest(request) : undefined) ??
     FLAGS_DEFAULT_ENVIRONMENT;
 
+  if (!request) {
+    return buildFlagEvaluationContext(
+      {
+        ...input.context,
+        environment,
+      },
+      {
+        environment,
+        includeAnonymousContext: input.includeAnonymousContext,
+      },
+    );
+  }
+
   return buildContextFromRequest(
-    input.request,
+    request,
     {
       ...input.context,
       environment,
@@ -169,9 +181,11 @@ export function createHonoFlagContextFactoryInput<
 >(
   context: HonoFlagContext<TBindings>,
 ): HonoFlagContextFactoryInput {
+  const honoContext = toHonoVariableContext(context);
+
   return {
-    request: context.req.raw,
-    env: context.env,
+    request: honoContext.req.raw,
+    env: honoContext.env,
     executionContext: getExecutionContext(context),
   };
 }
@@ -182,7 +196,10 @@ export async function resolveHonoFlagContext<
   context: HonoFlagContext<TBindings>,
   options: BuildHonoFlagContextOptions<TBindings> = {},
 ): Promise<FlagEvaluationContext> {
-  const existingContext = context.get(HONO_FLAG_CONTEXT_VARIABLE_KEY);
+  const existingContext = getHonoVariable<FlagEvaluationContext>(
+    context,
+    HONO_FLAG_CONTEXT_VARIABLE_KEY,
+  );
 
   if (existingContext) {
     return existingContext;
@@ -235,7 +252,7 @@ export function readHonoFlagHeader<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
   key: string,
 ): string | undefined {
-  const value = context.req.header(key);
+  const value = toHonoVariableContext(context).req.header(key);
 
   if (!value) {
     return undefined;
@@ -254,7 +271,10 @@ export function readHonoFlagHeaders<TBindings extends HonoFlagBindings>(
     userId: readHonoFlagHeader(context, FLAGS_HEADER_KEYS.userId),
     anonymousId: readHonoFlagHeader(context, FLAGS_HEADER_KEYS.anonymousId),
     sessionId: readHonoFlagHeader(context, FLAGS_HEADER_KEYS.sessionId),
-    organizationId: readHonoFlagHeader(context, FLAGS_HEADER_KEYS.organizationId),
+    organizationId: readHonoFlagHeader(
+      context,
+      FLAGS_HEADER_KEYS.organizationId,
+    ),
     workspaceId: readHonoFlagHeader(context, FLAGS_HEADER_KEYS.workspaceId),
     plan: readHonoFlagHeader(context, FLAGS_HEADER_KEYS.plan),
     country: readHonoFlagHeader(context, FLAGS_HEADER_KEYS.country),
@@ -269,16 +289,20 @@ export function readHonoFlagEnvString<
   context: HonoFlagContext<TBindings>,
   key: string,
 ): string | undefined {
-  return readStringFromRecord(context.env, key);
+  return readStringFromRecord(toHonoVariableContext(context).env, key);
 }
 
-export function readEnvironmentFromRequest(request: Request): FlagEnvironment | undefined {
+export function readEnvironmentFromRequest(
+  request: RequestLike,
+): FlagEnvironment | undefined {
   return normalizeOptionalEnvironment(
     request.headers.get(FLAGS_HEADER_KEYS.environment),
   );
 }
 
-export function readEnvironmentFromEnv(env: unknown): FlagEnvironment | undefined {
+export function readEnvironmentFromEnv(
+  env: unknown,
+): FlagEnvironment | undefined {
   return (
     normalizeOptionalEnvironment(readStringFromRecord(env, 'AEREALITH_ENVIRONMENT')) ??
     normalizeOptionalEnvironment(readStringFromRecord(env, 'NODE_ENV')) ??
@@ -289,11 +313,36 @@ export function readEnvironmentFromEnv(env: unknown): FlagEnvironment | undefine
 export function getExecutionContext<TBindings extends HonoFlagBindings>(
   context: HonoFlagContext<TBindings>,
 ): unknown {
-  const maybeContext = context as unknown as {
-    readonly executionCtx?: unknown;
-  };
+  return toHonoVariableContext(context).executionCtx;
+}
 
-  return maybeContext.executionCtx;
+function getHonoVariable<TValue>(
+  context: unknown,
+  key: string,
+): TValue | undefined {
+  return toHonoVariableContext(context).get<TValue>(key);
+}
+
+function setHonoVariable(context: unknown, key: string, value: unknown): void {
+  toHonoVariableContext(context).set(key, value);
+}
+
+function toHonoVariableContext(context: unknown): HonoVariableContext {
+  return context as HonoVariableContext;
+}
+
+function toRequestLike(value: unknown): RequestLike | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const maybeRequest = value as Partial<RequestLike>;
+
+  if (!maybeRequest.headers || typeof maybeRequest.headers.get !== 'function') {
+    return undefined;
+  }
+
+  return maybeRequest as RequestLike;
 }
 
 function readStringFromRecord(record: unknown, key: string): string | undefined {
@@ -312,7 +361,9 @@ function readStringFromRecord(record: unknown, key: string): string | undefined 
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function normalizeOptionalEnvironment(value: unknown): FlagEnvironment | undefined {
+function normalizeOptionalEnvironment(
+  value: unknown,
+): FlagEnvironment | undefined {
   if (typeof value !== 'string') {
     return undefined;
   }

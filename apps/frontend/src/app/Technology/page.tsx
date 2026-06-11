@@ -2,20 +2,20 @@
 
 // apps/frontend/src/app/Technology/page.tsx
 
-import * as React from 'react';
 import Script from 'next/script';
+import * as React from 'react';
 
 import { Box, Button, Container, Stack, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid';
 
-import { Footer, Header, MediaImage } from '@aerealith-ai/ui';
 import type { ReadonlyCardArray } from '@aerealith-ai/content';
+import { Footer, Header, MediaImage } from '@aerealith-ai/ui';
 
 import {
   footerProps,
   headerProps,
-  technologyCardGroups,
   Image_Paths,
+  technologyCardGroups,
 } from '@aerealith-ai/content';
 
 declare global {
@@ -511,18 +511,6 @@ export default function TechnologyPage() {
     (total, group) => total + group.items.length,
     0,
   );
-
-  React.useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_ADSENSE_CLIENT) {
-      return;
-    }
-
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch {
-      // Ignore locally.
-    }
-  }, [groups.length]);
 
   return (
     <Box

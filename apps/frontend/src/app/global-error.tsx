@@ -26,7 +26,7 @@ type GlobalErrorProps = {
    * Supporting both keeps this compatible while Next settles the API shape.
    */
   reset?: () => void;
-  unstable_retry?: () => void;
+  unstable_retry?: () => void
 };
 
 type ClientDiagnostics = {
