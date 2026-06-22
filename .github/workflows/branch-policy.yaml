@@ -203,12 +203,12 @@ jobs:
 
     steps:
       - name: Checkout repository automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.base.sha || github.sha }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -331,7 +331,7 @@ jobs:
 
       - name: Upload branch policy artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: branch-policy-${{ github.run_id }}
           path: |
